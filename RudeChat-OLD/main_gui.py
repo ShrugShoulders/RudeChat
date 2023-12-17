@@ -577,8 +577,13 @@ class IRCClientGUI:
                 self.irc_client.current_channel = channel_name
                 self.display_channel_messages()
                 self.update_window_title(self.irc_client.nickname, channel_name)
-            case "topic": #requests topic only for right now
-                self.irc_client._send_message(f'TOPIC {self.irc_client.current_channel}')
+            case "topic":  # set or request the topic
+                if len(args) > 1:
+                    new_topic = ' '.join(args[1:])
+                    self.irc_client._send_message(f'TOPIC {self.irc_client.current_channel} :{new_topic}')
+                else:
+                    # If no argument is provided, request the current topic
+                    self.irc_client._send_message(f'TOPIC {self.irc_client.current_channel}')
             case "help": #HELP!
                 self.display_help()
             case "names": #refreshes user list
@@ -671,8 +676,10 @@ class IRCClientGUI:
                 self.dice_roll(args)
             case "exec":
                 self._handle_exec_command(args)
-            case "mode":
-                self.handle_mode_command(args)
+            case "mode":  # Set modes for channels or users
+                target = args[1] if len(args) > 1 else None
+                modes = ' '.join(args[2:]) if len(args) > 2 else None
+                self.set_modes(target, modes)
             case "notice":
                 self.handle_notice_command(args)
             case "invite":
@@ -687,6 +694,17 @@ class IRCClientGUI:
             case _:
                 self.update_message_text(f"Unkown Command! Type '/help' for help.\r\n")
         self.input_entry.delete(0, tk.END)
+
+    def set_modes(self, target, modes):
+        if target and modes:
+            if target.startswith("#"):
+                # If target starts with '#', it's a channel mode
+                self.irc_client._send_message(f'MODE {target} {modes}')
+            else:
+                # Assume it's a user mode if not a channel
+                self.irc_client._send_message(f'MODE {target} {modes}')
+        else:
+            self.update_message_text("Invalid usage. Usage: /mode <channel> <modes> <target>\r\n")
 
     def add_friend(self, user_input):
         user_input_split = user_input.split()
@@ -913,25 +931,6 @@ class IRCClientGUI:
         channel = args[2]
         self.irc_client._send_message(f'INVITE {user} {channel}\r\n')
         self.update_message_text(f"Invited {user} to {channel}\r\n")
-
-    def handle_mode_command(self, args):
-        if len(args) < 3:
-            self.update_message_text("Usage: /mode [channel] <target> <mode>\r\n")
-            return
-
-        # Check if a channel is explicitly specified
-        if args[1].startswith("#"):
-            channel = args[1]
-            target = args[2]
-            mode = args[3]
-        else:  # If no channel is specified, use the current channel
-            channel = self.irc_client.current_channel
-            target = args[1]
-            mode = args[2]
-
-        # Send the MODE command to the IRC server
-        self.irc_client._send_message(f'MODE {channel} {mode} {target}')
-        self.update_message_text(f"Attempting to set mode {mode} for {target} in {channel}\r\n")
 
     def handle_notice_command(self, args):
         if len(args) < 3:
