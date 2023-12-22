@@ -181,7 +181,8 @@ class AsyncIRCClient:
     async def _await_welcome_message(self):
         self.gui.insert_text_widget(f'Waiting for welcome message from server.\r\n')
         buffer = ""
-        received_001 = False  
+        received_001 = False
+        motd_received = False  
 
         while True:
             data = await self.reader.read(4096)
@@ -227,13 +228,18 @@ class AsyncIRCClient:
                         self.handle_motd_start(tokens)
                     case "376":  # End of MOTD
                         self.handle_motd_end(tokens)
+                        await self.send_message(f'PRIVMSG NickServ :IDENTIFY {self.nickname} {self.nickserv_password}\r\n')
+                        print("Sent NickServ authentication.")
+                        motd_received = True
                     case "PING":
                         await self.initial_ping(tokens)
+                    case "396":  # NickServ authentication successful
+                        if received_001 and motd_received:
+                            await self.automatic_join()
+                            print("Joined channels after NickServ authentication.")
+                            return
                     case _:
                         self.gui.insert_and_scroll()
-            if received_001:
-                await self.automatic_join()
-                return
 
     async def handle_cap(self, tokens):
         print(f"[DEBUG] Handling CAP: {tokens.params}")
@@ -308,7 +314,6 @@ class AsyncIRCClient:
             self.gui.channel_listbox.insert(tk.END, chan)
 
     def update_gui_user_list(self, channel):
-        print(f"Debug: channel_users = {self.channel_users}")  # Debug line
         self.gui.user_listbox.delete(0, tk.END)
         for user in self.channel_users.get(channel, []):
             self.gui.user_listbox.insert(tk.END, user)
@@ -386,6 +391,9 @@ class AsyncIRCClient:
                 case "VERSION":
                     if tokens.command == "PRIVMSG":
                         await self.send_message(f'NOTICE {sender} :\x01VERSION RudeChat3.0\x01')
+                case "MOO":
+                    if tokens.command == "PRIVMSG":
+                        await self.send_message(f'NOTICE {sender} :\x01OOOOOOOOOOM\x01')
                 case "PING":
                     if tokens.command == "PRIVMSG":
                         await self.send_message(f'NOTICE {sender} :\x01PING {ctcp_content}\x01')
@@ -420,8 +428,6 @@ class AsyncIRCClient:
 
     async def notify_user_of_mention(self, server, channel):
         notification_msg = f"Mention on {server} in {channel}"
-        self.gui.insert_server_widget(f"\n{notification_msg}\n")
-        self.gui.insert_and_scroll()
 
         # Highlight the mentioned channel in the Listbox
         for idx in range(self.gui.channel_listbox.size()):
@@ -478,7 +484,6 @@ class AsyncIRCClient:
         # If the target is the bot's nickname, it's a DM
         if target == self.nickname:
             target = sender  # Consider the sender as the "channel" for DMs
-            print(f"[DEBUG] Current target: {target}")
 
             # Check if we have executed WHOIS for this sender before
             if sender not in self.whois_executed:
@@ -495,7 +500,6 @@ class AsyncIRCClient:
 
                 # If it's a DM and not in the joined_channels list, add it
                 if target == sender and target not in self.joined_channels:
-                    print(f"[DEBUG] Current channel_messages: {self.channel_messages}")
                     self.joined_channels.append(target)
                     self.gui.channel_lists[self.server] = self.joined_channels
                     self.update_gui_channel_list()
@@ -1049,7 +1053,7 @@ class AsyncIRCClient:
                 self.gui.insert_text_widget("Read operation timed out!\n")
                 continue
             except OSError as e:
-                if e.winerror == 121:  # Check if the WinError code is 121
+                if e.winerror == 121:  # I hate this WinError >:C
                     self.gui.insert_text_widget(f"WinError: {e}\n")
                     await self.reconnect()
                 else:
@@ -1833,8 +1837,6 @@ class AsyncIRCClient:
 
     async def start(self):
         await self.connect()
-        if self.nickserv_password:
-            await self.send_message(f'PRIVMSG NickServ :IDENTIFY {self.nickserv_password}')
 
         asyncio.create_task(self.keep_alive())
         asyncio.create_task(self.handle_incoming_message())
@@ -1845,13 +1847,8 @@ class AsyncIRCClient:
         if server_name:
             print(f"Server Name: {server_name}")
             messages = self.channel_messages.get(server_name, {}).get(channel, [])
-            print(f"[DEBUG] Attempting to display DMs for server: {server_name}, channel: {channel}")
         else:
             messages = self.channel_messages.get(channel, [])
-            print(f"[DEBUG] Attempting to display messages for channel: {channel}")
-
-        print(f"[DEBUG] Messages to be displayed: {messages}")
-        print(f"[DEBUG] self.channel_messages: {self.channel_messages}")
 
         for message in messages[-num:]:
             self.gui.insert_text_widget(message)
@@ -2014,15 +2011,12 @@ class IRCGui:
             await irc_client.send_message('QUIT')
 
     def add_client(self, server_name, irc_client):
-        print(f"Adding client: {server_name}")  # Debugging line
         self.clients[server_name] = irc_client
         current_servers = list(self.server_dropdown['values'])
         current_servers.append(server_name)
         self.server_dropdown['values'] = current_servers
         self.server_var.set(server_name)  # Set the current server
         self.channel_lists[server_name] = irc_client.joined_channels
-        print(f"Server Dropdown Values: {self.server_dropdown['values']}")  # Debugging line
-        print(f"Current Clients: {self.clients.keys()}")  # Debugging line
 
     def on_server_change(self, event):
         selected_server = self.server_var.get()
@@ -2071,8 +2065,6 @@ class IRCGui:
             self.highlight_nickname()
 
     async def switch_channel(self, channel_name):
-        print(f"[DEBUG] Attempting to switch to channel: {channel_name}")
-        print(f"[DEBUG] Current channel_messages: {self.irc_client.channel_messages}")
 
         server = self.irc_client.server  # Assume the server is saved in the irc_client object
         print(f"{self.irc_client.server}")
@@ -2085,14 +2077,12 @@ class IRCGui:
         # First, check if it's a DM
         if server in self.irc_client.channel_messages and \
            channel_name in self.irc_client.channel_messages[server]:
-            print(f"[DEBUG] This is a DM with {channel_name} on server {server}")
 
             # Set current channel to the DM
             self.irc_client.current_channel = channel_name
             self.update_nick_channel_label()
 
             # Display the last messages for the current DM
-            print(f"Debug: server = {server}")
             self.irc_client.display_last_messages(channel_name, server_name=server)
             self.insert_and_scroll()
             print(f"server: {server}")
