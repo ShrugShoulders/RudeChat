@@ -418,8 +418,11 @@ class AsyncIRCClient:
                         await self.send_message(f'NOTICE {sender} :\x01PING {ctcp_content}\x01')
                 case "TIME":
                     if tokens.command == "PRIVMSG":
-                        current_time = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-                        await self.send_message(f'NOTICE {sender} :\x01TIME {current_time}\x01')
+                        import pytz
+                        dublin_tz = pytz.timezone('Europe/Dublin')
+                        dublin_time = datetime.datetime.now(dublin_tz).strftime("%Y-%m-%d %H:%M:%S")
+                        time_reply = "\x01TIME " + dublin_time + "\x01"
+                        await self.send_message(f'NOTICE {sender} :{time_reply}')
                 case "ACTION":
                     action_message = f"{timestamp}* {sender} {ctcp_content}\r\n"
                     
@@ -1926,6 +1929,8 @@ class IRCGui:
         self.nickname_colors = self.load_nickname_colors()
         self.clients = {}
         self.channel_topics = {}
+        self.entry_history = []
+        self.history_index = 0
 
         # Server and Topic Frame
         self.server_topic_frame = tk.Frame(self.master, bg="black")
@@ -1997,6 +2002,8 @@ class IRCGui:
         self.entry_widget = tk.Entry(self.master)
         self.entry_widget.grid(row=3, column=1, sticky='ew')
         self.entry_widget.bind('<Tab>', self.handle_tab_complete)
+        self.entry_widget.bind('<Up>', self.handle_arrow_keys)
+        self.entry_widget.bind('<Down>', self.handle_arrow_keys)
 
         # Label for nickname and channel
         self.current_nick_channel = tk.StringVar(value="Nickname | #Channel" + " &>")
@@ -2027,6 +2034,8 @@ class IRCGui:
 
         self.channel_frame.grid_rowconfigure(1, weight=1)
         self.channel_frame.grid_columnconfigure(0, weight=1)
+
+        self.master.after(0, self.bind_return_key)
 
     def load_nickname_colors(self):
         try:
@@ -2300,14 +2309,50 @@ class IRCGui:
         asyncio.create_task(irc_client.keep_alive())
         asyncio.create_task(irc_client.handle_incoming_message())
 
-        async def on_enter_key(event):
-            user_input = self.entry_widget.get()
-            self.entry_widget.delete(0, tk.END)
-            await self.irc_client.command_parser(user_input)
-            self.text_widget.see(tk.END)
+        self.bind_return_key()
 
+    def bind_return_key(self):
         loop = asyncio.get_event_loop()
-        self.entry_widget.bind('<Return>', lambda event: loop.create_task(on_enter_key(event)))
+        self.entry_widget.bind('<Return>', lambda event: loop.create_task(self.on_enter_key(event)))
+
+    async def on_enter_key(self, event):
+        user_input = self.entry_widget.get()
+
+        # Save the entered message to entry_history
+        if user_input:
+            self.entry_history.append(user_input)
+
+            # Limit the entry_history to the last 10 messages
+            if len(self.entry_history) > 10:
+                self.entry_history.pop(0)
+
+            # Reset history_index to the end of entry_history
+            self.history_index = len(self.entry_history)
+
+        self.entry_widget.delete(0, tk.END)
+        await self.irc_client.command_parser(user_input)
+        self.text_widget.see(tk.END)
+
+    def handle_arrow_keys(self, event):
+        if event.keysym == 'Up':
+            self.show_previous_entry()
+        elif event.keysym == 'Down':
+            self.show_next_entry()
+
+    def show_previous_entry(self):
+        if self.history_index > 0:
+            self.history_index -= 1
+            self.entry_widget.delete(0, tk.END)
+            self.entry_widget.insert(0, self.entry_history[self.history_index])
+
+    def show_next_entry(self):
+        if self.history_index < len(self.entry_history) - 1:
+            self.history_index += 1
+            self.entry_widget.delete(0, tk.END)
+            self.entry_widget.insert(0, self.entry_history[self.history_index])
+        elif self.history_index == len(self.entry_history) - 1:
+            self.history_index += 1
+            self.entry_widget.delete(0, tk.END)
 
     def on_channel_click(self, event):
         loop = asyncio.get_event_loop()
