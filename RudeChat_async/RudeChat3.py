@@ -2460,20 +2460,20 @@ class IRCGui:
             end_idx = self.text_widget.search('>', start_idx, f"{start_idx} lineend")
             if end_idx:
                 end_idx = f"{end_idx}+1c"  # Include the '>' character
-                # Extract the nickname
-                nickname = self.text_widget.get(start_idx + "+1c", end_idx + "-1c")
+                # Extract the nickname with '<' and '>'
+                nickname_with_brackets = self.text_widget.get(start_idx, end_idx)
 
                 # If nickname doesn't have an assigned color, generate one
-                if nickname not in self.nickname_colors:
-                    self.nickname_colors[nickname] = self.generate_random_color()
-                nickname_color = self.nickname_colors[nickname]
+                if nickname_with_brackets not in self.nickname_colors:
+                    self.nickname_colors[nickname_with_brackets] = self.generate_random_color()
+                nickname_color = self.nickname_colors[nickname_with_brackets]
 
                 # If it's the main user's nickname, set color to green
-                if nickname == self.irc_client.nickname:
+                if nickname_with_brackets == f"<{self.irc_client.nickname}>":
                     nickname_color = "#39ff14"
 
-                self.text_widget.tag_configure(f"nickname_{nickname}", foreground=nickname_color)
-                self.text_widget.tag_add(f"nickname_{nickname}", start_idx, end_idx)
+                self.text_widget.tag_configure(f"nickname_{nickname_with_brackets}", foreground=nickname_color)
+                self.text_widget.tag_add(f"nickname_{nickname_with_brackets}", start_idx, end_idx)
                 start_idx = end_idx
             else:
                 start_idx = f"{start_idx}+1c"
