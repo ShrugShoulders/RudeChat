@@ -556,7 +556,7 @@ class AsyncIRCClient:
     async def handle_join(self, tokens):
         user_info = tokens.hostmask.nickname
         channel = tokens.params[0]
-        join_message = f"<X> {user_info} has joined channel {channel}\r\n"
+        join_message = f"<Y> {user_info} has joined channel {channel}\r\n"
 
         # Update the message history for the channel
         if channel not in self.channel_messages:
@@ -672,7 +672,7 @@ class AsyncIRCClient:
                     # Display the nick change message in the channel
                     if channel not in self.channel_messages:
                         self.channel_messages[channel] = []
-                    self.channel_messages[channel].append(f"<X> {old_nick} has changed their nickname to {new_nick}\r\n")
+                    self.channel_messages[channel].append(f"<N> {old_nick} has changed their nickname to {new_nick}\r\n")
                     
                     # Insert message into the text widget only if this is the current channel
                     if channel == self.current_channel:
@@ -1571,8 +1571,7 @@ class AsyncIRCClient:
 
     async def handle_mac_command(self, args):
         if len(args) < 2:
-            available_macros = ", ".join(self.ASCII_ART_MACROS.keys())
-            self.gui.insert_text_widget(f"Available ASCII art macros: {available_macros}\r\n")
+            self.update_available_macros()
             self.gui.insert_text_widget("Usage: /mac <macro_name>\r\n")
             return
 
@@ -1587,6 +1586,7 @@ class AsyncIRCClient:
                 await asyncio.sleep(0.5)
                 await self.append_to_channel_history(self.current_channel, line)
         else:
+            self.update_available_macros()
             self.gui.insert_text_widget(f"Unknown ASCII art macro: {macro_name}. Type '/mac' to see available macros.\r\n")
 
     def load_ascii_art_macros(self):
@@ -1603,9 +1603,15 @@ class AsyncIRCClient:
 
     def reload_ascii_macros(self):
         """Clears and reloads the ASCII art macros from files."""
-        self.ASCII_ART_MACROS.clear()  # Clear the current dictionary
+        print("Reloading ASCII art macros...")
         self.ASCII_ART_MACROS = self.load_ascii_art_macros()
-        self.update_message_text(f'ASCII art macros reloaded!\r\n') 
+        self.gui.insert_text_widget(f'ASCII art macros reloaded!\r\n')
+        self.update_available_macros()
+
+    def update_available_macros(self):
+        """Update the available macros list."""
+        available_macros = ", ".join(self.ASCII_ART_MACROS.keys())
+        self.gui.insert_text_widget(f"Available ASCII art macros: {available_macros}\r\n") 
 
     def ignore_user(self, args):
         user_to_ignore = " ".join(args[1:])
@@ -2190,6 +2196,7 @@ class IRCGui:
         self.message_menu.add_command(label="Copy", command=self.copy_text_message)
         self.message_menu.add_command(label="Reset Colors", command=self.reset_nick_colors)
         self.message_menu.add_command(label="Save Colors", command=self.save_nickname_colors)
+        self.message_menu.add_command(label="Reload Macros", command=self.irc_client.reload_ascii_macros)
         
         self.text_widget.bind("<Button-3>", self.show_message_menu)
 
