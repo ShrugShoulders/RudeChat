@@ -1,3 +1,21 @@
+"""
+GPL-3.0 License
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <https://www.gnu.org/licenses/>.
+"""
+
+
 import asyncio
 import base64
 import ssl
@@ -16,7 +34,7 @@ import tkinter as tk
 from plyer import notification
 from tkinter import ttk
 from tkinter.scrolledtext import ScrolledText
-from tkinter import Tk, Frame, Label, Entry, Listbox, Scrollbar, StringVar
+from tkinter import Tk, Frame, Label, Entry, Listbox, Menu, Scrollbar, StringVar
 
 class AsyncIRCClient:
     def __init__(self, text_widget, server_text_widget, entry_widget, master, gui):
@@ -928,9 +946,17 @@ class AsyncIRCClient:
         kicked_nickname = tokens.params[1]
         reason = tokens.params[2] if len(tokens.params) > 2 else 'No reason provided'
 
-        # Display the kick message in the chat window
+        # Update the message history for the channel
+        if channel not in self.channel_messages:
+            self.channel_messages[channel] = []
+
+        # Display the kick message in the chat window only if the channel is the current channel
         kick_message_content = f"{kicked_nickname} has been kicked from {channel} by {tokens.hostmask.nickname} ({reason})"
-        self.gui.insert_text_widget(kick_message_content + "\r\n")
+        self.channel_messages[channel].append(kick_message_content + "\r\n")
+
+        if channel == self.current_channel and self.gui.irc_client == self:
+            self.gui.insert_text_widget(kick_message_content + "\r\n")
+            self.gui.insert_and_scroll()
 
         # Remove the user from the channel_users list for the channel
         user_found = False
@@ -1040,6 +1066,21 @@ class AsyncIRCClient:
         elif command == "333":
             who_set = tokens.params[2]
 
+    def strip_ansi_escape_sequences(self, text):
+        # Strip ANSI escape sequences and IRC formatting characters
+        ansi_escape = re.compile(r'\x1B[@-_][0-?]*[ -/]*[@-~]')
+        cleaned_text = ansi_escape.sub('', text)
+
+        # Strip IRC color codes
+        irc_color = re.compile(r'\x03\d{0,2}(,\d{1,2})?')
+        cleaned_text = irc_color.sub('', cleaned_text)
+
+        # Remove bold characters
+        bold_formatting = re.compile(r'\x02')
+        cleaned_text = bold_formatting.sub('', cleaned_text)
+
+        return cleaned_text
+
     async def handle_incoming_message(self):
         buffer = ""
         current_users_list = []
@@ -1068,7 +1109,8 @@ class AsyncIRCClient:
                 break
 
             decoded_data = data.decode('UTF-8', errors='ignore')
-            buffer += decoded_data
+            cleaned_data = self.strip_ansi_escape_sequences(decoded_data)
+            buffer += cleaned_data
 
             while '\r\n' in buffer:
                 line, buffer = buffer.split('\r\n', 1)
@@ -1218,6 +1260,52 @@ class AsyncIRCClient:
         except Exception as e:
             print(f"Error logging message: {e}")
 
+    def handle_query_command(self, args, timestamp):
+        if len(args) < 2:
+            self.gui.insert_text_widget(f"{timestamp}Error: Please provide a nickname for the query command.\r\n")
+            return
+
+        nickname = args[1]
+        
+        # Remove @ and + symbols from the nickname
+        nickname = nickname.lstrip("@+")
+
+        if nickname not in self.joined_channels:
+            self.open_dm(nickname, timestamp)
+        else:
+            self.gui.insert_text_widget(f"{timestamp}You already have a DM open with {nickname}.\r\n")
+
+    def handle_cq_command(self, args, timestamp):
+        if len(args) < 2:
+            self.update_message_text(f"{timestamp}Usage: /cq <nickname>\r\n")
+        else:
+            nickname = args[1]
+            if nickname in self.joined_channels:
+                self.close_dm(nickname, timestamp)
+            else:
+                self.gui.insert_text_widget(f"No open private message with {nickname}.\r\n")
+
+    def open_dm(self, nickname, timestamp):
+        # Add the DM to the channel list
+        self.joined_channels.append(nickname)
+        self.gui.channel_lists[self.server] = self.joined_channels
+        self.update_gui_channel_list()
+        self.gui.insert_text_widget(f"{timestamp}Opened DM with {nickname}.\r\n")
+
+    def close_dm(self, nickname, timestamp):
+        # Remove the DM from the list of joined channels
+        self.joined_channels.remove(nickname)
+
+        # Remove the DM's messages from the channel_messages dictionary
+        if self.server in self.channel_messages and nickname in self.channel_messages[self.server]:
+            del self.channel_messages[self.server][nickname]
+
+        # Update the GUI's list of channels
+        self.update_gui_channel_list()
+
+        # Display a message indicating the DM was closed
+        self.gui.insert_text_widget(f"Private message with {nickname} closed.\r\n")
+
     async def command_parser(self, user_input):
         args = user_input[1:].split() if user_input.startswith('/') else []
         primary_command = args[0] if args else None
@@ -1230,43 +1318,10 @@ class AsyncIRCClient:
                 await self.join_channel(channel_name)
 
             case "query":  # open a DM with a user
-                if len(args) < 2:
-                    self.gui.insert_text_widget(f"{timestamp}Error: Please provide a nickname for the query command.\r\n")
-                    return
-
-                nickname = args[1]
-                if nickname not in self.joined_channels:
-                    # Add the DM to the channel list
-                    self.joined_channels.append(nickname)
-                    self.gui.channel_lists[self.server] = self.joined_channels
-                    self.update_gui_channel_list()
-                    self.gui.insert_text_widget(f"{timestamp}Opened DM with {nickname}.\r\n")
-                else:
-                    self.gui.insert_text_widget(f"{timestamp}You already have a DM open with {nickname}.\r\n")
+                self.handle_query_command(args, timestamp)
 
             case "cq":  # close a private message (query) with a user
-                if len(args) < 2:
-                    # Display an error message if not enough arguments are provided
-                    self.update_message_text(f"{timestamp}Usage: /cq <nickname>\r\n")
-                else:
-                    nickname = args[1]
-
-                    # Check if the DM exists in the list of open channels
-                    if nickname in self.joined_channels:
-                        # Remove the DM from the list of joined channels
-                        self.joined_channels.remove(nickname)
-
-                        # Remove the DM's messages from the channel_messages dictionary
-                        if self.server in self.channel_messages and nickname in self.channel_messages[self.server]:
-                            del self.channel_messages[self.server][nickname]
-
-                        # Update the GUI's list of channels
-                        self.update_gui_channel_list()
-
-                        # Display a message indicating the DM was closed
-                        self.gui.insert_text_widget(f"Private message with {nickname} closed.\r\n")
-                    else:
-                        self.gui.insert_text_widget(f"No open private message with {nickname}.\r\n")
+                self.handle_cq_command(args, timestamp)
 
             case "quote":  # sends raw IRC message to the server
                 if len(args) < 2:
@@ -1891,7 +1946,7 @@ class IRCGui:
         self.tooltip = None
 
         # Main text widget
-        self.text_widget = ScrolledText(self.frame, wrap='word', bg="black", fg="#C0FFEE")
+        self.text_widget = ScrolledText(self.frame, wrap='word', bg="black", cursor="arrow", fg="#C0FFEE")
         self.text_widget.grid(row=0, column=0, sticky="nsew")
 
         # List frames
@@ -1910,6 +1965,7 @@ class IRCGui:
         self.user_listbox.config(yscrollcommand=self.user_scrollbar.set)
         self.user_listbox.grid(row=1, column=0, sticky='nsew')
         self.user_scrollbar.grid(row=1, column=1, sticky='ns')
+        self.user_listbox.bind("<Button-3>", self.show_user_list_menu)
 
         # Channel frame
         self.channel_frame = tk.Frame(self.list_frame, bg="black")
@@ -1924,6 +1980,7 @@ class IRCGui:
         self.channel_listbox.grid(row=1, column=0, sticky='nsew')
         self.channel_scrollbar.grid(row=1, column=1, sticky='ns')
         self.channel_listbox.bind('<ButtonRelease-1>', self.on_channel_click)
+        self.channel_listbox.bind("<Button-3>", self.show_channel_list_menu)
 
         # Server frame
         self.server_frame = tk.Frame(self.master, height=100, bg="black")
@@ -1932,7 +1989,7 @@ class IRCGui:
         # Configure column to expand
         self.server_frame.grid_columnconfigure(0, weight=1)
 
-        self.server_text_widget = ScrolledText(self.server_frame, wrap='word', height=5, bg="black", fg="#7882ff")
+        self.server_text_widget = ScrolledText(self.server_frame, wrap='word', height=5, bg="black", cursor="arrow", fg="#7882ff")
         self.server_text_widget.grid(row=0, column=0, sticky='nsew')
 
         # Entry widget
@@ -1947,6 +2004,9 @@ class IRCGui:
 
         # Initialize the AsyncIRCClient and set the GUI reference
         self.irc_client = AsyncIRCClient(self.text_widget, self.server_text_widget, self.entry_widget, self.master, self)
+        self.init_input_menu()
+        self.init_message_menu()
+        self.init_server_menu()
 
         # Configure grid weights
         self.master.grid_rowconfigure(0, weight=0)
@@ -1966,6 +2026,128 @@ class IRCGui:
 
         self.channel_frame.grid_rowconfigure(1, weight=1)
         self.channel_frame.grid_columnconfigure(0, weight=1)
+
+    def init_input_menu(self):
+        """
+        Right click menu.
+        """
+        self.input_menu = Menu(self.entry_widget, tearoff=0)
+        self.input_menu.add_command(label="Cut", command=self.cut_text)
+        self.input_menu.add_command(label="Copy", command=self.copy_text)
+        self.input_menu.add_command(label="Paste", command=self.paste_text)
+        self.input_menu.add_command(label="Select All", command=self.select_all_text)
+
+        self.entry_widget.bind("<Button-3>", self.show_input_menu)
+
+    def show_input_menu(self, event):
+        try:
+            self.input_menu.tk_popup(event.x_root, event.y_root)
+        finally:
+            self.input_menu.grab_release()
+
+    def init_message_menu(self):
+        """
+        Right click menu for the main chat window.
+        """
+        self.message_menu = Menu(self.text_widget, tearoff=0)
+        self.message_menu.add_command(label="Copy", command=self.copy_text_message)
+        self.message_menu.add_command(label="Reset Colors", command=self.reset_nick_colors)
+        
+        self.text_widget.bind("<Button-3>", self.show_message_menu)
+
+    def show_message_menu(self, event):
+        try:
+            self.message_menu.tk_popup(event.x_root, event.y_root)
+        finally:
+            self.message_menu.grab_release()
+
+    def init_server_menu(self):
+        """
+        Right click menu for the server window.
+        """
+        self.server_menu = Menu(self.server_text_widget, tearoff=0)
+        self.server_menu.add_command(label="Copy", command=self.copy_text_server)
+
+        self.server_text_widget.bind("<Button-3>", self.show_server_menu)
+
+    def show_server_menu(self, event):
+        try:
+            self.server_menu.tk_popup(event.x_root, event.y_root)
+        finally:
+            self.server_menu.grab_release()
+
+    def create_user_list_menu(self):
+        menu = tk.Menu(self.user_listbox, tearoff=0)
+        menu.add_command(label="Open Query", command=self.open_query_from_menu)
+        menu.add_command(label="Copy", command=self.copy_text_user)
+        menu.add_command(label="Whois", command=self.whois_from_menu)
+        return menu
+
+    def show_user_list_menu(self, event):
+        menu = self.create_user_list_menu()
+        menu.post(event.x_root, event.y_root)
+
+    def create_channel_list_menu(self):
+        menu = tk.Menu(self.channel_listbox, tearoff=0)
+        menu.add_command(label="Close Query", command=self.close_query_from_menu)
+        menu.add_command(label="Leave Channel", command=self.leave_channel_from_menu)
+        return menu
+
+    def show_channel_list_menu(self, event):
+        menu = self.create_channel_list_menu()
+        menu.post(event.x_root, event.y_root)
+
+    def copy_text_user(self):
+        self.user_listbox.event_generate("<<Copy>>")
+
+    def cut_text(self):
+        self.entry_widget.event_generate("<<Cut>>")
+
+    def copy_text(self):
+        self.entry_widget.event_generate("<<Copy>>")
+
+    def copy_text_message(self):
+        self.text_widget.event_generate("<<Copy>>")
+
+    def copy_text_server(self):
+        self.server_text_widget.event_generate("<<Copy>>")
+
+    def paste_text(self):
+        self.entry_widget.event_generate("<<Paste>>")
+
+    def select_all_text(self):
+        self.entry_widget.select_range(0, tk.END)
+        self.entry_widget.icursor(tk.END)
+
+    def open_query_from_menu(self):
+        selected_user_index = self.user_listbox.curselection()
+        if selected_user_index:
+            selected_user = self.user_listbox.get(selected_user_index)
+            self.irc_client.handle_query_command(["/query", selected_user], "<3 ")
+
+    def close_query_from_menu(self):
+        selected_channel_index = self.channel_listbox.curselection()
+        if selected_channel_index:
+            selected_channel = self.channel_listbox.get(selected_channel_index)
+            self.irc_client.handle_cq_command(["/cq", selected_channel], "</3 ")
+
+    def leave_channel_from_menu(self):
+        selected_channel_index = self.channel_listbox.curselection()
+        if selected_channel_index:
+            selected_channel = self.channel_listbox.get(selected_channel_index)
+            loop = asyncio.get_event_loop()
+            loop.create_task(self.irc_client.leave_channel(selected_channel))
+
+    def whois_from_menu(self):
+        selected_user_index = self.user_listbox.curselection()
+        if selected_user_index:
+            selected_user = self.user_listbox.get(selected_user_index)
+            loop = asyncio.get_event_loop()
+            loop.create_task(self.irc_client.whois(selected_user))
+
+    def reset_nick_colors(self):
+        self.nickname_colors = {}
+        self.highlight_nickname()
 
     def add_server_to_combo_box(self, server_name):
         # Get the current list of servers from the combo box
@@ -1996,9 +2178,51 @@ class IRCGui:
         self.tooltip = None
 
     def insert_text_widget(self, message):
+        # Remove ANSI escape codes from the message
+        stripped_message = re.sub(r'\x1B\[([0-9]{1,2}(;[0-9]{1,2})?)?[m|K]?', '', message)
+
+        # Highlight URLs in blue and underline
+        urls = self.find_urls(stripped_message)
+
+        # Set the Text widget state to NORMAL before inserting and configuring tags
         self.text_widget.config(state=tk.NORMAL)
-        self.text_widget.insert(tk.END, message)
+
+        # Insert the message with tags for URLs
+        self.text_widget.insert(tk.END, stripped_message)
+
+        for url in urls:
+            start_idx = "1.0"
+
+            while True:
+                start_idx = self.text_widget.search(url, start_idx, tk.END)
+
+                if not start_idx:
+                    break
+
+                end_idx = f"{start_idx}+{len(url)}c"
+
+                # Create a unique tag for each URL
+                url_tag = f"url_{start_idx}"
+                self.text_widget.tag_configure(url_tag, foreground="blue", underline=1)
+
+                # Apply the tag to the found URL
+                self.text_widget.tag_add(url_tag, start_idx, end_idx)
+                self.text_widget.tag_bind(url_tag, "<Button-1>", lambda event, url=url: self.open_url(event, url))
+
+                # Move the start index to after the current found URL to continue the search
+                start_idx = end_idx
+
+        # Set the Text widget state back to DISABLED after configuring tags
         self.text_widget.config(state=tk.DISABLED)
+
+    def find_urls(self, text):
+        # A simple regex to detect URLs
+        url_pattern = re.compile(r'(\w+://\S+|www\.\S+)')
+        return url_pattern.findall(text)
+
+    def open_url(self, event, url):
+        import webbrowser
+        webbrowser.open(url)
 
     def insert_server_widget(self, message):
         self.server_text_widget.config(state=tk.NORMAL)
@@ -2107,7 +2331,6 @@ class IRCGui:
             self.irc_client.update_gui_user_list(channel_name)
             self.insert_and_scroll()
             print(f"Switching to channel {channel_name}. Current topic should be {self.channel_topics.get(channel_name, 'N/A')}")
-            print(f"Current channel topics: {self.channel_topics}")
 
         else:
             self.insert_text_widget(f"Not a member of channel or unknown DM {channel_name}\r\n")
@@ -2411,8 +2634,10 @@ def main():
     root = tk.Tk()
     app = IRCGui(root)
 
-    loop = asyncio.get_event_loop()
+    new_loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(new_loop)
 
+    loop = asyncio.get_event_loop()
     loop.create_task(initialize_clients(app))
 
     def tk_update():
