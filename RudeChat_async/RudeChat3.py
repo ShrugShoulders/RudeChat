@@ -556,7 +556,7 @@ class AsyncIRCClient:
     async def handle_join(self, tokens):
         user_info = tokens.hostmask.nickname
         channel = tokens.params[0]
-        join_message = f"<Y> {user_info} has joined channel {channel}\r\n"
+        join_message = f"<&> {user_info} has joined channel {channel}\r\n"
 
         # Update the message history for the channel
         if channel not in self.channel_messages:
@@ -672,7 +672,7 @@ class AsyncIRCClient:
                     # Display the nick change message in the channel
                     if channel not in self.channel_messages:
                         self.channel_messages[channel] = []
-                    self.channel_messages[channel].append(f"<N> {old_nick} has changed their nickname to {new_nick}\r\n")
+                    self.channel_messages[channel].append(f"<@> {old_nick} has changed their nickname to {new_nick}\r\n")
                     
                     # Insert message into the text widget only if this is the current channel
                     if channel == self.current_channel:
@@ -1579,7 +1579,7 @@ class AsyncIRCClient:
         if macro_name in self.ASCII_ART_MACROS:
             current_time = datetime.datetime.now().strftime('[%H:%M:%S] ')
             for line in self.ASCII_ART_MACROS[macro_name].splitlines():
-                formatted_message = f"{current_time} <{self.nickname}> {line}\r\n"
+                formatted_message = f"{current_time}<{self.nickname}> {line}\r\n"
                 await self.send_message(f'PRIVMSG {self.current_channel} :{line}')
                 self.gui.insert_text_widget(formatted_message)
                 self.gui.highlight_nickname()
