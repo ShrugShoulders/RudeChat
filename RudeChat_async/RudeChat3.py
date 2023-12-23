@@ -2452,28 +2452,31 @@ class IRCGui:
         # Start again at the beginning of the text_widget for other nicknames enclosed in <>
         start_idx = "1.0"
         while True:
+            # Find the opening '<'
             start_idx = self.text_widget.search('<', start_idx, stopindex=tk.END)
             if not start_idx:
                 break
+            # Find the closing '>' ensuring no newlines between
+            end_idx = self.text_widget.search('>', start_idx, f"{start_idx} lineend")
+            if end_idx:
+                end_idx = f"{end_idx}+1c"  # Include the '>' character
+                # Extract the nickname
+                nickname = self.text_widget.get(start_idx + "+1c", end_idx + "-1c")
 
-            end_idx = self.text_widget.search('>', start_idx, stopindex=tk.END)
-            if not end_idx:
-                break
+                # If nickname doesn't have an assigned color, generate one
+                if nickname not in self.nickname_colors:
+                    self.nickname_colors[nickname] = self.generate_random_color()
+                nickname_color = self.nickname_colors[nickname]
 
-            # Get the nickname using text widget indices
-            nickname = self.text_widget.get(start_idx, end_idx + '+1c')
+                # If it's the main user's nickname, set color to green
+                if nickname == self.irc_client.nickname:
+                    nickname_color = "#39ff14"
 
-            # Check if a color for this nickname is already stored, if not, generate and store it
-            if nickname not in self.nickname_colors:
-                random_color = self.generate_random_color()
-                self.nickname_colors[nickname] = random_color
-
-            nickname_color = self.nickname_colors[nickname]
-            self.text_widget.tag_add(nickname, start_idx, end_idx + '+1c')  # Include the '>'
-            self.text_widget.tag_configure(nickname, foreground=nickname_color)
-
-            # Update the start index to search from the position after the current found nickname
-            start_idx = end_idx + '+1c'
+                self.text_widget.tag_configure(f"nickname_{nickname}", foreground=nickname_color)
+                self.text_widget.tag_add(f"nickname_{nickname}", start_idx, end_idx)
+                start_idx = end_idx
+            else:
+                start_idx = f"{start_idx}+1c"
 
     def generate_random_color(self):
         while True:
