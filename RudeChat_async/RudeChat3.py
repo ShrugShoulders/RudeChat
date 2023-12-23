@@ -1579,7 +1579,7 @@ class AsyncIRCClient:
         if macro_name in self.ASCII_ART_MACROS:
             current_time = datetime.datetime.now().strftime('[%H:%M:%S] ')
             for line in self.ASCII_ART_MACROS[macro_name].splitlines():
-                formatted_message = f"{current_time}<{self.nickname}> {line}\r\n"
+                formatted_message = f"{current_time} <{self.nickname}> {line}\r\n"
                 await self.send_message(f'PRIVMSG {self.current_channel} :{line}')
                 self.gui.insert_text_widget(formatted_message)
                 self.gui.highlight_nickname()
