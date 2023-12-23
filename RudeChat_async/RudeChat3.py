@@ -30,6 +30,7 @@ import logging
 import os
 import re
 import sys
+import json
 import tkinter as tk
 from plyer import notification
 from tkinter import ttk
@@ -1922,7 +1923,7 @@ class IRCGui:
 
         # Initialize other instance variables
         self.channel_lists = {}
-        self.nickname_colors = {}
+        self.nickname_colors = self.load_nickname_colors()
         self.clients = {}
         self.channel_topics = {}
 
@@ -2027,6 +2028,28 @@ class IRCGui:
         self.channel_frame.grid_rowconfigure(1, weight=1)
         self.channel_frame.grid_columnconfigure(0, weight=1)
 
+    def load_nickname_colors(self):
+        try:
+            with open('nickname_colors.json', 'r') as file:
+                nickname_colors = json.load(file)
+            return nickname_colors
+        except FileNotFoundError:
+            print("Nickname colors file not found. Returning an empty dictionary.")
+            return {}
+        except json.JSONDecodeError as e:
+            print(f"Error decoding JSON in nickname colors file: {e}. Returning an empty dictionary.")
+            return {}
+        except Exception as e:
+            print(f"An unexpected error occurred while loading nickname colors: {e}. Returning an empty dictionary.")
+            return {}
+
+    def save_nickname_colors(self):
+        try:
+            with open('nickname_colors.json', 'w') as file:
+                json.dump(self.nickname_colors, file)
+        except Exception as e:
+            print(f"An unexpected error occurred while saving nickname colors: {e}. Unable to save nickname colors.")
+
     def init_input_menu(self):
         """
         Right click menu.
@@ -2052,6 +2075,7 @@ class IRCGui:
         self.message_menu = Menu(self.text_widget, tearoff=0)
         self.message_menu.add_command(label="Copy", command=self.copy_text_message)
         self.message_menu.add_command(label="Reset Colors", command=self.reset_nick_colors)
+        self.message_menu.add_command(label="Save Colors", command=self.save_nickname_colors)
         
         self.text_widget.bind("<Button-3>", self.show_message_menu)
 
@@ -2089,8 +2113,16 @@ class IRCGui:
 
     def create_channel_list_menu(self):
         menu = tk.Menu(self.channel_listbox, tearoff=0)
-        menu.add_command(label="Close Query", command=self.close_query_from_menu)
-        menu.add_command(label="Leave Channel", command=self.leave_channel_from_menu)
+        
+        # Assume self.channel_listbox is a list of channel names or DM nicknames
+        selected_channel_index = self.channel_listbox.curselection()
+        if selected_channel_index:
+            selected_channel = self.channel_listbox.get(selected_channel_index)
+            if '#' in selected_channel:
+                menu.add_command(label="Leave Channel", command=self.leave_channel_from_menu)
+            else:
+                menu.add_command(label="Close Query", command=self.close_query_from_menu)
+        
         return menu
 
     def show_channel_list_menu(self, event):
@@ -2135,8 +2167,9 @@ class IRCGui:
         selected_channel_index = self.channel_listbox.curselection()
         if selected_channel_index:
             selected_channel = self.channel_listbox.get(selected_channel_index)
-            loop = asyncio.get_event_loop()
-            loop.create_task(self.irc_client.leave_channel(selected_channel))
+            if '#' in selected_channel:
+                loop = asyncio.get_event_loop()
+                loop.create_task(self.irc_client.leave_channel(selected_channel))
 
     def whois_from_menu(self):
         selected_user_index = self.user_listbox.curselection()
@@ -2146,7 +2179,7 @@ class IRCGui:
             loop.create_task(self.irc_client.whois(selected_user))
 
     def reset_nick_colors(self):
-        self.nickname_colors = {}
+        self.nickname_colors = self.load_nickname_colors()
         self.highlight_nickname()
 
     def add_server_to_combo_box(self, server_name):
@@ -2382,7 +2415,8 @@ class IRCGui:
             if not end_idx:
                 break
 
-            nickname = self.text_widget.get(start_idx + '+1c', end_idx + '-1c')
+            # Get the nickname using text widget indices
+            nickname = self.text_widget.get(start_idx, end_idx + '+1c')
 
             # Check if a color for this nickname is already stored, if not, generate and store it
             if nickname not in self.nickname_colors:
