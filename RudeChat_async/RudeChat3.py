@@ -21,6 +21,7 @@ import base64
 import ssl
 import configparser
 import datetime
+import fnmatch
 import irctokens
 import time
 import textwrap
@@ -487,6 +488,11 @@ class AsyncIRCClient:
         target = tokens.params[0]
         message = tokens.params[1]
 
+        sender_hostmask = str(tokens.hostmask)
+        # Check if the sender is in the ignore list based on hostmask wildcard
+        if any(fnmatch.fnmatch(sender_hostmask, ignored) for ignored in self.ignore_list):
+            return
+
         # Check if the user is mentioned in the message
         if self.nickname in message:
             await self.notify_user_of_mention(self.server, target)
@@ -766,7 +772,19 @@ class AsyncIRCClient:
                 user_modes.discard(mode)
                     
                 if not user_modes:
-                    del current_modes[user]  # Remove the user's entry if no modes left
+                    if user in current_modes:
+                        del current_modes[user]  # Remove the user's entry if no modes left
+                    else:
+                        print(f"User {user} not found in current modes. Adding with no modes.")
+                        user_modes = set()
+
+                        # Check for special characters in the user's nickname and add corresponding modes
+                        if '@' in user:
+                            user_modes.add('o')  # Add the '@' mode
+                        if '+' in user:
+                            user_modes.add('v')  # Add the '+' mode
+
+                        current_modes[user] = user_modes  # Add the user with an empty set of modes
                 else:
                     current_modes[user] = user_modes  # Update the user's modes
 
@@ -1537,6 +1555,8 @@ class AsyncIRCClient:
                 await self.gui.remove_server_from_dropdown()
 
             case None:
+                if not user_input:
+                    return
                 if self.current_channel:
                     await self.send_message(f'PRIVMSG {self.current_channel} :{user_input}')
                     self.gui.insert_text_widget(f"{timestamp}<{self.nickname}> {user_input}\r\n")
