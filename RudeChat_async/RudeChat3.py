@@ -1065,10 +1065,18 @@ class AsyncIRCClient:
         if command == "332":
             topic = tokens.params[2]
             self.gui.channel_topics[channel_name] = topic
-            self.gui.current_topic.set(f"Topic: {topic}")
+            self.gui.current_topic.set(f"{topic}")
 
         elif command == "333":
             who_set = tokens.params[2]
+
+        elif command == "TOPIC":
+            # Debugging output
+            print(f"Debug: TOPIC params - {tokens.params}")
+            # Handling updates to the channel topic
+            topic = tokens.params[1]
+            self.gui.channel_topics[channel_name] = topic
+            self.gui.current_topic.set(f"{topic}")
 
     def strip_ansi_escape_sequences(self, text):
         # Strip ANSI escape sequences and IRC formatting characters
@@ -1167,7 +1175,7 @@ class AsyncIRCClient:
                     case "311" | "312" | "313" | "317" | "319" | "301" | "671" | "338" | "318" | "330":
                         await self.handle_whois_replies(tokens.command, tokens)
 
-                    case "332" | "333":
+                    case "332" | "333" | "TOPIC":
                         self.handle_topic(tokens)
 
                     case "367":  
@@ -1478,8 +1486,6 @@ class AsyncIRCClient:
                     self.gui.insert_text_widget(f"Not a member of channel {channel_name}\r\n")
 
             case "topic":
-                # Use this line to join all the arguments after the first one (the command "topic")
-                # This allows for multi-word topics
                 new_topic = ' '.join(args[1:])
                 await self.request_send_topic(new_topic)
 
@@ -2217,6 +2223,7 @@ class IRCGui:
         self.message_menu.add_command(label="Reset Colors", command=self.reset_nick_colors)
         self.message_menu.add_command(label="Save Colors", command=self.save_nickname_colors)
         self.message_menu.add_command(label="Reload Macros", command=self.irc_client.reload_ascii_macros)
+        self.message_menu.add_command(label="Clear", command=self.clear_chat_window)
         
         self.text_widget.bind("<Button-3>", self.show_message_menu)
 
@@ -2512,7 +2519,6 @@ class IRCGui:
     async def switch_channel(self, channel_name):
 
         server = self.irc_client.server  # Assume the server is saved in the irc_client object
-        print(f"{self.irc_client.server}")
 
         # Clear the text window
         self.text_widget.config(state=tk.NORMAL)
@@ -2530,11 +2536,10 @@ class IRCGui:
             # Display the last messages for the current DM
             self.irc_client.display_last_messages(channel_name, server_name=server)
             self.insert_and_scroll()
-            print(f"server: {server}")
             self.highlight_nickname()
 
             # No topic for DMs
-            self.current_topic.set("Topic: N/A")
+            self.current_topic.set(f"{channel_name}")
 
         # Then, check if it's a channel
         elif channel_name in self.irc_client.joined_channels:
@@ -2543,7 +2548,7 @@ class IRCGui:
 
             # Update topic label
             current_topic = self.channel_topics.get(channel_name, "N/A")
-            self.current_topic.set(f"Topic: {current_topic}")
+            self.current_topic.set(f"{current_topic}")
 
             # Display the last messages for the current channel
             self.irc_client.display_last_messages(self.irc_client.current_channel)
