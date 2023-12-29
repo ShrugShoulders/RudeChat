@@ -1071,12 +1071,11 @@ class AsyncIRCClient:
             who_set = tokens.params[2]
 
         elif command == "TOPIC":
-            # Debugging output
-            print(f"Debug: TOPIC params - {tokens.params}")
             # Handling updates to the channel topic
             topic = tokens.params[1]
             self.gui.channel_topics[channel_name] = topic
             self.gui.current_topic.set(f"{topic}")
+            self.gui.insert_text_widget(f"Topic has been changed to: {topic}")
 
     def strip_ansi_escape_sequences(self, text):
         # Strip ANSI escape sequences and IRC formatting characters
@@ -2368,38 +2367,31 @@ class IRCGui:
         self.tooltip = None
 
     def insert_text_widget(self, message):
-        # Remove ANSI escape codes from the message
-        stripped_message = re.sub(r'\x1B\[([0-9]{1,2}(;[0-9]{1,2})?)?[m|K]?', '', message)
-
         # Highlight URLs in blue and underline
-        urls = self.find_urls(stripped_message)
+        urls = self.find_urls(message)
 
         # Set the Text widget state to NORMAL before inserting and configuring tags
         self.text_widget.config(state=tk.NORMAL)
 
-        # Insert the message with tags for URLs
-        self.text_widget.insert(tk.END, stripped_message)
+        # Insert the message without tags initially
+        self.text_widget.insert(tk.END, message)
 
+        # Batch configure tags for all URLs
+        for url in urls:
+            tag_name = f"url_{url}"
+            self.text_widget.tag_configure(tag_name, foreground="blue", underline=1)
+
+        # Apply tags and bind events in a single pass
         for url in urls:
             start_idx = "1.0"
-
             while True:
-                start_idx = self.text_widget.search(url, start_idx, tk.END)
-
+                start_idx = self.text_widget.search(url, start_idx, tk.END, tag_name)
                 if not start_idx:
                     break
-
                 end_idx = f"{start_idx}+{len(url)}c"
-
-                # Create a unique tag for each URL
-                url_tag = f"url_{start_idx}"
-                self.text_widget.tag_configure(url_tag, foreground="blue", underline=1)
-
-                # Apply the tag to the found URL
-                self.text_widget.tag_add(url_tag, start_idx, end_idx)
-                self.text_widget.tag_bind(url_tag, "<Button-1>", lambda event, url=url: self.open_url(event, url))
-
-                # Move the start index to after the current found URL to continue the search
+                tag_name = f"url_{url}"
+                self.text_widget.tag_add(tag_name, start_idx, end_idx)
+                self.text_widget.tag_bind(tag_name, "<Button-1>", lambda event, url=url: self.open_url(event, url))
                 start_idx = end_idx
 
         # Set the Text widget state back to DISABLED after configuring tags
