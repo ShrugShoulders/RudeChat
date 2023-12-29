@@ -26,8 +26,6 @@ import irctokens
 import time
 import textwrap
 import random
-import datetime
-import logging
 import os
 import re
 import sys
@@ -36,9 +34,10 @@ import tkinter as tk
 from plyer import notification
 from tkinter import ttk
 from tkinter.scrolledtext import ScrolledText
-from tkinter import Tk, Frame, Label, Entry, Listbox, Menu, Scrollbar, StringVar
+from tkinter import Menu
 
-class AsyncIRCClient:
+
+class RudeChatClient:
     def __init__(self, text_widget, server_text_widget, entry_widget, master, gui):
         self.master = master
         self.text_widget = text_widget
