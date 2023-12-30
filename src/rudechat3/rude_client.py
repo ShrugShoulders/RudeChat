@@ -1053,7 +1053,19 @@ class RudeChatClient:
             topic = tokens.params[1]
             self.gui.channel_topics[channel_name] = topic
             self.gui.current_topic.set(f"{topic}")
-            self.gui.insert_text_widget(f"Topic has been changed to: {topic}")
+            self.gui.insert_text_widget(f"Topic has been changed to: {topic}\r\n")
+
+    def handle_nickname_doesnt_exist(self, tokens):
+        """
+        Handle the "401" response, which indicates that a given nickname doesn't exist on the server.
+        """
+        if len(tokens.params) >= 2:
+            # Extract the nickname from the second element of the list
+            nickname = tokens.params[1]
+            
+            self.gui.insert_text_widget(f"The nickname '{nickname}' doesn't exist on the server.")
+        else:
+            print("Invalid response format for '401'.")
 
     def strip_ansi_escape_sequences(self, text):
         # Strip ANSI escape sequences and IRC formatting characters
@@ -1160,6 +1172,9 @@ class RudeChatClient:
                             
                     case "368":  
                         self.handle_endofbanlist(tokens)
+
+                    case "401":
+                        self.handle_nickname_doesnt_exist(tokens)
 
                     case "322":  # Channel list
                         await self.handle_list_response(tokens)
