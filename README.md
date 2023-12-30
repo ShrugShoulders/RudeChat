@@ -1,5 +1,5 @@
-To install cd to src/rudechat3 && run pip install .
-Right click anywhere to open and edit the config.
+        To install cd to src/rudechat3 && run pip install .
+        Right click anywhere to open and edit the config.
 RudeIRC assumes conf.server.rude is available and configed properly:
 
 Config Example:
