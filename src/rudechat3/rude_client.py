@@ -1652,9 +1652,15 @@ class RudeChatClient:
         
         # Construct the full path for the ignore_list.txt
         file_path = os.path.join(script_directory, 'ignore_list.txt')
-        if os.path.exists("ignore_list.txt"):
+        
+        if os.path.exists(file_path):
             with open(file_path, "r", encoding='utf-8') as f:
                 self.ignore_list = [line.strip() for line in f.readlines()]
+        else:
+            # If the file doesn't exist, create it
+            with open(file_path, "w", encoding='utf-8') as f:
+                # You can add default content to the file if needed
+                pass
 
     def reload_ignore_list(self):
         self.ignore_list = []
