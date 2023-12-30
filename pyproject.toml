@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "RudeChat"
-version = "3.0.0"
+version = "3.0.1"
 description = "RudeChat is a Python IRC client designed to be fast, portable, and fun. "
 readme = "README.md"
 requires-python = ">=3.11"
@@ -21,11 +21,12 @@ source = ["src"]
 packages = [
     { include = "rudechat3", from = "." },
     { include = "rudechat3/Art", from = "rudechat3/Art" },
-    { include = "rudechat3/Sounds", from = "rudechat3/Sounds"},
+    { include = "rudechat3/Sounds", from = "rudechat3/Sounds" },
     { include = "rudechat3/Fortune Lists", from = "rudechat3/Fortune Lists" },
-    { include = "*.rude" },
+    { include = "rudechat3/Splash/**", from = "." },
+    { include = ["*.rude"], from = "." },
     { include = "nickname_colors.json" },
     { include = "rude.ico" },
     { include = "rude.png" },
-    { include = "ignore_list.txt"}
+    { include = "ignore_list.txt", from = "rudechat3" },
 ]
