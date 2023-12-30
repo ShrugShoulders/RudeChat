@@ -573,7 +573,7 @@ class RudeGui:
             self.update_nick_channel_label()
 
             # Display the last messages for the current DM
-            self.irc_client.display_last_messages(channel_name, server_name=server)
+            await self.irc_client.display_last_messages(channel_name, server_name=server)
             self.insert_and_scroll()
             self.highlight_nickname()
 
@@ -590,7 +590,7 @@ class RudeGui:
             self.current_topic.set(f"{current_topic}")
 
             # Display the last messages for the current channel
-            self.irc_client.display_last_messages(self.irc_client.current_channel)
+            await self.irc_client.display_last_messages(self.irc_client.current_channel)
             self.highlight_nickname()
 
             self.irc_client.update_gui_user_list(channel_name)
