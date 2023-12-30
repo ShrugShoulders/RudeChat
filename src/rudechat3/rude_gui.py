@@ -62,6 +62,7 @@ class RudeGui:
         # Main text widget
         self.text_widget = ScrolledText(self.frame, wrap='word', bg="black", cursor="arrow", fg="#C0FFEE")
         self.text_widget.grid(row=0, column=0, sticky="nsew")
+        self.show_startup_art()
 
         # List frames
         self.list_frame = tk.Frame(self.frame, bg="black")
@@ -144,6 +145,26 @@ class RudeGui:
         self.channel_frame.grid_columnconfigure(0, weight=1)
 
         self.master.after(0, self.bind_return_key)
+
+    def show_startup_art(self):
+        splash_directory = os.path.join(self.script_directory, "Splash")
+
+        try:
+            # List all .txt files in the Splash directory
+            txt_files = [f for f in os.listdir(splash_directory) if f.endswith(".txt")]
+
+            if not txt_files:
+                raise FileNotFoundError("No .txt files found in the Splash directory")
+
+            # Choose a random .txt file
+            random_art_file = random.choice(txt_files)
+            art_path = os.path.join(splash_directory, random_art_file)
+
+            with open(art_path, "r", encoding='utf-8') as art_file:
+                art_content = art_file.read()
+                self.text_widget.insert(tk.END, art_content)
+        except FileNotFoundError as e:
+            print(f"Error displaying startup art: {e}")
 
     async def remove_server_from_dropdown(self):
         current_server = self.server_var.get()
