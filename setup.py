@@ -24,6 +24,7 @@ setup(
             "Art/*",
             "Sounds/*",
             "Fortune Lists/*",
+            "Splash/*",
             "*.rude",
             "nickname_colors.json",
             "rude.ico",
