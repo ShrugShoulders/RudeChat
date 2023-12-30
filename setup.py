@@ -28,6 +28,7 @@ setup(
             "nickname_colors.json",
             "rude.ico",
             "rude.png",
+            "ignore_list.txt",
         ],
     },
     entry_points={
