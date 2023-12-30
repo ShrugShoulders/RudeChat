@@ -25,4 +25,4 @@ file name: conf.libera.rude
                 ssl_enabled = True needs port 6697(usually)
                 sasl_enabled will use SASL to authenticate if SASL is available. Default is False - must be enabled.
 
-![alt text](https://i.imgur.com/tO0n1bv.png)
+![alt text]([https://i.imgur.com/tO0n1bv.png](https://i.imgur.com/tO0n1bv.png)https://i.imgur.com/tO0n1bv.png)
