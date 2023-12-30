@@ -27,4 +27,5 @@ packages = [
     { include = "nickname_colors.json" },
     { include = "rude.ico" },
     { include = "rude.png" },
+    { include = "ignore_list.txt"}
 ]
