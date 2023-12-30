@@ -2021,7 +2021,7 @@ class RudeChatClient:
 
         await self.main_loop()
 
-    def display_last_messages(self, channel, num=200, server_name=None):
+    async def display_last_messages(self, channel, num=200, server_name=None):
         if server_name:
             print(f"Server Name: {server_name}")
             messages = self.channel_messages.get(server_name, {}).get(channel, [])
