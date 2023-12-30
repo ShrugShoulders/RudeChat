@@ -1,9 +1,13 @@
-RudeIRC assumes conf.rude is available and configed properly:
+To install cd to src/rudechat3 && run pip install .
+Right click anywhere to open and edit the config.
+RudeIRC assumes conf.server.rude is available and configed properly:
 
 Config Example:
+file name: conf.libera.rude
 
         [IRC]
-        nickname = Rudie
+        server_name = Libera
+        nickname = Rude
         server = irc.libera.chat
         auto_join_channels = #irish
         nickserv_password = password
@@ -12,7 +16,7 @@ Config Example:
         font_family = Hack
         font_size = 10
         sasl_enabled = False
-        sasl_username = Rudie
+        sasl_username = Rude
         sasl_password = password
 
                 password can be replaced with your nick's password to auto-auth with nickserv.
