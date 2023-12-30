@@ -223,7 +223,7 @@ class RudeGui:
         root = tk.Tk()
         root.title("Configuration Window")
 
-        files = os.listdir()
+        files = os.listdir(self.script_directory)
         config_files = [f for f in files if f.startswith("conf.") and f.endswith(".rude")]
         config_files.sort()
 
@@ -232,12 +232,12 @@ class RudeGui:
             root.destroy()
             return
 
-        config_window = ConfigWindow(root, config_files[0])
+        config_window = ConfigWindow(root, os.path.join(self.script_directory, config_files[0]))
 
         def on_config_change(event):
             selected_config_file = selected_config_file_var.get()
-            config_window.config_file = selected_config_file
-            config_window.config.read(selected_config_file)
+            config_window.config_file = os.path.join(self.script_directory, selected_config_file)
+            config_window.config.read(config_window.config_file)
             config_window.create_widgets()
 
         # Menu to choose configuration file
