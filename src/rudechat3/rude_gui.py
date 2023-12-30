@@ -26,6 +26,7 @@ class RudeGui:
         self.master.title("RudeChat")
         self.master.geometry("1200x800")
         self.master.configure(bg="black")
+        self.script_directory = os.path.dirname(os.path.abspath(__file__))
 
         # Main frame
         self.frame = tk.Frame(self.master, bg="black")
@@ -161,12 +162,14 @@ class RudeGui:
         self.gui.update_nick_channel_label()
 
     def load_nickname_colors(self):
+        nickname_colors_path = os.path.join(self.script_directory, 'nickname_colors.json')
+
         try:
-            with open('nickname_colors.json', 'r') as file:
+            with open(nickname_colors_path, 'r') as file:
                 nickname_colors = json.load(file)
             return nickname_colors
         except FileNotFoundError:
-            print("Nickname colors file not found. Returning an empty dictionary.")
+            print(f"Nickname colors file not found at {nickname_colors_path}. Returning an empty dictionary.")
             return {}
         except json.JSONDecodeError as e:
             print(f"Error decoding JSON in nickname colors file: {e}. Returning an empty dictionary.")
@@ -176,8 +179,10 @@ class RudeGui:
             return {}
 
     def save_nickname_colors(self):
+        nickname_colors_path = os.path.join(self.script_directory, 'nickname_colors.json')
+
         try:
-            with open('nickname_colors.json', 'w') as file:
+            with open(nickname_colors_path, 'w') as file:
                 json.dump(self.nickname_colors, file)
         except Exception as e:
             print(f"An unexpected error occurred while saving nickname colors: {e}. Unable to save nickname colors.")
