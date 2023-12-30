@@ -1,0 +1,51 @@
+LICENSE
+README.md
+pyproject.toml
+setup.py
+src/rudechat3/main.py
+src/RudeChat.egg-info/PKG-INFO
+src/RudeChat.egg-info/SOURCES.txt
+src/RudeChat.egg-info/dependency_links.txt
+src/RudeChat.egg-info/entry_points.txt
+src/RudeChat.egg-info/requires.txt
+src/RudeChat.egg-info/top_level.txt
+src/rudechat3/__init__.py
+src/rudechat3/conf.freenode.rude
+src/rudechat3/conf.libera.rude
+src/rudechat3/conf.oftc.rude
+src/rudechat3/configure_window.py
+src/rudechat3/list_window.py
+src/rudechat3/main.py
+src/rudechat3/nickname_colors.json
+src/rudechat3/rude.ico
+src/rudechat3/rude.png
+src/rudechat3/rude_client.py
+src/rudechat3/rude_gui.py
+src/rudechat3/shared_imports.py
+src/rudechat3/Art/Windows.txt
+src/rudechat3/Art/alien1.txt
+src/rudechat3/Art/catface.txt
+src/rudechat3/Art/clover.txt
+src/rudechat3/Art/clover2.txt
+src/rudechat3/Art/cow1.txt
+src/rudechat3/Art/cow2.txt
+src/rudechat3/Art/cow3.txt
+src/rudechat3/Art/facetest.txt
+src/rudechat3/Art/ferengicow.txt
+src/rudechat3/Art/kitty.txt
+src/rudechat3/Art/mouse.txt
+src/rudechat3/Art/mush1.txt
+src/rudechat3/Art/mush2.txt
+src/rudechat3/Art/mush3.txt
+src/rudechat3/Art/rat.txt
+src/rudechat3/Art/rat2.txt
+src/rudechat3/Art/rat3.txt
+src/rudechat3/Art/rat4.txt
+src/rudechat3/Art/shrug.txt
+src/rudechat3/Art/tableflip.txt
+src/rudechat3/Art/ubuntu.txt
+src/rudechat3/Fortune Lists/dadjoke.txt
+src/rudechat3/Fortune Lists/insults.txt
+src/rudechat3/Fortune Lists/therules.txt
+src/rudechat3/Fortune Lists/yomama.txt
+src/rudechat3/Sounds/Notification4.wav

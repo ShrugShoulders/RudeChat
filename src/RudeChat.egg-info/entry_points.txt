@@ -1,0 +1,2 @@
+[console_scripts]
+rudechat = rudechat3.main:main

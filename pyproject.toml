@@ -1,0 +1,28 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "RudeChat"
+version = "3.0.0"
+description = "RudeChat is a Python IRC client designed to be fast, portable, and fun. "
+readme = "README.md"
+requires-python = ">=3.11"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+    "Operating System :: OS Independent",
+]
+[project.scripts]
+rudechat = "rudechat3.main:main"
+
+[tool.poetry]
+source = ["src"]
+packages = [
+    { include = "rudechat3", from = "." },
+    { include = "rudechat3/Art", from = "rudechat3/Art" },
+    { include = "rudechat3/Sounds", from = "rudechat3/Sounds"},
+    { include = "rudechat3/Fortune Lists", from = "rudechat3/Fortune Lists" },
+    # Add other packages if needed
+]
+
