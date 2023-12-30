@@ -27,6 +27,8 @@ class RudeGui:
         self.master.geometry("1200x800")
         self.master.configure(bg="black")
         self.script_directory = os.path.dirname(os.path.abspath(__file__))
+        icon_path = os.path.join(self.script_directory, "rude.ico")
+        self.master.iconbitmap(default=icon_path)
 
         # Main frame
         self.frame = tk.Frame(self.master, bg="black")
