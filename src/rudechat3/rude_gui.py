@@ -462,10 +462,11 @@ class RudeGui:
         self.server_text_widget.config(state=tk.DISABLED)
         self.insert_and_scroll()
 
-    async def send_quit_to_all_clients(self):
+    async def send_quit_to_all_clients(self, quit_message=None):
         for irc_client in self.clients.values():
+            quit_cmd = f'QUIT :{quit_message}' if quit_message else 'QUIT :RudeChat3'
+            await self.irc_client.send_message(quit_cmd)
             await asyncio.sleep(1)
-            await irc_client.send_message('QUIT')
 
     def add_client(self, server_name, irc_client):
         self.clients[server_name] = irc_client
