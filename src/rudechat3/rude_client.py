@@ -605,7 +605,7 @@ class RudeChatClient:
             pass
 
     async def handle_quit(self, tokens):
-        user_info = tokens.hostmask.nickname  # No stripping needed here
+        user_info = tokens.hostmask.nickname
         reason = tokens.params[0] if tokens.params else "No reason"
         quit_message = f"<X> {user_info} has quit: {reason}\r\n"
 
@@ -721,9 +721,9 @@ class RudeChatClient:
         mode_change = tokens.params[1]
         user = tokens.params[2] if len(tokens.params) > 2 else None
 
-        # Ignore ban and unban commands
-        if mode_change in ['+b', '-b']:
-            print(f"Ignoring ban/unban mode for {user if user else 'unknown'}")
+        # Ignore ban and unban and quiet modes
+        if mode_change in ['+b', '-b', '-q', '+q']:
+            print(f"Ignoring ban/unban/quiet mode for {user if user else 'unknown'}")
             return
 
         if channel in self.joined_channels and user:
@@ -733,7 +733,19 @@ class RudeChatClient:
             if mode_change.startswith('+'):
                 mode = mode_change[1]
                 current_modes.setdefault(user, set()).add(mode)
-                    
+                
+                # Show message and save to history
+                message = f"<+> {user} has been given mode +{mode}\r\n"
+                if channel == self.current_channel:
+                    self.gui.insert_text_widget(f"{message}\r\n")
+                    self.gui.highlight_nickname()
+
+                # Update the message history for the channel
+                if channel not in self.channel_messages:
+                    self.channel_messages[channel] = []
+
+                self.channel_messages[channel].append(message)
+
             # Handle removal of modes
             elif mode_change.startswith('-'):
                 mode = mode_change[1]
@@ -745,10 +757,22 @@ class RudeChatClient:
                     ]
                 else:
                     print(f"Unknown mode: {mode}")
-                    
+
                 user_modes = current_modes.get(user, set())
                 user_modes.discard(mode)
-                    
+
+                # Show message and save to history
+                message = f"<-> {user} has had mode +{mode} removed\r\n"
+                if channel == self.current_channel:
+                    self.gui.insert_text_widget(f"{message}\r\n")
+                    self.gui.highlight_nickname()
+
+                # Update the message history for the channel
+                if channel not in self.channel_messages:
+                    self.channel_messages[channel] = []
+
+                self.channel_messages[channel].append(message)
+
                 if not user_modes:
                     if user in current_modes:
                         del current_modes[user]  # Remove the user's entry if no modes left
@@ -1507,7 +1531,9 @@ class RudeChatClient:
                 await self.send_message_to_all_channels(message)
 
             case "quit":
-                await self.gui.send_quit_to_all_clients()
+                quit_message = " ".join(args[1:]) if len(args) > 0 else None
+                await self.gui.send_quit_to_all_clients(quit_message)
+                await asyncio.sleep(1)
                 self.master.destroy()
                 return False
 
