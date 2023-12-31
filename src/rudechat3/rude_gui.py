@@ -236,11 +236,15 @@ class RudeGui:
         self.message_menu.add_command(label="Copy", command=self.copy_text_message)
         self.message_menu.add_command(label="Reset Colors", command=self.reset_nick_colors)
         self.message_menu.add_command(label="Save Colors", command=self.save_nickname_colors)
-        self.message_menu.add_command(label="Reload Macros", command=self.irc_client.reload_ascii_macros)
+        self.message_menu.add_command(label="Reload Macros", command=self.reload_macros)
         self.message_menu.add_command(label="Clear", command=self.clear_chat_window)
         self.message_menu.add_command(label="Config", command=self.open_config_window)
         
         self.text_widget.bind("<Button-3>", self.show_message_menu)
+
+    def reload_macros(self):
+        loop = asyncio.get_event_loop()
+        loop.create_task(self.irc_client.update_available_macros())
     
     def open_config_window(self):
         root = tk.Tk()
@@ -489,6 +493,7 @@ class RudeGui:
 
     async def init_client_with_config(self, config_file, fallback_server_name):
         irc_client = RudeChatClient(self.text_widget, self.server_text_widget, self.entry_widget, self.master, self)
+        asyncio.create_task(irc_client.load_ascii_art_macros())
         await irc_client.read_config(config_file)
         await irc_client.connect()
 
