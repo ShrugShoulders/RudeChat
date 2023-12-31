@@ -44,7 +44,7 @@ class RudeChatClient:
         self.reader = None
         self.writer = None
         self.sasl_authenticated = False
-        self.ASCII_ART_MACROS = self.load_ascii_art_macros()
+        self.ASCII_ART_MACROS = {}
         self.load_ignore_list()
 
     async def read_config(self, config_file):
@@ -1025,7 +1025,7 @@ class RudeChatClient:
 
     def handle_pong(self, tokens):
         pong_server = tokens.params[-1]  # Assumes the server name is the last parameter
-        self.gui.insert_server_widget(f"PONG: {pong_server}\r\n")
+        print(f"PONG: {pong_server}\r\n")
 
     def handle_372(self, tokens):
         motd_line = tokens.params[-1]
@@ -1103,6 +1103,17 @@ class RudeChatClient:
         # Remove bold characters
         bold_formatting = re.compile(r'\x02')
         cleaned_text = bold_formatting.sub('', cleaned_text)
+
+        # Remove italics characters
+        italics_formatting = re.compile(r'\x1D')
+        cleaned_text = italics_formatting.sub('', cleaned_text)
+
+        # Remove bold-italics characters
+        bold_italics_formatting = re.compile(r'\x02\x1D|\x1D\x02')
+        cleaned_text = bold_italics_formatting.sub('', cleaned_text)
+
+        # Remove Shift Out character
+        cleaned_text = cleaned_text.replace('\x0E', '')
 
         return cleaned_text
 
@@ -1623,37 +1634,34 @@ class RudeChatClient:
         if macro_name in self.ASCII_ART_MACROS:
             current_time = datetime.datetime.now().strftime('[%H:%M:%S] ')
             for line in self.ASCII_ART_MACROS[macro_name].splitlines():
-                formatted_message = f"{current_time} <{self.nickname}> {line}\r\n"
+                formatted_message = f"{current_time}<{self.nickname}> {line}\r\n"
                 await self.send_message(f'PRIVMSG {self.current_channel} :{line}')
                 self.gui.insert_text_widget(formatted_message)
                 self.gui.highlight_nickname()
                 await asyncio.sleep(0.5)
                 await self.append_to_channel_history(self.current_channel, line)
         else:
-            self.update_available_macros()
             self.gui.insert_text_widget(f"Unknown ASCII art macro: {macro_name}. Type '/mac' to see available macros.\r\n")
 
-    def load_ascii_art_macros(self):
-        """Load ASCII art from files into a dictionary."""
-        ascii_macros = {}
+    async def load_ascii_art_macros(self):
+        """Load ASCII art from files into a dictionary asynchronously."""
+        print("Loading ASCII art macros...")
         script_directory = os.path.dirname(os.path.abspath(__file__))
         ASCII_ART_DIRECTORY = os.path.join(script_directory, 'Art')
+
         for file in os.listdir(ASCII_ART_DIRECTORY):
             if file.endswith(".txt"):
-                with open(os.path.join(ASCII_ART_DIRECTORY, file), 'r', encoding='utf-8') as f:
+                file_path = os.path.join(ASCII_ART_DIRECTORY, file)
+                async with aiofiles.open(file_path, 'r', encoding='utf-8') as f:
                     macro_name, _ = os.path.splitext(file)
-                    ascii_macros[macro_name] = f.read()
-        return ascii_macros
+                    self.ASCII_ART_MACROS[macro_name] = await f.read()
 
-    def reload_ascii_macros(self):
-        """Clears and reloads the ASCII art macros from files."""
-        print("Reloading ASCII art macros...")
-        self.ASCII_ART_MACROS = self.load_ascii_art_macros()
-        self.gui.insert_text_widget(f'ASCII art macros reloaded!\r\n')
-        self.update_available_macros()
-
-    def update_available_macros(self):
+    async def update_available_macros(self):
         """Update the available macros list."""
+        self.gui.insert_text_widget("Reloading Macros...\r\n")
+        self.ASCII_ART_MACROS = {}
+        await self.load_ascii_art_macros()
+        self.gui.insert_text_widget("Macros Reloaded!\r\n")
         available_macros = ", ".join(self.ASCII_ART_MACROS.keys())
         self.gui.insert_text_widget(f"Available ASCII art macros: {available_macros}\r\n") 
 
