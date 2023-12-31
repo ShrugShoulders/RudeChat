@@ -37,7 +37,7 @@ class ConfigWindow:
             for (section, option), entry in self.entries.items():
                 value = self.config.get(section, option)
                 entry.delete(0, tk.END)
-                entry.insert(0, value)
+                entry.insert(0, value if option not in ['sasl_password', 'nickserv_password'] else '*' * len(value))
         else:
             # Create new widgets
             self.main_frame = ttk.Frame(self.parent)
@@ -54,7 +54,8 @@ class ConfigWindow:
                     label.grid(row=len(self.entries), column=0, padx=5, pady=2, sticky='e')
 
                     entry = ttk.Entry(section_frame)
-                    entry.insert(0, self.config.get(section, option))
+                    value = self.config.get(section, option)
+                    entry.insert(0, value if option not in ['sasl_password', 'nickserv_password'] else '*' * len(value))
                     entry.grid(row=len(self.entries), column=1, padx=5, pady=2, sticky='w')
 
                     self.entries[(section, option)] = entry
