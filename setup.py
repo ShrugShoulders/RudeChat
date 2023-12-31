@@ -13,6 +13,7 @@ setup(
         'asyncio',
         'irctokens',
         'plyer',
+        'aiofiles',
     ],
     classifiers=[
         "Programming Language :: Python :: 3",
