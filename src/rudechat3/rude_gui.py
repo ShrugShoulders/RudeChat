@@ -484,12 +484,17 @@ class RudeGui:
         selected_server = self.server_var.get()
         self.irc_client = self.clients.get(selected_server, None)
         if self.irc_client:
+            # Set the server name in the RudeChatClient instance
+            self.irc_client.set_server_name(selected_server)
+            
+            # Set the GUI reference and update the GUI components
             self.irc_client.set_gui(self)
             self.irc_client.update_gui_channel_list()
-        # Update the user list in GUI
-        selected_channel = self.irc_client.current_channel
-        if selected_channel:
-            self.irc_client.update_gui_user_list(selected_channel)
+            
+            # Update the user list in GUI
+            selected_channel = self.irc_client.current_channel
+            if selected_channel:
+                self.irc_client.update_gui_user_list(selected_channel)
 
     async def init_client_with_config(self, config_file, fallback_server_name):
         irc_client = RudeChatClient(self.text_widget, self.server_text_widget, self.entry_widget, self.master, self)
@@ -562,13 +567,14 @@ class RudeGui:
             self.highlight_nickname()
 
     async def switch_channel(self, channel_name):
-
         server = self.irc_client.server  # Assume the server is saved in the irc_client object
 
         # Clear the text window
         self.text_widget.config(state=tk.NORMAL)
         self.text_widget.delete(1.0, tk.END)
         self.text_widget.config(state=tk.DISABLED)
+
+        # Print the current channel topics dictionary
 
         # First, check if it's a DM
         if server in self.irc_client.channel_messages and \
@@ -588,11 +594,12 @@ class RudeGui:
 
         # Then, check if it's a channel
         elif channel_name in self.irc_client.joined_channels:
+
             self.irc_client.current_channel = channel_name
             self.update_nick_channel_label()
 
             # Update topic label
-            current_topic = self.channel_topics.get(channel_name, "N/A")
+            current_topic = self.channel_topics.get(self.irc_client.server, {}).get(channel_name, "N/A")
             self.current_topic.set(f"{current_topic}")
 
             # Display the last messages for the current channel
