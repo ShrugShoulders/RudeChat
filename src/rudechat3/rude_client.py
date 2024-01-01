@@ -249,12 +249,12 @@ class RudeChatClient:
                             motd_received = True  # Set motd_received to True when NickServ is not used
                             await self.automatic_join()
                             return
-                            
+
                     case "PING":
                         await self.initial_ping(tokens)
 
                     case "396":  # NickServ authentication successful
-                        if received_001 and motd_received and sasl_authenticated:
+                        if received_001 and motd_received:
                             await self.automatic_join()
                             print("Joined channels after authentication.")
                             return
