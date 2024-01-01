@@ -1106,12 +1106,12 @@ class RudeChatClient:
 
         elif command == "TOPIC":
             # TOPIC command is received indicating a change in topic
+            channel_name = tokens.params[0]
             topic = tokens.params[1]
-
-            # Clear the entire channel_topics dictionary for the specified channel under the server entry
-            self.gui.channel_topics[self.server][channel_name] = {}
-
-            # Set the new topic for the channel under the server entry
+            # Check if the server entry exists in the dictionary
+            if self.server not in self.gui.channel_topics:
+                self.gui.channel_topics[self.server] = {}
+            # Set the topic for the channel under the server entry
             self.gui.channel_topics[self.server][channel_name] = topic
             self.gui.current_topic.set(f"{topic}")
 
