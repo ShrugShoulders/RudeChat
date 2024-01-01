@@ -39,25 +39,29 @@ async def initialize_clients(app):
         print("No .rude configuration files found.")
         return
 
-    async def try_init_client_with_config(config_file, fallback_server_name, retries=0):
+    for i, config_file in enumerate(config_files):
         try:
-            await app.init_client_with_config(config_file, fallback_server_name)
+            await app.init_client_with_config(config_file, f'Server_{i+1}')
         except OSError as e:
             if e.winerror == 121:  # The semaphore timeout error
-                retries += 1
-                if retries <= MAX_RETRIES:
+                retries = 0
+                while retries < MAX_RETRIES:
+                    retries += 1
                     print(f"Semaphore timeout error. Retrying {retries}/{MAX_RETRIES}...")
                     await asyncio.sleep(RETRY_DELAY)
-                    await try_init_client_with_config(config_file, fallback_server_name, retries)
+                    try:
+                        await app.init_client_with_config(config_file, f'Server_{i+1}')
+                        break
+                    except OSError as e:
+                        if e.winerror != 121:
+                            print(f"An unexpected error occurred: {str(e)}")
+                            break
                 else:
                     print("Max retries reached. Skipping this server.")
             else:
                 print(f"An unexpected error occurred: {str(e)}")
         except Exception as e:
-            print(f"Failed to connect to {fallback_server_name} due to {e}. Proceeding to the next server.")
-
-    tasks = [try_init_client_with_config(cf, f'Server_{i+1}') for i, cf in enumerate(config_files)]
-    await asyncio.gather(*tasks)
+            print(f"Failed to connect to Server_{i+1} due to {e}. Proceeding to the next server.")
 
     if app.server_dropdown['values']:
         first_server = app.server_dropdown['values'][0]
