@@ -763,7 +763,7 @@ class RudeChatClient:
                 # Show message and save to history
                 message = f"<+> {user} has been given mode +{mode}\r\n"
                 if channel == self.current_channel:
-                    self.gui.insert_text_widget(f"{message}\r\n")
+                    self.gui.insert_text_widget(f"{message}")
                     self.gui.highlight_nickname()
 
                 # Update the message history for the channel
@@ -790,7 +790,7 @@ class RudeChatClient:
                 # Show message and save to history
                 message = f"<-> {user} has had mode +{mode} removed\r\n"
                 if channel == self.current_channel:
-                    self.gui.insert_text_widget(f"{message}\r\n")
+                    self.gui.insert_text_widget(f"{message}")
                     self.gui.highlight_nickname()
 
                 # Update the message history for the channel
@@ -1087,23 +1087,33 @@ class RudeChatClient:
             self.gui.insert_text_widget(f"Enabled capabilities: {acknowledged_caps}\r\n")
 
     def handle_topic(self, tokens):
-        channel_name = tokens.params[1] 
+        channel_name = tokens.params[1]
         command = tokens.command
 
         if command == "332":
+            # RPL_TOPIC (numeric 332) - Topic for the channel is being sent
             topic = tokens.params[2]
-            self.gui.channel_topics[channel_name] = topic
+            # Check if the server entry exists in the dictionary
+            if self.server not in self.gui.channel_topics:
+                self.gui.channel_topics[self.server] = {}
+            # Set the topic for the channel under the server entry
+            self.gui.channel_topics[self.server][channel_name] = topic
             self.gui.current_topic.set(f"{topic}")
 
         elif command == "333":
+            # RPL_TOPICWHOTIME (numeric 333) - Who set the topic and when
             who_set = tokens.params[2]
 
         elif command == "TOPIC":
-            # Handling updates to the channel topic
+            # TOPIC command is received indicating a change in topic
             topic = tokens.params[1]
-            self.gui.channel_topics[channel_name] = topic
+
+            # Clear the entire channel_topics dictionary for the specified channel under the server entry
+            self.gui.channel_topics[self.server][channel_name] = {}
+
+            # Set the new topic for the channel under the server entry
+            self.gui.channel_topics[self.server][channel_name] = topic
             self.gui.current_topic.set(f"{topic}")
-            self.gui.insert_text_widget(f"Topic has been changed to: {topic}\r\n")
 
     def handle_nickname_doesnt_exist(self, tokens):
         """
@@ -2061,6 +2071,10 @@ class RudeChatClient:
 
     def set_gui(self, gui):
         self.gui = gui
+
+    def set_server_name(self, server_name):
+        self.server_name = server_name
+        self.gui.update_nick_channel_label()
 
     async def main_loop(self):
         while True:
