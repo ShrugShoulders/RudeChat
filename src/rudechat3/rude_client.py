@@ -54,7 +54,11 @@ class RudeChatClient:
         self.port = config.getint('IRC', 'port')
         self.ssl_enabled = config.getboolean('IRC', 'ssl_enabled')
         self.nickname = config.get('IRC', 'nickname')
-        self.nickserv_password = config.get('IRC', 'nickserv_password')
+
+        # Add a new option for NickServ authentication
+        self.use_nickserv_auth = config.getboolean('IRC', 'use_nickserv_auth', fallback=False)
+        self.nickserv_password = config.get('IRC', 'nickserv_password') if self.use_nickserv_auth else None
+
         self.auto_join_channels = config.get('IRC', 'auto_join_channels').split(',')
         
         # Read new SASL-related fields
@@ -62,7 +66,7 @@ class RudeChatClient:
         self.sasl_username = config.get('IRC', 'sasl_username', fallback=None)
         self.sasl_password = config.get('IRC', 'sasl_password', fallback=None)
         
-        # Read server name from config file
+        # Read server name from the config file
         self.server_name = config.get('IRC', 'server_name', fallback=None)
         self.gui.update_nick_channel_label()
 
@@ -174,16 +178,17 @@ class RudeChatClient:
             await asyncio.sleep(0.5)
 
     async def _await_welcome_message(self):
-        self.gui.insert_text_widget(f'Waiting for welcome message from server.\r\n')
+        self.gui.insert_text_widget(f'Waiting for welcome message from the server.\r\n')
         buffer = ""
         received_001 = False
-        motd_received = False  
+        motd_received = False
+        sasl_authenticated = False  # Initialize this variable
 
         while True:
             data = await self.reader.read(4096)
             if not data:
-                raise ConnectionError("Connection lost while waiting for welcome message.")
-            
+                raise ConnectionError("Connection lost while waiting for the welcome message.")
+
             decoded_data = data.decode('UTF-8', errors='ignore')
             buffer += decoded_data
             while '\r\n' in buffer:
@@ -200,39 +205,60 @@ class RudeChatClient:
                     case "903":
                         await self.handle_sasl_successful()
                         sasl_authenticated = True
+                        await self.automatic_join()
+                        return
 
                     case "904":
                         self.handle_sasl_failed()
 
                     case "001":
-                        self.gui.insert_text_widget(f'Connected to server: {self.server}:{self.port}\r\n')
+                        self.gui.insert_text_widget(f'Connected to the server: {self.server}:{self.port}\r\n')
                         received_001 = True  # Set this to True upon receiving 001
                         self.gui.insert_and_scroll()
+
+                        # If NickServ authentication is enabled, send authentication
+                        if self.use_nickserv_auth:
+                            await self.send_message(f'PRIVMSG NickServ :IDENTIFY {self.nickname} {self.nickserv_password}\r\n')
+                            print("Sent NickServ authentication.")
+                            motd_received = True
+                        else:
+                            motd_received = True
+
                     case "005":  # Handling the ISUPPORT message
                         self.handle_isupport(tokens)
                         self.gui.insert_and_scroll()
+
                     case "250":
                         self.handle_connection_info(tokens)
+
                     case "266":
                         self.handle_global_users_info(tokens)
+
                     case "433":  # Nickname already in use
                         await self.handle_nickname_conflict(tokens)
+
                     case "372":  # Individual line of MOTD
                         self.handle_motd_line(tokens)
+
                     case "375":  # Start of MOTD
                         self.handle_motd_start(tokens)
+
                     case "376":  # End of MOTD
                         self.handle_motd_end(tokens)
-                        await self.send_message(f'PRIVMSG NickServ :IDENTIFY {self.nickname} {self.nickserv_password}\r\n')
-                        print("Sent NickServ authentication.")
-                        motd_received = True
+                        if not self.use_nickserv_auth:
+                            motd_received = True  # Set motd_received to True when NickServ is not used
+                            await self.automatic_join()
+                            return
+                            
                     case "PING":
                         await self.initial_ping(tokens)
+
                     case "396":  # NickServ authentication successful
-                        if received_001 and motd_received:
+                        if received_001 and motd_received and sasl_authenticated:
                             await self.automatic_join()
-                            print("Joined channels after NickServ authentication.")
+                            print("Joined channels after authentication.")
                             return
+
                     case _:
                         self.gui.insert_and_scroll()
 
@@ -1626,7 +1652,8 @@ class RudeChatClient:
 
     async def handle_mac_command(self, args):
         if len(args) < 2:
-            self.update_available_macros()
+            available_macros = ", ".join(self.ASCII_ART_MACROS.keys())
+            self.gui.insert_text_widget(f"Available ASCII art macros: {available_macros}\r\n")
             self.gui.insert_text_widget("Usage: /mac <macro_name>\r\n")
             return
 
