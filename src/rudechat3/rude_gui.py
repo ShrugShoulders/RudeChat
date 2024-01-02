@@ -207,7 +207,7 @@ class RudeGui:
 
         try:
             with open(nickname_colors_path, 'w') as file:
-                json.dump(self.nickname_colors, file)
+                json.dump(self.nickname_colors, file, indent=2)
         except Exception as e:
             print(f"An unexpected error occurred while saving nickname colors: {e}. Unable to save nickname colors.")
 
