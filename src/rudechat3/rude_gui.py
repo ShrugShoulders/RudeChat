@@ -18,6 +18,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 from .rude_client import RudeChatClient
 from .configure_window import ConfigWindow
+from .rude_colours import RudeColours
 from .shared_imports import *
 
 class RudeGui:
@@ -185,7 +186,7 @@ class RudeGui:
         self.gui.update_nick_channel_label()
 
     def load_nickname_colors(self):
-        nickname_colors_path = os.path.join(self.script_directory, 'nickname_colors.json')
+        nickname_colors_path = os.path.join(self.script_directory, 'nickname_colours.json')
 
         try:
             with open(nickname_colors_path, 'r') as file:
@@ -202,7 +203,7 @@ class RudeGui:
             return {}
 
     def save_nickname_colors(self):
-        nickname_colors_path = os.path.join(self.script_directory, 'nickname_colors.json')
+        nickname_colors_path = os.path.join(self.script_directory, 'nickname_colours.json')
 
         try:
             with open(nickname_colors_path, 'w') as file:
@@ -236,11 +237,18 @@ class RudeGui:
         self.message_menu.add_command(label="Copy", command=self.copy_text_message)
         self.message_menu.add_command(label="Reset Colors", command=self.reset_nick_colors)
         self.message_menu.add_command(label="Save Colors", command=self.save_nickname_colors)
+        self.message_menu.add_command(label="Color Selector", command=self.open_color_selector)
         self.message_menu.add_command(label="Reload Macros", command=self.reload_macros)
         self.message_menu.add_command(label="Clear", command=self.clear_chat_window)
         self.message_menu.add_command(label="Config", command=self.open_config_window)
         
         self.text_widget.bind("<Button-3>", self.show_message_menu)
+
+    def open_color_selector(self):
+        root = tk.Tk()
+        app = RudeColours(root)
+        root.geometry("400x300")  # Set the initial size of the window
+        root.mainloop()
 
     def reload_macros(self):
         loop = asyncio.get_event_loop()
