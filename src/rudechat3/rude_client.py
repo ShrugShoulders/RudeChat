@@ -175,7 +175,7 @@ class RudeChatClient:
     async def automatic_join(self):
         for channel in self.auto_join_channels:
             await self.join_channel(channel)
-            await asyncio.sleep(0.5)
+            await asyncio.sleep(0.2)
 
     async def _await_welcome_message(self):
         self.gui.insert_text_widget(f'Waiting for welcome message from the server.\r\n')
@@ -531,7 +531,7 @@ class RudeChatClient:
 
             # Now it's safe to append the message
             self.channel_messages[self.server][target].append(f"{timestamp}<{sender}> {message}\r\n")
-            self.log_message(target, sender, message, is_sent=False)
+            self.log_message(self.server_name, target, sender, message, is_sent=False)
 
             # Identify the correct message list for trimming
             message_list = self.channel_messages[self.server][target]
@@ -541,7 +541,7 @@ class RudeChatClient:
                 self.channel_messages[target] = []
             
             self.channel_messages[target].append(f"{timestamp}<{sender}> {message}\r\n")
-            self.log_message(target, sender, message, is_sent=False)
+            self.log_message(self.server_name, target, sender, message, is_sent=False)
 
             # Identify the correct message list for trimming
             message_list = self.channel_messages[target]
@@ -685,7 +685,7 @@ class RudeChatClient:
                     self.channel_messages[channel].append(f"<@> {old_nick} has changed their nickname to {new_nick}\r\n")
                     
                     # Insert message into the text widget only if this is the current channel
-                    if channel == self.current_channel:
+                    if channel == self.current_channel and self.gui.irc_client == self:
                         self.gui.insert_text_widget(f"{old_nick} has changed their nickname to {new_nick}\r\n")
                         self.gui.highlight_nickname()
 
@@ -762,7 +762,7 @@ class RudeChatClient:
                 
                 # Show message and save to history
                 message = f"<+> {user} has been given mode +{mode}\r\n"
-                if channel == self.current_channel:
+                if channel == self.current_channel and self.gui.irc_client == self:
                     self.gui.insert_text_widget(f"{message}")
                     self.gui.highlight_nickname()
 
@@ -789,7 +789,7 @@ class RudeChatClient:
 
                 # Show message and save to history
                 message = f"<-> {user} has had mode +{mode} removed\r\n"
-                if channel == self.current_channel:
+                if channel == self.current_channel and self.gui.irc_client == self:
                     self.gui.insert_text_widget(f"{message}")
                     self.gui.highlight_nickname()
 
@@ -829,7 +829,7 @@ class RudeChatClient:
         sorted_users = self.sort_users(current_users, channel)
         
         # Only update the user listbox if the channel is the currently selected channel
-        if channel == self.current_channel:
+        if channel == self.current_channel and self.gui.irc_client == self:
             # Update the Tkinter Listbox to reflect the current users in the channel
             self.gui.user_listbox.delete(0, tk.END)  # Clear existing items
             for user in sorted_users:
@@ -1287,18 +1287,18 @@ class RudeChatClient:
         #gotta remove any characters that are not alphanumeric or allowed special characters
         return re.sub(r'[^\w\-\[\]{}^`|]', '_', channel)
 
-    def log_message(self, channel, sender, message, is_sent=False):
+    def log_message(self, server, channel, sender, message, is_sent=False):
         """
         Logs your chats for later use.
         """
         timestamp = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-        
+
         # Split the message into lines
         lines = message.split("\n")
-        
+
         # Detect if the message is an action message
         is_action = lines[0].startswith('* ')
-        
+
         # Construct the log line
         if is_sent:
             if is_action:
@@ -1310,25 +1310,25 @@ class RudeChatClient:
                 log_line = f'[{timestamp}] {lines[0]}\n'
             else:
                 log_line = f'[{timestamp}] <{sender}> {lines[0]}\n'
-        
+
         # Add the subsequent lines without timestamp
         for line in lines[1:]:
             if is_action:
                 log_line += f'           {line}\n'
             else:
                 log_line += f'           <{sender if is_sent else self.nickname}> {line}\n'
-        
+
         # Determine script directory
         script_directory = os.path.dirname(os.path.abspath(__file__))
-        
+
         logs_directory = os.path.join(script_directory, 'Logs')
-        
+
         try:
             # Create the Logs directory if it doesn't exist
             os.makedirs(logs_directory, exist_ok=True)
 
             # Construct the full path for the log file inside the Logs directory
-            filename = os.path.join(logs_directory, f'irc_log_{self.sanitize_channel_name(channel)}.txt')
+            filename = os.path.join(logs_directory, f'irc_log_{server}_{self.sanitize_channel_name(channel)}.txt')
 
             with open(filename, 'a', encoding='utf-8') as file:
                 file.write(log_line)
@@ -1653,7 +1653,7 @@ class RudeChatClient:
                         messages = messages[-200:]
 
                     # Log the sent message using the new logging method
-                    self.log_message(self.current_channel, self.nickname, user_input, is_sent=True)
+                    self.log_message(self.server_name, self.current_channel, self.nickname, user_input, is_sent=True)
 
                 else:
                     self.gui.insert_text_widget(f"No channel selected. Use /join to join a channel.\r\n")
@@ -2020,6 +2020,7 @@ class RudeChatClient:
         # Categories and their associated commands
         categories = {
             "Channel Management": [
+            "Use Your Right Click for Config and more."
                 "/join <channel> - Joins a channel",
                 "/part <channel> - Leaves a channel",
                 "/ch - Shows channels joined",
