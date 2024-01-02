@@ -27,7 +27,7 @@ setup(
             "Fortune Lists/*",
             "Splash/*",
             "*.rude",
-            "nickname_colors.json",
+            "nickname_colours.json",
             "rude.ico",
             "rude.png",
             "ignore_list.txt",
