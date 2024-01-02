@@ -25,7 +25,7 @@ packages = [
     { include = "rudechat3/Fortune Lists", from = "rudechat3/Fortune Lists" },
     { include = "rudechat3/Splash/**", from = "." },
     { include = ["*.rude"], from = "." },
-    { include = "nickname_colors.json" },
+    { include = "nickname_colours.json" },
     { include = "rude.ico" },
     { include = "rude.png" },
     { include = "ignore_list.txt", from = "rudechat3" },
