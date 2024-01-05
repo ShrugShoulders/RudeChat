@@ -58,6 +58,7 @@ class RudeColours:
         # Create a custom dialog window
         dialog = tk.Toplevel(self.root)
         dialog.title("Add/Edit Color Option")
+        dialog.transient(self.root)
 
         # Create entry fields for nickname and color
         nickname_label = tk.Label(dialog, text="Nickname:")
@@ -81,7 +82,7 @@ class RudeColours:
 
         pick_color_button = tk.Button(dialog, text="Pick Color", command=pick_color)
         pick_color_button.grid(row=1, column=2, padx=5, pady=5)
-        
+
         # Function to remove the selected entry
         def remove_entry():
             if selected_key:
