@@ -1247,6 +1247,9 @@ class RudeChatClient:
                     case "401":
                         self.handle_nickname_doesnt_exist(tokens)
 
+                    case "477":
+                        await self.handle_cannot_join_channel(tokens)
+
                     case "322":  # Channel list
                         await self.handle_list_response(tokens)
                         await self.channel_window.update_channel_info(tokens.params[1], tokens.params[2], tokens.params[3])
@@ -1282,6 +1285,14 @@ class RudeChatClient:
                         print(f"Debug: Unhandled command {tokens.command}. Full line: {line}")
                         if line.startswith(f":{self.server}"):
                             await self.handle_server_message(line)
+
+    async def handle_cannot_join_channel(self, tokens):
+        channel_name = tokens.params[1]
+        error_message = tokens.params[2]
+        
+        # Add your specific handling logic here, such as displaying an error message to the user.
+        error_text = f"Cannot join channel {channel_name}: {error_message}\r\n"
+        self.gui.insert_text_widget(error_text)
 
     def sanitize_channel_name(self, channel):
         #gotta remove any characters that are not alphanumeric or allowed special characters
