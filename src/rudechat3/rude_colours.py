@@ -1,8 +1,8 @@
 import json
 import os
 import tkinter as tk
-import threading
 from tkinter import messagebox, simpledialog, colorchooser
+from tkcolorpicker import askcolor
 
 class RudeColours:
     def __init__(self, root):
@@ -81,10 +81,7 @@ class RudeColours:
 
         pick_color_button = tk.Button(dialog, text="Pick Color", command=pick_color)
         pick_color_button.grid(row=1, column=2, padx=5, pady=5)
-
-        # Run the color picker in a separate thread
-        dialog.wait_window()
-
+        
         # Function to remove the selected entry
         def remove_entry():
             if selected_key:
