@@ -21,3 +21,5 @@ from plyer import notification
 from tkinter import ttk
 from tkinter.scrolledtext import ScrolledText
 from tkinter import Tk, Frame, Label, Entry, Listbox, Menu, Scrollbar, StringVar
+from tkinter import simpledialog
+from threading import Thread
