@@ -437,27 +437,36 @@ class RudeGui:
         # Insert the message without tags initially
         self.text_widget.insert(tk.END, message)
 
-        # Batch configure tags for all URLs
-        for url in urls:
-            tag_name = f"url_{url}"
-            self.text_widget.tag_configure(tag_name, foreground="blue", underline=1)
+        # Run URL tagging in a separate thread
+        thread = Thread(target=self.tag_urls_async, args=(urls,))
+        thread.start()
 
-        # Apply tags and bind events in a single pass
-        for url in urls:
-            start_idx = "1.0"
-            while True:
-                start_idx = self.text_widget.search(url, start_idx, tk.END, tag_name)
-                if not start_idx:
-                    break
-                end_idx = f"{start_idx}+{len(url)}c"
-                tag_name = f"url_{url}"
-                self.text_widget.tag_add(tag_name, start_idx, end_idx)
-                self.text_widget.tag_bind(tag_name, "<Button-1>", lambda event, url=url: self.open_url(event, url))
-                start_idx = end_idx
+    def tag_urls_async(self, urls):
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+
+        tasks = [self.tag_url(url) for url in urls]
+        loop.run_until_complete(asyncio.gather(*tasks))
+
+        loop.close()
 
         # Set the Text widget state back to DISABLED after configuring tags
         self.text_widget.config(state=tk.DISABLED)
         self.insert_and_scroll()
+
+    async def tag_url(self, url):
+        tag_name = f"url_{url}"
+        self.text_widget.tag_configure(tag_name, foreground="blue", underline=1)
+
+        start_idx = "1.0"
+        while True:
+            start_idx = self.text_widget.search(url, start_idx, tk.END, tag_name)
+            if not start_idx:
+                break
+            end_idx = f"{start_idx}+{len(url)}c"
+            self.text_widget.tag_add(tag_name, start_idx, end_idx)
+            self.text_widget.tag_bind(tag_name, "<Button-1>", lambda event, url=url: self.open_url(event, url))
+            start_idx = end_idx
 
     def find_urls(self, text):
         # A simple regex to detect URLs
