@@ -1,11 +1,20 @@
+[tool.poetry.dependencies]
+python = "^3.11"
+irctokens = "^2.0.2"
+plyer = "^2.1.0"
+asyncio = "^3.4.3"
+aiofiles = "^23.2.1"
+pytz = "^2023.3.post1"
+colorchooser = "^1.0"
+
 [build-system]
 requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "RudeChat"
-version = "3.0.1"
-description = "RudeChat is a Python IRC client designed to be fast, portable, and fun. "
+version = "3.0.4"
+description = "RudeChat is a Python IRC client designed to be fast, portable, and fun."
 readme = "README.md"
 requires-python = ">=3.11"
 classifiers = [
