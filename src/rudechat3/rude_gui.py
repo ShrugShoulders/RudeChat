@@ -36,7 +36,7 @@ class RudeGui:
             '00': '#FFFFFF', '01': '#000000', '02': '#0000AA', '03': '#00AA00',
             '04': '#AA0000', '05': '#AA5500', '06': '#AA00AA', '07': '#FFAA00',
             '08': '#FFFF00', '09': '#00ff00', '10': '#00AAAA', '11': '#00FFAA',
-            '12': '#0000FF', '13': '#ff00ff', '14': '#AAAAAA', '15': '#D3D3D3',
+            '12': '#2576ff', '13': '#ff00ff', '14': '#AAAAAA', '15': '#D3D3D3',
             '16': '#470000', '17': '#472100', '18': '#474700', '19': '#324700',
             '20': '#004700', '21': '#00472c', '22': '#004747', '23': '#002747',
             '24': '#000047', '25': '#2e0047', '26': '#470047', '27': '#47002a',
@@ -473,10 +473,6 @@ class RudeGui:
         # Use the decoder to process the message and get formatted output
         formatted_text = decoder(message)
 
-        # Track the indices for applying color
-        color_start_index = None
-        color_tag = None
-
         for text, attributes in formatted_text:
             # Create a tag name based on the attributes
             tag_name = "_".join(str(attr) for attr in attributes)
@@ -501,18 +497,8 @@ class RudeGui:
             # Configure the tag in the Text widget
             self.text_widget.tag_configure(tag_name, **tag_config)
 
-            # Insert the formatted text without color tags
-            start_index = self.text_widget.index(tk.END)
+            # Insert the formatted text with all tags
             self.text_widget.insert(tk.END, text, (tag_name,))
-            end_index = self.text_widget.index(tk.END)
-
-            # Apply color only to the specific portion of text between color control codes
-            if color_start_index is not None and color_tag is not None:
-                self.text_widget.tag_add(color_tag, color_start_index, end_index)
-
-            # Update color tracking variables
-            color_start_index = end_index
-            color_tag = tag_name
 
         # Run URL tagging in a separate thread
         thread = Thread(target=self.tag_urls_async, args=(urls,))
@@ -705,7 +691,7 @@ class RudeGui:
             self.insert_and_scroll()
 
         else:
-            self.insert_text_widget(f"Not a member of channel or unknown DM {channel_name}\r\n")
+            self.insert_text_widget(f"Not a member of channel or unknown DM {channel_name}\n")
 
     def insert_and_scroll(self):
         self.text_widget.see(tk.END)
