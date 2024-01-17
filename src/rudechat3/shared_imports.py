@@ -17,6 +17,9 @@ import re
 import sys
 import json
 import tkinter as tk
+import tkinter.font as tkFont
+import dataclasses
+from typing import List, Tuple, NamedTuple
 from plyer import notification
 from tkinter import ttk
 from tkinter.scrolledtext import ScrolledText
