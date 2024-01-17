@@ -15,9 +15,11 @@ def decoder(input_text: str) -> List[Tuple[str, List[Attribute]]]:
     current_attributes = []
     attribute_stack = []
     c_index = 0
-    color_start_index = None
-    color_end_index = None
-    color_tag = None
+
+    def reset_attributes():
+        nonlocal current_attributes, attribute_stack
+        current_attributes.clear()
+        attribute_stack.clear()
 
     while c_index < len(input_text):
         c = input_text[c_index]
@@ -44,24 +46,21 @@ def decoder(input_text: str) -> List[Tuple[str, List[Attribute]]]:
                     current_attributes = [a for a in current_attributes if not a.underline]
                     attribute_stack.pop()
             case '\x03':
+                # End the previous color
+                reset_attributes()
+
                 colour_code = ''
-                for _ in range(2):
-                    if c_index + 1 < len(input_text) and input_text[c_index + 1].isdigit():
-                        c_index += 1
-                        colour_code += input_text[c_index]
-                    else:
-                        break
+                while c_index + 1 < len(input_text) and input_text[c_index + 1].isdigit():
+                    c_index += 1
+                    colour_code += input_text[c_index]
+
                 if colour_code:
-                    # Check if a comma follows the color code for background color
                     if c_index + 1 < len(input_text) and input_text[c_index + 1] == ',':
                         c_index += 1
                         background_code = ''
-                        for _ in range(2):
-                            if c_index + 1 < len(input_text) and input_text[c_index + 1].isdigit():
-                                c_index += 1
-                                background_code += input_text[c_index]
-                            else:
-                                break
+                        while c_index + 1 < len(input_text) and input_text[c_index + 1].isdigit():
+                            c_index += 1
+                            background_code += input_text[c_index]
                         background_num = int(background_code)
                         current_attributes.append(Attribute(colour=int(colour_code), background=background_num))
                         attribute_stack.append(Attribute(colour=int(colour_code), background=background_num))
@@ -69,22 +68,15 @@ def decoder(input_text: str) -> List[Tuple[str, List[Attribute]]]:
                         colour_num = int(colour_code)
                         current_attributes.append(Attribute(colour=colour_num))
                         attribute_stack.append(Attribute(colour=colour_num))
-                    # Track the start index of color
-                    color_start_index = c_index
-                else:
-                    # If no digit follows '\x03', treat it as the end of color
-                    color_end_index = c_index
-                    current_attributes.clear()
-                    attribute_stack.clear()
 
-                    # Check if the color control is open and close it
-                    if color_start_index is not None and color_end_index is None:
-                        output.append(("", current_attributes))
             case '\x0F':
-                current_attributes.clear()
-                attribute_stack.clear()
+                reset_attributes()
             case _:
                 current_text += c
+
+        # Check for the end of the string
+        if c_index == len(input_text) - 1:
+            reset_attributes()
 
         if attribute_stack:
             current_attributes = attribute_stack[:]
@@ -94,11 +86,5 @@ def decoder(input_text: str) -> List[Tuple[str, List[Attribute]]]:
             current_text = ''
 
         c_index += 1
-
-    # Check if the color control is open and close it
-    if color_start_index is not None and color_end_index is None:
-        current_attributes.clear()
-        attribute_stack.clear()
-        output.append(("", current_attributes))
 
     return output
