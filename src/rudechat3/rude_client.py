@@ -70,13 +70,13 @@ class RudeChatClient:
         self.server_name = config.get('IRC', 'server_name', fallback=None)
         self.gui.update_nick_channel_label()
 
-    async def connect(self):
-        await self.connect_to_server()
+    async def connect(self, config_file):
+        await self.connect_to_server(config_file)
         await self.send_initial_commands()
-        await self.wait_for_welcome()
+        await self.wait_for_welcome(config_file)
 
-    async def connect_to_server(self):
-        TIMEOUT = 60  # seconds
+    async def connect_to_server(self, config_file):
+        TIMEOUT = 256  # seconds
         self.gui.insert_text_widget(f'Connecting to server: {self.server}:{self.port}\r\n')
         self.gui.highlight_nickname()
 
@@ -99,7 +99,7 @@ class RudeChatClient:
         except OSError as e:
             if e.winerror == 121:  # The semaphore error that I hate.
                 self.gui.insert_text_widget("The semaphore timeout period has expired. Reconnecting...\r\n")
-                success = await self.reconnect()
+                success = await self.reconnect(config_file)
                 if success:
                     self.gui.add_server_to_combo_box(self.server_name)
             else:
@@ -134,7 +134,7 @@ class RudeChatClient:
         # Clear the MOTD buffer for future use
         self.motd_lines.clear()
             
-    async def wait_for_welcome(self):
+    async def wait_for_welcome(self, config_file):
         MAX_RETRIES = 5
         RETRY_DELAY = 5  # seconds
         retries = 0
@@ -146,7 +146,7 @@ class RudeChatClient:
                 return  # Successfully connected and received 001
             except (OSError, ConnectionError) as e:
                 self.gui.insert_text_widget(f"Error occurred: {e}. Retrying in {RETRY_DELAY} seconds.\r\n")
-                success = await self.reconnect()
+                success = await self.reconnect(config_file)
                 if success:
                     return  # Successfully reconnected
                 retries += 1
@@ -182,7 +182,7 @@ class RudeChatClient:
         buffer = ""
         received_001 = False
         motd_received = False
-        sasl_authenticated = False  # Initialize this variable
+        sasl_authenticated = False
 
         while True:
             data = await self.reader.read(4096)
@@ -339,6 +339,7 @@ class RudeChatClient:
             self.gui.user_listbox.insert(tk.END, user)
 
     async def reset_state(self):
+        await self.gui.remove_server_from_dropdown(self.server_name)
         self.joined_channels.clear()
         self.motd_lines.clear()
         self.channel_messages.clear()
@@ -349,21 +350,22 @@ class RudeChatClient:
         self.download_channel_list.clear()
         self.whois_executed.clear()
 
-    async def reconnect(self):
+    async def reconnect(self, config_file):
         MAX_RETRIES = 5
         RETRY_DELAY = 5
         retries = 0
         while retries < MAX_RETRIES:
             try:
                 # Reset client state before attempting to reconnect
-                await self.reset_state()
-                # Attempt to reconnect
-                await self.connect()
+                await self.disconnect()
+                
+                # Initialize the client with the specified config file
+                await self.gui.init_client_with_config(config_file, self.server_name)
                 
                 # Add server to combo box if reconnection is successful
                 if self.gui:
                     self.gui.irc_client = self
-                    self.gui.add_server_to_combo_box(self.server_name)  # Assuming such a method exists in your GUI class
+                    self.gui.add_server_to_combo_box(self.server_name)
                 
                 if hasattr(self.gui, 'insert_text_widget'):  
                     self.gui.insert_text_widget(f'Successfully reconnected.\r\n')
@@ -374,7 +376,7 @@ class RudeChatClient:
                 retries += 1
                 print(f'Failed to reconnect ({retries}/{MAX_RETRIES}): {e}. Retrying in {RETRY_DELAY} seconds.\r\n')
                 await asyncio.sleep(RETRY_DELAY)
-        return False  # Failed to reconnect after MAX_RETRIES
+        return False
 
     async def keep_alive(self):
         while True:
@@ -430,6 +432,10 @@ class RudeChatClient:
                         self.channel_messages[target] = []
                     
                     self.channel_messages[target].append(action_message)
+
+                    # Trim the messages list if it exceeds 100 lines
+                    if len(self.channel_messages[target]) > 100:
+                        self.channel_messages[target] = self.channel_messages[target][-100:]
                     
                     # Display the message in the text_widget if the target matches the current channel or DM
                     if target == self.current_channel and self.gui.irc_client == self:
@@ -546,9 +552,9 @@ class RudeChatClient:
             # Identify the correct message list for trimming
             message_list = self.channel_messages[target]
 
-        # Trim the messages list if it exceeds 200 lines
-        if len(message_list) > 200:
-            message_list = message_list[-200:]
+        # Trim the messages list if it exceeds 100 lines
+        if len(message_list) > 100:
+            message_list = message_list[-100:]
 
         # Display the message in the text_widget if the target matches the current channel or DM
         if target == self.current_channel and self.gui.irc_client == self:
@@ -573,6 +579,10 @@ class RudeChatClient:
             self.channel_messages[channel] = []
 
         self.channel_messages[channel].append(join_message)
+
+        # Trim the messages list if it exceeds 100 lines
+        if len(self.channel_messages[channel]) > 100:
+            self.channel_messages[channel] = self.channel_messages[channel][-100:]
 
         # Display the message in the text_widget only if the channel matches the current channel
         if channel == self.current_channel and self.gui.irc_client == self:
@@ -608,6 +618,10 @@ class RudeChatClient:
             self.channel_messages[channel] = []
 
         self.channel_messages[channel].append(part_message)
+
+        # Trim the messages list if it exceeds 100 lines
+        if len(self.channel_messages[channel]) > 100:
+            self.channel_messages[channel] = self.channel_messages[channel][-100:]
 
         # Display the message in the text_widget only if the channel matches the current channel
         if channel == self.current_channel and self.gui.irc_client == self:
@@ -650,6 +664,10 @@ class RudeChatClient:
 
                     self.channel_messages[channel].append(quit_message)
 
+                    # Trim the messages list if it exceeds 100 lines
+                    if len(self.channel_messages[channel]) > 100:
+                        self.channel_messages[channel] = self.channel_messages[channel][-100:]
+
                     # Display the message in the text_widget only if the channel matches the current channel
                     if channel == self.current_channel and self.gui.irc_client == self:
                         self.gui.insert_text_widget(quit_message)
@@ -683,10 +701,14 @@ class RudeChatClient:
                     if channel not in self.channel_messages:
                         self.channel_messages[channel] = []
                     self.channel_messages[channel].append(f"<@> {old_nick} has changed their nickname to {new_nick}\r\n")
+
+                    # Trim the messages list if it exceeds 100 lines
+                    if len(self.channel_messages[channel]) > 100:
+                        self.channel_messages[channel] = self.channel_messages[channel][-100:]
                     
                     # Insert message into the text widget only if this is the current channel
                     if channel == self.current_channel and self.gui.irc_client == self:
-                        self.gui.insert_text_widget(f"{old_nick} has changed their nickname to {new_nick}\r\n")
+                        self.gui.insert_text_widget(f"<@> {old_nick} has changed their nickname to {new_nick}\r\n")
                         self.gui.highlight_nickname()
 
                     break
@@ -772,6 +794,10 @@ class RudeChatClient:
 
                 self.channel_messages[channel].append(message)
 
+                # Trim the messages list if it exceeds 100 lines
+                if len(self.channel_messages[channel]) > 100:
+                    self.channel_messages[channel] = self.channel_messages[channel][-100:]
+
             # Handle removal of modes
             elif mode_change.startswith('-'):
                 mode = mode_change[1]
@@ -798,6 +824,10 @@ class RudeChatClient:
                     self.channel_messages[channel] = []
 
                 self.channel_messages[channel].append(message)
+
+                # Trim the messages list if it exceeds 100 lines
+                if len(self.channel_messages[channel]) > 100:
+                    self.channel_messages[channel] = self.channel_messages[channel][-100:]
 
                 if not user_modes:
                     if user in current_modes:
@@ -993,6 +1023,10 @@ class RudeChatClient:
         kick_message_content = f"<X> {kicked_nickname} has been kicked from {channel} by {tokens.hostmask.nickname} ({reason})"
         self.channel_messages[channel].append(kick_message_content + "\r\n")
 
+        # Trim the messages list if it exceeds 100 lines
+        if len(self.channel_messages[channel]) > 100:
+            self.channel_messages[channel] = self.channel_messages[channel][-100:]
+
         if channel == self.current_channel and self.gui.irc_client == self:
             self.gui.insert_text_widget(kick_message_content + "\r\n")
             self.gui.highlight_nickname()
@@ -1127,33 +1161,33 @@ class RudeChatClient:
         else:
             print("Invalid response format for '401'.")
 
-    def strip_ansi_escape_sequences(self, text):
+    #def strip_ansi_escape_sequences(self, text):
         # Strip ANSI escape sequences and IRC formatting characters
-        ansi_escape = re.compile(r'\x1B[@-_][0-?]*[ -/]*[@-~]')
-        cleaned_text = ansi_escape.sub('', text)
+    #    ansi_escape = re.compile(r'\x1B[@-_][0-?]*[ -/]*[@-~]')
+    #    cleaned_text = ansi_escape.sub('', text)
 
         # Strip IRC color codes
-        irc_color = re.compile(r'\x03\d{0,2}(,\d{1,2})?')
-        cleaned_text = irc_color.sub('', cleaned_text)
+    #    irc_color = re.compile(r'\x03\d{0,2}(,\d{1,2})?')
+    #    cleaned_text = irc_color.sub('', cleaned_text)
 
         # Remove bold characters
-        bold_formatting = re.compile(r'\x02')
-        cleaned_text = bold_formatting.sub('', cleaned_text)
+    #    bold_formatting = re.compile(r'\x02')
+    #    cleaned_text = bold_formatting.sub('', cleaned_text)
 
         # Remove italics characters
-        italics_formatting = re.compile(r'\x1D')
-        cleaned_text = italics_formatting.sub('', cleaned_text)
+    #    italics_formatting = re.compile(r'\x1D')
+    #    cleaned_text = italics_formatting.sub('', cleaned_text)
 
         # Remove bold-italics characters
-        bold_italics_formatting = re.compile(r'\x02\x1D|\x1D\x02')
-        cleaned_text = bold_italics_formatting.sub('', cleaned_text)
+    #    bold_italics_formatting = re.compile(r'\x02\x1D|\x1D\x02')
+    #    cleaned_text = bold_italics_formatting.sub('', cleaned_text)
 
         # Remove Shift Out character
-        cleaned_text = cleaned_text.replace('\x0E', '')
+    #    cleaned_text = cleaned_text.replace('\x0E', '')
 
-        return cleaned_text
+    #    return cleaned_text
 
-    async def handle_incoming_message(self):
+    async def handle_incoming_message(self, config_file):
         buffer = ""
         current_users_list = []
         current_channel = ""
@@ -1168,7 +1202,7 @@ class RudeChatClient:
             except OSError as e:
                 if e.winerror == 121:  # I hate this WinError >:C
                     self.gui.insert_text_widget(f"WinError: {e}\n")
-                    await self.reconnect()
+                    await self.reconnect(config_file)
                 else:
                     self.gui.insert_text_widget(f"Unhandled OSError: {e}\n")
                     continue
@@ -1181,8 +1215,8 @@ class RudeChatClient:
                 break
 
             decoded_data = data.decode('UTF-8', errors='ignore')
-            cleaned_data = self.strip_ansi_escape_sequences(decoded_data)
-            buffer += cleaned_data
+            #cleaned_data = self.strip_ansi_escape_sequences(decoded_data)
+            buffer += decoded_data
 
             while '\r\n' in buffer:
                 line, buffer = buffer.split('\r\n', 1)
@@ -1226,6 +1260,14 @@ class RudeChatClient:
                     case "396":
                         self.handle_396(tokens)
 
+                    case "305":
+                        message = "You are no longer marked as being away"
+                        self.gui.insert_text_widget(f"{message}\r\n")
+
+                    case "306":
+                        message = "You have been marked as being away"
+                        self.gui.insert_text_widget(f"{message}\r\n")
+
                     case "391":
                         self.handle_time_request(tokens)
 
@@ -1246,6 +1288,14 @@ class RudeChatClient:
 
                     case "401":
                         self.handle_nickname_doesnt_exist(tokens)
+
+                    case "473" | "475" | "474" | "471":
+                        channel = tokens.params[1]
+                        reason = tokens.params[2] if len(tokens.params) > 2 else ""
+
+                        # Combine information into one message
+                        message = f"Cannot join channel {channel} - {reason}"
+                        self.gui.insert_text_widget(f"{message}\r\n")
 
                     case "477":
                         await self.handle_cannot_join_channel(tokens)
@@ -1429,7 +1479,7 @@ class RudeChatClient:
         if self.reader and not self.reader.at_eof():
             self.writer.close()
             await self.writer.wait_closed()
-            await self.reset_state()
+            await reset_state()
 
         self.gui.insert_text_widget("Disconnected from the server.\r\n")
 
@@ -1634,7 +1684,7 @@ class RudeChatClient:
 
             case "disconnect":
                 await self.disconnect()
-                await self.gui.remove_server_from_dropdown()
+                await self.gui.remove_server_from_dropdown(server_name=None)
 
             case None:
                 if not user_input:
@@ -1658,10 +1708,10 @@ class RudeChatClient:
                             self.channel_messages[server_name][self.current_channel] = []
                         self.channel_messages[server_name][self.current_channel].append(f"{timestamp}<{self.nickname}> {user_input}\r\n")
 
-                    # Trim the messages list if it exceeds 200 lines
+                    # Trim the messages list if it exceeds 100 lines
                     messages = self.channel_messages.get(server_name, {}).get(self.current_channel, []) if not self.current_channel.startswith("#") else self.channel_messages.get(self.current_channel, [])
-                    if len(messages) > 200:
-                        messages = messages[-200:]
+                    if len(messages) > 100:
+                        messages = messages[-100:]
 
                     # Log the sent message using the new logging method
                     self.log_message(self.server_name, self.current_channel, self.nickname, user_input, is_sent=True)
@@ -1800,9 +1850,9 @@ class RudeChatClient:
         # Append the message to the channel's history
         self.channel_messages[channel].append(formatted_message)
         
-        # Trim the history if it exceeds 200 lines
-        if len(self.channel_messages[channel]) > 200:
-            self.channel_messages[channel] = self.channel_messages[channel][-200:]
+        # Trim the history if it exceeds 100 lines
+        if len(self.channel_messages[channel]) > 100:
+            self.channel_messages[channel] = self.channel_messages[channel][-100:]
 
     async def handle_cowsay_command(self, args):
         script_directory = os.path.dirname(os.path.abspath(__file__))
@@ -1983,9 +2033,9 @@ class RudeChatClient:
                 self.channel_messages[channel] = []
             self.channel_messages[channel].append(formatted_message)
             
-            # Trim the messages list if it exceeds 200 lines
-            if len(self.channel_messages[channel]) > 200:
-                self.channel_messages[channel] = self.channel_messages[channel][-200:]
+            # Trim the messages list if it exceeds 100 lines
+            if len(self.channel_messages[channel]) > 100:
+                self.channel_messages[channel] = self.channel_messages[channel][-100:]
         self.gui.insert_text_widget(f"Message: {message} sent to all channels")
 
     async def handle_who_command(self, args):
@@ -2023,9 +2073,9 @@ class RudeChatClient:
             self.channel_messages[self.current_channel] = []
         self.channel_messages[self.current_channel].append(f"{timestamp}{formatted_message}\r\n")
 
-        # Trim the messages list if it exceeds 200 lines
-        if len(self.channel_messages[self.current_channel]) > 200:
-            self.channel_messages[self.current_channel] = self.channel_messages[self.current_channel][-200:]
+        # Trim the messages list if it exceeds 100 lines
+        if len(self.channel_messages[self.current_channel]) > 100:
+            self.channel_messages[self.current_channel] = self.channel_messages[self.current_channel][-100:]
 
     def display_help(self):
         # Categories and their associated commands
