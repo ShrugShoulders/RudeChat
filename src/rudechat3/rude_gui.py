@@ -19,17 +19,46 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 from .rude_client import RudeChatClient
 from .configure_window import ConfigWindow
 from .rude_colours import RudeColours
+from .format_decoder import Attribute, decoder
 from .shared_imports import *
 
 class RudeGui:
     def __init__(self, master):
         self.master = master
         self.master.title("RudeChat")
-        self.master.geometry("1200x800")
+        self.master.geometry("1600x800")
         self.master.configure(bg="black")
         self.script_directory = os.path.dirname(os.path.abspath(__file__))
         icon_path = os.path.join(self.script_directory, "rude.ico")
         self.master.iconbitmap(default=icon_path)
+
+        self.irc_colors = {
+            '00': '#FFFFFF', '01': '#000000', '02': '#0000AA', '03': '#00AA00',
+            '04': '#AA0000', '05': '#AA5500', '06': '#AA00AA', '07': '#FFAA00',
+            '08': '#FFFF00', '09': '#00ff00', '10': '#00AAAA', '11': '#00FFAA',
+            '12': '#0000FF', '13': '#ff00ff', '14': '#AAAAAA', '15': '#D3D3D3',
+            '16': '#470000', '17': '#472100', '18': '#474700', '19': '#324700',
+            '20': '#004700', '21': '#00472c', '22': '#004747', '23': '#002747',
+            '24': '#000047', '25': '#2e0047', '26': '#470047', '27': '#47002a',
+            '28': '#740000', '29': '#743a00', '30': '#747400', '31': '#517400',
+            '32': '#007400', '33': '#007449', '34': '#007474', '35': '#004074',
+            '36': '#000074', '37': '#4b0074', '38': '#740074', '39': '#740045',
+            '40': '#b50000', '41': '#b56300', '42': '#b5b500', '43': '#7db500',
+            '44': '#00b500', '45': '#00b571', '46': '#00b5b5', '47': '#0063b5',
+            '48': '#0000b5', '49': '#7500b5', '50': '#b500b5', '51': '#b5006b',
+            '52': '#ff0000', '53': '#ff8c00', '54': '#ffff00', '55': '#b2ff00',
+            '56': '#00ff00', '57': '#00ffa0', '58': '#00ffff', '59': '#008cff',
+            '60': '#0000ff', '61': '#a500ff', '62': '#ff00ff', '63': '#ff0098',
+            '64': '#ff5959', '65': '#ffb459', '66': '#ffff71', '67': '#cfff60',
+            '68': '#6fff6f', '69': '#65ffc9', '70': '#6dffff', '71': '#59b4ff',
+            '72': '#5959ff', '73': '#c459ff', '74': '#ff66ff', '75': '#ff59bc', 
+            '76': '#ff9c9c', '77': '#ffd39c', '78': '#ffff9c', '79': '#e2ff9c', 
+            '80': '#9cff9c', '81': '#9cffdb', '82': '#9cffff', '83': '#9cd3ff', 
+            '84': '#9c9cff', '85': '#dc9cff', '86': '#ff9cff', '87': '#ff94d3', 
+            '88': '#000000', '89': '#131313', '90': '#282828', '91': '#363636', 
+            '92': '#4d4d4d', '93': '#656565', '94': '#818181', '95': '#9f9f9f',
+            '96': '#bcbcbc', '97': '#e2e2e2', '98': '#ffffff' 
+        }
 
         # Main frame
         self.frame = tk.Frame(self.master, bg="black")
@@ -63,7 +92,7 @@ class RudeGui:
         self.tooltip = None
 
         # Main text widget
-        self.text_widget = ScrolledText(self.frame, wrap='word', bg="black", cursor="arrow", fg="#C0FFEE")
+        self.text_widget = ScrolledText(self.frame, wrap='word', bg="black", cursor="arrow", fg="#C0FFEE", font=("Hack", 10))
         self.text_widget.grid(row=0, column=0, sticky="nsew")
         self.show_startup_art()
 
@@ -122,6 +151,10 @@ class RudeGui:
         self.nick_channel_label = tk.Label(self.master, textvariable=self.current_nick_channel, bg="black", fg="white", padx=5, pady=1)
         self.nick_channel_label.grid(row=3, column=0, sticky='w')
 
+        self.text_widget.tag_configure('bold', font=('Hack', 10, 'bold'))
+        self.text_widget.tag_configure('italic', font=('Hack', 10, 'italic'))
+        self.text_widget.tag_configure('underline', underline=True)
+
         # Initialize the RudeChatClient and set the GUI reference
         self.irc_client = RudeChatClient(self.text_widget, self.server_text_widget, self.entry_widget, self.master, self)
         self.init_input_menu()
@@ -169,11 +202,13 @@ class RudeGui:
         except FileNotFoundError as e:
             print(f"Error displaying startup art: {e}")
 
-    async def remove_server_from_dropdown(self):
-        current_server = self.server_var.get()
-        if current_server in self.server_dropdown['values']:
+    async def remove_server_from_dropdown(self, server_name=None):
+        if server_name is None:
+            server_name = self.server_var.get()
+
+        if server_name in self.server_dropdown['values']:
             servers = list(self.server_dropdown['values'])
-            servers.remove(current_server)
+            servers.remove(server_name)
             self.server_dropdown['values'] = tuple(servers)
 
         # Set the first available server as the current one
@@ -245,9 +280,10 @@ class RudeGui:
         self.text_widget.bind("<Button-3>", self.show_message_menu)
 
     def open_color_selector(self):
-        root = tk.Tk()
+        root = tk.Toplevel(self.master)  # Use Toplevel instead of Tk for a new window
         app = RudeColours(root)
         root.geometry("400x300")  # Set the initial size of the window
+        root.transient(self.master)  # Set the main window as the transient master
         root.mainloop()
 
     def reload_macros(self):
@@ -434,8 +470,49 @@ class RudeGui:
         # Set the Text widget state to NORMAL before inserting and configuring tags
         self.text_widget.config(state=tk.NORMAL)
 
-        # Insert the message without tags initially
-        self.text_widget.insert(tk.END, message)
+        # Use the decoder to process the message and get formatted output
+        formatted_text = decoder(message)
+
+        # Track the indices for applying color
+        color_start_index = None
+        color_tag = None
+
+        for text, attributes in formatted_text:
+            # Create a tag name based on the attributes
+            tag_name = "_".join(str(attr) for attr in attributes)
+
+            # Configure the tag based on attributes
+            tag_config = {}
+            if any(attr.bold for attr in attributes):
+                tag_config['font'] = ('Hack', 10, 'bold')
+            if any(attr.italic for attr in attributes):
+                tag_config['font'] = ('Hack', 10, 'italic')
+            if any(attr.underline for attr in attributes):
+                tag_config['underline'] = True
+            if attributes and attributes[0].colour != 0:
+                irc_color_code = f"{attributes[0].colour:02d}"
+                hex_color = self.irc_colors.get(irc_color_code, 'black')
+                tag_config['foreground'] = hex_color
+            if attributes and attributes[0].background != 0:
+                irc_background_code = f"{attributes[0].background:02d}"
+                hex_background = self.irc_colors.get(irc_background_code, 'white')
+                tag_config['background'] = hex_background
+
+            # Configure the tag in the Text widget
+            self.text_widget.tag_configure(tag_name, **tag_config)
+
+            # Insert the formatted text without color tags
+            start_index = self.text_widget.index(tk.END)
+            self.text_widget.insert(tk.END, text, (tag_name,))
+            end_index = self.text_widget.index(tk.END)
+
+            # Apply color only to the specific portion of text between color control codes
+            if color_start_index is not None and color_tag is not None:
+                self.text_widget.tag_add(color_tag, color_start_index, end_index)
+
+            # Update color tracking variables
+            color_start_index = end_index
+            color_tag = tag_name
 
         # Run URL tagging in a separate thread
         thread = Thread(target=self.tag_urls_async, args=(urls,))
@@ -485,7 +562,7 @@ class RudeGui:
 
     async def send_quit_to_all_clients(self, quit_message=None):
         for irc_client in self.clients.values():
-            quit_cmd = f'QUIT :{quit_message}' if quit_message else 'QUIT :RudeChat3'
+            quit_cmd = f'QUIT :{quit_message}' if quit_message else 'QUIT :RudeChat3 https://github.com/ShrugShoulders/RudeChat'
             await self.irc_client.send_message(quit_cmd)
             await asyncio.sleep(1)
 
@@ -517,14 +594,14 @@ class RudeGui:
         irc_client = RudeChatClient(self.text_widget, self.server_text_widget, self.entry_widget, self.master, self)
         asyncio.create_task(irc_client.load_ascii_art_macros())
         await irc_client.read_config(config_file)
-        await irc_client.connect()
+        await irc_client.connect(config_file)
 
         # Use the server_name if it is set in the configuration, else use fallback_server_name
         server_name = irc_client.server_name if irc_client.server_name else fallback_server_name
         
         self.add_client(server_name, irc_client)
         asyncio.create_task(irc_client.keep_alive())
-        asyncio.create_task(irc_client.handle_incoming_message())
+        asyncio.create_task(irc_client.handle_incoming_message(config_file))
 
         self.bind_return_key()
 
@@ -595,7 +672,8 @@ class RudeGui:
 
         # First, check if it's a DM
         if server in self.irc_client.channel_messages and \
-           channel_name in self.irc_client.channel_messages[server]:
+            channel_name in self.irc_client.channel_messages[server]:
+            self.user_listbox.delete(0, tk.END)
 
             # Set current channel to the DM
             self.irc_client.current_channel = channel_name
