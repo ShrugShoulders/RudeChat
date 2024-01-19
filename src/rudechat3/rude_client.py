@@ -1732,14 +1732,29 @@ class RudeChatClient:
         if macro_name in self.ASCII_ART_MACROS:
             current_time = datetime.datetime.now().strftime('[%H:%M:%S] ')
             for line in self.ASCII_ART_MACROS[macro_name].splitlines():
-                formatted_message = f"{current_time}<{self.nickname}> {line}\n"
-                await self.send_message(f'PRIVMSG {self.current_channel} :{line}')
-                self.gui.insert_text_widget(formatted_message)
+                formatted_message = self.format_message(line, current_time)
+                await self.send_message(f'PRIVMSG {self.current_channel} :{formatted_message}')
+                self.gui.insert_text_widget(f"{current_time}<{self.nickname}> {formatted_message}")
                 self.gui.highlight_nickname()
                 await asyncio.sleep(0.5)
                 await self.append_to_channel_history(self.current_channel, line)
         else:
             self.gui.insert_text_widget(f"Unknown ASCII art macro: {macro_name}. Type '/mac' to see available macros.\n")
+
+    def format_message(self, line, current_time):
+        # Process the whole string and escape color codes
+        processed_line = self.escape_color_codes(line)
+
+        # Add current time and nickname to the message
+        formatted_message = f'{processed_line}\n'
+
+        return formatted_message
+
+    def escape_color_codes(self, line):
+        # Escape color codes in the string
+        escaped_line = re.sub(r'\\x([0-9a-fA-F]{2})', lambda match: bytes.fromhex(match.group(1)).decode('utf-8'), line)
+        
+        return escaped_line
 
     async def load_ascii_art_macros(self):
         """Load ASCII art from files into a dictionary asynchronously."""
@@ -1841,7 +1856,11 @@ class RudeChatClient:
 
     async def append_to_channel_history(self, channel, message, is_action=False):
         timestamp = datetime.datetime.now().strftime('[%H:%M:%S] ')
-        formatted_message = f"{timestamp}<{self.nickname}> {message}\n"
+        
+        # Escape color codes in the message
+        escaped_message = self.escape_color_codes(message)
+
+        formatted_message = f"{timestamp}<{self.nickname}> {escaped_message}\n"
 
         # Initialize the channel's history if it does not exist yet
         if channel not in self.channel_messages:
