@@ -1689,16 +1689,17 @@ class RudeChatClient:
             case None:
                 if not user_input:
                     return
+                escaped_input = self.escape_color_codes(user_input)
                 if self.current_channel:
-                    await self.send_message(f'PRIVMSG {self.current_channel} :{user_input}')
-                    self.gui.insert_text_widget(f"{timestamp}<{self.nickname}> {user_input}\n")
+                    await self.send_message(f'PRIVMSG {self.current_channel} :{escaped_input}')
+                    self.gui.insert_text_widget(f"{timestamp}<{self.nickname}> {escaped_input}\n")
                     self.gui.highlight_nickname()
 
                     # Check if it's a DM or channel
                     if self.current_channel.startswith(self.chantypes):  # It's a channel
                         if self.current_channel not in self.channel_messages:
                             self.channel_messages[self.current_channel] = []
-                        self.channel_messages[self.current_channel].append(f"{timestamp}<{self.nickname}> {user_input}\n")
+                        self.channel_messages[self.current_channel].append(f"{timestamp}<{self.nickname}> {escaped_input}\n")
 
                     else:  # It's a DM
                         server_name = self.server  # Replace this with the actual server name if needed
@@ -1706,7 +1707,7 @@ class RudeChatClient:
                             self.channel_messages[server_name] = {}
                         if self.current_channel not in self.channel_messages[server_name]:
                             self.channel_messages[server_name][self.current_channel] = []
-                        self.channel_messages[server_name][self.current_channel].append(f"{timestamp}<{self.nickname}> {user_input}\n")
+                        self.channel_messages[server_name][self.current_channel].append(f"{timestamp}<{self.nickname}> {escaped_input}\n")
 
                     # Trim the messages list if it exceeds 100 lines
                     messages = self.channel_messages.get(server_name, {}).get(self.current_channel, []) if not self.current_channel.startswith("#") else self.channel_messages.get(self.current_channel, [])
@@ -1714,7 +1715,7 @@ class RudeChatClient:
                         messages = messages[-100:]
 
                     # Log the sent message using the new logging method
-                    self.log_message(self.server_name, self.current_channel, self.nickname, user_input, is_sent=True)
+                    self.log_message(self.server_name, self.current_channel, self.nickname, escaped_input, is_sent=True)
 
                 else:
                     self.gui.insert_text_widget(f"No channel selected. Use /join to join a channel.\n")
