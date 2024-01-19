@@ -33,7 +33,7 @@ class RudeGui:
         self.master.iconbitmap(default=icon_path)
 
         self.irc_colors = {
-            '00': '#FFFFFF', '01': '#000000', '02': '#0000AA', '03': '#00AA00',
+            '00': '#000000', '01': '#4d4d4d', '02': '#0000AA', '03': '#00AA00',
             '04': '#AA0000', '05': '#AA5500', '06': '#AA00AA', '07': '#FFAA00',
             '08': '#FFFF00', '09': '#00ff00', '10': '#00AAAA', '11': '#00FFAA',
             '12': '#2576ff', '13': '#ff00ff', '14': '#AAAAAA', '15': '#D3D3D3',
@@ -198,9 +198,19 @@ class RudeGui:
 
             with open(art_path, "r", encoding='utf-8') as art_file:
                 art_content = art_file.read()
-                self.text_widget.insert(tk.END, art_content)
+
+                # Escape color codes in the art content
+                escaped_art_content = self.escape_color_codes(art_content)
+
+                self.insert_text_widget(escaped_art_content)
         except FileNotFoundError as e:
             print(f"Error displaying startup art: {e}")
+
+    def escape_color_codes(self, line):
+        # Escape color codes in the string
+        escaped_line = re.sub(r'\\x([0-9a-fA-F]{2})', lambda match: bytes.fromhex(match.group(1)).decode('utf-8'), line)
+        
+        return escaped_line
 
     async def remove_server_from_dropdown(self, server_name=None):
         if server_name is None:
