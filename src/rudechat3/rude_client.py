@@ -260,6 +260,7 @@ class RudeChatClient:
                         if not self.use_nickserv_auth and not self.sasl_enabled:
                             motd_received = True
                             await self.automatic_join()
+                            return
 
                     case "PING":
                         print("[DEBUG] Handling PING message")
