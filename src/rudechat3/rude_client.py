@@ -268,7 +268,7 @@ class RudeChatClient:
 
                     case "396":
                         print("[DEBUG] Handling NickServ authentication successful message")
-                        if received_001 and motd_received:
+                        if received_001 and motd_received and not self.sasl_enabled:
                             await self.automatic_join()
                             print("Joined channels after authentication.")
                             return
