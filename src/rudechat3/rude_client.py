@@ -194,29 +194,34 @@ class RudeChatClient:
             while '\r\n' in buffer:
                 line, buffer = buffer.split('\r\n', 1)
                 tokens = irctokens.tokenise(line)
+                print(f"{tokens}")
 
                 match tokens.command:
                     case "CAP":
+                        print("[DEBUG] Handling CAP message")
                         await self.handle_cap(tokens)
 
                     case "AUTHENTICATE":
+                        print("[DEBUG] Handling AUTHENTICATE message")
                         await self.handle_sasl_auth(tokens)
 
                     case "903":
+                        print("[DEBUG] Handling SASL successful message")
                         await self.handle_sasl_successful()
                         sasl_authenticated = True
                         await self.automatic_join()
                         return
 
                     case "904":
+                        print("[DEBUG] Handling SASL failed message")
                         self.handle_sasl_failed()
 
                     case "001":
+                        print("[DEBUG] Handling 001 message")
                         self.gui.insert_text_widget(f'Connected to the server: {self.server}:{self.port}\n')
-                        received_001 = True  # Set this to True upon receiving 001
+                        received_001 = True
                         self.gui.insert_and_scroll()
 
-                        # If NickServ authentication is enabled, send authentication
                         if self.use_nickserv_auth:
                             await self.send_message(f'PRIVMSG NickServ :IDENTIFY {self.nickname} {self.nickserv_password}\r\n')
                             print("Sent NickServ authentication.")
@@ -224,42 +229,51 @@ class RudeChatClient:
                         else:
                             motd_received = True
 
-                    case "005":  # Handling the ISUPPORT message
+                    case "005":
+                        print("[DEBUG] Handling ISUPPORT message")
                         self.handle_isupport(tokens)
                         self.gui.insert_and_scroll()
 
                     case "250":
+                        print("[DEBUG] Handling connection info message")
                         self.handle_connection_info(tokens)
 
                     case "266":
+                        print("[DEBUG] Handling global users info message")
                         self.handle_global_users_info(tokens)
 
-                    case "433":  # Nickname already in use
+                    case "433":
+                        print("[DEBUG] Handling nickname conflict message")
                         await self.handle_nickname_conflict(tokens)
 
-                    case "372":  # Individual line of MOTD
+                    case "372":
+                        print("[DEBUG] Handling individual MOTD line")
                         self.handle_motd_line(tokens)
 
-                    case "375":  # Start of MOTD
+                    case "375":
+                        print("[DEBUG] Handling MOTD start message")
                         self.handle_motd_start(tokens)
 
-                    case "376":  # End of MOTD
+                    case "376":
+                        print("[DEBUG] Handling MOTD end message")
                         self.handle_motd_end(tokens)
-                        if not self.use_nickserv_auth:
-                            motd_received = True  # Set motd_received to True when NickServ is not used
+                        if not self.use_nickserv_auth and not self.sasl_enabled:
+                            motd_received = True
                             await self.automatic_join()
-                            return
 
                     case "PING":
+                        print("[DEBUG] Handling PING message")
                         await self.initial_ping(tokens)
 
-                    case "396":  # NickServ authentication successful
+                    case "396":
+                        print("[DEBUG] Handling NickServ authentication successful message")
                         if received_001 and motd_received:
                             await self.automatic_join()
                             print("Joined channels after authentication.")
                             return
 
                     case _:
+                        print("[DEBUG] Handling other messages")
                         self.gui.insert_and_scroll()
 
     async def handle_cap(self, tokens):
@@ -393,7 +407,6 @@ class RudeChatClient:
         sender = tokens.hostmask if tokens.hostmask else "Server"
         target = tokens.params[0]
         message = tokens.params[1]
-        print(f"{target}")
         self.gui.insert_server_widget(f"NOTICE {sender} {target}: {message}\n")
 
     async def handle_ctcp(self, tokens):
@@ -425,32 +438,39 @@ class RudeChatClient:
                         time_reply = "\x01TIME " + dublin_time + "\x01"
                         await self.send_message(f'NOTICE {sender} :{time_reply}')
                 case "ACTION":
-                    action_message = f"{timestamp}* {sender} {ctcp_content}\n"
-                    
-                    # Update the message history
-                    if target not in self.channel_messages:
-                        self.channel_messages[target] = []
-                    
-                    self.channel_messages[target].append(action_message)
-
-                    # Trim the messages list if it exceeds 100 lines
-                    if len(self.channel_messages[target]) > 100:
-                        self.channel_messages[target] = self.channel_messages[target][-100:]
-                    
-                    # Display the message in the text_widget if the target matches the current channel or DM
-                    if target == self.current_channel and self.gui.irc_client == self:
-                        self.gui.insert_text_widget(action_message)
-                        self.gui.highlight_nickname()
-                    else:
-                        # If it's not the currently viewed channel, highlight the channel in green in the Listbox
-                        for idx in range(self.gui.channel_listbox.size()):
-                            if self.gui.channel_listbox.get(idx) == target:
-                                current_bg = self.gui.channel_listbox.itemcget(idx, 'bg')
-                                if current_bg != 'red':
-                                    self.gui.channel_listbox.itemconfig(idx, {'bg':'green'})
-                                break
+                    await self.handle_action_ctcp(timestamp, sender, target, ctcp_content)
                 case _:
                     print(f"Unhandled CTCP command: {ctcp_command}")
+
+    async def handle_action_ctcp(self, timestamp, sender, target, ctcp_content):
+        action_message = f"{timestamp}* {sender} {ctcp_content}\n"
+
+        # Update the message history
+        if target not in self.channel_messages:
+            self.channel_messages[target] = []
+
+        self.channel_messages[target].append(action_message)
+
+        # Trim the messages list
+        self.trim_messages(target)
+
+        # Display the message in the text_widget if the target matches the current channel or DM
+        if target == self.current_channel and self.gui.irc_client == self:
+            self.gui.insert_text_widget(action_message)
+            self.gui.highlight_nickname()
+        else:
+            # If it's not the currently viewed channel, highlight the channel in green in the Listbox
+            for idx in range(self.gui.channel_listbox.size()):
+                if self.gui.channel_listbox.get(idx) == target:
+                    current_bg = self.gui.channel_listbox.itemcget(idx, 'bg')
+                    if current_bg != 'red':
+                        self.gui.channel_listbox.itemconfig(idx, {'bg':'green'})
+                    break
+
+    def trim_messages(self, target):
+        # Trim the messages list if it exceeds 100 lines
+        if len(self.channel_messages[target]) > 100:
+            self.channel_messages[target] = self.channel_messages[target][-100:]
 
     async def notify_user_of_mention(self, server, channel):
         notification_msg = f"Mention on {server} in {channel}"
@@ -580,9 +600,7 @@ class RudeChatClient:
 
         self.channel_messages[channel].append(join_message)
 
-        # Trim the messages list if it exceeds 100 lines
-        if len(self.channel_messages[channel]) > 100:
-            self.channel_messages[channel] = self.channel_messages[channel][-100:]
+        self.trim_messages(channel)
 
         # Display the message in the text_widget only if the channel matches the current channel
         if channel == self.current_channel and self.gui.irc_client == self:
@@ -620,8 +638,7 @@ class RudeChatClient:
         self.channel_messages[channel].append(part_message)
 
         # Trim the messages list if it exceeds 100 lines
-        if len(self.channel_messages[channel]) > 100:
-            self.channel_messages[channel] = self.channel_messages[channel][-100:]
+        self.trim_messages(channel)
 
         # Display the message in the text_widget only if the channel matches the current channel
         if channel == self.current_channel and self.gui.irc_client == self:
@@ -665,8 +682,7 @@ class RudeChatClient:
                     self.channel_messages[channel].append(quit_message)
 
                     # Trim the messages list if it exceeds 100 lines
-                    if len(self.channel_messages[channel]) > 100:
-                        self.channel_messages[channel] = self.channel_messages[channel][-100:]
+                    self.trim_messages(channel)
 
                     # Display the message in the text_widget only if the channel matches the current channel
                     if channel == self.current_channel and self.gui.irc_client == self:
@@ -703,8 +719,7 @@ class RudeChatClient:
                     self.channel_messages[channel].append(f"<@> {old_nick} has changed their nickname to {new_nick}\n")
 
                     # Trim the messages list if it exceeds 100 lines
-                    if len(self.channel_messages[channel]) > 100:
-                        self.channel_messages[channel] = self.channel_messages[channel][-100:]
+                    self.trim_messages(channel)
                     
                     # Insert message into the text widget only if this is the current channel
                     if channel == self.current_channel and self.gui.irc_client == self:
@@ -795,8 +810,7 @@ class RudeChatClient:
                 self.channel_messages[channel].append(message)
 
                 # Trim the messages list if it exceeds 100 lines
-                if len(self.channel_messages[channel]) > 100:
-                    self.channel_messages[channel] = self.channel_messages[channel][-100:]
+                self.trim_messages(channel)
 
             # Handle removal of modes
             elif mode_change.startswith('-'):
@@ -826,8 +840,7 @@ class RudeChatClient:
                 self.channel_messages[channel].append(message)
 
                 # Trim the messages list if it exceeds 100 lines
-                if len(self.channel_messages[channel]) > 100:
-                    self.channel_messages[channel] = self.channel_messages[channel][-100:]
+                self.trim_messages(channel)
 
                 if not user_modes:
                     if user in current_modes:
@@ -1024,8 +1037,7 @@ class RudeChatClient:
         self.channel_messages[channel].append(kick_message_content + "\n")
 
         # Trim the messages list if it exceeds 100 lines
-        if len(self.channel_messages[channel]) > 100:
-            self.channel_messages[channel] = self.channel_messages[channel][-100:]
+        self.trim_messages(channel)
 
         if channel == self.current_channel and self.gui.irc_client == self:
             self.gui.insert_text_widget(kick_message_content + "\n")
@@ -1085,7 +1097,6 @@ class RudeChatClient:
 
     def handle_pong(self, tokens):
         pong_server = tokens.params[-1]  # Assumes the server name is the last parameter
-        print(f"PONG: {pong_server}\n")
 
     def handle_372(self, tokens):
         motd_line = tokens.params[-1]
@@ -1119,6 +1130,7 @@ class RudeChatClient:
         elif subcommand == "ACK":  # If the server acknowledges the capabilities you requested
             acknowledged_caps = tokens.params[-1]
             self.gui.insert_text_widget(f"Enabled capabilities: {acknowledged_caps}\n")
+            await self.send_message("AUTHENTICATE PLAIN")
 
     def handle_topic(self, tokens):
         channel_name = tokens.params[1]
@@ -1223,16 +1235,16 @@ class RudeChatClient:
                 try:
                     # Check for an empty line or line with only whitespace before attempting to tokenize
                     if len(line.strip()) == 0:
-                        print(f"Debug: Received an empty or whitespace-only line: '{line}'\n")
+                        #print(f"Debug: Received an empty or whitespace-only line: '{line}'\n")
                         continue
 
                     # Additional check: Ensure that the line has at least one character
                     if len(line) < 1:
-                        print(f"Debug: Received a too-short line: '{line}'\n")
+                        #print(f"Debug: Received a too-short line: '{line}'\n")
                         continue
 
                     # Debug statement to print the line before tokenizing
-                    print(f"Debug: About to tokenize the line - '{line}'")
+                    #print(f"Debug: About to tokenize the line - '{line}'")
 
                     tokens = irctokens.tokenise(line)
                 except ValueError as e:
@@ -1280,6 +1292,9 @@ class RudeChatClient:
                     case "332" | "333" | "TOPIC":
                         self.handle_topic(tokens)
 
+                    case "328":
+                        self.handle_328(tokens)
+
                     case "367":  
                         self.handle_banlist(tokens)
                             
@@ -1326,15 +1341,31 @@ class RudeChatClient:
                     case "PING":
                         ping_param = tokens.params[0]
                         await self.send_message(f'PONG {ping_param}')
-                        print(f"sent PONG: {ping_param}")
                     case "CAP":
                         await self.handle_cap_main(tokens)
                     case "PONG":
                         self.handle_pong(tokens)
+                    case "AUTHENTICATE":
+                        print("[DEBUG] Handling AUTHENTICATE message")
+                        await self.handle_sasl_auth(tokens)
+                    case "903":
+                        print("[DEBUG] Handling SASL successful message")
+                        await self.handle_sasl_successful()
+                        sasl_authenticated = True
+                        await self.automatic_join()
+                        return
+                    case "904":
+                        print("[DEBUG] Handling SASL failed message")
+                        self.handle_sasl_failed()
                     case _:
                         print(f"Debug: Unhandled command {tokens.command}. Full line: {line}")
                         if line.startswith(f":{self.server}"):
                             await self.handle_server_message(line)
+
+    def handle_328(self, tokens):
+        channel = tokens.params[1]
+        url = tokens.params[2]
+        self.gui.insert_server_widget(f"URL for {channel} {url}\n")
 
     async def handle_cannot_join_channel(self, tokens):
         channel_name = tokens.params[1]
@@ -1513,14 +1544,12 @@ class RudeChatClient:
                 away_message = " ".join(args[1:]) if len(args) > 1 else None
                 if away_message:
                     await self.send_message(f"AWAY :{away_message}")
-                    self.gui.insert_text_widget(f"{timestamp}You are now set as away: {away_message}\n")
+                    self.gui.insert_text_widget(f"{away_message}\n")
                 else:
                     await self.send_message("AWAY")
-                    self.gui.insert_text_widget(f"{timestamp}You are now set as away.\n")
 
             case "back":  # remove the "away" status
                 await self.send_message("AWAY")
-                self.gui.insert_text_widget(f"{timestamp}You are no longer set as away.\n")
 
             case "msg":  # send a private message to a user
                 if len(args) < 3:
@@ -1871,8 +1900,7 @@ class RudeChatClient:
         self.channel_messages[channel].append(formatted_message)
         
         # Trim the history if it exceeds 100 lines
-        if len(self.channel_messages[channel]) > 100:
-            self.channel_messages[channel] = self.channel_messages[channel][-100:]
+        self.trim_messages(channel)
 
     async def handle_cowsay_command(self, args):
         script_directory = os.path.dirname(os.path.abspath(__file__))
@@ -2054,8 +2082,8 @@ class RudeChatClient:
             self.channel_messages[channel].append(formatted_message)
             
             # Trim the messages list if it exceeds 100 lines
-            if len(self.channel_messages[channel]) > 100:
-                self.channel_messages[channel] = self.channel_messages[channel][-100:]
+            self.trim_messages(channel)
+
         self.gui.insert_text_widget(f"Message: {message} sent to all channels")
 
     async def handle_who_command(self, args):
@@ -2094,14 +2122,14 @@ class RudeChatClient:
         self.channel_messages[self.current_channel].append(f"{timestamp}{formatted_message}\n")
 
         # Trim the messages list if it exceeds 100 lines
-        if len(self.channel_messages[self.current_channel]) > 100:
-            self.channel_messages[self.current_channel] = self.channel_messages[self.current_channel][-100:]
+        self.trim_messages(self.current_channel)
 
     def display_help(self):
         # Categories and their associated commands
         categories = {
             "Channel Management": [
-            "Use Your Right Click for Config and more."
+                "Use Your Right Click for Config and more.",
+                "To use formatting use the format control characters as follows",
                 "/join <channel> - Joins a channel",
                 "/part <channel> - Leaves a channel",
                 "/ch - Shows channels joined",
@@ -2111,6 +2139,14 @@ class RudeChatClient:
                 "/banlist - Shows ban list for channel",
                 "/invite <user> <channel> - invites a user to a channel",
                 "/kick <user> <channel> [message]",
+            ],
+            "String Formatting": [
+                "\\x02 - Bold",
+                "\\x1D - Italic",
+                "\\x1F - Underline",
+                "\\x03<colorcode> - Color",
+                "\\x0F - Terminate formatting - end of format string",
+                "Example: \\x0304example text\\x0F",
             ],
             "Private Messaging": [
                 "/query <nickname> - Opens a DM with a user",
@@ -2150,6 +2186,7 @@ class RudeChatClient:
             self.gui.insert_text_widget(f"\n{category}:\n")
             for cmd in commands:
                 self.gui.insert_text_widget(f"{cmd}\n")
+                self.gui.insert_and_scroll()
 
     def set_gui(self, gui):
         self.gui = gui
@@ -2180,7 +2217,6 @@ class RudeChatClient:
 
     async def display_last_messages(self, channel, num=200, server_name=None):
         if server_name:
-            print(f"Server Name: {server_name}")
             messages = self.channel_messages.get(server_name, {}).get(channel, [])
         else:
             messages = self.channel_messages.get(channel, [])
