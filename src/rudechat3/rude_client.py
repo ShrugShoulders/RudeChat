@@ -766,8 +766,18 @@ class RudeChatClient:
         user = tokens.params[2] if len(tokens.params) > 2 else None
 
         # Ignore ban and unban and quiet modes
-        if mode_change in ['+b', '-b', '-q', '+q']:
-            print(f"Ignoring ban/unban/quiet mode for {user if user else 'unknown'}")
+        ignored_modes = ['+b', '-b', '-q', '+q']
+        if mode_change in ignored_modes:
+            message = f"<!> {mode_change} mode for {user if user else 'unknown'}\n"
+            if channel == self.current_channel:
+                self.gui.insert_text_widget(f"{message}")
+                self.gui.highlight_nickname()
+
+            # Update the message history for the channel
+            if channel not in self.channel_messages:
+                self.channel_messages[channel] = []
+            self.channel_messages[channel].append(message)
+
             return
 
         if channel in self.joined_channels and user:
@@ -2170,7 +2180,7 @@ class RudeChatClient:
 
         await self.main_loop()
 
-    async def display_last_messages(self, channel, num=200, server_name=None):
+    async def display_last_messages(self, channel, num=100, server_name=None):
         if server_name:
             messages = self.channel_messages.get(server_name, {}).get(channel, [])
         else:
