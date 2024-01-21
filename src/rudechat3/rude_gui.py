@@ -140,7 +140,7 @@ class RudeGui:
         self.server_text_widget.grid(row=0, column=0, sticky='nsew')
 
         # Entry widget
-        self.entry_widget = tk.Entry(self.master)
+        self.entry_widget = tk.Entry(self.master, bg="black", fg="#C0FFEE", insertbackground="#C0FFEE", font=("Hack", 10))
         self.entry_widget.grid(row=3, column=1, sticky='ew')
         self.entry_widget.bind('<Tab>', self.handle_tab_complete)
         self.entry_widget.bind('<Up>', self.handle_arrow_keys)
