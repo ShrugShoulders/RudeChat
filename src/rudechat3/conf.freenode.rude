@@ -1,6 +1,6 @@
 [IRC]
 server_name = freenode
-nickname = Eire
+nickname = Rude
 server = irc.freenode.net
 auto_join_channels = #irish
 use_nickserv_auth = False
