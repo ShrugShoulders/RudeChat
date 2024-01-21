@@ -194,68 +194,59 @@ class RudeChatClient:
             while '\r\n' in buffer:
                 line, buffer = buffer.split('\r\n', 1)
                 tokens = irctokens.tokenise(line)
-                print(f"{tokens}")
 
                 match tokens.command:
                     case "CAP":
-                        print("[DEBUG] Handling CAP message")
+                        self.gui.insert_text_widget("Handling CAP message\n")
                         await self.handle_cap(tokens)
 
                     case "AUTHENTICATE":
-                        print("[DEBUG] Handling AUTHENTICATE message")
+                        self.gui.insert_text_widget("Handling AUTHENTICATE message\n")
                         await self.handle_sasl_auth(tokens)
 
                     case "903":
-                        print("[DEBUG] Handling SASL successful message")
+                        self.gui.insert_text_widget("Handling SASL successful message\n")
                         await self.handle_sasl_successful()
                         sasl_authenticated = True
                         await self.automatic_join()
                         return
 
                     case "904":
-                        print("[DEBUG] Handling SASL failed message")
+                        self.gui.insert_text_widget("Handling SASL failed message\n")
                         self.handle_sasl_failed()
 
                     case "001":
-                        print("[DEBUG] Handling 001 message")
                         self.gui.insert_text_widget(f'Connected to the server: {self.server}:{self.port}\n')
                         received_001 = True
                         self.gui.insert_and_scroll()
 
-                        if self.use_nickserv_auth:
+                        if self.use_nickserv_auth and not self.sasl_enabled:
                             await self.send_message(f'PRIVMSG NickServ :IDENTIFY {self.nickname} {self.nickserv_password}\r\n')
-                            print("Sent NickServ authentication.")
+                            self.gui.insert_text_widget(f"Sent NickServ authentication.\n")
                             motd_received = True
                         else:
                             motd_received = True
 
                     case "005":
-                        print("[DEBUG] Handling ISUPPORT message")
                         self.handle_isupport(tokens)
                         self.gui.insert_and_scroll()
 
                     case "250":
-                        print("[DEBUG] Handling connection info message")
                         self.handle_connection_info(tokens)
 
                     case "266":
-                        print("[DEBUG] Handling global users info message")
                         self.handle_global_users_info(tokens)
 
                     case "433":
-                        print("[DEBUG] Handling nickname conflict message")
                         await self.handle_nickname_conflict(tokens)
 
                     case "372":
-                        print("[DEBUG] Handling individual MOTD line")
                         self.handle_motd_line(tokens)
 
                     case "375":
-                        print("[DEBUG] Handling MOTD start message")
                         self.handle_motd_start(tokens)
 
                     case "376":
-                        print("[DEBUG] Handling MOTD end message")
                         self.handle_motd_end(tokens)
                         if not self.use_nickserv_auth and not self.sasl_enabled:
                             motd_received = True
@@ -263,55 +254,45 @@ class RudeChatClient:
                             return
 
                     case "PING":
-                        print("[DEBUG] Handling PING message")
                         await self.initial_ping(tokens)
 
                     case "396":
-                        print("[DEBUG] Handling NickServ authentication successful message")
                         if received_001 and motd_received and not self.sasl_enabled:
                             await self.automatic_join()
                             print("Joined channels after authentication.")
                             return
 
                     case _:
-                        print("[DEBUG] Handling other messages")
                         self.gui.insert_and_scroll()
 
     async def handle_cap(self, tokens):
-        print(f"[DEBUG] Handling CAP: {tokens.params}")
         if not self.sasl_enabled:
-            print(f"[DEBUG] SASL is not enabled.")
+            self.gui.insert_text_widget(f"SASL is not enabled.\n")
             return  # Skip SASL if it's not enabled
         if "LS" in tokens.params:
-            print(f"[DEBUG] Sending CAP REQ :sasl")
             await self.send_message("CAP REQ :sasl")
         elif "ACK" in tokens.params:
-            print(f"[DEBUG] Sending AUTHENTICATE PLAIN")
             await self.send_message("AUTHENTICATE PLAIN")
 
     async def handle_sasl_auth(self, tokens):
-        print(f"[DEBUG] Handling AUTHENTICATE: {tokens.params}")
         if not self.sasl_enabled:
-            print(f"[DEBUG] SASL is not enabled.")
+            self.gui.insert_text_widget(f"SASL is not enabled.\n")
             return  # Skip SASL if it's not enabled
         if tokens.params[0] == '+':
             auth_string = f"{self.sasl_username}\0{self.sasl_username}\0{self.sasl_password}"
             encoded_auth_string = base64.b64encode(auth_string.encode()).decode()
-            print(f"[DEBUG] Sending AUTHENTICATE {encoded_auth_string[:5]}...")  # Truncate to not reveal sensitive info
             await self.send_message(f"AUTHENTICATE {encoded_auth_string}")
 
     async def handle_sasl_successful(self):
-        print(f"[DEBUG] SASL authentication successful.")
         if not self.sasl_enabled:
-            print(f"[DEBUG] SASL is not enabled.")
+            self.gui.insert_text_widget(f"SASL is not enabled.\n")
             return  # Skip SASL if it's not enabled
         self.gui.insert_text_widget(f"SASL authentication successful.\n")
         await self.send_message("CAP END")
 
     def handle_sasl_failed(self):
-        print(f"[DEBUG] SASL authentication failed.")
         if not self.sasl_enabled:
-            print(f"[DEBUG] SASL is not enabled.")
+            self.gui.insert_text_widget(f"SASL is not enabled.\n")
             return
         self.gui.insert_text_widget(f"SASL authentication failed. Disconnecting.\n")
 
@@ -324,7 +305,6 @@ class RudeChatClient:
 
     async def join_channel(self, channel):
         if not self.is_valid_channel(channel):
-            print(f"Invalid channel name {channel}.")
             self.gui.insert_text_widget(f"Invalid channel name {channel}.\n")
             return
 
@@ -1121,18 +1101,6 @@ class RudeChatClient:
         error_message = ' '.join(tokens.params) if tokens.params else 'Unknown error'
         self.gui.insert_text_widget(f"ERROR: {error_message}\n")
 
-    async def handle_cap_main(self, tokens):
-        subcommand = tokens.params[1].upper()
-        if subcommand == "LS":
-            capabilities = tokens.params[-1]
-            self.gui.insert_text_widget(f"Server capabilities: {capabilities}\n")
-            # Requesting SASL capability
-            await self.send_message("CAP REQ :sasl")
-        elif subcommand == "ACK":  # If the server acknowledges the capabilities you requested
-            acknowledged_caps = tokens.params[-1]
-            self.gui.insert_text_widget(f"Enabled capabilities: {acknowledged_caps}\n")
-            await self.send_message("AUTHENTICATE PLAIN")
-
     def handle_topic(self, tokens):
         channel_name = tokens.params[1]
         command = tokens.command
@@ -1342,22 +1310,8 @@ class RudeChatClient:
                     case "PING":
                         ping_param = tokens.params[0]
                         await self.send_message(f'PONG {ping_param}')
-                    case "CAP":
-                        await self.handle_cap_main(tokens)
                     case "PONG":
                         self.handle_pong(tokens)
-                    case "AUTHENTICATE":
-                        print("[DEBUG] Handling AUTHENTICATE message")
-                        await self.handle_sasl_auth(tokens)
-                    case "903":
-                        print("[DEBUG] Handling SASL successful message")
-                        await self.handle_sasl_successful()
-                        sasl_authenticated = True
-                        await self.automatic_join()
-                        return
-                    case "904":
-                        print("[DEBUG] Handling SASL failed message")
-                        self.handle_sasl_failed()
                     case _:
                         print(f"Debug: Unhandled command {tokens.command}. Full line: {line}")
                         if line.startswith(f":{self.server}"):
