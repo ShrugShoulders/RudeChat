@@ -112,10 +112,10 @@ class RudeChatClient:
         
         # Start capability negotiation
         if self.sasl_enabled:
-            print("[DEBUG] About to send CAP LS 302")  # Debug message
+            self.gui.insert_text_widget("Beginning SASL Authentication\n")
             await self.send_message('CAP LS 302')
         else:
-            print("[DEBUG] SASL is not enabled.")  # Debug message
+            self.gui.insert_text_widget("SASL is not enabled.\n")
 
     def handle_motd_line(self, tokens):
         motd_line = tokens.params[-1]  # Assumes the MOTD line is the last parameter
@@ -140,7 +140,6 @@ class RudeChatClient:
         retries = 0
 
         while retries < MAX_RETRIES:
-            print(f"Retry count: {retries}")
             try:
                 await self._await_welcome_message()
                 return  # Successfully connected and received 001
@@ -456,12 +455,23 @@ class RudeChatClient:
     async def notify_user_of_mention(self, server, channel):
         notification_msg = f"Mention on {server} in {channel}"
 
-        # Highlight the mentioned channel in the Listbox
-        for idx in range(self.gui.channel_listbox.size()):
-            if self.gui.channel_listbox.get(idx) == channel:
-                self.gui.channel_listbox.itemconfig(idx, {'bg':'red'})
+        # Check if the mentioned channel is currently selected
+        selected_channel = self.current_channel
+        is_channel_selected = selected_channel == channel
+
+        # Highlight the mentioned channel in the channel_listbox if it's not selected
+        if not is_channel_selected:
+            for idx in range(self.gui.channel_listbox.size()):
+                if self.gui.channel_listbox.get(idx) == channel:
+                    self.gui.channel_listbox.itemconfig(idx, {'bg': 'red'})
+                    break
+
+        # Highlight the mentioned server
+        for idx in range(self.gui.server_listbox.size()):
+            if self.gui.server_listbox.get(idx) == self.server_name:
+                self.gui.server_listbox.itemconfig(idx, {'bg': 'red'})
                 break
-        
+
         # Play the beep sound/notification
         await self.trigger_beep_notification(channel_name=channel, message_content=notification_msg)
 
@@ -1148,35 +1158,9 @@ class RudeChatClient:
             # Extract the nickname from the second element of the list
             nickname = tokens.params[1]
             
-            self.gui.insert_text_widget(f"The nickname '{nickname}' doesn't exist on the server.")
+            self.gui.insert_text_widget(f"The nickname '{nickname}' doesn't exist on the server.\n")
         else:
             print("Invalid response format for '401'.")
-
-    #def strip_ansi_escape_sequences(self, text):
-        # Strip ANSI escape sequences and IRC formatting characters
-    #    ansi_escape = re.compile(r'\x1B[@-_][0-?]*[ -/]*[@-~]')
-    #    cleaned_text = ansi_escape.sub('', text)
-
-        # Strip IRC color codes
-    #    irc_color = re.compile(r'\x03\d{0,2}(,\d{1,2})?')
-    #    cleaned_text = irc_color.sub('', cleaned_text)
-
-        # Remove bold characters
-    #    bold_formatting = re.compile(r'\x02')
-    #    cleaned_text = bold_formatting.sub('', cleaned_text)
-
-        # Remove italics characters
-    #    italics_formatting = re.compile(r'\x1D')
-    #    cleaned_text = italics_formatting.sub('', cleaned_text)
-
-        # Remove bold-italics characters
-    #    bold_italics_formatting = re.compile(r'\x02\x1D|\x1D\x02')
-    #    cleaned_text = bold_italics_formatting.sub('', cleaned_text)
-
-        # Remove Shift Out character
-    #    cleaned_text = cleaned_text.replace('\x0E', '')
-
-    #    return cleaned_text
 
     async def handle_incoming_message(self, config_file):
         buffer = ""
@@ -1753,7 +1737,7 @@ class RudeChatClient:
 
     async def load_ascii_art_macros(self):
         """Load ASCII art from files into a dictionary asynchronously."""
-        print("Loading ASCII art macros...")
+        self.gui.insert_text_widget("Loading ASCII art macros...\n")
         script_directory = os.path.dirname(os.path.abspath(__file__))
         ASCII_ART_DIRECTORY = os.path.join(script_directory, 'Art')
 
