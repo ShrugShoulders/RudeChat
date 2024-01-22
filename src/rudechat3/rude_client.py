@@ -466,7 +466,6 @@ class RudeChatClient:
                     self.gui.channel_listbox.itemconfig(idx, {'bg': 'red'})
                     break
 
-        # Highlight the mentioned server
         for idx in range(self.gui.server_listbox.size()):
             if self.gui.server_listbox.get(idx) == self.server_name:
                 self.gui.server_listbox.itemconfig(idx, {'bg': 'red'})
