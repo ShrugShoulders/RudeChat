@@ -602,7 +602,7 @@ class RudeGui:
             self.server_listbox.insert(tk.END, server)
 
         self.server_var.set(server_name)  # Set the current server
-        self.on_server_change(None)  # Trigger the server change event
+        self.server_listbox.select_set(0)
         self.channel_lists[server_name] = irc_client.joined_channels
 
     def on_server_change(self, event):
@@ -624,6 +624,9 @@ class RudeGui:
                 selected_channel = self.irc_client.current_channel
                 if selected_channel:
                     self.irc_client.update_gui_user_list(selected_channel)
+
+                # Set the background color of the selected server to black
+                self.server_listbox.itemconfig(selected_server_index, {'bg': 'black', 'fg': 'white'})
 
     async def init_client_with_config(self, config_file, fallback_server_name):
         irc_client = RudeChatClient(self.text_widget, self.server_text_widget, self.entry_widget, self.master, self)
