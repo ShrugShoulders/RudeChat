@@ -37,6 +37,8 @@ class RudeChatClient:
         self.mode_to_symbol = {}
         self.whois_data = {}
         self.download_channel_list = {}
+        self.highlighted_channels = {}
+        self.highlighted_servers = {}
         self.whois_executed = set()
         self.decoder = irctokens.StatefulDecoder()
         self.encoder = irctokens.StatefulEncoder()
@@ -302,6 +304,9 @@ class RudeChatClient:
         except TimeoutError:
             print("Timeout while sending message.")
 
+    def is_valid_channel(self, channel):
+        return any(channel.startswith(prefix) for prefix in self.chantypes)
+
     async def join_channel(self, channel):
         if not self.is_valid_channel(channel):
             self.gui.insert_text_widget(f"Invalid channel name {channel}.\n")
@@ -312,20 +317,52 @@ class RudeChatClient:
         self.gui.channel_lists[self.server] = self.joined_channels  # Update the GUI channel list
         self.update_gui_channel_list()  # Update the channel list in GUI
 
-    def is_valid_channel(self, channel):
-        return any(channel.startswith(prefix) for prefix in self.chantypes)
-
     async def leave_channel(self, channel):
         await self.send_message(f'PART {channel}')
         if channel in self.joined_channels:
             self.joined_channels.remove(channel)
-        self.gui.channel_lists[self.server] = self.joined_channels
-        self.update_gui_channel_list()
+            
+            # Remove the channel entry from the highlighted_channels dictionary
+            if self.server_name in self.highlighted_channels:
+                self.highlighted_channels[self.server_name].pop(channel, None)
+
+            self.gui.channel_lists[self.server] = self.joined_channels
+            self.update_gui_channel_list()
 
     def update_gui_channel_list(self):
-        self.gui.channel_listbox.delete(0, tk.END)  # Clear existing items
+        print(f"{self.highlighted_channels}")
+        # Clear existing items
+        self.gui.channel_listbox.delete(0, tk.END)
+
         for chan in self.joined_channels:
             self.gui.channel_listbox.insert(tk.END, chan)
+
+        # Update and restore the highlighted background color for all previously highlighted channels
+        updated_highlighted_channels = {}
+        for channel, highlighted_info in self.highlighted_channels.get(self.server_name, {}).items():
+            if highlighted_info is not None:
+                old_index = highlighted_info.get('index')
+                if old_index is not None:
+                    # Find the new index in the current listbox
+                    new_index = None
+                    for idx in range(self.gui.channel_listbox.size()):
+                        if self.gui.channel_listbox.get(idx) == channel:
+                            new_index = idx
+                            break
+
+                    if new_index is not None:
+                        # Update the index in the highlighted info
+                        highlighted_info['index'] = new_index
+
+                        # Set the background color directly based on the dictionary entry
+                        bg_color = highlighted_info.get('bg', 'red')
+                        self.gui.channel_listbox.itemconfig(new_index, {'bg': bg_color})
+
+                        # Update the dictionary with the new index
+                        updated_highlighted_channels[channel] = highlighted_info
+
+        # Update the highlighted_channels dictionary with the new indexes
+        self.highlighted_channels[self.server_name] = updated_highlighted_channels
 
     def update_gui_user_list(self, channel):
         self.gui.user_listbox.delete(0, tk.END)
@@ -461,18 +498,32 @@ class RudeChatClient:
 
         # Highlight the mentioned channel in the channel_listbox if it's not selected
         if not is_channel_selected:
-            for idx in range(self.gui.channel_listbox.size()):
-                if self.gui.channel_listbox.get(idx) == channel:
-                    self.gui.channel_listbox.itemconfig(idx, {'bg': 'red'})
-                    break
+            self.highlight_channel(channel)
 
-        for idx in range(self.gui.server_listbox.size()):
-            if self.gui.server_listbox.get(idx) == self.server_name:
-                self.gui.server_listbox.itemconfig(idx, {'bg': 'red'})
-                break
+        # Highlight the server in the server_listbox if it's not selected
+        self.highlight_server()
 
         # Play the beep sound/notification
         await self.trigger_beep_notification(channel_name=channel, message_content=notification_msg)
+
+    def highlight_channel(self, channel):
+        if self.server_name not in self.highlighted_channels:
+            self.highlighted_channels[self.server_name] = {}
+
+        for idx in range(self.gui.channel_listbox.size()):
+            if self.gui.channel_listbox.get(idx) == channel:
+                self.gui.channel_listbox.itemconfig(idx, {'bg': 'red'})
+                # Store the highlighted channel information for the server
+                self.highlighted_channels[self.server_name][channel] = {'index': idx, 'bg': 'red'}
+                break
+
+    def highlight_server(self):
+        for idx in range(self.gui.server_listbox.size()):
+            if self.gui.server_listbox.get(idx) == self.server_name:
+                self.gui.server_listbox.itemconfig(idx, {'bg': 'red'})
+                # Store the highlighted server information with red background
+                self.highlighted_servers[self.server_name] = {'index': idx, 'bg': 'red'}
+                break
 
     async def trigger_beep_notification(self, channel_name=None, message_content=None):
         """
@@ -576,8 +627,18 @@ class RudeChatClient:
                 if self.gui.channel_listbox.get(idx) == target:
                     current_bg = self.gui.channel_listbox.itemcget(idx, 'bg')
                     if current_bg != 'red':
-                        self.gui.channel_listbox.itemconfig(idx, {'bg':'green'})
+                        self.gui.channel_listbox.itemconfig(idx, {'bg': 'green'})
+
+                        # Store the highlighted channel information for the server with green background
+                        self.save_highlight(target, idx, bg='green')
                     break
+
+    def save_highlight(self, channel, index, bg='green'):
+        if self.server_name not in self.highlighted_channels:
+            self.highlighted_channels[self.server_name] = {}
+
+        # Store the highlighted channel information for the server
+        self.highlighted_channels[self.server_name][channel] = {'index': index, 'bg': bg}
 
     async def handle_join(self, tokens):
         user_info = tokens.hostmask.nickname
@@ -1407,19 +1468,17 @@ class RudeChatClient:
         self.update_gui_channel_list()
         self.gui.insert_text_widget(f"{timestamp}Opened DM with {nickname}.\n")
 
-    def close_dm(self, nickname, timestamp):
-        # Remove the DM from the list of joined channels
-        self.joined_channels.remove(nickname)
+    async def leave_channel(self, channel):
+        await self.send_message(f'PART {channel}')
+        if channel in self.joined_channels:
+            self.joined_channels.remove(channel)
+            
+            # Remove the channel entry from the highlighted_channels dictionary
+            if self.server_name in self.highlighted_channels:
+                self.highlighted_channels[self.server_name].pop(channel, None)
 
-        # Remove the DM's messages from the channel_messages dictionary
-        if self.server in self.channel_messages and nickname in self.channel_messages[self.server]:
-            del self.channel_messages[self.server][nickname]
-
-        # Update the GUI's list of channels
-        self.update_gui_channel_list()
-
-        # Display a message indicating the DM was closed
-        self.gui.insert_text_widget(f"Private message with {nickname} closed.\n")
+            self.gui.channel_lists[self.server] = self.joined_channels
+            self.update_gui_channel_list()
 
     async def handle_kick_command(self, args):
         if len(args) < 3:
