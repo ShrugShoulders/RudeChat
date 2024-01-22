@@ -63,8 +63,9 @@ async def initialize_clients(app):
         except Exception as e:
             print(f"Failed to connect to Server_{i+1} due to {e}. Proceeding to the next server.")
 
-    if app.server_dropdown['values']:
-        first_server = app.server_dropdown['values'][0]
+    # Update the Listbox with the new list of servers
+    if app.server_listbox.size() > 0:
+        first_server = app.server_listbox.get(0)
         app.server_var.set(first_server)
         app.on_server_change(None)
 
