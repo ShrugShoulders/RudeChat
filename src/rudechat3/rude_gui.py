@@ -234,7 +234,7 @@ class RudeGui:
         # Set the first available server as the current one
         if self.server_listbox.size() > 0:
             self.server_var.set(self.server_listbox.get(0))
-            self.on_server_change(None)
+            self.server_listbox.select_set(0)
         else:
             self.server_var.set("")  # No servers left, clear the current selection
 
