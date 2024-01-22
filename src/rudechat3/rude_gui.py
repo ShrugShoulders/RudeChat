@@ -76,13 +76,6 @@ class RudeGui:
         self.server_topic_frame = tk.Frame(self.master, bg="black")
         self.server_topic_frame.grid(row=0, column=0, columnspan=2, sticky='nsew')
 
-        # Server selection dropdown
-        self.server_var = tk.StringVar(self.master)
-        self.server_dropdown = ttk.Combobox(self.server_topic_frame, textvariable=self.server_var, width=20)
-        self.server_dropdown.grid(row=0, column=0, sticky='w')
-        self.server_dropdown['values'] = []
-        self.server_dropdown.bind('<<ComboboxSelected>>', self.on_server_change)
-
         # Topic label
         self.current_topic = tk.StringVar(value="Topic: ")
         self.topic_label = tk.Label(self.server_topic_frame, textvariable=self.current_topic, bg="black", fg="white", padx=5, pady=1)
@@ -118,14 +111,30 @@ class RudeGui:
         self.channel_frame = tk.Frame(self.list_frame, bg="black")
         self.channel_frame.grid(row=1, column=0, sticky="nsew")
 
-        self.channel_label = tk.Label(self.channel_frame, text="Channels", bg="black", fg="white")
-        self.channel_label.grid(row=0, column=0, sticky='ew')
+        # Label for Servers
+        self.servers_label = tk.Label(self.channel_frame, text="Servers", bg="black", fg="white")
+        self.servers_label.grid(row=0, column=0, sticky='ew')  # Make sure label is above the server_listbox
 
-        self.channel_listbox = tk.Listbox(self.channel_frame, height=20, width=16, bg="black", fg="white")
+        # Server selection dropdown
+        self.server_var = tk.StringVar(self.master)
+        self.server_listbox = tk.Listbox(self.channel_frame, selectmode=tk.SINGLE, width=16, height=4, bg="black", fg="white")
+        self.server_listbox.grid(row=1, column=0, sticky='w')  # Adjust column to display server_listbox
+
+        # Server listbox scrollbar
+        self.server_scrollbar = tk.Scrollbar(self.channel_frame, orient="vertical", command=self.server_listbox.yview)
+        self.server_listbox.config(yscrollcommand=self.server_scrollbar.set)
+        self.server_scrollbar.grid(row=1, column=1, sticky='ns')
+
+        self.server_listbox.bind('<<ListboxSelect>>', self.on_server_change)
+
+        self.channel_label = tk.Label(self.channel_frame, text="Channels", bg="black", fg="white")
+        self.channel_label.grid(row=2, column=0, sticky='ew')  # Make sure label is below the server_listbox
+
+        self.channel_listbox = tk.Listbox(self.channel_frame, height=17, width=16, bg="black", fg="white")
         self.channel_scrollbar = tk.Scrollbar(self.channel_frame, orient="vertical", command=self.channel_listbox.yview)
         self.channel_listbox.config(yscrollcommand=self.channel_scrollbar.set)
-        self.channel_listbox.grid(row=1, column=0, sticky='nsew')
-        self.channel_scrollbar.grid(row=1, column=1, sticky='ns')
+        self.channel_listbox.grid(row=3, column=0, sticky='nsew')  # Adjust row to display channel_listbox
+        self.channel_scrollbar.grid(row=3, column=1, sticky='ns')
         self.channel_listbox.bind('<ButtonRelease-1>', self.on_channel_click)
         self.channel_listbox.bind("<Button-3>", self.show_channel_list_menu)
 
@@ -212,18 +221,19 @@ class RudeGui:
         
         return escaped_line
 
-    async def remove_server_from_dropdown(self, server_name=None):
+    async def remove_server_from_listbox(self, server_name=None):
         if server_name is None:
             server_name = self.server_var.get()
 
-        if server_name in self.server_dropdown['values']:
-            servers = list(self.server_dropdown['values'])
-            servers.remove(server_name)
-            self.server_dropdown['values'] = tuple(servers)
+        # Check if the server_name is in the Listbox
+        if server_name in self.server_listbox.get(0, tk.END):
+            # Remove the server_name from the Listbox
+            index = self.server_listbox.get(0, tk.END).index(server_name)
+            self.server_listbox.delete(index)
 
         # Set the first available server as the current one
-        if self.server_dropdown['values']:
-            self.server_var.set(self.server_dropdown['values'][0])
+        if self.server_listbox.size() > 0:
+            self.server_var.set(self.server_listbox.get(0))
             self.on_server_change(None)
         else:
             self.server_var.set("")  # No servers left, clear the current selection
@@ -445,16 +455,18 @@ class RudeGui:
         self.nickname_colors = self.load_nickname_colors()
         self.highlight_nickname()
 
-    def add_server_to_combo_box(self, server_name):
-        # Get the current list of servers from the combo box
-        current_servers = list(self.server_dropdown['values'])
+    def add_server_to_listbox(self, server_name):
+        # Get the current list of servers from the Listbox
+        current_servers = list(self.server_listbox.get(0, tk.END))
         
         # Add the new server_name to the list if it's not already there
         if server_name not in current_servers:
             current_servers.append(server_name)
             
-        # Update the combo box with the new list of servers
-        self.server_dropdown['values'] = current_servers
+        # Update the Listbox with the new list of servers
+        self.server_listbox.delete(0, tk.END)  # Clear the existing items
+        for server in current_servers:
+            self.server_listbox.insert(tk.END, server)
 
     def show_topic_tooltip(self, event):
         if self.tooltip:
@@ -480,39 +492,51 @@ class RudeGui:
         # Set the Text widget state to NORMAL before inserting and configuring tags
         self.text_widget.config(state=tk.NORMAL)
 
-        # Use the decoder to process the message and get formatted output
+        # Run URL tagging in a separate thread
+        url_thread = Thread(target=self.tag_urls_async, args=(urls,))
+        url_thread.start()
+
+        self.tag_text(message)
+
+    def tag_text(self, message):
         formatted_text = decoder(message)
+
+        # Initialize variables to track current tag configuration
+        current_tag_name = None
+        current_tag_config = {}
 
         for text, attributes in formatted_text:
             # Create a tag name based on the attributes
             tag_name = "_".join(str(attr) for attr in attributes)
 
-            # Configure the tag based on attributes
-            tag_config = {}
-            if any(attr.bold for attr in attributes):
-                tag_config['font'] = ('Hack', 10, 'bold')
-            if any(attr.italic for attr in attributes):
-                tag_config['font'] = ('Hack', 10, 'italic')
-            if any(attr.underline for attr in attributes):
-                tag_config['underline'] = True
-            if attributes and attributes[0].colour != 0:
-                irc_color_code = f"{attributes[0].colour:02d}"
-                hex_color = self.irc_colors.get(irc_color_code, 'black')
-                tag_config['foreground'] = hex_color
-            if attributes and attributes[0].background != 0:
-                irc_background_code = f"{attributes[0].background:02d}"
-                hex_background = self.irc_colors.get(irc_background_code, 'white')
-                tag_config['background'] = hex_background
+            # Check if the tag configuration has changed
+            if tag_name != current_tag_name:
+                # Configure the tag based on attributes
+                tag_config = {}
+                if any(attr.bold for attr in attributes):
+                    tag_config['font'] = ('Hack', 10, 'bold')
+                if any(attr.italic for attr in attributes):
+                    tag_config['font'] = ('Hack', 10, 'italic')
+                if any(attr.underline for attr in attributes):
+                    tag_config['underline'] = True
+                if attributes and attributes[0].colour != 0:
+                    irc_color_code = f"{attributes[0].colour:02d}"
+                    hex_color = self.irc_colors.get(irc_color_code, 'black')
+                    tag_config['foreground'] = hex_color
+                if attributes and attributes[0].background != 0:
+                    irc_background_code = f"{attributes[0].background:02d}"
+                    hex_background = self.irc_colors.get(irc_background_code, 'white')
+                    tag_config['background'] = hex_background
 
-            # Configure the tag in the Text widget
-            self.text_widget.tag_configure(tag_name, **tag_config)
+                # Configure the tag in the Text widget
+                self.text_widget.tag_configure(tag_name, **tag_config)
 
-            # Insert the formatted text with all tags
-            self.text_widget.insert(tk.END, text, (tag_name,))
+                # Update current tag configuration
+                current_tag_name = tag_name
+                current_tag_config = tag_config
 
-        # Run URL tagging in a separate thread
-        thread = Thread(target=self.tag_urls_async, args=(urls,))
-        thread.start()
+            # Insert the formatted text with the current tag
+            self.text_widget.insert(tk.END, text, (current_tag_name,))
 
     def tag_urls_async(self, urls):
         loop = asyncio.new_event_loop()
@@ -564,27 +588,42 @@ class RudeGui:
 
     def add_client(self, server_name, irc_client):
         self.clients[server_name] = irc_client
-        current_servers = list(self.server_dropdown['values'])
-        current_servers.append(server_name)
-        self.server_dropdown['values'] = current_servers
+
+        # Get the current list of servers from the Listbox
+        current_servers = list(self.server_listbox.get(0, tk.END))
+
+        # Add the new server_name to the list if it's not already there
+        if server_name not in current_servers:
+            current_servers.append(server_name)
+
+        # Update the Listbox with the new list of servers
+        self.server_listbox.delete(0, tk.END)  # Clear the existing items
+        for server in current_servers:
+            self.server_listbox.insert(tk.END, server)
+
         self.server_var.set(server_name)  # Set the current server
+        self.on_server_change(None)  # Trigger the server change event
         self.channel_lists[server_name] = irc_client.joined_channels
 
     def on_server_change(self, event):
-        selected_server = self.server_var.get()
-        self.irc_client = self.clients.get(selected_server, None)
-        if self.irc_client:
-            # Set the server name in the RudeChatClient instance
-            self.irc_client.set_server_name(selected_server)
+        selected_server_index = self.server_listbox.curselection()
+        
+        if selected_server_index:
+            selected_server = self.server_listbox.get(selected_server_index)  # Get the selected server from the listbox
+            self.irc_client = self.clients.get(selected_server, None)
             
-            # Set the GUI reference and update the GUI components
-            self.irc_client.set_gui(self)
-            self.irc_client.update_gui_channel_list()
-            
-            # Update the user list in GUI
-            selected_channel = self.irc_client.current_channel
-            if selected_channel:
-                self.irc_client.update_gui_user_list(selected_channel)
+            if self.irc_client:
+                # Set the server name in the RudeChatClient instance
+                self.irc_client.set_server_name(selected_server)
+                
+                # Set the GUI reference and update the GUI components
+                self.irc_client.set_gui(self)
+                self.irc_client.update_gui_channel_list()
+                
+                # Update the user list in GUI
+                selected_channel = self.irc_client.current_channel
+                if selected_channel:
+                    self.irc_client.update_gui_user_list(selected_channel)
 
     async def init_client_with_config(self, config_file, fallback_server_name):
         irc_client = RudeChatClient(self.text_widget, self.server_text_widget, self.entry_widget, self.master, self)
