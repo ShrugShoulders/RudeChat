@@ -330,7 +330,6 @@ class RudeChatClient:
             self.update_gui_channel_list()
 
     def update_gui_channel_list(self):
-        print(f"{self.highlighted_channels}")
         # Clear existing items
         self.gui.channel_listbox.delete(0, tk.END)
 
@@ -1338,6 +1337,9 @@ class RudeChatClient:
                     case "477":
                         await self.handle_cannot_join_channel(tokens)
 
+                    case "482":
+                        self.handle_not_channel_operator(tokens)
+
                     case "322":  # Channel list
                         await self.handle_list_response(tokens)
                         await self.channel_window.update_channel_info(tokens.params[1], tokens.params[2], tokens.params[3])
@@ -1370,6 +1372,11 @@ class RudeChatClient:
                         print(f"Debug: Unhandled command {tokens.command}. Full line: {line}")
                         if line.startswith(f":{self.server}"):
                             await self.handle_server_message(line)
+
+    def handle_not_channel_operator(self, tokens):
+        channel = tokens.params[1]
+        message = tokens.params[2]
+        self.gui.insert_server_widget(f"{channel}: {message}")
 
     def handle_328(self, tokens):
         channel = tokens.params[1]
@@ -1467,6 +1474,24 @@ class RudeChatClient:
         self.gui.channel_lists[self.server] = self.joined_channels
         self.update_gui_channel_list()
         self.gui.insert_text_widget(f"{timestamp}Opened DM with {nickname}.\n")
+
+    def close_dm(self, nickname, timestamp):
+        # Remove the DM from the list of joined channels
+        self.joined_channels.remove(nickname)
+
+        # Remove the DM's messages from the channel_messages dictionary
+        if self.server in self.channel_messages and nickname in self.channel_messages[self.server]:
+            del self.channel_messages[self.server][nickname]
+
+        # Remove the DM's entry from the highlighted_channels dictionary
+        if self.server_name in self.highlighted_channels:
+            self.highlighted_channels[self.server_name].pop(nickname, None)
+
+        # Update the GUI's list of channels
+        self.update_gui_channel_list()
+
+        # Display a message indicating the DM was closed
+        self.gui.insert_text_widget(f"Private message with {nickname} closed.\n")
 
     async def leave_channel(self, channel):
         await self.send_message(f'PART {channel}')
