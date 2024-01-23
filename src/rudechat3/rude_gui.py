@@ -157,7 +157,7 @@ class RudeGui:
 
         # Label for nickname and channel
         self.current_nick_channel = tk.StringVar(value="Nickname | #Channel" + " &>")
-        self.nick_channel_label = tk.Label(self.master, textvariable=self.current_nick_channel, bg="black", fg="white", padx=5, pady=1)
+        self.nick_channel_label = tk.Label(self.master, textvariable=self.current_nick_channel, bg="black", fg="#C0FFEE", padx=5, pady=1, font=("Hack", 10))
         self.nick_channel_label.grid(row=3, column=0, sticky='w')
 
         self.text_widget.tag_configure('bold', font=('Hack', 10, 'bold'))
@@ -697,6 +697,12 @@ class RudeGui:
             # Clear the background color changes of the clicked channel only
             self.channel_listbox.itemconfig(clicked_index, {'bg': 'black'})
             self.highlight_nickname()
+
+            # Remove the clicked channel from highlighted_channels dictionary
+            if self.irc_client.server_name in self.irc_client.highlighted_channels:
+                server_highlighted_channels = self.irc_client.highlighted_channels[self.irc_client.server_name]
+                if clicked_channel in server_highlighted_channels:
+                    del server_highlighted_channels[clicked_channel]
 
     async def switch_channel(self, channel_name):
         server = self.irc_client.server  # Assume the server is saved in the irc_client object
