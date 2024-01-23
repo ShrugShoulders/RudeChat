@@ -1924,13 +1924,21 @@ class RudeChatClient:
 
         formatted_message = f"{timestamp}<{self.nickname}> {escaped_message}\n"
 
-        # Initialize the channel's history if it does not exist yet
-        if channel not in self.channel_messages:
-            self.channel_messages[channel] = []
-        
-        # Append the message to the channel's history
-        self.channel_messages[channel].append(formatted_message)
-        
+        # Initialize the server name
+        server_name = self.server
+
+        # Determine if it's a channel or DM
+        if channel.startswith(self.chantypes):  # It's a channel
+            if channel not in self.channel_messages:
+                self.channel_messages[channel] = []
+            self.channel_messages[channel].append(formatted_message)
+        else:  # It's a DM
+            if server_name not in self.channel_messages:
+                self.channel_messages[server_name] = {}
+            if channel not in self.channel_messages[server_name]:
+                self.channel_messages[server_name][channel] = []
+            self.channel_messages[server_name][channel].append(formatted_message)
+
         # Trim the history if it exceeds 100 lines
         self.trim_messages(channel)
 
