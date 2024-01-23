@@ -2,7 +2,7 @@
 server_name = freenode
 nickname = Rude
 server = irc.freenode.net
-auto_join_channels = #irish
+auto_join_channels = ##rudechat
 use_nickserv_auth = False
 nickserv_password = password
 port = 6697
