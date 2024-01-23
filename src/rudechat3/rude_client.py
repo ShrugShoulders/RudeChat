@@ -1465,7 +1465,7 @@ class RudeChatClient:
 
     def handle_cq_command(self, args, timestamp):
         if len(args) < 2:
-            self.update_message_text(f"{timestamp}Usage: /cq <nickname>\n")
+            self.gui.insert_text_widget(f"{timestamp}Usage: /cq <nickname>\n")
         else:
             nickname = args[1]
             if nickname in self.joined_channels:
@@ -1512,7 +1512,7 @@ class RudeChatClient:
 
     async def handle_kick_command(self, args):
         if len(args) < 3:
-            self.update_message_text("Usage: /kick <user> <channel> [reason]\n")
+            self.gui.insert_text_widget("Usage: /kick <user> <channel> [reason]\n")
             return
         user = args[1].lstrip('@+')
         channel = args[2]
@@ -1523,7 +1523,7 @@ class RudeChatClient:
 
     def handle_invite_command(self, args):
         if len(args) < 3:
-            self.update_message_text("Usage: /invite <user> <channel>\n")
+            self.gui.insert_text_widget("Usage: /invite <user> <channel>\n")
             return
         user = args[1]
         channel = args[2]
@@ -1591,7 +1591,7 @@ class RudeChatClient:
             case "msg":  # send a private message to a user
                 if len(args) < 3:
                     # Display an error message if not enough arguments are provided
-                    self.update_message_text(f"{timestamp}Usage: /msg <nickname> <message>\n")
+                    self.gui.insert_text_widget(f"{timestamp}Usage: /msg <nickname> <message>\n")
                 else:
                     nickname = args[1]
                     message = " ".join(args[2:])
