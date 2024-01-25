@@ -112,10 +112,10 @@ class RudeGui:
         self.channel_frame.grid(row=1, column=0, sticky="nsew")
 
         # Label for Servers
-        self.servers_label = tk.Label(self.channel_frame, text="Servers", bg="black", fg="white")
+        self.servers_label = tk.Label(self.channel_frame, text="Servers: --s", bg="black", fg="white")
         self.servers_label.grid(row=0, column=0, sticky='ew')  # Make sure label is above the server_listbox
 
-        # Server selection dropdown
+        # Server selection
         self.server_var = tk.StringVar(self.master)
         self.server_listbox = tk.Listbox(self.channel_frame, selectmode=tk.SINGLE, width=16, height=4, bg="black", fg="white")
         self.server_listbox.grid(row=1, column=0, sticky='w')  # Adjust column to display server_listbox
@@ -150,7 +150,7 @@ class RudeGui:
 
         # Entry widget
         self.entry_widget = tk.Entry(self.master, bg="black", fg="#C0FFEE", insertbackground="#C0FFEE", font=("Hack", 10))
-        self.entry_widget.grid(row=3, column=1, sticky='ew')
+        self.entry_widget.grid(row=3, column=1, sticky='ew', columnspan=1)  # Adjust column span to cover only one column
         self.entry_widget.bind('<Tab>', self.handle_tab_complete)
         self.entry_widget.bind('<Up>', self.handle_arrow_keys)
         self.entry_widget.bind('<Down>', self.handle_arrow_keys)
@@ -869,6 +869,10 @@ class RudeGui:
 
     def is_app_focused(self):
         return bool(self.master.focus_displayof())
+
+    def update_ping_label(self, ping_time):
+        ping_text = f'Servers: PT{ping_time}'
+        self.servers_label.config(text=ping_text)
 
     def handle_tab_complete(self, event):
         """
