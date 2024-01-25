@@ -45,6 +45,7 @@ class RudeChatClient:
         self.gui = gui
         self.reader = None
         self.writer = None
+        self.ping_start_time = None
         self.sasl_authenticated = False
         self.ASCII_ART_MACROS = {}
         self.load_ignore_list()
@@ -171,7 +172,6 @@ class RudeChatClient:
     async def initial_ping(self, tokens):
         ping_param = tokens.params[0]
         await self.send_message(f'PONG {ping_param}')
-        self.gui.insert_and_scroll()
 
     async def automatic_join(self):
         for channel in self.auto_join_channels:
@@ -411,8 +411,12 @@ class RudeChatClient:
     async def keep_alive(self):
         while True:
             try:
+                # Measure ping time before sending PING
+                self.ping_start_time = time.time()
+
                 await asyncio.sleep(194)
                 await self.send_message(f'PING {self.server}')
+
             except (ConnectionResetError, OSError) as e:
                 print(f"Exception caught in keep_alive: {e}")
 
@@ -1162,6 +1166,14 @@ class RudeChatClient:
 
     def handle_pong(self, tokens):
         pong_server = tokens.params[-1]  # Assumes the server name is the last parameter
+        current_time = time.time()
+
+        if self.ping_start_time is not None:
+            ping_time = current_time - self.ping_start_time
+            ping_time_formatted = "{:.3f}".format(ping_time).lstrip('0') + " s"
+            self.gui.update_ping_label(ping_time_formatted)
+
+        self.ping_start_time = None
 
     def handle_372(self, tokens):
         motd_line = tokens.params[-1]
@@ -1381,7 +1393,7 @@ class RudeChatClient:
     def handle_not_channel_operator(self, tokens):
         channel = tokens.params[1]
         message = tokens.params[2]
-        self.gui.insert_server_widget(f"{channel}: {message}")
+        self.gui.insert_server_widget(f"{channel}: {message}\n")
 
     def handle_328(self, tokens):
         channel = tokens.params[1]
@@ -1502,13 +1514,16 @@ class RudeChatClient:
         await self.send_message(f'PART {channel}')
         if channel in self.joined_channels:
             self.joined_channels.remove(channel)
-            
+
             # Remove the channel entry from the highlighted_channels dictionary
             if self.server_name in self.highlighted_channels:
                 self.highlighted_channels[self.server_name].pop(channel, None)
 
             self.gui.channel_lists[self.server] = self.joined_channels
             self.update_gui_channel_list()
+
+            # Remove the channel's history
+            self.channel_messages[channel] = []
 
     async def handle_kick_command(self, args):
         if len(args) < 3:
@@ -1521,13 +1536,13 @@ class RudeChatClient:
         await self.send_message(kick_message)
         self.gui.insert_text_widget(f"Kicked {user} from {channel} for {reason}\n")
 
-    def handle_invite_command(self, args):
+    async def handle_invite_command(self, args):
         if len(args) < 3:
             self.gui.insert_text_widget("Usage: /invite <user> <channel>\n")
             return
         user = args[1]
         channel = args[2]
-        self.send_message(f'INVITE {user} {channel}\n')
+        await self.send_message(f'INVITE {user} {channel}\n')
         self.gui.insert_text_widget(f"Invited {user} to {channel}\n")
 
     async def handle_notice_command(self, args):
@@ -1730,7 +1745,7 @@ class RudeChatClient:
                 await self.handle_kick_command(args)
 
             case "invite":
-                self.handle_invite_command(args)
+                await self.handle_invite_command(args)
 
             case "clear": #Clears the screen
                 self.gui.clear_chat_window()
@@ -2112,6 +2127,9 @@ class RudeChatClient:
         self.gui.update_nick_channel_label() 
 
     async def ping_server(self):
+        # Initialize ping_start_time to the current time
+        self.ping_start_time = time.time()
+
         await self.send_message(f'PING {self.server}')
 
     async def send_message_to_all_channels(self, message):
