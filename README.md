@@ -1,4 +1,6 @@
-        To install cd to RudeChat3 folder where the .toml is && run "pip install ."
+        To install cd to RudeChat3 folder where the .toml is && run the installer for your OS. 
+
+        It will pip install all needed libraries and then RudeChat3.
         
         Right click anywhere to open and edit the config.
         
