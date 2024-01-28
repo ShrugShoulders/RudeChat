@@ -1,8 +1,11 @@
         To install cd to RudeChat3 folder where the .toml is && run "pip install ."
         Right click anywhere to open and edit the config.
 RudeIRC assumes conf.server.rude is available and configed properly:
+
 For assistance find me on irc.libera.chat/##rudechat
+
 Config Example:
+
 file name: conf.libera.rude
 
         [IRC]
