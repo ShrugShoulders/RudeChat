@@ -57,11 +57,16 @@ def decoder(input_text: str) -> List[Tuple[str, List[Attribute]]]:
                 if colour_code:
                     if c_index + 1 < len(input_text) and input_text[c_index + 1] == ',':
                         c_index += 1
+                        #
                         background_code = ''
                         while c_index + 1 < len(input_text) and input_text[c_index + 1].isdigit():
                             c_index += 1
                             background_code += input_text[c_index]
-                        background_num = int(background_code)
+
+                        try:
+                            background_num = int(background_code)
+                        except ValueError:
+                            pass
                         current_attributes.append(Attribute(colour=int(colour_code), background=background_num))
                         attribute_stack.append(Attribute(colour=int(colour_code), background=background_num))
                     else:
