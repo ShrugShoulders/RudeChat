@@ -629,19 +629,22 @@ class RudeGui:
                 self.server_listbox.itemconfig(selected_server_index, {'bg': 'black', 'fg': 'white'})
 
     async def init_client_with_config(self, config_file, fallback_server_name):
-        irc_client = RudeChatClient(self.text_widget, self.server_text_widget, self.entry_widget, self.master, self)
-        asyncio.create_task(irc_client.load_ascii_art_macros())
-        await irc_client.read_config(config_file)
-        await irc_client.connect(config_file)
+        try:
+            irc_client = RudeChatClient(self.text_widget, self.server_text_widget, self.entry_widget, self.master, self)
+            asyncio.create_task(irc_client.load_ascii_art_macros())
+            await irc_client.read_config(config_file)
+            await irc_client.connect(config_file)
 
-        # Use the server_name if it is set in the configuration, else use fallback_server_name
-        server_name = irc_client.server_name if irc_client.server_name else fallback_server_name
-        
-        self.add_client(server_name, irc_client)
-        asyncio.create_task(irc_client.keep_alive())
-        asyncio.create_task(irc_client.handle_incoming_message(config_file))
+            # Use the server_name if it is set in the configuration, else use fallback_server_name
+            server_name = irc_client.server_name if irc_client.server_name else fallback_server_name
+            
+            self.add_client(server_name, irc_client)
+            asyncio.create_task(irc_client.keep_alive())
+            asyncio.create_task(irc_client.handle_incoming_message(config_file))
 
-        self.bind_return_key()
+            self.bind_return_key()
+        except Exception as e:
+            print(f"Error in init_client_with_config: {e}")
 
     def bind_return_key(self):
         loop = asyncio.get_event_loop()
