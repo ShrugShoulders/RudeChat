@@ -47,7 +47,10 @@ class RudeChatClient:
         self.writer = None
         self.ping_start_time = None
         self.sasl_authenticated = False
+        self.rate_limit_semaphore = asyncio.Semaphore(10)
+        self.privmsg_rate_limit_semaphore = asyncio.Semaphore(5)
         self.ASCII_ART_MACROS = {}
+        self.load_channel_messages()
         self.load_ignore_list()
 
     async def read_config(self, config_file):
@@ -72,6 +75,22 @@ class RudeChatClient:
         # Read server name from the config file
         self.server_name = config.get('IRC', 'server_name', fallback=None)
         self.gui.update_nick_channel_label()
+
+    def load_channel_messages(self):
+        script_directory = os.path.dirname(os.path.abspath(__file__))
+        file_path = os.path.join(script_directory, 'channel_messages.json')
+        try:
+            with open(file_path, 'r') as file:
+                self.channel_messages = json.load(file)
+        except FileNotFoundError:
+            # If the file doesn't exist, initialize an empty dictionary
+            self.channel_messages = {}
+
+    def save_channel_messages(self):
+        script_directory = os.path.dirname(os.path.abspath(__file__))
+        file_path = os.path.join(script_directory, 'channel_messages.json')
+        with open(file_path, 'w') as file:
+            json.dump(self.channel_messages, file, indent=2)
 
     async def connect(self, config_file):
         await self.connect_to_server(config_file)
@@ -568,78 +587,91 @@ class RudeChatClient:
         message = tokens.params[1]
 
         sender_hostmask = str(tokens.hostmask)
-        # Check if the sender is in the ignore list based on hostmask wildcard
-        if any(fnmatch.fnmatch(sender_hostmask, ignored) for ignored in self.ignore_list):
+        if self.should_ignore_sender(sender_hostmask):
             return
 
-        # Check if the user is mentioned in the message
-        if self.nickname in message:
-            await self.notify_user_of_mention(self.server, target)
-
-        # Check for CTCP command
-        if message.startswith('\x01') and message.endswith('\x01'):
+        await self.notify_user_if_mentioned(message, target)
+        if self.is_ctcp_command(message):
             await self.handle_ctcp(tokens)
             return
 
-        # If the target is the users's nickname, it's a DM
-        if target == self.nickname:
-            target = sender  # Consider the sender as the "channel" for DMs
-
-            # Check if we have executed WHOIS for this sender before
-            if sender not in self.whois_executed:
-                await self.send_message(f'WHOIS {sender}')
-                self.whois_executed.add(sender)
-
-            # Check if the server exists in the dictionary
-            if self.server not in self.channel_messages:
-                self.channel_messages[self.server] = {}
-
-            # Check if the DM exists in the server's dictionary
-            if target not in self.channel_messages[self.server]:
-                self.channel_messages[self.server][target] = []
-
-                # If it's a DM and not in the joined_channels list, add it
-                if target == sender and target not in self.joined_channels:
-                    self.joined_channels.append(target)
-                    self.gui.channel_lists[self.server] = self.joined_channels
-                    self.update_gui_channel_list()
-
-            # Now it's safe to append the message
-            self.channel_messages[self.server][target].append(f"{timestamp}<{sender}> {message}\n")
-            self.log_message(self.server_name, target, sender, message, is_sent=False)
-
-            # Identify the correct message list for trimming
-            message_list = self.channel_messages[self.server][target]
+        if self.is_direct_message(target):
+            target = await self.get_direct_message_target(sender, target)
+            await self.prepare_direct_message(sender, target, message, timestamp)
         else:
-            # It's a channel message
-            if target not in self.channel_messages:
-                self.channel_messages[target] = []
-            
-            self.channel_messages[target].append(f"{timestamp}<{sender}> {message}\n")
-            self.log_message(self.server_name, target, sender, message, is_sent=False)
+            await self.handle_channel_message(sender, target, message, timestamp)
 
-            # Identify the correct message list for trimming
-            message_list = self.channel_messages[target]
+    def should_ignore_sender(self, sender_hostmask):
+        return any(fnmatch.fnmatch(sender_hostmask, ignored) for ignored in self.ignore_list)
 
-        # Trim the messages list if it exceeds 100 lines
-        if len(message_list) > 100:
-            message_list = message_list[-100:]
+    async def notify_user_if_mentioned(self, message, target):
+        if self.nickname in message:
+            await self.notify_user_of_mention(self.server, target)
 
-        # Display the message in the text_widget if the target matches the current channel or DM
+    def is_ctcp_command(self, message):
+        return message.startswith('\x01') and message.endswith('\x01')
+
+    def is_direct_message(self, target):
+        return target == self.nickname
+
+    async def get_direct_message_target(self, sender, target):
+        if sender not in self.whois_executed:
+            await self.send_message(f'WHOIS {sender}')
+            self.whois_executed.add(sender)
+        return target
+
+    async def prepare_direct_message(self, sender, target, message, timestamp):
+        if self.server not in self.channel_messages:
+            self.channel_messages[self.server] = {}
+        if sender not in self.channel_messages[self.server]:
+            self.channel_messages[self.server][sender] = []
+
+        if self.is_direct_message(target) and sender not in self.joined_channels:
+            self.joined_channels.append(sender)
+            self.gui.channel_lists[self.server] = self.joined_channels
+            self.update_gui_channel_list()
+
+        self.save_message(self.server_name, target, sender, message, is_sent=False)
+        self.display_message(timestamp, sender, message, target)
+
+    async def handle_channel_message(self, sender, target, message, timestamp):
+        if target not in self.channel_messages:
+            self.channel_messages[target] = []
+        self.save_message(self.server_name, target, sender, message, is_sent=False)
+        self.display_message(timestamp, sender, message, target)
+
+    def save_message(self, server, target, sender, message, is_sent):
+        timestamp = datetime.datetime.now().strftime('[%H:%M:%S] ')
+        if is_sent:
+            self.sent_messages.append((timestamp, sender, target, message))
+        else:
+            if self.is_direct_message(target):
+                message_list = self.channel_messages[self.server][sender]
+            else:
+                message_list = self.channel_messages[target]
+            message_list.append(f"{timestamp}<{sender}> {message}\n")
+            if len(message_list) > 100:
+                message_list = message_list[-100:]
+
+    def display_message(self, timestamp, sender, message, target):
         if target == self.current_channel and self.gui.irc_client == self:
             self.gui.insert_text_widget(f"{timestamp}<{sender}> {message}\n")
             self.gui.highlight_nickname()
         else:
-            # If it's not the currently viewed channel, highlight the channel in green in the Listbox
-            for idx in range(self.gui.channel_listbox.size()):
-                if self.gui.channel_listbox.get(idx) == target:
-                    current_bg = self.gui.channel_listbox.itemcget(idx, 'bg')
-                    if current_bg != 'red':
-                        self.gui.channel_listbox.itemconfig(idx, {'bg': 'green'})
+            self.highlight_channel_if_not_current(target, sender)
 
-                        # Store the highlighted channel information for the server with green background
-                        self.save_highlight(target, idx, bg='green')
-                    break
+    def highlight_channel_if_not_current(self, target, sender):
+        highlighted_channel = target
+        if self.is_direct_message(target):
+            highlighted_channel = sender
+
+        for idx in range(self.gui.channel_listbox.size()):
+            if self.gui.channel_listbox.get(idx) == highlighted_channel:
+                current_bg = self.gui.channel_listbox.itemcget(idx, 'bg')
+                if current_bg != 'red':
+                    self.gui.channel_listbox.itemconfig(idx, {'bg': 'green'})
+                    self.save_highlight(highlighted_channel, idx, bg='green')
+                break
 
     def save_highlight(self, channel, index, bg='green'):
         if self.server_name not in self.highlighted_channels:
@@ -1246,7 +1278,8 @@ class RudeChatClient:
         #
         while True:
             try:
-                data = await asyncio.wait_for(self.reader.read(4096), timeout_seconds)
+                async with self.rate_limit_semaphore:
+                    data = await asyncio.wait_for(self.reader.read(4096), timeout_seconds)
             except asyncio.TimeoutError:
                 self.gui.insert_text_widget("Read operation timed out!\n")
                 continue
@@ -1369,7 +1402,8 @@ class RudeChatClient:
                     case "NOTICE":
                         await self.handle_notice_message(tokens)
                     case "PRIVMSG":
-                        await self.handle_privmsg(tokens)
+                        async with self.privmsg_rate_limit_semaphore:
+                            await self.handle_privmsg(tokens)
                     case "JOIN":
                         await self.handle_join(tokens)
                     case "PART":
@@ -1721,6 +1755,7 @@ class RudeChatClient:
 
             case "quit":
                 quit_message = " ".join(args[1:]) if len(args) > 0 else None
+                self.save_channel_messages()
                 await self.gui.send_quit_to_all_clients(quit_message)
                 await asyncio.sleep(1)
                 self.master.destroy()
