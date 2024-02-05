@@ -33,7 +33,7 @@ class RudeGui:
         self.master.iconbitmap(default=icon_path)
 
         self.irc_colors = {
-            '00': '#000000', '01': '#4d4d4d', '02': '#0000AA', '03': '#00AA00',
+            '00': '#ffffff', '01': '#000000', '02': '#0000AA', '03': '#00AA00',
             '04': '#AA0000', '05': '#AA5500', '06': '#AA00AA', '07': '#FFAA00',
             '08': '#FFFF00', '09': '#00ff00', '10': '#00AAAA', '11': '#00FFAA',
             '12': '#2576ff', '13': '#ff00ff', '14': '#AAAAAA', '15': '#D3D3D3',
@@ -57,7 +57,10 @@ class RudeGui:
             '84': '#9c9cff', '85': '#dc9cff', '86': '#ff9cff', '87': '#ff94d3', 
             '88': '#000000', '89': '#131313', '90': '#282828', '91': '#363636', 
             '92': '#4d4d4d', '93': '#656565', '94': '#818181', '95': '#9f9f9f',
-            '96': '#bcbcbc', '97': '#e2e2e2', '98': '#ffffff' 
+            '96': '#bcbcbc', '97': '#e2e2e2', '98': '#ffffff', '0': '#ffffff',
+            '4': '#AA0000', '5': '#AA5500', '6': '#AA00AA', '7': '#FFAA00',
+            '8': '#FFFF00', '9': '#00ff00', '1': '#000000', '2': '#0000AA', 
+            '3': '#00AA00'
         }
 
         # Main frame
@@ -492,15 +495,15 @@ class RudeGui:
         # Set the Text widget state to NORMAL before inserting and configuring tags
         self.text_widget.config(state=tk.NORMAL)
 
+        formatted_text = decoder(message)
+
         # Run URL tagging in a separate thread
         url_thread = Thread(target=self.tag_urls_async, args=(urls,))
         url_thread.start()
 
-        self.tag_text(message)
+        self.tag_text(formatted_text)
 
-    def tag_text(self, message):
-        formatted_text = decoder(message)
-
+    def tag_text(self, formatted_text):
         # Initialize variables to track current tag configuration
         current_tag_name = None
         current_tag_config = {}
@@ -584,7 +587,7 @@ class RudeGui:
         for irc_client in self.clients.values():
             quit_cmd = f'QUIT :{quit_message}' if quit_message else 'QUIT :RudeChat3 https://github.com/ShrugShoulders/RudeChat'
             await self.irc_client.send_message(quit_cmd)
-            await asyncio.sleep(1)
+            await asyncio.sleep(2)
 
     def add_client(self, server_name, irc_client):
         self.clients[server_name] = irc_client
@@ -876,6 +879,14 @@ class RudeGui:
     def update_ping_label(self, ping_time):
         ping_text = f'Servers: PT{ping_time}'
         self.servers_label.config(text=ping_text)
+
+    def update_users_label(self, away=False):
+        if away == True:
+            away_text = f"Users: You're Away"
+            self.user_label.config(text=away_text, fg="red")
+        elif away == False:
+            back_text = f"Users"
+            self.user_label.config(text=back_text, fg="white")
 
     def handle_tab_complete(self, event):
         """
