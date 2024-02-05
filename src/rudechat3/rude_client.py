@@ -48,7 +48,7 @@ class RudeChatClient:
         self.ping_start_time = None
         self.sasl_authenticated = False
         self.rate_limit_semaphore = asyncio.Semaphore(10)
-        self.privmsg_rate_limit_semaphore = asyncio.Semaphore(5)
+        self.privmsg_rate_limit_semaphore = asyncio.Semaphore(2)
         self.ASCII_ART_MACROS = {}
         self.load_channel_messages()
         self.load_ignore_list()
@@ -632,12 +632,14 @@ class RudeChatClient:
             self.update_gui_channel_list()
 
         self.save_message(self.server_name, target, sender, message, is_sent=False)
+        self.log_message(self.server_name, target, sender, message, is_sent=False)
         self.display_message(timestamp, sender, message, target)
 
     async def handle_channel_message(self, sender, target, message, timestamp):
         if target not in self.channel_messages:
             self.channel_messages[target] = []
         self.save_message(self.server_name, target, sender, message, is_sent=False)
+        self.log_message(self.server_name, target, sender, message, is_sent=False)
         self.display_message(timestamp, sender, message, target)
 
     def save_message(self, server, target, sender, message, is_sent):
@@ -1275,7 +1277,7 @@ class RudeChatClient:
         current_users_list = []
         current_channel = ""
         timeout_seconds = 256  # seconds
-        #
+
         while True:
             try:
                 async with self.rate_limit_semaphore:
@@ -1292,15 +1294,14 @@ class RudeChatClient:
                     continue
             except Exception as e:  # General exception catch
                 self.gui.insert_text_widget(f"An unexpected error occurred: {e}\n")
-
                 continue
 
             if not data:
                 break
 
             decoded_data = data.decode('UTF-8', errors='ignore')
-            #cleaned_data = self.strip_ansi_escape_sequences(decoded_data)
-            buffer += decoded_data
+            cleaned_data = decoded_data.replace("\x06", "")  # Remove the character with ASCII value 6
+            buffer += cleaned_data
 
             while '\n' in buffer:
                 line, buffer = buffer.split('\n', 1)
@@ -1631,11 +1632,14 @@ class RudeChatClient:
                 if away_message:
                     await self.send_message(f"AWAY :{away_message}")
                     self.gui.insert_text_widget(f"{away_message}\n")
+                    self.gui.update_users_label(away=True)
                 else:
                     await self.send_message("AWAY")
+                    self.gui.update_users_label(away=True)
 
             case "back":  # remove the "away" status
                 await self.send_message("AWAY")
+                self.gui.update_users_label(away=False)
 
             case "msg":  # send a private message to a user
                 if len(args) < 3:
