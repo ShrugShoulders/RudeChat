@@ -19,6 +19,8 @@ import json
 import tkinter as tk
 import tkinter.font as tkFont
 import dataclasses
+import multiprocessing
+import concurrent.futures
 from typing import List, Tuple, NamedTuple
 from plyer import notification
 from tkinter import ttk
