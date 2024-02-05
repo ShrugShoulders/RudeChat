@@ -33,7 +33,7 @@ class RudeGui:
         self.master.iconbitmap(default=icon_path)
 
         self.irc_colors = {
-            '00': '#ffffff', '01': '#000000', '02': '#0000AA', '03': '#00AA00',
+            '00': '#000000', '01': '#ffffff', '02': '#0000AA', '03': '#00AA00',
             '04': '#AA0000', '05': '#AA5500', '06': '#AA00AA', '07': '#FFAA00',
             '08': '#FFFF00', '09': '#00ff00', '10': '#00AAAA', '11': '#00FFAA',
             '12': '#2576ff', '13': '#ff00ff', '14': '#AAAAAA', '15': '#D3D3D3',
@@ -57,10 +57,7 @@ class RudeGui:
             '84': '#9c9cff', '85': '#dc9cff', '86': '#ff9cff', '87': '#ff94d3', 
             '88': '#000000', '89': '#131313', '90': '#282828', '91': '#363636', 
             '92': '#4d4d4d', '93': '#656565', '94': '#818181', '95': '#9f9f9f',
-            '96': '#bcbcbc', '97': '#e2e2e2', '98': '#ffffff', '0': '#ffffff',
-            '4': '#AA0000', '5': '#AA5500', '6': '#AA00AA', '7': '#FFAA00',
-            '8': '#FFFF00', '9': '#00ff00', '1': '#000000', '2': '#0000AA', 
-            '3': '#00AA00'
+            '96': '#bcbcbc', '97': '#e2e2e2', '98': '#ffffff'
         }
 
         # Main frame
@@ -882,7 +879,7 @@ class RudeGui:
 
     def update_users_label(self, away=False):
         if away == True:
-            away_text = f"Users: You're Away"
+            away_text = f"You're Away"
             self.user_label.config(text=away_text, fg="red")
         elif away == False:
             back_text = f"Users"
