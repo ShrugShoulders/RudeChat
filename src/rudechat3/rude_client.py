@@ -331,6 +331,10 @@ class RudeChatClient:
             self.gui.insert_text_widget(f"Invalid channel name {channel}.\n")
             return
 
+        if channel in self.joined_channels:
+            self.gui.insert_text_widget(f"You are already in channel {channel}.\n")
+            return
+
         await self.send_message(f'JOIN {channel}')
         self.joined_channels.append(channel)
         self.gui.channel_lists[self.server] = self.joined_channels  # Update the GUI channel list
@@ -1365,6 +1369,12 @@ class RudeChatClient:
                     case "332" | "333" | "TOPIC":
                         self.handle_topic(tokens)
 
+                    case "324":
+                        self.handle_mode_info(tokens)
+
+                    case "329":
+                        self.handle_creation_time(tokens)
+
                     case "328":
                         self.handle_328(tokens)
 
@@ -1376,6 +1386,15 @@ class RudeChatClient:
 
                     case "401":
                         self.handle_nickname_doesnt_exist(tokens)
+
+                    case "442":
+                        self.handle_not_on_channel(tokens)
+
+                    case "443":
+                        self.handle_already_on_channel(tokens)
+
+                    case "472":
+                        self.handle_unknown_mode(tokens)
 
                     case "473" | "475" | "474" | "471":
                         channel = tokens.params[1]
@@ -1396,7 +1415,6 @@ class RudeChatClient:
                         await self.channel_window.update_channel_info(tokens.params[1], tokens.params[2], tokens.params[3])
                     case "323":  # End of channel list
                         await self.save_channel_list_to_file()
-                        await self.channel_window.stop_progress_bar()
 
                     case "KICK":
                         await self.handle_kick_event(tokens)
@@ -1424,6 +1442,31 @@ class RudeChatClient:
                         print(f"Debug: Unhandled command {tokens.command}. Full line: {line}")
                         if line.startswith(f":{self.server}"):
                             await self.handle_server_message(line)
+
+    def handle_already_on_channel(self, tokens):
+        channel = tokens.params[2]
+        message = tokens.params[3]
+        self.gui.insert_server_widget(f"{channel}: {message}\n")
+
+    def handle_not_on_channel(self, tokens):
+        channel = tokens.params[1]
+        message = tokens.params[2]
+        self.gui.insert_server_widget(f"{channel}: {message}\n")
+
+    def handle_unknown_mode(self, tokens):
+        channel = tokens.params[1]
+        message = tokens.params[2]
+        self.gui.insert_server_widget(f"Unknown mode for {channel}: {message}\n")
+
+    def handle_mode_info(self, tokens):
+        channel = tokens.params[1]
+        modes = tokens.params[2]
+        self.gui.insert_server_widget(f"Modes for {channel}: {modes}\n")
+
+    def handle_creation_time(self, tokens):
+        channel = tokens.params[1]
+        timestamp = tokens.params[2]
+        self.gui.insert_server_widget(f"Creation time for {channel}: {timestamp}\n")
 
     def handle_not_channel_operator(self, tokens):
         channel = tokens.params[1]
@@ -1661,32 +1704,21 @@ class RudeChatClient:
 
             case "mode":
                 if len(args) < 2:
-                    self.gui.insert_text_widget(f"{timestamp}Error: Please provide a mode.\n")
-                    self.gui.insert_text_widget("Usage: /mode [+|-][mode flags] [target] [channel]\n")
-                    self.gui.insert_text_widget("Example for channel: /mode +o #channel_name\n")
-                    self.gui.insert_text_widget("Example for user: /mode +o username #channel_name\n")
-                    self.gui.insert_text_widget("If no channel is specified, the mode will be set for the current channel.\n")
+                    self.gui.insert_text_widget("Error: Please provide a mode and a channel.\n")
+                    self.gui.insert_text_widget("Usage: /mode [channel] [+|-][mode flags] [target]\n")
+                    self.gui.insert_text_widget("Example for channel: /mode #channel_name +o username\n")
+                    self.gui.insert_text_widget("Example for user: /mode #channel_name +o username\n")
                     return
 
-                mode = args[1]
-                target = None  # Initialize target to None
-                channel = self.current_channel  # Default to current channel
+                channel = args[1]
+                mode = None
+                target = None
 
                 if len(args) > 2:
-                    possible_target = args[2]
-                    # Check if the third argument is a channel or a user
-                    if possible_target.startswith(tuple(self.chantypes)):
-                        channel = possible_target
-                    else:
-                        target = possible_target
+                    mode = args[2]
 
                 if len(args) > 3:
-                    # If we have a fourth argument, it should be the channel
-                    channel = args[3]
-
-                if not channel:
-                    self.gui.insert_text_widget(f"{timestamp}Error: No channel selected or provided.\n")
-                    return
+                    target = args[3]
 
                 await self.set_mode(channel, mode, target)
 
@@ -2137,10 +2169,12 @@ class RudeChatClient:
         """Sets the mode for a specified target in a specified channel.
         If target is None, sets the mode for the channel.
         """
-        if target:
+        if mode and target:
             await self.send_message(f'MODE {channel} {mode} {target}')
-        else:
+        elif mode:
             await self.send_message(f'MODE {channel} {mode}')
+        else:
+            await self.send_message(f'MODE {channel}')
 
     async def request_send_topic(self, new_topic=None):
         if self.current_channel:
