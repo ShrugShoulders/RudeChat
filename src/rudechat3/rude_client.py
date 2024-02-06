@@ -466,13 +466,25 @@ class RudeChatClient:
             match ctcp_command:
                 case "VERSION":
                     if tokens.command == "PRIVMSG":
-                        await self.send_message(f'NOTICE {sender} :\x01VERSION RudeChat3.0\x01')
+                        await self.send_message(f'NOTICE {sender} :\x01VERSION RudeChat3.0.4\x01')
+                        self.gui.insert_server_widget(f"CTCP: {sender} {target}: {ctcp_command}\n")
                 case "MOO":
                     if tokens.command == "PRIVMSG":
-                        await self.send_message(f'NOTICE {sender} :\x01OOOOOOOOOOM\x01')
+                        await self.send_message(f'NOTICE {sender} :\x01MoooOOO! Hi Cow!! RudeChat3.0.4\x01')
+                        self.gui.insert_server_widget(f"CTCP: {sender} {target}: {ctcp_command}\n")
                 case "PING":
                     if tokens.command == "PRIVMSG":
-                        await self.send_message(f'NOTICE {sender} :\x01PING {ctcp_content}\x01')
+                        timestamp = str(int(time.time()))  # Get the current Unix timestamp
+                        await self.send_message(f'NOTICE {sender} :\x01PING {ctcp_content} {timestamp}\x01')
+                        self.gui.insert_server_widget(f"CTCP: {sender} {target}: {ctcp_command}\n")
+                case "FINGER":
+                    if tokens.command == "PRIVMSG":
+                        await self.send_message(f'NOTICE {sender} :\x01FINGER: {self.nickname} {self.server_name} RudeChat3.0.4\x01')
+                        self.gui.insert_server_widget(f"CTCP: {sender} {target}: {ctcp_command}\n")
+                case "CLIENTINFO":
+                    if tokens.command == "PRIVMSG":
+                        await self.send_message(f'NOTICE {sender} :\x01CLIENTINFO VERSION TIME PING FINGER\x01')
+                        self.gui.insert_server_widget(f"CTCP: {sender} {target}: {ctcp_command}\n")
                 case "TIME":
                     if tokens.command == "PRIVMSG":
                         import pytz
@@ -480,6 +492,7 @@ class RudeChatClient:
                         dublin_time = datetime.datetime.now(dublin_tz).strftime("%Y-%m-%d %H:%M:%S")
                         time_reply = "\x01TIME " + dublin_time + "\x01"
                         await self.send_message(f'NOTICE {sender} :{time_reply}')
+                        self.gui.insert_server_widget(f"CTCP: {sender} {target}: {ctcp_command}\n")
                 case "ACTION":
                     await self.handle_action_ctcp(timestamp, sender, target, ctcp_content)
                 case _:
@@ -1123,7 +1136,6 @@ class RudeChatClient:
         server_name = tokens.params[0]  # The server's name
         local_time = tokens.params[1]   # The local time on the server
 
-        # Display the information in your client's GUI
         message = f"Server Time from {server_name}: {local_time}"
         self.gui.insert_text_widget(message)
 
@@ -1465,8 +1477,10 @@ class RudeChatClient:
 
     def handle_creation_time(self, tokens):
         channel = tokens.params[1]
-        timestamp = tokens.params[2]
-        self.gui.insert_server_widget(f"Creation time for {channel}: {timestamp}\n")
+        timestamp = int(tokens.params[2])  # Convert timestamp to an integer if it's a string
+        creation_date = datetime.datetime.utcfromtimestamp(timestamp)
+        formatted_date = creation_date.strftime('%Y-%m-%d %H:%M:%S UTC')  # Format the date as desired
+        self.gui.insert_server_widget(f"Creation time for {channel}: {formatted_date}\n")
 
     def handle_not_channel_operator(self, tokens):
         channel = tokens.params[1]
@@ -1482,7 +1496,6 @@ class RudeChatClient:
         channel_name = tokens.params[1]
         error_message = tokens.params[2]
         
-        # Add your specific handling logic here, such as displaying an error message to the user.
         error_text = f"Cannot join channel {channel_name}: {error_message}\n"
         self.gui.insert_text_widget(error_text)
 
