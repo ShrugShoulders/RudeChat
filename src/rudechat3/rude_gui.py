@@ -582,9 +582,9 @@ class RudeGui:
 
     async def send_quit_to_all_clients(self, quit_message=None):
         for irc_client in self.clients.values():
+            await self.irc_client.save_channel_messages()
             quit_cmd = f'QUIT :{quit_message}' if quit_message else 'QUIT :RudeChat3 https://github.com/ShrugShoulders/RudeChat'
             await self.irc_client.send_message(quit_cmd)
-            await asyncio.sleep(2)
 
     def add_client(self, server_name, irc_client):
         self.clients[server_name] = irc_client
@@ -610,6 +610,7 @@ class RudeGui:
         
         if selected_server_index:
             selected_server = self.server_listbox.get(selected_server_index)  # Get the selected server from the listbox
+            self.irc_client.current_server = selected_server
             self.irc_client = self.clients.get(selected_server, None)
             
             if self.irc_client:
@@ -717,9 +718,32 @@ class RudeGui:
 
         # Print the current channel topics dictionary
 
-        # First, check if it's a DM
-        if server in self.irc_client.channel_messages and \
-            channel_name in self.irc_client.channel_messages[server]:
+        is_channel = any(channel_name.startswith(prefix) for prefix in self.irc_client.chantypes)
+
+        if is_channel:
+            # It's a channel
+            if server in self.irc_client.channel_messages and \
+                    channel_name in self.irc_client.channel_messages[server]:
+
+                self.irc_client.current_channel = channel_name
+                self.update_nick_channel_label()
+
+                # Update topic label
+                current_topic = self.channel_topics.get(self.irc_client.server, {}).get(channel_name, "N/A")
+                self.current_topic.set(f"{current_topic}")
+
+                # Display the last messages for the current channel
+                self.irc_client.display_last_messages(channel_name, server_name=server)
+                self.highlight_nickname()
+
+                self.irc_client.update_gui_user_list(channel_name)
+                self.insert_and_scroll()
+
+            else:
+                self.insert_text_widget(f"Not a member of channel {channel_name}\n")
+
+        else:
+            # It's a DM
             self.user_listbox.delete(0, tk.END)
 
             # Set current channel to the DM
@@ -727,32 +751,12 @@ class RudeGui:
             self.update_nick_channel_label()
 
             # Display the last messages for the current DM
-            await self.irc_client.display_last_messages(channel_name, server_name=server)
+            self.irc_client.display_last_messages(channel_name, server_name=server)
             self.insert_and_scroll()
             self.highlight_nickname()
 
             # No topic for DMs
             self.current_topic.set(f"{channel_name}")
-
-        # Then, check if it's a channel
-        elif channel_name in self.irc_client.joined_channels:
-
-            self.irc_client.current_channel = channel_name
-            self.update_nick_channel_label()
-
-            # Update topic label
-            current_topic = self.channel_topics.get(self.irc_client.server, {}).get(channel_name, "N/A")
-            self.current_topic.set(f"{current_topic}")
-
-            # Display the last messages for the current channel
-            await self.irc_client.display_last_messages(self.irc_client.current_channel)
-            self.highlight_nickname()
-
-            self.irc_client.update_gui_user_list(channel_name)
-            self.insert_and_scroll()
-
-        else:
-            self.insert_text_widget(f"Not a member of channel or unknown DM {channel_name}\n")
 
     def insert_and_scroll(self):
         self.text_widget.see(tk.END)
@@ -765,7 +769,7 @@ class RudeGui:
             self.text_widget.config(state=tk.NORMAL)
             self.text_widget.delete(1.0, tk.END)
             self.text_widget.config(state=tk.DISABLED)
-            self.irc_client.channel_messages[current_channel] = []
+            self.irc_client.channel_messages[self.irc_client.server][current_channel] = []
 
     def update_nick_channel_label(self):
         """Update the label with the current nickname and channel."""
