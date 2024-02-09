@@ -657,7 +657,7 @@ class RudeChatClient:
 
         self.save_message(self.server, target, sender, message, is_sent=False)
         self.log_message(self.server_name, target, sender, message, is_sent=False)
-        self.display_message(timestamp, sender, message, target)
+        self.display_message(timestamp, sender, message, target, is_direct=True)
 
     async def handle_channel_message(self, sender, target, message, timestamp):
         if self.server not in self.channel_messages:
@@ -666,7 +666,7 @@ class RudeChatClient:
             self.channel_messages[self.server][target] = []
         self.save_message(self.server, target, sender, message, is_sent=False)
         self.log_message(self.server_name, target, sender, message, is_sent=False)
-        self.display_message(timestamp, sender, message, target)
+        self.display_message(timestamp, sender, message, target, is_direct=False)
 
     def save_message(self, server, target, sender, message, is_sent):
         timestamp = datetime.datetime.now().strftime('[%H:%M:%S] ')
@@ -682,13 +682,14 @@ class RudeChatClient:
         # Append the message to the appropriate list
         message_list.append(f"{timestamp}<{sender}> {message}\n")
 
-    def display_message(self, timestamp, sender, message, target):
+    def display_message(self, timestamp, sender, message, target, is_direct=False):
         if target == self.current_channel and self.gui.irc_client == self:
             self.gui.insert_text_widget(f"{timestamp}<{sender}> {message}\n")
             self.gui.highlight_nickname()
         elif sender == self.current_channel and self.gui.irc_client == self:
-            self.gui.insert_text_widget(f"{timestamp}<{sender}> {message}\n")
-            self.gui.highlight_nickname()
+            if is_direct == True:
+                self.gui.insert_text_widget(f"{timestamp}<{sender}> {message}\n")
+                self.gui.highlight_nickname()
         else:
             self.highlight_channel_if_not_current(target, sender)
 
