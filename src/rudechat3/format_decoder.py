@@ -15,10 +15,6 @@ def decoder(input_text: str) -> List[Tuple[str, List[Attribute]]]:
     current_attributes = []
     c_index = 0
 
-    def reset_attributes():
-        nonlocal current_attributes
-        current_attributes = []
-
     while c_index < len(input_text):
         c = input_text[c_index]
         match c:
@@ -32,7 +28,7 @@ def decoder(input_text: str) -> List[Tuple[str, List[Attribute]]]:
                 if not any(attr.underline for attr in current_attributes):
                     current_attributes.append(Attribute(underline=True))
             case '\x03':
-                reset_attributes()
+                current_attributes = []
                 colour_code = ''
                 while c_index + 1 < len(input_text) and input_text[c_index + 1].isdigit():
                     c_index += 1
@@ -48,18 +44,18 @@ def decoder(input_text: str) -> List[Tuple[str, List[Attribute]]]:
                         try:
                             background_num = int(background_code)
                         except ValueError:
-                            pass
+                            background_num = 0
                     new_attribute = Attribute(colour=int(colour_code), background=background_num)
                     if new_attribute not in current_attributes:
                         current_attributes.append(new_attribute)
             case '\x0F':
-                reset_attributes()
+                current_attributes = []
             case _:
                 current_text += c
 
         # Check for the end of the string
         if c_index == len(input_text) - 1:
-            reset_attributes()
+            current_attributes = []
 
         if current_text:
             output.append((current_text, list(current_attributes)))
