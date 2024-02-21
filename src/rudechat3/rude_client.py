@@ -39,6 +39,7 @@ class RudeChatClient:
         self.download_channel_list = {}
         self.highlighted_channels = {}
         self.highlighted_servers = {}
+        self.mentions = {}
         self.whois_executed = set()
         self.decoder = irctokens.StatefulDecoder()
         self.encoder = irctokens.StatefulEncoder()
@@ -429,6 +430,18 @@ class RudeChatClient:
                 await asyncio.sleep(RETRY_DELAY)
         return False
 
+    #async def refresher(self):
+    #    while True:
+    #        channel = self.current_channel
+    #        server = self.server
+    #        print(f"{channel}, {server}")
+    #        await asyncio.sleep(194)
+    #        self.gui.text_widget.config(state=tk.NORMAL)
+    #        self.gui.text_widget.delete(1.0, tk.END)
+    #        self.gui.text_widget.config(state=tk.DISABLED)
+    #        self.display_last_messages(channel, server_name=server)
+    #        self.gui.highlight_nickname()
+
     async def keep_alive(self):
         while True:
             try:
@@ -462,11 +475,11 @@ class RudeChatClient:
             ctcp_content = message[1:-1].split(' ', 1)[1] if ' ' in message else None  # Extract the content if present
 
             match ctcp_command:
-                case "VERSION":
+                case "VERSION" | "version":
                     if tokens.command == "PRIVMSG":
                         await self.send_message(f'NOTICE {sender} :\x01VERSION RudeChat3.0.4\x01')
                         self.gui.insert_server_widget(f"CTCP: {sender} {target}: {ctcp_command}\n")
-                case "MOO":
+                case "MOO" | "moo":
                     if tokens.command == "PRIVMSG":
                         await self.send_message(f'NOTICE {sender} :\x01MoooOOO! Hi Cow!! RudeChat3.0.4\x01')
                         self.gui.insert_server_widget(f"CTCP: {sender} {target}: {ctcp_command}\n")
@@ -475,15 +488,15 @@ class RudeChatClient:
                         timestamp = str(int(time.time()))  # Get the current Unix timestamp
                         await self.send_message(f'NOTICE {sender} :\x01PING {ctcp_content} {timestamp}\x01')
                         self.gui.insert_server_widget(f"CTCP: {sender} {target}: {ctcp_command}\n")
-                case "FINGER":
+                case "FINGER" | "finger":
                     if tokens.command == "PRIVMSG":
                         await self.send_message(f'NOTICE {sender} :\x01FINGER: {self.nickname} {self.server_name} RudeChat3.0.4\x01')
                         self.gui.insert_server_widget(f"CTCP: {sender} {target}: {ctcp_command}\n")
-                case "CLIENTINFO":
+                case "CLIENTINFO" | "clientinfo":
                     if tokens.command == "PRIVMSG":
                         await self.send_message(f'NOTICE {sender} :\x01CLIENTINFO VERSION TIME PING FINGER\x01')
                         self.gui.insert_server_widget(f"CTCP: {sender} {target}: {ctcp_command}\n")
-                case "TIME":
+                case "TIME" | "time":
                     if tokens.command == "PRIVMSG":
                         import pytz
                         dublin_tz = pytz.timezone('Europe/Dublin')
@@ -614,7 +627,7 @@ class RudeChatClient:
         if self.should_ignore_sender(sender_hostmask):
             return
 
-        await self.notify_user_if_mentioned(message, target)
+        await self.notify_user_if_mentioned(message, target, sender, timestamp)
         if self.is_ctcp_command(message):
             await self.handle_ctcp(tokens)
             return
@@ -628,9 +641,16 @@ class RudeChatClient:
     def should_ignore_sender(self, sender_hostmask):
         return any(fnmatch.fnmatch(sender_hostmask, ignored) for ignored in self.ignore_list)
 
-    async def notify_user_if_mentioned(self, message, target):
+    async def notify_user_if_mentioned(self, message, target, sender, timestamp):
         if self.nickname in message:
             await self.notify_user_of_mention(self.server, target)
+
+            if target in self.mentions:
+                # If the channel is already there, append the new mention to the list of mentions for that channel
+                self.mentions[target].append(f'{timestamp} <{sender}> {message}')
+            else:
+                # If the channel is not there, create a new entry with the message as the first mention
+                self.mentions[target] = [f'{timestamp} <{sender}> {message}']
 
     def is_ctcp_command(self, message):
         return message.startswith('\x01') and message.endswith('\x01')
@@ -1711,6 +1731,20 @@ class RudeChatClient:
                 await self.send_message(raw_command)
                 self.gui.insert_text_widget(f"{timestamp}Sent raw command: {raw_command}\n")
 
+            case "mentions":  # new command to print or clear mentions
+                if len(args) > 1 and args[1] == "clear":
+                    self.mentions.clear()  # Clear the mentions dictionary
+                    self.gui.insert_text_widget(f"All mentions have been cleared.\n")
+                elif not self.mentions:
+                    self.gui.insert_text_widget(f"No mentions found.\n")
+                else:
+                    for target, messages in self.mentions.items():
+                        self.gui.insert_text_widget(f"Mentions for {target}:\n")
+                        for message in messages:
+                            self.gui.insert_text_widget(f" - {message}\n")
+
+                    self.gui.highlight_nickname()
+
             case "away":  # set the user as away
                 away_message = " ".join(args[1:]) if len(args) > 1 else None
                 if away_message:
@@ -1822,13 +1856,6 @@ class RudeChatClient:
 
             case "ping":
                 await self.ping_server()
-
-            case "sa":
-                if len(args) < 2:
-                    self.gui.insert_text_widget(f"{timestamp}Error: Please provide a message to send to all channels.\n")
-                    return
-                message = " ".join(args[1:])
-                await self.send_message_to_all_channels(message)
 
             case "quit":
                 quit_message = " ".join(args[1:]) if len(args) > 0 else None
@@ -2247,25 +2274,6 @@ class RudeChatClient:
 
         await self.send_message(f'PING {self.server}')
 
-    async def send_message_to_all_channels(self, message):
-        timestamp = datetime.datetime.now().strftime('[%H:%M:%S] ')
-        formatted_message = f"{timestamp}<{self.nickname}> {message}\n"
-        
-        for channel in self.joined_channels:
-            await self.send_message(f'PRIVMSG {channel} :{message}')
-            
-            # Save the message to the channel_messages dictionary
-            if self.server not in self.channel_messages:
-                self.channel_messages[self.server] = {}
-            if channel not in self.channel_messages[self.server][channel]:
-                self.channel_messages[self.server][channel] = []
-            self.channel_messages[self.server][channel].append(formatted_message)
-            
-            # Trim the messages list if it exceeds 100 lines
-            self.trim_messages(channel, self.server)
-
-        self.gui.insert_text_widget(f"Message: {message} sent to all channels")
-
     async def handle_who_command(self, args):
         """
         Handle the WHO command entered by the user.
@@ -2326,6 +2334,7 @@ class RudeChatClient:
                 "\\x02 - Bold",
                 "\\x1D - Italic",
                 "\\x1F - Underline",
+                "\\x1E - Strike-Through",
                 "\\x03<colorcode> - Color",
                 "\\x0F - Terminate formatting - end of format string",
                 "Example: \\x0304example text\\x0F",
@@ -2351,7 +2360,6 @@ class RudeChatClient:
                 "/mode <mode> [channel] - Sets mode for user (optionally in a specific channel)",
             ],
             "Broadcasting": [
-                "/sa [message] - Sends a message to all channels",
                 "/mac <macro> - sends a chosen macro to a channel /mac - shows available macros",
                 "/notice <target> [message]",
             ],
