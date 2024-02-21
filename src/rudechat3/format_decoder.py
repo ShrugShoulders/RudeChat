@@ -6,6 +6,7 @@ class Attribute:
     bold: bool = False
     italic: bool = False
     underline: bool = False
+    strikethrough: bool = False
     colour: int = 0
     background: int = 0
 
@@ -27,6 +28,9 @@ def decoder(input_text: str) -> List[Tuple[str, List[Attribute]]]:
             case '\x1F':
                 if not any(attr.underline for attr in current_attributes):
                     current_attributes.append(Attribute(underline=True))
+            case '\x1E':
+                if not any(attr.strikethrough for attr in current_attributes):
+                    current_attributes.append(Attribute(strikethrough=True))
             case '\x03':
                 current_attributes = []
                 colour_code = ''
