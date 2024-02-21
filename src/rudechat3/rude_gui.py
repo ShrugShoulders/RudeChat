@@ -501,6 +501,9 @@ class RudeGui:
         self.tag_text(formatted_text)
 
     def tag_text(self, formatted_text):
+        # Initialize a cache for tag configurations to avoid redundant setups
+        tag_cache = {}
+        
         # Initialize variables to track current tag configuration
         current_tag_name = None
         current_tag_config = {}
@@ -510,33 +513,43 @@ class RudeGui:
             tag_name = "_".join(str(attr) for attr in attributes)
 
             # Check if the tag configuration has changed
-            if tag_name != current_tag_name:
-                # Configure the tag based on attributes
-                tag_config = {}
-                if any(attr.bold for attr in attributes):
-                    tag_config['font'] = ('Hack', 10, 'bold')
-                if any(attr.italic for attr in attributes):
-                    tag_config['font'] = ('Hack', 10, 'italic')
-                if any(attr.underline for attr in attributes):
-                    tag_config['underline'] = True
-                if attributes and attributes[0].colour != 0:
-                    irc_color_code = f"{attributes[0].colour:02d}"
-                    hex_color = self.irc_colors.get(irc_color_code, 'black')
-                    tag_config['foreground'] = hex_color
-                if attributes and attributes[0].background != 0:
-                    irc_background_code = f"{attributes[0].background:02d}"
-                    hex_background = self.irc_colors.get(irc_background_code, 'white')
-                    tag_config['background'] = hex_background
-
-                # Configure the tag in the Text widget
+            if tag_name not in tag_cache:
+                # If tag configuration is new, determine and cache it
+                tag_config = self.configure_tag_based_on_attributes(attributes)
                 self.text_widget.tag_configure(tag_name, **tag_config)
+                tag_cache[tag_name] = tag_config
+            else:
+                # Use cached configuration
+                tag_config = tag_cache[tag_name]
 
-                # Update current tag configuration
+            # Update current tag configuration if it has changed
+            if tag_name != current_tag_name:
                 current_tag_name = tag_name
                 current_tag_config = tag_config
 
             # Insert the formatted text with the current tag
             self.text_widget.insert(tk.END, text, (current_tag_name,))
+
+    def configure_tag_based_on_attributes(self, attributes):
+        # This method configures tag based on attributes efficiently
+        tag_config = {}
+        if any(attr.bold for attr in attributes):
+            tag_config['font'] = ('Hack', 10, 'bold')
+        if any(attr.italic for attr in attributes):
+            tag_config['font'] = ('Hack', 10, 'italic')
+        if any(attr.underline for attr in attributes):
+            tag_config['underline'] = True
+        if any(attr.strikethrough for attr in attributes):
+            tag_config['overstrike'] = True
+        if attributes and attributes[0].colour != 0:
+            irc_color_code = f"{attributes[0].colour:02d}"
+            hex_color = self.irc_colors.get(irc_color_code, 'black')
+            tag_config['foreground'] = hex_color
+        if attributes and attributes[0].background != 0:
+            irc_background_code = f"{attributes[0].background:02d}"
+            hex_background = self.irc_colors.get(irc_background_code, 'white')
+            tag_config['background'] = hex_background
+        return tag_config
 
     def tag_urls_async(self, urls):
         loop = asyncio.new_event_loop()
@@ -641,6 +654,7 @@ class RudeGui:
             
             self.add_client(server_name, irc_client)
             asyncio.create_task(irc_client.keep_alive())
+            #asyncio.create_task(irc_client.refresher())
             asyncio.create_task(irc_client.handle_incoming_message(config_file))
 
             self.bind_return_key()
