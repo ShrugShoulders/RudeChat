@@ -47,7 +47,7 @@ class RudeChatClient:
         self.reader = None
         self.writer = None
         self.ping_start_time = None
-        self.sasl_authenticated = False
+        self.isupport_flag = False
         self.ASCII_ART_MACROS = {}
         self.load_channel_messages()
         self.load_ignore_list()
@@ -202,6 +202,9 @@ class RudeChatClient:
         received_001 = False
         motd_received = False
         sasl_authenticated = False
+        logged_in = False
+        nickserv_sent = False
+        got_396 = False
 
         while True:
             data = await self.reader.read(4096)
@@ -227,8 +230,9 @@ class RudeChatClient:
                         self.gui.insert_text_widget("Handling SASL successful message\n")
                         await self.handle_sasl_successful()
                         sasl_authenticated = True
-                        await self.automatic_join()
-                        return
+                        if logged_in and sasl_authenticated and self.isupport_flag and motd_received:
+                            await self.automatic_join()
+                            return
 
                     case "904":
                         self.gui.insert_text_widget("Handling SASL failed message\n")
@@ -239,15 +243,9 @@ class RudeChatClient:
                         received_001 = True
                         self.gui.insert_and_scroll()
 
-                        if self.use_nickserv_auth and not self.sasl_enabled:
-                            await self.send_message(f'PRIVMSG NickServ :IDENTIFY {self.nickname} {self.nickserv_password}\r\n')
-                            self.gui.insert_text_widget(f"Sent NickServ authentication.\n")
-                            motd_received = True
-                        else:
-                            motd_received = True
-
                     case "005":
                         self.handle_isupport(tokens)
+                        self.isupport_flag = True
                         self.gui.insert_and_scroll()
 
                     case "250":
@@ -267,19 +265,29 @@ class RudeChatClient:
 
                     case "376":
                         self.handle_motd_end(tokens)
+                        motd_received = True
                         if not self.use_nickserv_auth and not self.sasl_enabled:
-                            motd_received = True
                             await self.automatic_join()
                             return
+                        elif sasl_authenticated and self.isupport_flag:
+                            await self.automatic_join()
+                            return
+                        elif self.use_nickserv_auth and not self.sasl_enabled:
+                            await self.send_message(f'PRIVMSG NickServ :IDENTIFY {self.nickname} {self.nickserv_password}\r\n')
+                            self.gui.insert_text_widget(f"Sent NickServ authentication.\n")
+                            nickserv_sent = True
 
                     case "PING":
                         await self.initial_ping(tokens)
 
-                    case "396":
-                        if received_001 and motd_received and not self.sasl_enabled:
+                    case "900":
+                        logged_in = True
+                        if self.use_nickserv_auth and logged_in and nickserv_sent and not self.sasl_enabled:
                             await self.automatic_join()
-                            print("Joined channels after authentication.")
                             return
+
+                    case "396":
+                        got_396 = True
 
                     case _:
                         self.gui.insert_and_scroll()
@@ -642,7 +650,7 @@ class RudeChatClient:
         return any(fnmatch.fnmatch(sender_hostmask, ignored) for ignored in self.ignore_list)
 
     async def notify_user_if_mentioned(self, message, target, sender, timestamp):
-        if self.nickname in message:
+        if self.nickname.lower() in message.lower():
             await self.notify_user_of_mention(self.server, target)
 
             if target in self.mentions:
