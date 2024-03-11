@@ -26,7 +26,7 @@ class RudeGui:
     def __init__(self, master):
         self.master = master
         self.master.title("RudeChat")
-        self.master.geometry("1600x800")
+        self.master.geometry("1064x900")
         self.master.configure(bg="black")
         self.script_directory = os.path.dirname(os.path.abspath(__file__))
         icon_path = os.path.join(self.script_directory, "rude.ico")
@@ -931,7 +931,7 @@ class RudeGui:
             return
 
         # Remove @ and + symbols from nicknames
-        user_list_cleaned = [nick.lstrip('@+') for nick in user_list]
+        user_list_cleaned = [nick.lstrip('~&@%+') for nick in user_list]
 
         # Initialize or update completions list
         if not hasattr(self, 'tab_complete_completions') or not hasattr(self, 'last_tab_time') or (time.time() - self.last_tab_time) > 1.0:
