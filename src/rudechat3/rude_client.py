@@ -579,15 +579,18 @@ class RudeChatClient:
         await self.trigger_beep_notification(channel_name=channel, message_content=notification_msg)
 
     def highlight_channel(self, channel):
-        if self.server_name not in self.highlighted_channels:
-            self.highlighted_channels[self.server_name] = {}
+        # Ensure the channel is part of the joined_channels before highlighting
+        if channel in self.joined_channels:
+            channel_idx = self.joined_channels.index(channel)
+            self.save_highlight(channel, channel_idx, is_mention=True)
 
-        for idx in range(self.gui.channel_listbox.size()):
-            if self.gui.channel_listbox.get(idx) == channel:
-                self.gui.channel_listbox.itemconfig(idx, {'bg': 'red'})
-                # Store the highlighted channel information for the server
-                self.highlighted_channels[self.server_name][channel] = {'index': idx, 'bg': 'red'}
-                break
+            # Find and highlight the channel in the GUI listbox
+            for idx in range(self.gui.channel_listbox.size()):
+                if self.gui.channel_listbox.get(idx) == channel:
+                    self.gui.channel_listbox.itemconfig(idx, {'bg': 'red'})
+                    break
+        else:
+            pass
 
     def highlight_server(self):
         for idx in range(self.gui.server_listbox.size()):
@@ -726,20 +729,35 @@ class RudeChatClient:
         if self.is_direct_message(target):
             highlighted_channel = sender
 
+        # Find the channel's index in joined_channels, if it exists
+        if highlighted_channel in self.joined_channels:
+            channel_idx = self.joined_channels.index(highlighted_channel)
+            self._highlight_channel_by_name(highlighted_channel, channel_idx)
+            self.save_highlight(highlighted_channel, channel_idx, is_mention=False)
+        else:
+            pass
+
+    def _highlight_channel_by_name(self, highlighted_channel, joined_idx):
+        # Attempt to find the channel in the GUI listbox and highlight it
         for idx in range(self.gui.channel_listbox.size()):
             if self.gui.channel_listbox.get(idx) == highlighted_channel:
                 current_bg = self.gui.channel_listbox.itemcget(idx, 'bg')
                 if current_bg != 'red':
                     self.gui.channel_listbox.itemconfig(idx, {'bg': 'green'})
-                    self.save_highlight(highlighted_channel, idx, bg='green')
                 break
 
-    def save_highlight(self, channel, index, bg='green'):
+    def save_highlight(self, channel, joined_index, is_mention):
+        # Initialize highlighted_channels for server_name if not already done
         if self.server_name not in self.highlighted_channels:
             self.highlighted_channels[self.server_name] = {}
 
-        # Store the highlighted channel information for the server
-        self.highlighted_channels[self.server_name][channel] = {'index': index, 'bg': bg}
+        current_highlight = self.highlighted_channels[self.server_name].get(channel)
+
+        if is_mention:
+            self.highlighted_channels[self.server_name][channel] = {'index': joined_index, 'bg': 'red'}
+        else:
+            if not current_highlight or current_highlight['bg'] != 'red':
+                self.highlighted_channels[self.server_name][channel] = {'index': joined_index, 'bg': 'green'}
 
     async def handle_join(self, tokens):
         user_info = tokens.hostmask.nickname
@@ -805,7 +823,7 @@ class RudeChatClient:
         user_found = False
         for user_with_symbol in self.channel_users.get(channel, []):
             # Check if the stripped user matches user_info
-            if user_with_symbol.lstrip('@+%') == user_info:
+            if user_with_symbol.lstrip('~&@%+') == user_info:
                 user_found = True
                 self.channel_users[channel].remove(user_with_symbol)
                 break
@@ -827,7 +845,7 @@ class RudeChatClient:
             user_found = False
             for idx, user_with_symbol in enumerate(users):
                 # Check if the stripped user matches user_info
-                if user_with_symbol.lstrip('@+%') == user_info:
+                if user_with_symbol.lstrip('~&@%+') == user_info:
                     user_found = True
                     del self.channel_users[channel][idx]
                     
@@ -861,9 +879,9 @@ class RudeChatClient:
         for channel, users in self.channel_users.items():
             for idx, user_with_symbol in enumerate(users):
                 # Check if the stripped user matches old_nick
-                if user_with_symbol.lstrip('@+%') == old_nick:
+                if user_with_symbol.lstrip('~&@%+') == old_nick:
                     # Extract the mode symbols from the old nickname
-                    mode_symbols = ''.join([c for c in user_with_symbol if c in '@+%'])
+                    mode_symbols = ''.join([c for c in user_with_symbol if c in '~&@%+'])
                     
                     # Replace old_nick with new_nick, retaining the mode symbols
                     users[idx] = mode_symbols + new_nick
@@ -1224,7 +1242,7 @@ class RudeChatClient:
         user_found = False
         for user_with_symbol in self.channel_users.get(channel, []):
             # Check if the stripped user matches kicked_nickname
-            if user_with_symbol.lstrip('@+%') == kicked_nickname:
+            if user_with_symbol.lstrip('~&@%+') == kicked_nickname:
                 user_found = True
                 self.channel_users[channel].remove(user_with_symbol)
                 break
@@ -1275,6 +1293,10 @@ class RudeChatClient:
     def handle_pong(self, tokens):
         pong_server = tokens.params[-1]  # Assumes the server name is the last parameter
         current_time = time.time()
+        if pong_server.startswith('irc'):
+            pass
+        else:
+            self.gui.insert_server_widget(f"PONG from {pong_server}\r\n")
 
         if self.ping_start_time is not None:
             ping_time = current_time - self.ping_start_time
@@ -1615,7 +1637,7 @@ class RudeChatClient:
         nickname = args[1]
         
         # Remove @ and + symbols from the nickname
-        nickname = nickname.lstrip("@+")
+        nickname = nickname.lstrip("~&@%+")
 
         if nickname not in self.joined_channels:
             self.open_dm(nickname, timestamp)
@@ -1676,7 +1698,7 @@ class RudeChatClient:
         if len(args) < 3:
             self.gui.insert_text_widget("Usage: /kick <user> <channel> [reason]\n")
             return
-        user = args[1].lstrip('@+')
+        user = args[1].lstrip('~&@%+')
         channel = args[2]
         reason = ' '.join(args[3:]) if len(args) > 3 else None
         kick_message = f'KICK {channel} {user}' + (f' :{reason}' if reason else '')
@@ -1863,7 +1885,12 @@ class RudeChatClient:
                 await self.change_nickname(new_nick, is_from_token=False)
 
             case "ping":
-                await self.ping_server()
+                if len(args) > 1:
+                    user = args[1]
+                    if user:
+                        await self.ping_user(user)
+                else:
+                    await self.ping_server()
 
             case "quit":
                 quit_message = " ".join(args[1:]) if len(args) > 0 else None
@@ -2282,6 +2309,12 @@ class RudeChatClient:
 
         await self.send_message(f'PING {self.server}')
 
+    async def ping_user(self, user):
+        # Initialize ping_start_time to the current time
+        self.ping_start_time = time.time()
+
+        await self.send_message(f'PING {user}')
+
     async def handle_who_command(self, args):
         """
         Handle the WHO command entered by the user.
@@ -2362,7 +2395,7 @@ class RudeChatClient:
                 "/clear - clears the chat window and removes all messages for the current channel",
             ],
             "Server Interaction": [
-                "/ping - Pings the currently selected server",
+                "/ping [user] - Pings the currently selected server, if user is specified it will ping that user.",
                 "/quote <IRC command> - Sends raw IRC message to the server",
                 "/CTCP <nickname> <command> - Sends a CTCP request",
                 "/mode <mode> [channel] - Sets mode for user (optionally in a specific channel)",
