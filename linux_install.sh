@@ -5,4 +5,5 @@ pip install irctokens --break-system-packages
 pip install aiofiles --break-system-packages
 pip install plyer --break-system-packages
 pip install tkcolorpicker --break-system-packages
+pip install colorchooser --break-system-packages
 pip install .
