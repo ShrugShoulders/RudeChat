@@ -29,8 +29,13 @@ class RudeGui:
         self.master.geometry("1064x900")
         self.master.configure(bg="black")
         self.script_directory = os.path.dirname(os.path.abspath(__file__))
-        icon_path = os.path.join(self.script_directory, "rude.ico")
-        self.master.iconbitmap(default=icon_path)
+        if sys.platform.startswith('win'):
+            icon_path = os.path.join(self.script_directory, "rude.ico")
+            self.master.iconbitmap(icon_path)
+        else:
+            icon_path = os.path.join(self.script_directory, "rude.png")  # Assuming you have a PNG version
+            img = PhotoImage(file=icon_path)
+            self.master.iconphoto(True, img)
 
         self.irc_colors = {
             '00': '#000000', '01': '#ffffff', '02': '#0000AA', '03': '#00AA00',
@@ -215,6 +220,10 @@ class RudeGui:
         except FileNotFoundError as e:
             print(f"Error displaying startup art: {e}")
 
+    def scroll_channel_list(self):
+        # This method scrolls the Listbox to the bottom
+        self.channel_listbox.yview(tk.END)
+
     def escape_color_codes(self, line):
         # Escape color codes in the string
         escaped_line = re.sub(r'\\x([0-9a-fA-F]{2})', lambda match: bytes.fromhex(match.group(1)).decode('utf-8'), line)
@@ -276,7 +285,76 @@ class RudeGui:
         self.input_menu.add_command(label="Paste", command=self.paste_text)
         self.input_menu.add_command(label="Select All", command=self.select_all_text)
 
+        irc_colors_menu = Menu(self.input_menu, tearoff=0)
+        irc_colors = [
+            ("White", "00"),
+            ("Black", "01"),
+            ("Blue", "02"),
+            ("Green", "03"),
+            ("Red", "04"),
+            ("Brown", "05"),
+            ("Purple", "06"),
+            ("Orange", "07"),
+            ("Yellow", "08"),
+            ("Lime", "09"),
+            ("Teal", "10"),
+            ("Cyan", "11"),
+            ("Royal", "12"),
+            ("Pink", "13"),
+            ("Grey", "14"),
+            ("Silver", "15"),
+        ]
+
+        for color_name, color_code in irc_colors:
+            irc_colors_menu.add_command(label=color_name, command=lambda code=color_code: self.insert_irc_color(code))
+
+        self.input_menu.add_cascade(label="2nd Insert IRC Color", menu=irc_colors_menu)
+
+        text_format_menu = Menu(self.input_menu, tearoff=0)
+        text_format_options = [
+            ("Bold", "\x02"),
+            ("Italic", "\x1D"),
+            ("Underline", "\x1F"),
+            ("Strike Through", "\x1E"),
+            ("Inverse", "\x16")
+        ]
+
+        for format_name, format_code in text_format_options:
+            text_format_menu.add_command(label=format_name, command=lambda code=format_code: self.insert_text_format(code))
+
+        self.input_menu.add_cascade(label="1st Text Format", menu=text_format_menu)
+
         self.entry_widget.bind("<Button-3>", self.show_input_menu)
+
+    def insert_text_format(self, format_code):
+        """
+        Insert text format code around selected text or at cursor position.
+        """
+        selected_text = self.entry_widget.selection_get()
+        if selected_text:
+            start_index = self.entry_widget.index(tk.SEL_FIRST)
+            end_index = self.entry_widget.index(tk.SEL_LAST)
+            self.entry_widget.delete(tk.SEL_FIRST, tk.SEL_LAST)
+            self.entry_widget.insert("insert", f"{format_code}{selected_text}{format_code}")
+            self.entry_widget.select_range(start_index, end_index + len(format_code)*2)
+            self.entry_widget.icursor(end_index + len(format_code) + 1)
+        else:
+            self.entry_widget.insert("insert", format_code)
+
+    def insert_irc_color(self, color_code):
+        """
+        Insert IRC color code around selected text or at cursor position.
+        """
+        selected_text = self.entry_widget.selection_get()
+        if selected_text:
+            start_index = self.entry_widget.index(tk.SEL_FIRST)
+            end_index = self.entry_widget.index(tk.SEL_LAST)
+            self.entry_widget.delete(tk.SEL_FIRST, tk.SEL_LAST)
+            self.entry_widget.insert("insert", f"\x03{color_code}{selected_text}\x03")
+            self.entry_widget.select_range(start_index, end_index + 3)
+            self.entry_widget.icursor(end_index + 4)
+        else:
+            self.entry_widget.insert("insert", f"\x03{color_code}")
 
     def show_input_menu(self, event):
         try:
@@ -448,8 +526,9 @@ class RudeGui:
         selected_user_index = self.user_listbox.curselection()
         if selected_user_index:
             selected_user = self.user_listbox.get(selected_user_index)
+            cleaned_nickname = selected_user.lstrip('~&@%+')
             loop = asyncio.get_event_loop()
-            loop.create_task(self.irc_client.whois(selected_user))
+            loop.create_task(self.irc_client.whois(cleaned_nickname))
 
     def reset_nick_colors(self):
         self.nickname_colors = self.load_nickname_colors()
@@ -477,7 +556,9 @@ class RudeGui:
         self.tooltip = tk.Toplevel(self.topic_label)
         self.tooltip.wm_overrideredirect(True)
         self.tooltip.wm_geometry(f"+{x}+{y}")
-        label = tk.Label(self.tooltip, text=self.current_topic.get(), justify='left')
+        
+        # Specify the wraplength in pixels (e.g., 200 pixels)
+        label = tk.Label(self.tooltip, text=self.current_topic.get(), justify='left', wraplength=800)
         label.pack()
 
     def hide_topic_tooltip(self, event):
@@ -543,11 +624,11 @@ class RudeGui:
             tag_config['overstrike'] = True
         if attributes and attributes[0].colour != 0:
             irc_color_code = f"{attributes[0].colour:02d}"
-            hex_color = self.irc_colors.get(irc_color_code, 'black')
+            hex_color = self.irc_colors.get(irc_color_code, 'white')
             tag_config['foreground'] = hex_color
         if attributes and attributes[0].background != 0:
             irc_background_code = f"{attributes[0].background:02d}"
-            hex_background = self.irc_colors.get(irc_background_code, 'white')
+            hex_background = self.irc_colors.get(irc_background_code, 'black')
             tag_config['background'] = hex_background
         return tag_config
 
@@ -580,7 +661,7 @@ class RudeGui:
 
     def find_urls(self, text):
         # A simple regex to detect URLs
-        url_pattern = re.compile(r'(\w+://\S+|www\.\S+)')
+        url_pattern = re.compile(r'(\w+://[^\s()<>]+|www\.[^\s()<>]+)')
         return url_pattern.findall(text)
 
     def open_url(self, event, url):
@@ -804,7 +885,7 @@ class RudeGui:
         start_idx = "1.0"
         while True:
             # Find the position of the next instance of the user's nickname
-            start_idx = self.text_widget.search(user_nickname, start_idx, stopindex=tk.END)
+            start_idx = self.text_widget.search(user_nickname, start_idx, stopindex=tk.END, regexp=True, nocase=True)
             if not start_idx:
                 break
 
