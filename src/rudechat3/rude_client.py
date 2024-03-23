@@ -438,18 +438,6 @@ class RudeChatClient:
                 await asyncio.sleep(RETRY_DELAY)
         return False
 
-    #async def refresher(self):
-    #    while True:
-    #        channel = self.current_channel
-    #        server = self.server
-    #        print(f"{channel}, {server}")
-    #        await asyncio.sleep(194)
-    #        self.gui.text_widget.config(state=tk.NORMAL)
-    #        self.gui.text_widget.delete(1.0, tk.END)
-    #        self.gui.text_widget.config(state=tk.DISABLED)
-    #        self.display_last_messages(channel, server_name=server)
-    #        self.gui.highlight_nickname()
-
     async def keep_alive(self):
         while True:
             try:
@@ -673,6 +661,7 @@ class RudeChatClient:
         if sender not in self.whois_executed:
             await self.send_message(f'WHOIS {sender}')
             self.whois_executed.add(sender)
+            self.gui.scroll_channel_list()
         return target
 
     async def prepare_direct_message(self, sender, target, message, timestamp):
@@ -963,10 +952,10 @@ class RudeChatClient:
         user = tokens.params[2] if len(tokens.params) > 2 else None
 
         # Ignore ban and unban and quiet modes
-        ignored_modes = ['+b', '-b', '-q', '+q']
+        ignored_modes = ['+b', '-b', '-q', '+q', 'q']
         if mode_change in ignored_modes:
             message = f"<!> {mode_change} mode for {user if user else 'unknown'}\n"
-            if channel == self.current_channel:
+            if channel == self.current_channel and self.gui.irc_client == self:
                 self.gui.insert_text_widget(f"{message}")
                 self.gui.highlight_nickname()
 
@@ -1499,7 +1488,6 @@ class RudeChatClient:
                         self.handle_not_channel_operator(tokens)
 
                     #case "487":
-                    #    self.handle_nick
 
                     case "322":  # Channel list
                         await self.handle_list_response(tokens)
@@ -1910,10 +1898,10 @@ class RudeChatClient:
                 await self.handle_cowsay_command(args)
 
             case "ignore":
-                self.ignore_user(args)
+                await self.ignore_user(args)
                 
             case "unignore":
-                self.unignore_user(args)
+                await self.unignore_user(args)
 
             case "kick":
                 await self.handle_kick_command(args)
@@ -2033,16 +2021,16 @@ class RudeChatClient:
         available_macros = ", ".join(self.ASCII_ART_MACROS.keys())
         self.gui.insert_text_widget(f"Available ASCII art macros: {available_macros}\n") 
 
-    def ignore_user(self, args):
+    async def ignore_user(self, args):
         user_to_ignore = " ".join(args[1:])
         if user_to_ignore not in self.ignore_list:
             self.ignore_list.append(user_to_ignore)
             self.gui.insert_text_widget(f"You've ignored {user_to_ignore}.\n")
-            self.save_ignore_list()
+            await self.save_ignore_list()
         else:
             self.gui.insert_text_widget(f"{user_to_ignore} is already in your ignore list.\n")
 
-    def unignore_user(self, args):
+    async def unignore_user(self, args):
         if len(args) < 2:  # Check if the user has provided the username to unignore
             self.gui.insert_text_widget("Usage: unignore <username>\n")
             return
@@ -2051,18 +2039,19 @@ class RudeChatClient:
         if user_to_unignore in self.ignore_list:
             self.ignore_list.remove(user_to_unignore)
             self.gui.insert_text_widget(f"You've unignored {user_to_unignore}.\n")
-            self.save_ignore_list()
+            await self.save_ignore_list()
         else:
             self.gui.insert_text_widget(f"{user_to_unignore} is not in your ignore list.\n")
 
-    def save_ignore_list(self):
+    async def save_ignore_list(self):
         script_directory = os.path.dirname(os.path.abspath(__file__))
         
         # Construct the full path for the ignore_list.txt
         file_path = os.path.join(script_directory, 'ignore_list.txt')
-        with open(file_path, "w", encoding='utf-8') as f:
+        
+        async with aiofiles.open(file_path, mode="w", encoding='utf-8') as f:
             for user in self.ignore_list:
-                f.write(f"{user}\n")
+                await f.write(f"{user}\n")
 
     def load_ignore_list(self):
         script_directory = os.path.dirname(os.path.abspath(__file__))
@@ -2339,8 +2328,9 @@ class RudeChatClient:
 
     async def handle_action(self, args):
         action_message = ' '.join(args[1:])
-        formatted_message = f"* {self.nickname} {action_message}"
-        await self.send_message(f'PRIVMSG {self.current_channel} :\x01ACTION {action_message}\x01')
+        escaped_input = self.escape_color_codes(action_message)
+        formatted_message = f"* {self.nickname} {escaped_input}"
+        await self.send_message(f'PRIVMSG {self.current_channel} :\x01ACTION {escaped_input}\x01')
         timestamp = datetime.datetime.now().strftime('[%H:%M:%S] ')
         self.gui.insert_text_widget(f"{timestamp}{formatted_message}\n")
         self.gui.highlight_nickname()
@@ -2370,6 +2360,7 @@ class RudeChatClient:
                 "/banlist - Shows ban list for channel",
                 "/invite <user> <channel> - invites a user to a channel",
                 "/kick <user> <channel> [message]",
+                "/mentions to show all mentions of your nickname. /mentions clear to clear these messages",
             ],
             "String Formatting": [
                 "\\x02 - Bold",
@@ -2378,7 +2369,9 @@ class RudeChatClient:
                 "\\x1E - Strike-Through",
                 "\\x03<colorcode> - Color",
                 "\\x0F - Terminate formatting - end of format string",
+                "\\x16 - Inverse control character. Swaps the color",
                 "Example: \\x0304example text\\x0F",
+                "When using the GUI for format select first the type of format example: bold. Then select the color.",
             ],
             "Private Messaging": [
                 "/query <nickname> - Opens a DM with a user",
