@@ -277,7 +277,7 @@ class RudeGui:
 
     def init_input_menu(self):
         """
-        Right click menu.
+        Right click menu for the Input Widget.
         """
         self.input_menu = Menu(self.entry_widget, tearoff=0)
         self.input_menu.add_command(label="Cut", command=self.cut_text)
@@ -285,6 +285,7 @@ class RudeGui:
         self.input_menu.add_command(label="Paste", command=self.paste_text)
         self.input_menu.add_command(label="Select All", command=self.select_all_text)
 
+        # First set of IRC colors
         irc_colors_menu = Menu(self.input_menu, tearoff=0)
         irc_colors = [
             ("White", "00"),
@@ -308,7 +309,17 @@ class RudeGui:
         for color_name, color_code in irc_colors:
             irc_colors_menu.add_command(label=color_name, command=lambda code=color_code: self.insert_irc_color(code))
 
-        self.input_menu.add_cascade(label="2nd Insert IRC Color", menu=irc_colors_menu)
+        self.input_menu.add_cascade(label="IRC Color", menu=irc_colors_menu)
+
+        # Additional IRC colors
+        additional_irc_colors_menu = Menu(self.input_menu, tearoff=0)
+        # Simple representation for color names
+        additional_irc_colors = [(f"Color {i}", f"{i:02}") for i in range(16, 99)]
+
+        for color_name, color_code in additional_irc_colors:
+            additional_irc_colors_menu.add_command(label=color_name, command=lambda code=color_code: self.insert_irc_color(code))
+
+        self.input_menu.add_cascade(label="Extended IRC Color", menu=additional_irc_colors_menu)
 
         text_format_menu = Menu(self.input_menu, tearoff=0)
         text_format_options = [
@@ -322,7 +333,7 @@ class RudeGui:
         for format_name, format_code in text_format_options:
             text_format_menu.add_command(label=format_name, command=lambda code=format_code: self.insert_text_format(code))
 
-        self.input_menu.add_cascade(label="1st Text Format", menu=text_format_menu)
+        self.input_menu.add_cascade(label="Text Format", menu=text_format_menu)
 
         self.entry_widget.bind("<Button-3>", self.show_input_menu)
 
@@ -335,7 +346,7 @@ class RudeGui:
             start_index = self.entry_widget.index(tk.SEL_FIRST)
             end_index = self.entry_widget.index(tk.SEL_LAST)
             self.entry_widget.delete(tk.SEL_FIRST, tk.SEL_LAST)
-            self.entry_widget.insert("insert", f"{format_code}{selected_text}{format_code}")
+            self.entry_widget.insert("insert", f"{format_code}{selected_text}\x0F")
             self.entry_widget.select_range(start_index, end_index + len(format_code)*2)
             self.entry_widget.icursor(end_index + len(format_code) + 1)
         else:
