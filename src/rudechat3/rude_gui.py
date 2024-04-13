@@ -857,14 +857,19 @@ class RudeGui:
         channel = self.irc_client.current_channel
         server = self.irc_client.server
 
-        # Clear the text window
-        self.text_widget.config(state=tk.NORMAL)
-        self.text_widget.delete(1.0, tk.END)
-        self.text_widget.config(state=tk.DISABLED)
-
-        self.irc_client.display_last_messages(channel, server_name=server)
-        self.highlight_nickname()
-        self.insert_and_scroll()
+        # Split the text by '\n' and count the number of lines
+        text_lines = self.text_widget.get("1.0", tk.END).split("\n")
+        if len(text_lines) > 103:
+            # Clear the text window
+            self.text_widget.config(state=tk.NORMAL)
+            self.text_widget.delete(1.0, tk.END)
+            self.text_widget.config(state=tk.DISABLED)
+            # Refresh using display_last_messages
+            self.irc_client.display_last_messages(channel, server_name=server)
+            self.highlight_nickname()
+            self.insert_and_scroll()
+        else:
+            pass
 
     async def switch_channel(self, channel_name):
         server = self.irc_client.server  # Assume the server is saved in the irc_client object
