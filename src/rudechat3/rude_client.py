@@ -1564,7 +1564,12 @@ class RudeChatClient:
                     case "482":
                         self.handle_not_channel_operator(tokens)
 
-                    #case "487":
+                    case "487":
+                        self.command_487(tokens)
+                    case "433":
+                        self.command_433(tokens)
+                    case "432":
+                        self.command_432(tokens)
 
                     case "322":  # Channel list
                         await self.handle_list_response(tokens)
@@ -1597,6 +1602,27 @@ class RudeChatClient:
                         print(f"Debug: Unhandled command {tokens.command}. Full line: {line}")
                         if line.startswith(f":{self.server}"):
                             self.handle_server_message(line)
+
+    def command_432(tokens):
+        source = tokens.source
+        user = tokens.params[0]
+        message = f"""{tokens.params[2]}"""
+
+        self.gui.insert_server_widget(f"{source} {user}: {message}")
+
+    def command_487(tokens):
+        source = tokens.source
+        user = tokens.params[0]
+        message = f"""{tokens.params[1]}"""
+
+        self.gui.insert_server_widget(f"{source} {user}: {message}")
+
+    def command_433(tokens):
+        source = tokens.source
+        user = tokens.params[1]
+        message = f"""{tokens.params[2]}"""
+
+        self.gui.insert_server_widget(f"{source} {user}: {message}")
 
     def handle_already_on_channel(self, tokens):
         channel = tokens.params[2]
@@ -1939,10 +1965,6 @@ class RudeChatClient:
                 # Create the channel list window
                 self.show_channel_list_window()
 
-            case "ch":
-                for channel in self.joined_channels:
-                    self.gui.insert_text_widget(f'{channel}\n')
-
             case "sw":
                 channel_name = args[1]
                 if channel_name in self.joined_channels:
@@ -1983,6 +2005,7 @@ class RudeChatClient:
                 quit_message = " ".join(args[1:]) if len(args) > 0 else None
                 await self.save_channel_messages()
                 await self.gui.send_quit_to_all_clients(quit_message)
+                await self.gui.stop_all_tasks()
                 await asyncio.sleep(2)
                 self.master.destroy()
                 return False
