@@ -33,7 +33,7 @@ class RudeGui:
             icon_path = os.path.join(self.script_directory, "rude.ico")
             self.master.iconbitmap(icon_path)
         else:
-            icon_path = os.path.join(self.script_directory, "rude.png")  # Assuming you have a PNG version
+            icon_path = os.path.join(self.script_directory, "rude.png")
             img = PhotoImage(file=icon_path)
             self.master.iconphoto(True, img)
 
@@ -220,9 +220,26 @@ class RudeGui:
         except FileNotFoundError as e:
             print(f"Error displaying startup art: {e}")
 
+    def clear_channel_listbox(self):
+        self.channel_listbox.delete(0, tk.END)
+
     def scroll_channel_list(self):
         # This method scrolls the Listbox to the bottom
         self.channel_listbox.yview(tk.END)
+
+    def clear_user_listbox(self):
+        self.user_listbox.delete(0, tk.END)
+
+    def clear_topic_label(self):
+        self.current_topic.set("")
+
+    def clear_text_widget(self):
+        self.text_widget.config(state=tk.NORMAL)
+        self.text_widget.delete(1.0, tk.END)
+        self.text_widget.config(state=tk.DISABLED)
+        self.server_text_widget.config(state=tk.NORMAL)
+        self.server_text_widget.delete(1.0, tk.END)
+        self.server_text_widget.config(state=tk.DISABLED)
 
     def escape_color_codes(self, line):
         # Escape color codes in the string
@@ -230,12 +247,12 @@ class RudeGui:
         
         return escaped_line
 
-    async def remove_server_from_listbox(self, server_name=None):
-        if server_name is None:
+    async def remove_server_from_listbox(self, server_name=None, reconnect=False):
+        if server_name is None and reconnect is False:
             server_name = self.server_var.get()
 
         # Check if the server_name is in the Listbox
-        if server_name in self.server_listbox.get(0, tk.END):
+        if server_name and server_name in self.server_listbox.get(0, tk.END):
             # Remove the server_name from the Listbox
             index = self.server_listbox.get(0, tk.END).index(server_name)
             self.server_listbox.delete(index)
@@ -247,7 +264,10 @@ class RudeGui:
         else:
             self.server_var.set("")  # No servers left, clear the current selection
 
-        self.gui.update_nick_channel_label()
+        if reconnect == True and server_name == None:
+            self.server_listbox.delete(0, tk.END)
+
+        self.update_nick_channel_label()
 
     def load_nickname_colors(self):
         nickname_colors_path = os.path.join(self.script_directory, 'nickname_colours.json')
@@ -671,8 +691,8 @@ class RudeGui:
             start_idx = end_idx
 
     def find_urls(self, text):
-        # A simple regex to detect URLs
-        url_pattern = re.compile(r'(\w+://[^\s()<>]+|www\.[^\s()<>]+)')
+        # A "simple" regex to detect URLs
+        url_pattern = re.compile(r'(\w+://[^\s()<>]*\([^\s()<>]*\)[^\s()<>]*(?<![.,;!?])|www\.[^\s()<>]*\([^\s()<>]*\)[^\s()<>]*(?<![.,;!?])|\w+://[^\s()<>]+(?<![.,;!?])|www\.[^\s()<>]+(?<![.,;!?]))')
         return url_pattern.findall(text)
 
     def open_url(self, event, url):
@@ -686,13 +706,23 @@ class RudeGui:
         self.insert_and_scroll()
 
     async def send_quit_to_all_clients(self, quit_message=None):
-        for irc_client in self.clients.values():
-            await self.irc_client.save_channel_messages()
-            quit_cmd = f'QUIT :{quit_message}' if quit_message else 'QUIT :RudeChat3 https://github.com/ShrugShoulders/RudeChat'
-            await self.irc_client.send_message(quit_cmd)
+        try:       
+            for irc_client in self.clients.values():
+                await self.irc_client.save_channel_messages()
+                quit_cmd = f'QUIT :{quit_message}' if quit_message else 'QUIT :RudeChat3 https://github.com/ShrugShoulders/RudeChat'
+                await self.irc_client.send_message(quit_cmd)
+        except Exception as e:
+            print(f"Exception in send_quit_to_all_clients: {e}")
+
+    async def stop_all_tasks(self):
+        try:
+            for irc_client in self.clients.values():
+                await self.irc_client.stop_tasks_and_close_loop()
+        except Exception as e:
+            print(f"Exception in stop_all_tasks: {e}")
 
     def add_client(self, server_name, irc_client):
-        self.clients[server_name] = irc_client
+        self.clients[server_name] = irc_client # Store clients here.
 
         # Get the current list of servers from the Listbox
         current_servers = list(self.server_listbox.get(0, tk.END))
@@ -737,17 +767,26 @@ class RudeGui:
     async def init_client_with_config(self, config_file, fallback_server_name):
         try:
             irc_client = RudeChatClient(self.text_widget, self.server_text_widget, self.entry_widget, self.master, self)
-            asyncio.create_task(irc_client.load_ascii_art_macros())
+            irc_client.client_event_loops[irc_client] = asyncio.get_event_loop()  # Store a reference to the event loop
+            
+            # Create a dictionary to store references to tasks
+            irc_client.tasks = {}
+
+            # Create tasks and store references
+            irc_client.tasks["load_ascii_art_macros"] = asyncio.create_task(irc_client.load_ascii_art_macros(), name="load_ascii_art_macros_task")
             await irc_client.read_config(config_file)
             await irc_client.connect(config_file)
 
             # Use the server_name if it is set in the configuration, else use fallback_server_name
             server_name = irc_client.server_name if irc_client.server_name else fallback_server_name
-            
+
             self.add_client(server_name, irc_client)
-            asyncio.create_task(irc_client.keep_alive())
-            #asyncio.create_task(irc_client.refresher())
-            asyncio.create_task(irc_client.handle_incoming_message(config_file))
+
+            # Create and store references to tasks
+            irc_client.tasks["keep_alive"] = asyncio.create_task(irc_client.keep_alive(), name="keep_alive_task")
+            irc_client.tasks["auto_save"] = asyncio.create_task(irc_client.auto_save(), name="auto_save_task")
+            irc_client.tasks["auto_refresh"] = asyncio.create_task(irc_client.auto_refresh(), name="auto_refresh_task")
+            irc_client.tasks["handle_incoming_message"] = asyncio.create_task(irc_client.handle_incoming_message(config_file), name="handle_incoming_message_task")
 
             self.bind_return_key()
         except Exception as e:
@@ -813,6 +852,19 @@ class RudeGui:
                 server_highlighted_channels = self.irc_client.highlighted_channels[self.irc_client.server_name]
                 if clicked_channel in server_highlighted_channels:
                     del server_highlighted_channels[clicked_channel]
+
+    async def refresh_text_widget(self):
+        channel = self.irc_client.current_channel
+        server = self.irc_client.server
+
+        # Clear the text window
+        self.text_widget.config(state=tk.NORMAL)
+        self.text_widget.delete(1.0, tk.END)
+        self.text_widget.config(state=tk.DISABLED)
+
+        self.irc_client.display_last_messages(channel, server_name=server)
+        self.highlight_nickname()
+        self.insert_and_scroll()
 
     async def switch_channel(self, channel_name):
         server = self.irc_client.server  # Assume the server is saved in the irc_client object
