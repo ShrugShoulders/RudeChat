@@ -237,6 +237,8 @@ class RudeGui:
         self.text_widget.config(state=tk.NORMAL)
         self.text_widget.delete(1.0, tk.END)
         self.text_widget.config(state=tk.DISABLED)
+
+    def clear_server_widget(self):
         self.server_text_widget.config(state=tk.NORMAL)
         self.server_text_widget.delete(1.0, tk.END)
         self.server_text_widget.config(state=tk.DISABLED)
@@ -717,7 +719,7 @@ class RudeGui:
     async def stop_all_tasks(self):
         try:
             for irc_client in self.clients.values():
-                await self.irc_client.stop_tasks_and_close_loop()
+                await self.irc_client.stop_tasks()
         except Exception as e:
             print(f"Exception in stop_all_tasks: {e}")
 
@@ -751,15 +753,20 @@ class RudeGui:
             if self.irc_client:
                 # Set the server name in the RudeChatClient instance
                 self.irc_client.set_server_name(selected_server)
+
+                # Set the currently selected channel to None
+                self.irc_client.current_channel = ''
                 
                 # Set the GUI reference and update the GUI components
                 self.irc_client.set_gui(self)
                 self.irc_client.update_gui_channel_list()
-                
-                # Update the user list in GUI
-                selected_channel = self.irc_client.current_channel
-                if selected_channel:
-                    self.irc_client.update_gui_user_list(selected_channel)
+
+                # Clear the text widget
+                self.clear_text_widget()
+
+                # Display the MOTD if available
+                self.irc_client.display_server_motd(selected_server)
+                self.text_widget.see(tk.END)
 
                 # Set the background color of the selected server to black
                 self.server_listbox.itemconfig(selected_server_index, {'bg': 'black', 'fg': 'white'})
@@ -797,22 +804,26 @@ class RudeGui:
         self.entry_widget.bind('<Return>', lambda event: loop.create_task(self.on_enter_key(event)))
 
     async def on_enter_key(self, event):
-        user_input = self.entry_widget.get()
+        try:
+            user_input = self.entry_widget.get()
 
-        # Save the entered message to entry_history
-        if user_input:
-            self.entry_history.append(user_input)
+            # Save the entered message to entry_history
+            if user_input:
+                self.entry_history.append(user_input)
 
-            # Limit the entry_history to the last 10 messages
-            if len(self.entry_history) > 10:
-                self.entry_history.pop(0)
+                # Limit the entry_history to the last 10 messages
+                if len(self.entry_history) > 10:
+                    self.entry_history.pop(0)
 
-            # Reset history_index to the end of entry_history
-            self.history_index = len(self.entry_history)
+                # Reset history_index to the end of entry_history
+                self.history_index = len(self.entry_history)
 
-        self.entry_widget.delete(0, tk.END)
-        await self.irc_client.command_parser(user_input)
-        self.text_widget.see(tk.END)
+            self.entry_widget.delete(0, tk.END)
+            await self.irc_client.command_parser(user_input)
+            if hasattr(self, 'text_widget') and self.text_widget.winfo_exists():
+                self.text_widget.see(tk.END)
+        except Exception as e:
+            print(f"General Error in on_enter_key: {e}")
 
     def handle_arrow_keys(self, event):
         if event.keysym == 'Up':
