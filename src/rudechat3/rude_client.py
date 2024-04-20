@@ -32,6 +32,7 @@ class RudeChatClient:
         self.ignore_list = []
         self.current_channel = ''
         self.nickname = ''
+        self.motd_dict = {}
         self.channel_messages = {}
         self.channel_users = {}
         self.user_modes = {}
@@ -51,7 +52,7 @@ class RudeChatClient:
         self.writer = None
         self.ping_start_time = None
         self.isupport_flag = False
-        self.message_handling_semaphore = asyncio.Semaphore(30)
+        self.message_handling_semaphore = asyncio.Semaphore(50)
         self.load_channel_messages()
         self.load_ignore_list()
 
@@ -146,11 +147,9 @@ class RudeChatClient:
         self.motd_lines.append(motd_start_line)
 
     def handle_motd_end(self, tokens):
-        # Combine the individual MOTD lines into a single string
         full_motd = "\n".join(self.motd_lines)
-        # Display the full MOTD, cleaned up
+        self.motd_dict[self.server_name] = full_motd
         self.gui.insert_text_widget(f"Message of the Day:\n{full_motd}\n")
-        # Clear the MOTD buffer for future use
         self.motd_lines.clear()
             
     async def wait_for_welcome(self, config_file):
@@ -396,16 +395,16 @@ class RudeChatClient:
 
         # Cancel the auto_refresh task
         #print(self.tasks)
-        #await self.stop_tasks_and_close_loop(self.tasks)
+        #await self.stop_tasks(self.tasks)
         #print(self.tasks)
 
         self.gui.clear_channel_listbox()
         self.gui.clear_user_listbox()
         self.gui.clear_topic_label()
         self.gui.clear_text_widget()
+        self.gui.clear_server_widget()
         self.joined_channels.clear()
         self.motd_lines.clear()
-        self.channel_messages.clear()
         self.channel_users.clear()
         self.user_modes.clear()
         self.mode_to_symbol.clear()
@@ -413,55 +412,42 @@ class RudeChatClient:
         self.download_channel_list.clear()
         self.whois_executed.clear()
 
-    async def stop_tasks_and_close_loop(self, tasks_dict=None):
+    async def stop_tasks(self, tasks_dict=None):
         if tasks_dict is None:
             tasks_dict = self.tasks
-            
+
+        # Create a list to store tasks that are not done
+        not_done_tasks = []
+
+        # Check if each task is done or not, and cancel only if it's not done
         for task_name, task in tasks_dict.items():
             if not task.done():
+                not_done_tasks.append(task)
                 task.cancel()
-                try:
-                    await task
-                except asyncio.CancelledError:
-                    pass
 
-        await asyncio.sleep(0.1)  # Allow time for tasks to cancel
-        asyncio.get_event_loop().stop()
+        # Wait for only the not done tasks to be canceled
+        await asyncio.gather(*not_done_tasks, return_exceptions=True)
 
     async def reconnect(self, config_file):
         MAX_RETRIES = 5
-        RETRY_DELAY = 5
+        RETRY_DELAY = 270
         retries = 0
         while retries < MAX_RETRIES:
             try:
                 print("Resetting State")
                 await self.reset_state(reconnect_req=True)
-                print(f"Awaiting disconnect")
-                # Check if a connection is open before attempting to disconnect
-                if self.writer is not None and not self.writer.is_closing():
-                    await self.disconnect()
 
-                await self.gui.stop_all_tasks()
-
-                print(f"Attempt Connection")
-                success = await self.connect_to_specific_server(server_name=None, reconnect=True)
-                if success:
-                    print("Success returned")
-                    print(f"Attempting to find the chat display")
-                    if hasattr(self.gui, 'insert_text_widget'):  
-                        self.gui.insert_text_widget(f'Successfully reconnected.\n')
-                    else:
-                        print(f"GUI object not set")
-                    return True  # Exit the loop
-                
-                print(f"Failed to reconnect. Retrying in {RETRY_DELAY} seconds.\n")
-                await asyncio.sleep(RETRY_DELAY)
-                retries += 1
+                print("Attempt Connection")
+                await self.connect_to_specific_server(server_name=None, reconnect=True)
+                break
+                    
             except Exception as e:
+                retries += 1
                 print(f'Failed to reconnect ({retries}/{MAX_RETRIES}): {e}. Retrying in {RETRY_DELAY} seconds.\n')
                 await asyncio.sleep(RETRY_DELAY)
-        else:
-            return False
+
+        print("Maximum reconnection attempts reached. Giving up.")
+        return
 
     async def keep_alive(self):
         loop_running = True  # Indicate if the event loop is running
@@ -476,31 +462,42 @@ class RudeChatClient:
             except asyncio.CancelledError:
                 # If the event loop is stopped, break out of the loop
                 loop_running = False
-                print("Event loop stopped. Exiting keep_alive loop.")
+                print("Exiting keep_alive loop.")
 
             except (ConnectionResetError, OSError) as e:
                 print(f"Exception caught in keep_alive: {e}")
+                loop_running = False
 
             except Exception as e:  # Catch other exceptions
                 print(f"Unhandled exception in keep_alive: {e}")
+                loop_running = False
 
             except AttributeError as e:  # Catch AttributeError
                 print(f"AttributeError caught in keep_alive: {e}")
+                loop_running = False
 
     async def auto_save(self):
-        while True:
+        loop_running = True
+        while loop_running:
             try:
                 await asyncio.sleep(194)
                 await self.save_channel_messages()
 
+            except asyncio.CancelledError:
+                loop_running = False
+                print("Exiting auto_save loop.")
+
             except (ConnectionResetError, OSError) as e:
                 print(f"Exception caught in auto_save: {e}")
+                loop_running = False
 
             except Exception as e:  # Catch other exceptions
                 print(f"Unhandled exception in auto_save: {e}")
+                loop_running = False
 
             except AttributeError as e:  # Catch AttributeError
                 print(f"AttributeError caught in auto_save: {e}")
+                loop_running = False
 
     async def auto_refresh(self):
         loop_running = True
@@ -511,16 +508,19 @@ class RudeChatClient:
 
             except asyncio.CancelledError:
                 loop_running = False
-                print("Event loop stopped. Exiting auto_refresh loop.")
+                print("Exiting auto_refresh loop.")
 
             except (ConnectionResetError, OSError) as e:
                 print(f"Exception caught in auto_refresh: {e}")
+                loop_running = False
 
             except Exception as e:
                 print(f"Unhandled exception in auto_refresh: {e}")
+                loop_running = False
 
             except AttributeError as e:
                 print(f"AttributeError caught in auto_refresh: {e}")
+                loop_running = False
 
     def handle_server_message(self, line):
         self.gui.insert_server_widget(line + "\n")
@@ -1437,22 +1437,28 @@ class RudeChatClient:
             print("Invalid response format for '401'.")
 
     async def handle_incoming_message(self, config_file):
+        loop_running = True
         buffer = ""
         current_users_list = []
         current_channel = ""
         timeout_seconds = 256  # seconds
 
-        while True:
+        while loop_running:
             try:
                 async with self.message_handling_semaphore:
                     data = await asyncio.wait_for(self.reader.read(4096), timeout_seconds)
             except OSError as e:
                 print(f"OS ERROR: {e}")
                 await self.reconnect(config_file)
+                break
             except Exception as e:  # General exception catch
                 print(f"An unexpected error occurred: {e}\n")
                 await self.reconnect(config_file)
-                continue
+                break
+            except asyncio.CancelledError:
+                # If the event loop is stopped, break out of the loop
+                loop_running = False
+                print("Exiting handle_incoming_message loop.")
 
             if not data:
                 break
@@ -1511,6 +1517,9 @@ class RudeChatClient:
                         message = "You have been marked as being away"
                         self.gui.insert_text_widget(f"{message}\n")
 
+                    case "307":
+                        self.command_307(tokens)
+
                     case "391":
                         self.handle_time_request(tokens)
 
@@ -1537,6 +1546,9 @@ class RudeChatClient:
                             
                     case "368":  
                         self.handle_endofbanlist(tokens)
+
+                    case "379":
+                        self.command_379(tokens)
 
                     case "401":
                         self.handle_nickname_doesnt_exist(tokens)
@@ -1603,21 +1615,37 @@ class RudeChatClient:
                         if line.startswith(f":{self.server}"):
                             self.handle_server_message(line)
 
-    def command_432(tokens):
+    def command_379(self, tokens):
+        source = tokens.source
+        user = tokens.params[0]
+        identified_nick = tokens.params[1]
+        message = tokens.params[2]
+
+        self.gui.insert_server_widget(f"{source} {user} {identified_nick}: {message}")
+
+    def command_307(self, tokens):
+        source = tokens.source
+        user = tokens.params[0]
+        identified_nick = tokens.params[1]
+        message = tokens.params[2]
+
+        self.gui.insert_server_widget(f"{source} {user} {identified_nick}: {message}")
+
+    def command_432(self, tokens):
         source = tokens.source
         user = tokens.params[0]
         message = f"""{tokens.params[2]}"""
 
         self.gui.insert_server_widget(f"{source} {user}: {message}")
 
-    def command_487(tokens):
+    def command_487(self, tokens):
         source = tokens.source
         user = tokens.params[0]
         message = f"""{tokens.params[1]}"""
 
         self.gui.insert_server_widget(f"{source} {user}: {message}")
 
-    def command_433(tokens):
+    def command_433(self, tokens):
         source = tokens.source
         user = tokens.params[1]
         message = f"""{tokens.params[2]}"""
@@ -1828,6 +1856,7 @@ class RudeChatClient:
             # Iterate over the config files found and pass their paths to init_client_with_config
             for config_file in config_files:
                 await self.gui.init_client_with_config(config_file, server_name)
+            return
         else:
             # Otherwise, look for the specific config file
             config_file = f"conf.{server_name}.rude"
@@ -2005,8 +2034,8 @@ class RudeChatClient:
                 quit_message = " ".join(args[1:]) if len(args) > 0 else None
                 await self.save_channel_messages()
                 await self.gui.send_quit_to_all_clients(quit_message)
-                await self.gui.stop_all_tasks()
                 await asyncio.sleep(2)
+                await self.gui.stop_all_tasks()
                 self.master.destroy()
                 return False
 
@@ -2049,7 +2078,7 @@ class RudeChatClient:
 
             case "disconnect":
                 await self.disconnect()
-                await self.stop_tasks_and_close_loop()
+                await self.stop_tasks()
                 await self.reset_state(reconnect_req=False)
 
             case None:
@@ -2548,3 +2577,8 @@ class RudeChatClient:
 
         for message in messages[-num:]:
             self.gui.insert_text_widget(message)
+
+    def display_server_motd(self, server_name=None):
+        if server_name:
+            messages = self.motd_dict.get(server_name, [])
+            self.gui.insert_text_widget(f"{messages}\n")
