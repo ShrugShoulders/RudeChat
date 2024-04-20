@@ -51,16 +51,20 @@ def decoder(input_text: str) -> List[Tuple[str, List[Attribute]]]:
                 background_code = ''
                 
                 # Extracting color code
-                while c_index + 1 < len(input_text) and input_text[c_index + 1].isdigit():
+                digit_count = 0
+                while c_index + 1 < len(input_text) and input_text[c_index + 1].isdigit() and digit_count < 2:
                     c_index += 1
                     colour_code += input_text[c_index]
+                    digit_count += 1
                 
                 # Extracting background code
                 if c_index + 1 < len(input_text) and input_text[c_index + 1] == ',':
                     c_index += 1
-                    while c_index + 1 < len(input_text) and input_text[c_index + 1].isdigit():
+                    digit_count = 0
+                    while c_index + 1 < len(input_text) and input_text[c_index + 1].isdigit() and digit_count < 2:
                         c_index += 1
                         background_code += input_text[c_index]
+                        digit_count += 1
                 
                 # Converting codes to integers
                 try:
