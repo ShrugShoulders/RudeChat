@@ -1,8 +1,6 @@
 from .shared_imports import *
 
 async def initialize_clients(app):
-    MAX_RETRIES = 5  # Max number of times to retry on semaphore error
-    RETRY_DELAY = 5  # Time in seconds to wait before retrying
     script_directory = os.path.dirname(os.path.abspath(__file__))
 
     # Construct absolute paths for conf.*.rude files
