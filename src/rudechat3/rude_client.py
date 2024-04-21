@@ -1,21 +1,4 @@
 #!/usr/bin/env python
-"""
-GPL-3.0 License
-
-This program is free software: you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License
-along with this program.  If not, see <https://www.gnu.org/licenses/>.
-"""
-
 from .list_window import ChannelListWindow
 from .shared_imports import *
 
@@ -64,18 +47,15 @@ class RudeChatClient:
         self.ssl_enabled = config.getboolean('IRC', 'ssl_enabled')
         self.nickname = config.get('IRC', 'nickname')
 
-        # Add a new option for NickServ authentication
         self.use_nickserv_auth = config.getboolean('IRC', 'use_nickserv_auth', fallback=False)
         self.nickserv_password = config.get('IRC', 'nickserv_password') if self.use_nickserv_auth else None
 
         self.auto_join_channels = config.get('IRC', 'auto_join_channels').split(',')
         
-        # Read new SASL-related fields
         self.sasl_enabled = config.getboolean('IRC', 'sasl_enabled', fallback=False)
         self.sasl_username = config.get('IRC', 'sasl_username', fallback=None)
         self.sasl_password = config.get('IRC', 'sasl_password', fallback=None)
         
-        # Read server name from the config file
         self.server_name = config.get('IRC', 'server_name', fallback=None)
         self.gui.update_nick_channel_label()
 
@@ -158,9 +138,8 @@ class RudeChatClient:
             return  # Successfully connected and received 001
         except (OSError, ConnectionError) as e:
             self.gui.insert_text_widget(f"Error occurred: {e}. Retrying in {RETRY_DELAY} seconds.\n")
-            success = await self.reconnect(config_file)
-            if success:
-                return  # Successfully reconnected
+            await self.reconnect(config_file)
+            return
 
     def handle_connection_info(self, tokens):
         connection_info = tokens.params[-1]  # Assumes the connection info is the last parameter
@@ -436,6 +415,7 @@ class RudeChatClient:
             try:
                 print("Resetting State")
                 await self.reset_state(reconnect_req=True)
+                self.gui.clients.clear()
 
                 print("Attempt Connection")
                 await self.connect_to_specific_server(server_name=None, reconnect=True)
@@ -654,7 +634,7 @@ class RudeChatClient:
 
     def highlight_server(self):
         for idx in range(self.gui.server_listbox.size()):
-            if self.gui.server_listbox.get(idx) == self.server_name:
+            if self.gui.server_listbox.get(idx) == self.server_name and self.gui.irc_client != self:
                 self.gui.server_listbox.itemconfig(idx, {'bg': 'red'})
                 # Store the highlighted server information with red background
                 self.highlighted_servers[self.server_name] = {'index': idx, 'bg': 'red'}
@@ -823,8 +803,9 @@ class RudeChatClient:
 
     def handle_join(self, tokens):
         user_info = tokens.hostmask.nickname
+        user_mask = tokens.hostmask
         channel = tokens.params[0]
-        join_message = f"<&> {user_info} has joined channel {channel}\n"
+        join_message = f"<&> {user_mask} has joined channel {channel}\n"
 
         # Update the message history for the channel
         if self.server not in self.channel_messages:
@@ -862,8 +843,9 @@ class RudeChatClient:
 
     def handle_part(self, tokens):
         user_info = tokens.hostmask.nickname
+        user_mask = tokens.hostmask
         channel = tokens.params[0]
-        part_message = f"<X> {user_info} has parted from channel {channel}\n"
+        part_message = f"<X> {user_mask} has parted from channel {channel}\n"
 
         # Update the message history for the channel
         if self.server not in self.channel_messages:
@@ -899,8 +881,9 @@ class RudeChatClient:
 
     def handle_quit(self, tokens):
         user_info = tokens.hostmask.nickname
+        user_mask = tokens.hostmask
         reason = tokens.params[0] if tokens.params else "No reason"
-        quit_message = f"<X> {user_info} has quit: {reason}\n"
+        quit_message = f"<X> {user_mask} has quit: {reason}\n"
 
         # Remove the user from all channel_users lists
         for channel, users in self.channel_users.items():
