@@ -41,6 +41,7 @@ class GuiConfigWindow:
 
         # Button to save changes
         tk.Button(self.root, text="Save", command=self.save_changes).pack()
+        tk.Label(self.root, text="Once you click the Save button the GUI will automatically apply the settings.", wraplength=400).pack()
 
     def create_setting_entry(self, setting_name, default_value):
         frame = tk.Frame(self.root)
@@ -60,25 +61,25 @@ class GuiConfigWindow:
         config.read(self.config_file)
 
         # Update config with new values
-        config['GUI']['master_color'] = self.Master.get()
-        config['GUI']['family'] = self["Font Family"].get()
-        config['GUI']['size'] = self["Font Size"].get()
-        config['GUI']['main_fg_color'] = self["Main Text Foreground"].get()
-        config['GUI']['main_bg_color'] = self["Main Text Background"].get()
-        config['GUI']['server_fg'] = self["Console Foreground"].get()
-        config['GUI']['server_bg'] = self["Console Background"].get()
+        config['GUI']['master_color'] = getattr(self, "Master").get()
+        config['GUI']['family'] = getattr(self, "Font Family").get()
+        config['GUI']['size'] = getattr(self, "Font Size").get()
+        config['GUI']['main_fg_color'] = getattr(self, "Main Text Foreground").get()
+        config['GUI']['main_bg_color'] = getattr(self, "Main Text Background").get()
+        config['GUI']['server_fg'] = getattr(self, "Console Foreground").get()
+        config['GUI']['server_bg'] = getattr(self, "Console Background").get()
 
-        config['WIDGETS']['users_fg'] = self["User List Foreground"].get()
-        config['WIDGETS']['users_bg'] = self["User List Background"].get()
-        config['WIDGETS']['channels_fg'] = self["Channel List Foreground"].get()
-        config['WIDGETS']['channels_bg'] = self["Channel List Background"].get()
-        config['WIDGETS']['entry_fg'] = self["Input Foreground"].get()
-        config['WIDGETS']['entry_insertbackground'] = self["Input Insert Background"].get()
-        config['WIDGETS']['entry_bg'] = self["Input Background"].get()
-        config['WIDGETS']['entry_label_bg'] = self["Input Label Foreground"].get()
-        config['WIDGETS']['entry_label_fg'] = self["Input Label Background"].get()
-        config['WIDGETS']['server_listbox_bg'] = self["Server List Background"].get()
-        config['WIDGETS']['server_listbox_fg'] = self["Server List Foreground"].get()
+        config['WIDGETS']['users_fg'] = getattr(self, "User List Foreground").get()
+        config['WIDGETS']['users_bg'] = getattr(self, "User List Background").get()
+        config['WIDGETS']['channels_fg'] = getattr(self, "Channel List Foreground").get()
+        config['WIDGETS']['channels_bg'] = getattr(self, "Channel List Background").get()
+        config['WIDGETS']['entry_fg'] = getattr(self, "Input Foreground").get()
+        config['WIDGETS']['entry_insertbackground'] = getattr(self, "Input Insert Background").get()
+        config['WIDGETS']['entry_bg'] = getattr(self, "Input Background").get()
+        config['WIDGETS']['entry_label_bg'] = getattr(self, "Input Label Foreground").get()
+        config['WIDGETS']['entry_label_fg'] = getattr(self, "Input Label Background").get()
+        config['WIDGETS']['server_listbox_bg'] = getattr(self, "Server List Background").get()
+        config['WIDGETS']['server_listbox_fg'] = getattr(self, "Server List Foreground").get()
 
         # Write the updated config back to the file
         with open(self.config_file, 'w') as configfile:
