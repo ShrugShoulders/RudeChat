@@ -1,25 +1,9 @@
 #!/usr/bin/env python
-"""
-GPL-3.0 License
-
-This program is free software: you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License
-along with this program.  If not, see <https://www.gnu.org/licenses/>.
-"""
-
 from .rude_client import RudeChatClient
-from .configure_window import ConfigWindow
+from .server_config_window import ServerConfigWindow
 from .rude_colours import RudeColours
 from .format_decoder import Attribute, decoder
+from .gui_config_window import GuiConfigWindow
 from .shared_imports import *
 
 class RudeGui:
@@ -37,8 +21,10 @@ class RudeGui:
             img = PhotoImage(file=icon_path)
             self.master.iconphoto(True, img)
 
+        self.read_config()
+
         self.irc_colors = {
-            '00': '#000000', '01': '#ffffff', '02': '#0000AA', '03': '#00AA00',
+            '00': '#ffffff', '01': '#000000', '02': '#0000AA', '03': '#00AA00',
             '04': '#AA0000', '05': '#AA5500', '06': '#AA00AA', '07': '#FFAA00',
             '08': '#FFFF00', '09': '#00ff00', '10': '#00AAAA', '11': '#00FFAA',
             '12': '#2576ff', '13': '#ff00ff', '14': '#AAAAAA', '15': '#D3D3D3',
@@ -90,7 +76,7 @@ class RudeGui:
         self.tooltip = None
 
         # Main text widget
-        self.text_widget = ScrolledText(self.frame, wrap='word', bg="black", cursor="arrow", fg="#C0FFEE", font=("Hack", 10))
+        self.text_widget = ScrolledText(self.frame, wrap='word', cursor="arrow")
         self.text_widget.grid(row=0, column=0, sticky="nsew")
         self.show_startup_art()
 
@@ -105,7 +91,7 @@ class RudeGui:
         self.user_label = tk.Label(self.user_frame, text="Users", bg="black", fg="white")
         self.user_label.grid(row=0, column=0, sticky='ew')
 
-        self.user_listbox = tk.Listbox(self.user_frame, height=25, width=16, bg="black", fg="#39ff14")
+        self.user_listbox = tk.Listbox(self.user_frame, height=25, width=16)
         self.user_scrollbar = tk.Scrollbar(self.user_frame, orient="vertical", command=self.user_listbox.yview)
         self.user_listbox.config(yscrollcommand=self.user_scrollbar.set)
         self.user_listbox.grid(row=1, column=0, sticky='nsew')
@@ -122,7 +108,7 @@ class RudeGui:
 
         # Server selection
         self.server_var = tk.StringVar(self.master)
-        self.server_listbox = tk.Listbox(self.channel_frame, selectmode=tk.SINGLE, width=16, height=4, bg="black", fg="white")
+        self.server_listbox = tk.Listbox(self.channel_frame, selectmode=tk.SINGLE, width=16, height=4)
         self.server_listbox.grid(row=1, column=0, sticky='w')  # Adjust column to display server_listbox
 
         # Server listbox scrollbar
@@ -135,7 +121,7 @@ class RudeGui:
         self.channel_label = tk.Label(self.channel_frame, text="Channels", bg="black", fg="white")
         self.channel_label.grid(row=2, column=0, sticky='ew')  # Make sure label is below the server_listbox
 
-        self.channel_listbox = tk.Listbox(self.channel_frame, height=17, width=16, bg="black", fg="white")
+        self.channel_listbox = tk.Listbox(self.channel_frame, height=17, width=16)
         self.channel_scrollbar = tk.Scrollbar(self.channel_frame, orient="vertical", command=self.channel_listbox.yview)
         self.channel_listbox.config(yscrollcommand=self.channel_scrollbar.set)
         self.channel_listbox.grid(row=3, column=0, sticky='nsew')  # Adjust row to display channel_listbox
@@ -150,11 +136,11 @@ class RudeGui:
         # Configure column to expand
         self.server_frame.grid_columnconfigure(0, weight=1)
 
-        self.server_text_widget = ScrolledText(self.server_frame, wrap='word', height=5, bg="black", cursor="arrow", fg="#7882ff")
+        self.server_text_widget = ScrolledText(self.server_frame, wrap='word', height=5, cursor="arrow")
         self.server_text_widget.grid(row=0, column=0, sticky='nsew')
 
         # Entry widget
-        self.entry_widget = tk.Entry(self.master, bg="black", fg="#C0FFEE", insertbackground="#C0FFEE", font=("Hack", 10))
+        self.entry_widget = tk.Entry(self.master)
         self.entry_widget.grid(row=3, column=1, sticky='ew', columnspan=1)  # Adjust column span to cover only one column
         self.entry_widget.bind('<Tab>', self.handle_tab_complete)
         self.entry_widget.bind('<Up>', self.handle_arrow_keys)
@@ -162,18 +148,15 @@ class RudeGui:
 
         # Label for nickname and channel
         self.current_nick_channel = tk.StringVar(value="Nickname | #Channel" + " &>")
-        self.nick_channel_label = tk.Label(self.master, textvariable=self.current_nick_channel, bg="black", fg="#C0FFEE", padx=5, pady=1, font=("Hack", 10))
+        self.nick_channel_label = tk.Label(self.master, textvariable=self.current_nick_channel, padx=5, pady=1)
         self.nick_channel_label.grid(row=3, column=0, sticky='w')
-
-        self.text_widget.tag_configure('bold', font=('Hack', 10, 'bold'))
-        self.text_widget.tag_configure('italic', font=('Hack', 10, 'italic'))
-        self.text_widget.tag_configure('underline', underline=True)
 
         # Initialize the RudeChatClient and set the GUI reference
         self.irc_client = RudeChatClient(self.text_widget, self.server_text_widget, self.entry_widget, self.master, self)
         self.init_input_menu()
         self.init_message_menu()
         self.init_server_menu()
+        self.apply_settings()
 
         # Configure grid weights
         self.master.grid_rowconfigure(0, weight=0)
@@ -195,6 +178,77 @@ class RudeGui:
         self.channel_frame.grid_columnconfigure(0, weight=1)
 
         self.master.after(0, self.bind_return_key)
+
+    def apply_settings(self):
+        # Apply font settings to text widgets
+        self.master.configure(bg=self.master_bg)
+        self.text_widget.configure(font=(self.font_family, self.font_size))
+        self.server_text_widget.configure(font=(self.font_family, self.font_size))
+        self.entry_widget.configure(bg=self.input_bg, fg=self.input_fg, insertbackground=self.input_insertbackground, font=(self.font_family, self.font_size))
+        self.nick_channel_label.configure(fg=self.input_label_fg, bg=self.input_label_bg, font=(self.font_family, self.font_size))
+
+        # Apply maing GUI color settings
+        self.text_widget.configure(fg=self.main_fg_color, bg=self.main_bg_color)
+        self.server_text_widget.configure(fg=self.server_fg_color, bg=self.server_bg_color)
+
+        # Apply Widget color settings
+        self.user_listbox.configure(bg=self.user_listbox_bg, fg=self.user_listbox_fg)
+        self.channel_listbox.configure(bg=self.channel_listbox_bg, fg=self.channel_listbox_fg)
+        self.server_listbox.configure(bg=self.server_list_bg, fg=self.server_list_fg)
+
+    def read_config(self):
+        config_file = os.path.join(self.script_directory, 'gui_config.ini')
+
+        if os.path.exists(config_file):
+            config = configparser.ConfigParser()
+            config.read(config_file)
+
+            # Read main GUI settings
+            self.master_bg = config.get('GUI', 'master_color', fallback='black')
+            self.font_family = config.get('GUI', 'family', fallback='Hack')
+            self.font_size = config.getint('GUI', 'size', fallback=10)
+            self.main_fg_color = config.get('GUI', 'main_fg_color', fallback='#C0FFEE')
+            self.main_bg_color = config.get('GUI', 'main_bg_color', fallback='black')
+            self.server_fg_color = config.get('GUI', 'server_fg', fallback='#7882ff')
+            self.server_bg_color = config.get('GUI', 'server_bg', fallback='black')
+
+            # Read Widget Settings
+            self.user_listbox_fg = config.get('WIDGETS', 'users_fg', fallback='#39ff14')
+            self.user_listbox_bg = config.get('WIDGETS', 'users_bg', fallback='black')
+            self.channel_listbox_fg = config.get('WIDGETS', 'channels_fg', fallback='white')
+            self.channel_listbox_bg = config.get('WIDGETS', 'channels_bg', fallback='black')
+            self.input_fg = config.get('WIDGETS', 'entry_fg', fallback='#C0FFEE')
+            self.input_bg = config.get('WIDGETS', 'entry_bg', fallback='black')
+            self.input_insertbackground = config.get('WIDGETS', 'entry_insertbackground', fallback='#C0FFEE')
+            self.input_label_bg = config.get('WIDGETS', 'entry_label_bg', fallback='black')
+            self.input_label_fg = config.get('WIDGETS', 'entry_label_fg', fallback='#C0FFEE')
+            self.server_list_bg = config.get('WIDGETS', 'server_listbox_bg', fallback='black')
+            self.server_list_fg = config.get('WIDGETS', 'server_listbox_fg', fallback='white')
+
+        else:
+            # Use default font settings if config file doesn't exist
+            self.master_bg = 'black'
+            self.font_family = 'Hack'
+            self.font_size = 10
+            self.main_fg_color = '#C0FFEE'
+            self.main_bg_color = 'black'
+            self.server_fg_color = '#7882ff'
+            self.server_bg_color = 'black'
+            self.user_listbox_fg = '#39ff14'
+            self.user_listbox_bg = 'black'
+            self.channel_listbox_fg = 'white'
+            self.channel_listbox_bg = 'black'
+            self.input_fg = '#C0FFEE'
+            self.input_bg = '#C0FFEE'
+            self.input_insertbackground = 'black'
+            self.input_label_bg = 'black'
+            self.input_label_fg = '#C0FFEE'
+            print("GUI Fallbacks hit.")
+
+    def open_gui_config_window(self):
+        config_file = os.path.join(self.script_directory, 'gui_config.ini')
+        config_window = GuiConfigWindow(config_file)
+        config_window.root.mainloop()
 
     def show_startup_art(self):
         splash_directory = os.path.join(self.script_directory, "Splash")
@@ -406,7 +460,8 @@ class RudeGui:
         self.message_menu.add_command(label="Color Selector", command=self.open_color_selector)
         self.message_menu.add_command(label="Reload Macros", command=self.reload_macros)
         self.message_menu.add_command(label="Clear", command=self.clear_chat_window)
-        self.message_menu.add_command(label="Config", command=self.open_config_window)
+        self.message_menu.add_command(label="Server Config", command=self.open_client_config_window)
+        self.message_menu.add_command(label="GUI Config", command=self.open_gui_config_window)
         
         self.text_widget.bind("<Button-3>", self.show_message_menu)
 
@@ -421,7 +476,7 @@ class RudeGui:
         loop = asyncio.get_event_loop()
         loop.create_task(self.irc_client.update_available_macros())
     
-    def open_config_window(self):
+    def open_client_config_window(self):
         root = tk.Tk()
         root.title("Configuration Window")
 
@@ -434,7 +489,7 @@ class RudeGui:
             root.destroy()
             return
 
-        config_window = ConfigWindow(root, os.path.join(self.script_directory, config_files[0]))
+        config_window = ServerConfigWindow(root, os.path.join(self.script_directory, config_files[0]))
 
         def on_config_change(event):
             selected_config_file = selected_config_file_var.get()
@@ -451,6 +506,9 @@ class RudeGui:
 
         save_button = ttk.Button(root, text="Save", command=config_window.save_config)
         save_button.pack(pady=10)
+
+        instruction_label = tk.Label(root, text="To create a new config file simply change the data in the fields above then edit the file name bellow the entry fields, configuration files must follow conf.exampleserver.rude format.", wraplength=400)
+        instruction_label.pack()
 
         root.mainloop()
 
@@ -648,9 +706,9 @@ class RudeGui:
         # This method configures tag based on attributes efficiently
         tag_config = {}
         if any(attr.bold for attr in attributes):
-            tag_config['font'] = ('Hack', 10, 'bold')
+            tag_config['font'] = (self.font_family, self.font_size, 'bold')
         if any(attr.italic for attr in attributes):
-            tag_config['font'] = ('Hack', 10, 'italic')
+            tag_config['font'] = (self.font_family, self.font_size, 'italic')
         if any(attr.underline for attr in attributes):
             tag_config['underline'] = True
         if any(attr.strikethrough for attr in attributes):
@@ -659,7 +717,7 @@ class RudeGui:
             irc_color_code = f"{attributes[0].colour:02d}"
             hex_color = self.irc_colors.get(irc_color_code, 'white')
             tag_config['foreground'] = hex_color
-        if attributes and attributes[0].background != 0:
+        if attributes and attributes[0].background != 1:
             irc_background_code = f"{attributes[0].background:02d}"
             hex_background = self.irc_colors.get(irc_background_code, 'black')
             tag_config['background'] = hex_background
@@ -769,7 +827,7 @@ class RudeGui:
                 self.text_widget.see(tk.END)
 
                 # Set the background color of the selected server to black
-                self.server_listbox.itemconfig(selected_server_index, {'bg': 'black', 'fg': 'white'})
+                self.server_listbox.itemconfig(selected_server_index, {'bg': self.server_list_bg, 'fg': self.server_list_fg})
 
     async def init_client_with_config(self, config_file, fallback_server_name):
         try:
@@ -855,7 +913,7 @@ class RudeGui:
             loop.create_task(self.switch_channel(clicked_channel))
 
             # Clear the background color changes of the clicked channel only
-            self.channel_listbox.itemconfig(clicked_index, {'bg': 'black'})
+            self.channel_listbox.itemconfig(clicked_index, {'bg': self.channel_listbox_bg})
             self.highlight_nickname()
 
             # Remove the clicked channel from highlighted_channels dictionary
