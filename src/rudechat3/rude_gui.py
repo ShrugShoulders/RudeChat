@@ -243,12 +243,16 @@ class RudeGui:
             self.input_insertbackground = 'black'
             self.input_label_bg = 'black'
             self.input_label_fg = '#C0FFEE'
+            self.server_list_bg = 'black'
+            self.server_list_fg = 'white'
             print("GUI Fallbacks hit.")
 
     def open_gui_config_window(self):
         config_file = os.path.join(self.script_directory, 'gui_config.ini')
         config_window = GuiConfigWindow(config_file)
-        config_window.root.mainloop()
+        config_window.root.wait_window()
+        self.read_config()
+        self.apply_settings()
 
     def show_startup_art(self):
         splash_directory = os.path.join(self.script_directory, "Splash")
