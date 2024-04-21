@@ -9,7 +9,7 @@ class Attribute:
     strikethrough: bool = False
     inverse: bool = False 
     colour: int = 0
-    background: int = 0
+    background: int = 1
 
 def decoder(input_text: str) -> List[Tuple[str, List[Attribute]]]:
     output = []
@@ -43,8 +43,8 @@ def decoder(input_text: str) -> List[Tuple[str, List[Attribute]]]:
                     # Swap the colors
                     current_attributes.append(Attribute(colour=current_background, background=current_colour))
                 else:
-                    # If no colors were set, default to swapping black (88) and white (1) or appropriate values
-                    current_attributes.append(Attribute(colour=88, background=1))
+                    # If no colors were set, default to swapping black (01) and white (00)
+                    current_attributes.append(Attribute(colour=1, background=0))
             case '\x03':
                 current_attributes = []
                 colour_code = ''
@@ -69,7 +69,7 @@ def decoder(input_text: str) -> List[Tuple[str, List[Attribute]]]:
                 # Converting codes to integers
                 try:
                     colour = int(colour_code)
-                    background = int(background_code) if background_code else 0
+                    background = int(background_code) if background_code else 1
                 except ValueError:
                     pass
                 else:
