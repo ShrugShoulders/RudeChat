@@ -1,4 +1,21 @@
 #!/usr/bin/env python
+"""
+GPL-3.0 License
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <https://www.gnu.org/licenses/>.
+"""
+
 from .list_window import ChannelListWindow
 from .shared_imports import *
 
@@ -46,17 +63,15 @@ class RudeChatClient:
         self.port = config.getint('IRC', 'port')
         self.ssl_enabled = config.getboolean('IRC', 'ssl_enabled')
         self.nickname = config.get('IRC', 'nickname')
-
         self.use_nickserv_auth = config.getboolean('IRC', 'use_nickserv_auth', fallback=False)
         self.nickserv_password = config.get('IRC', 'nickserv_password') if self.use_nickserv_auth else None
-
         self.auto_join_channels = config.get('IRC', 'auto_join_channels').split(',')
-        
         self.sasl_enabled = config.getboolean('IRC', 'sasl_enabled', fallback=False)
         self.sasl_username = config.get('IRC', 'sasl_username', fallback=None)
         self.sasl_password = config.get('IRC', 'sasl_password', fallback=None)
-        
         self.server_name = config.get('IRC', 'server_name', fallback=None)
+        self.use_time_stamp = config.getboolean('IRC', 'use_time_stamp', fallback=True)
+        self.show_full_hostmask = config.getboolean('IRC', 'show_hostmask', fallback=True)
         self.gui.update_nick_channel_label()
 
     def load_channel_messages(self):
@@ -756,11 +771,17 @@ class RudeChatClient:
 
     def display_message(self, timestamp, sender, message, target, is_direct=False):
         if target == self.current_channel and self.gui.irc_client == self:
-            self.gui.insert_text_widget(f"{timestamp}<{sender}> {message}\n")
+            if self.use_time_stamp == True:
+                self.gui.insert_text_widget(f"{timestamp}<{sender}> {message}\n")
+            elif self.use_time_stamp == False:
+                self.gui.insert_text_widget(f"<{sender}> {message}\n")
             self.gui.highlight_nickname()
         elif sender == self.current_channel and self.gui.irc_client == self:
             if is_direct == True:
-                self.gui.insert_text_widget(f"{timestamp}<{sender}> {message}\n")
+                if self.use_time_stamp == True:
+                    self.gui.insert_text_widget(f"{timestamp}<{sender}> {message}\n")
+                elif self.use_time_stamp == False:
+                    self.gui.insert_text_widget(f"<{sender}> {message}\n")
                 self.gui.highlight_nickname()
         else:
             self.highlight_channel_if_not_current(target, sender)
@@ -805,7 +826,10 @@ class RudeChatClient:
         user_info = tokens.hostmask.nickname
         user_mask = tokens.hostmask
         channel = tokens.params[0]
-        join_message = f"<&> {user_mask} has joined channel {channel}\n"
+        if self.show_full_hostmask == True:
+            join_message = f"<&> {user_mask} has joined channel {channel}\n"
+        elif self.show_full_hostmask == False:
+            join_message = f"<&> {user_info} has joined channel {channel}\n"
 
         # Update the message history for the channel
         if self.server not in self.channel_messages:
@@ -845,7 +869,10 @@ class RudeChatClient:
         user_info = tokens.hostmask.nickname
         user_mask = tokens.hostmask
         channel = tokens.params[0]
-        part_message = f"<X> {user_mask} has parted from channel {channel}\n"
+        if self.show_full_hostmask == True:
+            part_message = f"<X> {user_mask} has parted from channel {channel}\n"
+        elif self.show_full_hostmask == False:
+            part_message = f"<X> {user_info} has parted from channel {channel}\n"
 
         # Update the message history for the channel
         if self.server not in self.channel_messages:
@@ -883,7 +910,10 @@ class RudeChatClient:
         user_info = tokens.hostmask.nickname
         user_mask = tokens.hostmask
         reason = tokens.params[0] if tokens.params else "No reason"
-        quit_message = f"<X> {user_mask} has quit: {reason}\n"
+        if self.show_full_hostmask == True:
+            quit_message = f"<X> {user_mask} has quit: {reason}\n"
+        elif self.show_full_hostmask == False:
+            quit_message = f"<X> {user_info} has quit: {reason}\n"
 
         # Remove the user from all channel_users lists
         for channel, users in self.channel_users.items():
