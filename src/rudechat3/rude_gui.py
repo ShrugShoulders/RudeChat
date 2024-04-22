@@ -10,7 +10,7 @@ class RudeGui:
     def __init__(self, master):
         self.master = master
         self.master.title("RudeChat")
-        self.master.geometry("1064x900")
+        self.master.geometry("1100x900")
         self.master.configure(bg="black")
         self.script_directory = os.path.dirname(os.path.abspath(__file__))
         if sys.platform.startswith('win'):
@@ -827,6 +827,7 @@ class RudeGui:
                 self.clear_text_widget()
 
                 # Display the MOTD if available
+                self.show_startup_art()
                 self.irc_client.display_server_motd(selected_server)
                 self.text_widget.see(tk.END)
 
