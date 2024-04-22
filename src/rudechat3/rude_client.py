@@ -1,21 +1,3 @@
-#!/usr/bin/env python
-"""
-GPL-3.0 License
-
-This program is free software: you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License
-along with this program.  If not, see <https://www.gnu.org/licenses/>.
-"""
-
 from .list_window import ChannelListWindow
 from .shared_imports import *
 
@@ -26,6 +8,11 @@ class RudeChatClient:
         self.entry_widget = entry_widget
         self.server_text_widget = server_text_widget
         self.gui = gui
+        self.nicknamelen = 0
+        self.chan_limit = 0
+        self.channellen = 0
+        self.topiclen = 0
+        self.chanmodes = []
         self.joined_channels = []
         self.motd_lines = []
         self.chantypes = ''
@@ -319,6 +306,14 @@ class RudeChatClient:
     async def join_channel(self, channel):
         if not self.is_valid_channel(channel):
             self.gui.insert_text_widget(f"Invalid channel name {channel}.\n")
+            return
+
+        if len(channel) >= self.channellen:
+            self.gui.insert_text_widget(f"Maximum Channel Character Limit Reached, Max Allowed: {self.channellen}")
+            return
+
+        if len(self.joined_channels) >= self.chan_limit:
+            self.gui.insert_text_widget(f"You have reached the maximum number of channels allowed.\n")
             return
 
         if channel in self.joined_channels:
@@ -1038,7 +1033,7 @@ class RudeChatClient:
         user = tokens.params[2] if len(tokens.params) > 2 else None
 
         # Ignore ban and unban and quiet modes
-        ignored_modes = ['+b', '-b', '-q', '+q', 'q']
+        ignored_modes = ['+b', '-b', '-q', '+q', 'q', 'b']
         if mode_change in ignored_modes:
             message = f"<!> {mode_change} mode for {user if user else 'unknown'}\n"
             if channel == self.current_channel and self.gui.irc_client == self:
@@ -1158,7 +1153,16 @@ class RudeChatClient:
         isupport_message = " ".join(params)
         self.gui.insert_server_widget(f"ISUPPORT: {isupport_message}\n")
 
-        # Parse PREFIX for mode-to-symbol mapping
+        # Initialize variables with empty fallback values
+        self.mode_to_symbol = {'q': '~', 'a': '&', 'o': '@', 'h': '%', 'v': '+'}
+        self.chantypes = "#"
+        self.chanmodes = ['e', 'I', 'b', 'q', 'k', 'f', 'l', 'j', 'C', 'F', 'L', 'M', 'P', 'Q', 'R', 'S', 'T', 'c', 'g', 'i', 'm', 'n', 'p', 'r', 's', 't', 'u', 'z']
+        self.nicknamelen = 16
+        self.chan_limit = 250
+        self.channellen = 50
+        self.topiclen = 390
+
+        # Parse ISUPPORT parameters
         for param in params:
             if param.startswith("PREFIX="):
                 _, mappings = param.split("=")
@@ -1167,6 +1171,21 @@ class RudeChatClient:
             elif param.startswith("CHANTYPES="):
                 _, channel_types = param.split("=")
                 self.chantypes = channel_types
+            elif param.startswith("NICKLEN="):
+                _, nick_len = param.split("=")
+                self.nicknamelen = int(nick_len)
+            elif param.startswith("CHANLIMIT="):
+                _, chan_limit = param.split("=")
+                self.chan_limit = int(chan_limit.split(":")[1])
+            elif param.startswith("CHANNELLEN="):
+                _, channel_len = param.split("=")
+                self.channellen = int(channel_len)
+            elif param.startswith("TOPICLEN="):
+                _, topic_len = param.split("=")
+                self.topiclen = int(topic_len)
+            elif param.startswith("CHANMODES="):
+                _, chan_modes = param.split("=")
+                self.chanmodes = [c for c in chan_modes if c != ',']
 
     async def handle_who_reply(self, tokens):
         """
@@ -1544,6 +1563,9 @@ class RudeChatClient:
 
                     case "332" | "333" | "TOPIC":
                         self.handle_topic(tokens)
+
+                    case "321":
+                        pass
 
                     case "324":
                         self.handle_mode_info(tokens)
@@ -2033,6 +2055,9 @@ class RudeChatClient:
                     self.gui.insert_text_widget(f"{timestamp}Error: Please provide a new nickname.\n")
                     return
                 new_nick = args[1]
+                if len(new_nick) > self.nicknamelen:
+                    self.gui.insert_text_widget(f"{timestamp}Error: New nickname is too long. Max Characters Allowed: {self.nicknamelen}\n")
+                    return
                 await self.change_nickname(new_nick, is_from_token=False)
 
             case "ping":
@@ -2430,7 +2455,11 @@ class RudeChatClient:
         if mode and target:
             await self.send_message(f'MODE {channel} {mode} {target}')
         elif mode:
-            await self.send_message(f'MODE {channel} {mode}')
+            # Check if the mode is in the list of channel modes
+            if mode in self.chanmodes:
+                await self.send_message(f'MODE {channel} {mode}')
+            else:
+                self.gui.insert_text_widget(f"Mode {mode} is not valid for the channel.")
         else:
             await self.send_message(f'MODE {channel}')
 
