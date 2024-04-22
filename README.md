@@ -17,14 +17,15 @@ file name: conf.libera.rude
         nickname = Rude
         server = irc.libera.chat
         auto_join_channels = ##rudechat
+        use_nickserv_auth = False
         nickserv_password = password
         port = 6697
         ssl_enabled = True
-        font_family = Hack
-        font_size = 10
         sasl_enabled = False
-        sasl_username = Rude
+        sasl_username = splithead
         sasl_password = password
+        use_time_stamp = True
+        show_hostmask = True
 
                 password can be replaced with your nick's password to auto-auth with nickserv.
                 to use ssl or not you can designate by port: no ssl: 6667 yes ssl: 6697
