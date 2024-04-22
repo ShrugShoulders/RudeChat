@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 from .list_window import ChannelListWindow
 from .shared_imports import *
 
