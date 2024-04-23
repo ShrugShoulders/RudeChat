@@ -569,7 +569,10 @@ class RudeChatClient:
                     print(f"Unhandled CTCP command: {ctcp_command}")
 
     async def handle_action_ctcp(self, timestamp, sender, target, ctcp_content):
-        action_message = f"{timestamp}* {sender} {ctcp_content}\n"
+        if self.use_time_stamp == True:
+            action_message = f"{timestamp}* {sender} {ctcp_content}\n"
+        elif self.use_time_stamp == False:
+            action_message = f"* {sender} {ctcp_content}\n"
 
         # Update the message history
         if self.server not in self.channel_messages:
@@ -763,7 +766,10 @@ class RudeChatClient:
                 self.channel_messages[server][target] = []  # Create a list for the target if it doesn't exist
             message_list = self.channel_messages[server][target]
         # Append the message to the appropriate list
-        message_list.append(f"{timestamp}<{sender}> {message}\n")
+        if self.use_time_stamp == True:
+            message_list.append(f"{timestamp}<{sender}> {message}\n")
+        elif self.use_time_stamp == False:
+            message_list.append(f"<{sender}> {message}\n")
 
     def display_message(self, timestamp, sender, message, target, is_direct=False):
         if target == self.current_channel and self.gui.irc_client == self:
@@ -1786,7 +1792,7 @@ class RudeChatClient:
 
     def handle_query_command(self, args, timestamp):
         if len(args) < 2:
-            self.gui.insert_text_widget(f"{timestamp}Error: Please provide a nickname for the query command.\n")
+            self.gui.insert_text_widget(f"Error: Please provide a nickname for the query command.\n")
             return
 
         nickname = args[1]
@@ -1797,11 +1803,11 @@ class RudeChatClient:
         if nickname not in self.joined_channels:
             self.open_dm(nickname, timestamp)
         else:
-            self.gui.insert_text_widget(f"{timestamp}You already have a DM open with {nickname}.\n")
+            self.gui.insert_text_widget(f"You already have a DM open with {nickname}.\n")
 
     def handle_cq_command(self, args, timestamp):
         if len(args) < 2:
-            self.gui.insert_text_widget(f"{timestamp}Usage: /cq <nickname>\n")
+            self.gui.insert_text_widget(f"Usage: /cq <nickname>\n")
         else:
             nickname = args[1]
             if nickname in self.joined_channels:
@@ -1814,7 +1820,7 @@ class RudeChatClient:
         self.joined_channels.append(nickname)
         self.gui.channel_lists[self.server] = self.joined_channels
         self.update_gui_channel_list()
-        self.gui.insert_text_widget(f"{timestamp}Opened DM with {nickname}.\n")
+        self.gui.insert_text_widget(f"Opened DM with {nickname}.\n")
 
     def close_dm(self, nickname, timestamp):
         # Remove the DM from the list of joined channels
@@ -1932,12 +1938,12 @@ class RudeChatClient:
 
             case "quote":  # sends raw IRC message to the server
                 if len(args) < 2:
-                    self.gui.insert_text_widget(f"{timestamp}Error: Please provide a raw IRC command after /quote.\n")
+                    self.gui.insert_text_widget(f"Error: Please provide a raw IRC command after /quote.\n")
                     return
 
                 raw_command = " ".join(args[1:])
                 await self.send_message(raw_command)
-                self.gui.insert_text_widget(f"{timestamp}Sent raw command: {raw_command}\n")
+                self.gui.insert_text_widget(f"Sent raw command: {raw_command}\n")
 
             case "mentions":  # new command to print or clear mentions
                 if len(args) > 1 and args[1] == "clear":
@@ -1970,7 +1976,7 @@ class RudeChatClient:
             case "msg":  # send a private message to a user
                 if len(args) < 3:
                     # Display an error message if not enough arguments are provided
-                    self.gui.insert_text_widget(f"{timestamp}Usage: /msg <nickname> <message>\n")
+                    self.gui.insert_text_widget(f"Usage: /msg <nickname> <message>\n")
                 else:
                     nickname = args[1]
                     message = " ".join(args[2:])
@@ -1979,7 +1985,7 @@ class RudeChatClient:
 
             case "CTCP":
                 if len(args) < 3:
-                    self.gui.insert_text_widget(f"{timestamp}Error: Please provide a nickname and CTCP command.\n")
+                    self.gui.insert_text_widget(f"Error: Please provide a nickname and CTCP command.\n")
                     return
                 target_nick = args[1]
                 ctcp_command = args[2]
@@ -2053,11 +2059,11 @@ class RudeChatClient:
 
             case "nick":
                 if len(args) < 2:
-                    self.gui.insert_text_widget(f"{timestamp}Error: Please provide a new nickname.\n")
+                    self.gui.insert_text_widget(f"Error: Please provide a new nickname.\n")
                     return
                 new_nick = args[1]
                 if len(new_nick) > self.nicknamelen:
-                    self.gui.insert_text_widget(f"{timestamp}Error: New nickname is too long. Max Characters Allowed: {self.nicknamelen}\n")
+                    self.gui.insert_text_widget(f"Error: New nickname is too long. Max Characters Allowed: {self.nicknamelen}\n")
                     return
                 await self.change_nickname(new_nick, is_from_token=False)
 
@@ -2134,7 +2140,10 @@ class RudeChatClient:
             for line in lines:
                 # Send the line as a message
                 await self.send_message(f'PRIVMSG {self.current_channel} :{line}')
-                self.gui.insert_text_widget(f"{timestamp}<{self.nickname}> {line}\n")
+                if self.use_time_stamp == True:
+                    self.gui.insert_text_widget(f"{timestamp}<{self.nickname}> {line}\n")
+                elif self.use_time_stamp == False:
+                    self.gui.insert_text_widget(f"<{self.nickname}> {line}\n")
                 self.gui.highlight_nickname()
 
                 # Check if it's a DM or channel
@@ -2155,7 +2164,10 @@ class RudeChatClient:
         if self.current_channel not in self.channel_messages[self.server]:
             self.channel_messages[self.server][self.current_channel] = []
 
-        self.channel_messages[self.server][self.current_channel].append(f"{timestamp}<{self.nickname}> {chunk}\n")
+        if self.use_time_stamp == True:
+            self.channel_messages[self.server][self.current_channel].append(f"{timestamp}<{self.nickname}> {chunk}\n")
+        elif self.use_time_stamp == False:
+            self.channel_messages[self.server][self.current_channel].append(f"<{self.nickname}> {chunk}\n")
 
         # Log the sent message using the new logging method
         self.log_message(self.server_name, self.current_channel, self.nickname, chunk, is_sent=True)
@@ -2166,7 +2178,10 @@ class RudeChatClient:
             self.channel_messages[server_name] = {}
         if self.current_channel not in self.channel_messages[server_name]:
             self.channel_messages[server_name][self.current_channel] = []
-        self.channel_messages[server_name][self.current_channel].append(f"{timestamp}<{self.nickname}> {chunk}\n")
+        if self.use_time_stamp == True:
+            self.channel_messages[server_name][self.current_channel].append(f"{timestamp}<{self.nickname}> {chunk}\n")
+        elif self.use_time_stamp == False:
+            self.channel_messages[server_name][self.current_channel].append(f"<{self.nickname}> {chunk}\n")
 
         # Log the sent message using the new logging method
         self.log_message(self.server_name, self.current_channel, self.nickname, chunk, is_sent=True)
@@ -2200,7 +2215,10 @@ class RudeChatClient:
             for line in self.ASCII_ART_MACROS[macro_name].splitlines():
                 formatted_message = self.format_message(line, current_time)
                 await self.send_message(f'PRIVMSG {self.current_channel} :{formatted_message}')
-                self.gui.insert_text_widget(f"{current_time}<{self.nickname}> {formatted_message}")
+                if self.use_time_stamp == True:
+                    self.gui.insert_text_widget(f"{current_time}<{self.nickname}> {formatted_message}")
+                elif self.use_time_stamp == False:
+                    self.gui.insert_text_widget(f"<{self.nickname}> {formatted_message}")
                 self.gui.highlight_nickname()
                 await asyncio.sleep(0.5)
                 await self.append_to_channel_history(self.current_channel, line)
@@ -2326,8 +2344,10 @@ class RudeChatClient:
         
         # Escape color codes in the message
         escaped_message = self.escape_color_codes(message)
-
-        formatted_message = f"{timestamp}<{self.nickname}> {escaped_message}\n"
+        if self.use_time_stamp == True:
+            formatted_message = f"{timestamp}<{self.nickname}> {escaped_message}\n"
+        elif self.use_time_stamp == False:
+            formatted_message = f"<{self.nickname}> {escaped_message}\n"
 
         # Initialize the server name
         server_name = self.server
@@ -2438,7 +2458,10 @@ class RudeChatClient:
         cowsay_fortune = self.cowsay(wrapped_fortune_text)
 
         for line in cowsay_fortune.split('\n'):
-            formatted_message = f"{timestamp}<{self.nickname}> {line}\n"
+            if self.use_time_stamp == True:
+                formatted_message = f"{timestamp}<{self.nickname}> {line}\n"
+            elif self.use_time_stamp == False:
+                formatted_message = f"<{self.nickname}> {line}\n"
             await self.send_message(f'PRIVMSG {self.current_channel} :{line}')
             self.gui.insert_text_widget(formatted_message)
             self.gui.highlight_nickname()
@@ -2452,7 +2475,10 @@ class RudeChatClient:
         cowsay_output = self.cowsay(wrapped_message)
         
         for line in cowsay_output.split('\n'):
-            formatted_message = f"{timestamp}<{self.nickname}> {line}\n"
+            if self.use_time_stamp == True:
+                formatted_message = f"{timestamp}<{self.nickname}> {line}\n"
+            elif self.use_time_stamp == False:
+                formatted_message = f"<{self.nickname}> {line}\n"
             await self.send_message(f'PRIVMSG {self.current_channel} :{line}')
             self.gui.insert_text_widget(formatted_message)
             self.gui.highlight_nickname()
@@ -2469,7 +2495,10 @@ class RudeChatClient:
             chosen_fortune = random.choice(fortunes).strip()
 
         for line in chosen_fortune.split('\n'):
-            formatted_message = f"{timestamp}<{self.nickname}> {line}\n"
+            if self.use_time_stamp == True:
+                formatted_message = f"{timestamp}<{self.nickname}> {line}\n"
+            elif self.use_time_stamp == False:
+                formatted_message = f"<{self.nickname}> {line}\n"
             await self.send_message(f'PRIVMSG {self.current_channel} :{line}')
             self.gui.insert_text_widget(formatted_message)
             self.gui.highlight_nickname()
@@ -2559,7 +2588,10 @@ class RudeChatClient:
         formatted_message = f"* {self.nickname} {escaped_input}"
         await self.send_message(f'PRIVMSG {self.current_channel} :\x01ACTION {escaped_input}\x01')
         timestamp = datetime.datetime.now().strftime('[%H:%M:%S] ')
-        self.gui.insert_text_widget(f"{timestamp}{formatted_message}\n")
+        if self.use_time_stamp == True:
+            self.gui.insert_text_widget(f"{timestamp}{formatted_message}\n")
+        elif self.use_time_stamp == False:
+            self.gui.insert_text_widget(f"{formatted_message}\n")
         self.gui.highlight_nickname()
 
         # Save the action message to the channel_messages dictionary
@@ -2567,7 +2599,10 @@ class RudeChatClient:
             self.channel_messages[self.server] = {}
         if self.current_channel not in self.channel_messages[self.server]:
             self.channel_messages[self.server][self.current_channel] = []
-        self.channel_messages[self.server][self.current_channel].append(f"{timestamp}{formatted_message}\n")
+        if self.use_time_stamp == True:
+            self.channel_messages[self.server][self.current_channel].append(f"{timestamp}{formatted_message}\n")
+        elif self.use_time_stamp == False:
+            self.channel_messages[self.server][self.current_channel].append(f"{formatted_message}\n")
 
         # Trim the messages list if it exceeds 100 lines
         self.trim_messages(self.current_channel, self.server)
