@@ -1154,7 +1154,7 @@ class RudeChatClient:
         isupport_message = " ".join(params)
         self.gui.insert_server_widget(f"ISUPPORT: {isupport_message}\n")
 
-        # Initialize variables with empty fallback values
+        # Initialize variables with fallback values
         self.mode_to_symbol = {'q': '~', 'a': '&', 'o': '@', 'h': '%', 'v': '+'}
         self.chantypes = "#"
         self.chanmodes = ['e', 'I', 'b', 'q', 'k', 'f', 'l', 'j', 'C', 'F', 'L', 'M', 'P', 'Q', 'R', 'S', 'T', 'c', 'g', 'i', 'm', 'n', 'p', 'r', 's', 't', 'u', 'z']
@@ -2121,39 +2121,61 @@ class RudeChatClient:
                 await self.reset_state(reconnect_req=False)
 
             case None:
-                if not user_input:
-                    return
-                escaped_input = self.escape_color_codes(user_input)
-                if self.current_channel:
-                    await self.send_message(f'PRIVMSG {self.current_channel} :{escaped_input}')
-                    self.gui.insert_text_widget(f"{timestamp}<{self.nickname}> {escaped_input}\n")
-                    self.gui.highlight_nickname()
-
-                    # Check if it's a DM or channel
-                    if self.current_channel.startswith(self.chantypes):  # It's a channel
-                        #
-                        if self.server not in self.channel_messages:
-                            self.channel_messages[self.server] = {}
-                        if self.current_channel not in self.channel_messages[self.server]:
-                            self.channel_messages[self.server][self.current_channel] = []
-
-                        self.channel_messages[self.server][self.current_channel].append(f"{timestamp}<{self.nickname}> {escaped_input}\n")
-
-                    else:  # It's a DM
-                        server_name = self.server  # Replace this with the actual server name if needed
-                        if server_name not in self.channel_messages:
-                            self.channel_messages[server_name] = {}
-                        if self.current_channel not in self.channel_messages[server_name]:
-                            self.channel_messages[server_name][self.current_channel] = []
-                        self.channel_messages[server_name][self.current_channel].append(f"{timestamp}<{self.nickname}> {escaped_input}\n")
-
-                    # Log the sent message using the new logging method
-                    self.log_message(self.server_name, self.current_channel, self.nickname, escaped_input, is_sent=True)
-
-                else:
-                    self.gui.insert_text_widget(f"No channel selected. Use /join to join a channel.\n")
+                await self.handle_user_input(user_input, timestamp)
 
         return True
+
+    async def send_message_chunks(self, message_chunks, timestamp):
+        # Method to handle sending messages
+        for chunk in message_chunks:
+            await self.send_message(f'PRIVMSG {self.current_channel} :{chunk}')
+            await asyncio.sleep(0.2)
+            self.gui.insert_text_widget(f"{timestamp}<{self.nickname}> {chunk}\n")
+            self.gui.highlight_nickname()
+
+            # Check if it's a DM or channel
+            if self.current_channel.startswith(self.chantypes):  # It's a channel
+                self.handle_channel_message(chunk, timestamp)
+            else:  # It's a DM
+                self.handle_dm_message(chunk, timestamp)
+
+    def handle_channel_message(self, chunk, timestamp):
+        if self.server not in self.channel_messages:
+            self.channel_messages[self.server] = {}
+        if self.current_channel not in self.channel_messages[self.server]:
+            self.channel_messages[self.server][self.current_channel] = []
+
+        self.channel_messages[self.server][self.current_channel].append(f"{timestamp}<{self.nickname}> {chunk}\n")
+
+        # Log the sent message using the new logging method
+        self.log_message(self.server_name, self.current_channel, self.nickname, chunk, is_sent=True)
+
+    def handle_dm_message(self, chunk, timestamp):
+        server_name = self.server  # Replace this with the actual server name if needed
+        if server_name not in self.channel_messages:
+            self.channel_messages[server_name] = {}
+        if self.current_channel not in self.channel_messages[server_name]:
+            self.channel_messages[server_name][self.current_channel] = []
+        self.channel_messages[server_name][self.current_channel].append(f"{timestamp}<{self.nickname}> {chunk}\n")
+
+        # Log the sent message using the new logging method
+        self.log_message(self.server_name, self.current_channel, self.nickname, chunk, is_sent=True)
+
+    async def handle_user_input(self, user_input, timestamp):
+        if not user_input:
+            return
+        
+        # Escape color codes
+        escaped_input = self.escape_color_codes(user_input)
+        
+        if self.current_channel:
+            # Split the message into chunks of 420 characters or less
+            message_chunks = [escaped_input[i:i+420] for i in range(0, len(escaped_input), 420)]
+            
+            # Send message chunks
+            await self.send_message_chunks(message_chunks, timestamp)
+        else:
+            self.gui.insert_text_widget(f"No channel selected. Use /join to join a channel.\n")
 
     async def handle_mac_command(self, args):
         if len(args) < 2:
