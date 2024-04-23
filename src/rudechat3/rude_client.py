@@ -2126,20 +2126,24 @@ class RudeChatClient:
         return True
 
     async def send_message_chunks(self, message_chunks, timestamp):
-        # Method to handle sending messages
         for chunk in message_chunks:
             await self.send_message(f'PRIVMSG {self.current_channel} :{chunk}')
-            await asyncio.sleep(0.2)
             self.gui.insert_text_widget(f"{timestamp}<{self.nickname}> {chunk}\n")
             self.gui.highlight_nickname()
 
             # Check if it's a DM or channel
             if self.current_channel.startswith(self.chantypes):  # It's a channel
-                self.handle_channel_message(chunk, timestamp)
+                self.user_input_channel_message(chunk, timestamp)
             else:  # It's a DM
-                self.handle_dm_message(chunk, timestamp)
+                self.user_input_dm_message(chunk, timestamp)
 
-    def handle_channel_message(self, chunk, timestamp):
+            # If there's only one item in the list, don't wait
+            if len(message_chunks) == 1:
+                return
+            else:
+                await asyncio.sleep(0.2)
+
+    def user_input_channel_message(self, chunk, timestamp):
         if self.server not in self.channel_messages:
             self.channel_messages[self.server] = {}
         if self.current_channel not in self.channel_messages[self.server]:
@@ -2150,7 +2154,7 @@ class RudeChatClient:
         # Log the sent message using the new logging method
         self.log_message(self.server_name, self.current_channel, self.nickname, chunk, is_sent=True)
 
-    def handle_dm_message(self, chunk, timestamp):
+    def user_input_dm_message(self, chunk, timestamp):
         server_name = self.server  # Replace this with the actual server name if needed
         if server_name not in self.channel_messages:
             self.channel_messages[server_name] = {}
