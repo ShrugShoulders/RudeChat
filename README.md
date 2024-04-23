@@ -1,10 +1,12 @@
-        To install cd to RudeChat3 folder where the .toml is && run the installer for your OS. 
+# RudeChat IRC Client: For Fun & Reasons.
+## Installation        
+To install cd to RudeChat3 folder where the .toml is && run the installer for your OS. 
 
-        It will pip install all needed libraries and then RudeChat3. 
-        You can then run rudechat in your terminal/cmd/powershell to open RudeChat.
-        It is suggested that you use: https://github.com/source-foundry/Hack as your font.
+It will pip install all needed libraries and then RudeChat3. 
+You can then run rudechat in your terminal/cmd/powershell to open RudeChat.
+It is suggested that you use: https://github.com/source-foundry/Hack as your font.
         
-        Right click anywhere to open and edit the config.
+Right click anywhere to open and edit the config.
         
 RudeIRC assumes conf.server.rude is available and configed properly:
 
