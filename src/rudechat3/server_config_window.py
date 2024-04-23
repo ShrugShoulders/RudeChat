@@ -66,6 +66,7 @@ class ServerConfigWindow:
                 new_config.write(configfile)
 
             messagebox.showinfo("Success", f"Configuration saved successfully as {new_config_file}.")
+            self.parent.destroy()
         except configparser.NoOptionError as e:
             messagebox.showerror("Error", f"Error saving configuration: Option '{e.option}' not found in section '{e.section}'.")
         except Exception as e:
