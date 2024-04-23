@@ -2138,25 +2138,26 @@ class RudeChatClient:
 
             # Send each line separately
             for line in lines:
-                # Send the line as a message
-                await self.send_message(f'PRIVMSG {self.current_channel} :{line}')
-                if self.use_time_stamp == True:
-                    self.gui.insert_text_widget(f"{timestamp}<{self.nickname}> {line}\n")
-                elif self.use_time_stamp == False:
-                    self.gui.insert_text_widget(f"<{self.nickname}> {line}\n")
-                self.gui.highlight_nickname()
+                if line:  # Skip empty lines
+                    # Send the line as a message
+                    await self.send_message(f'PRIVMSG {self.current_channel} :{line}')
+                    if self.use_time_stamp:
+                        self.gui.insert_text_widget(f"{timestamp}<{self.nickname}> {line}\n")
+                    else:
+                        self.gui.insert_text_widget(f"<{self.nickname}> {line}\n")
+                    self.gui.highlight_nickname()
 
-                # Check if it's a DM or channel
-                if self.current_channel.startswith(self.chantypes):  # It's a channel
-                    self.user_input_channel_message(line, timestamp)
-                else:  # It's a DM
-                    self.user_input_dm_message(line, timestamp)
+                    # Check if it's a DM or channel
+                    if self.current_channel.startswith(self.chantypes):  # It's a channel
+                        self.user_input_channel_message(line, timestamp)
+                    else:  # It's a DM
+                        self.user_input_dm_message(line, timestamp)
 
-                # If there's only one item in the list, don't wait
-                if len(message_chunks) == 1 and len(lines) == 1:
-                    return
-                else:
-                    await asyncio.sleep(0.7)
+                    # If there's only one item in the list, don't wait
+                    if len(message_chunks) == 1 and len(lines) == 1:
+                        return
+                    else:
+                        await asyncio.sleep(0.7)
 
     def user_input_channel_message(self, chunk, timestamp):
         if self.server not in self.channel_messages:
@@ -2194,8 +2195,17 @@ class RudeChatClient:
         escaped_input = self.escape_color_codes(user_input)
         
         if self.current_channel:
-            # Split the message into chunks of 420 characters or less
-            message_chunks = [escaped_input[i:i+420] for i in range(0, len(escaped_input), 420)]
+            # Split the input into lines
+            lines = escaped_input.splitlines()
+            
+            # Check the length of the first line
+            first_line = lines[0]  # Remove leading/trailing whitespace
+            if len(first_line) > 420:
+                # If the first line is longer than 420 characters, split the input into chunks
+                message_chunks = [escaped_input[i:i+420] for i in range(0, len(escaped_input), 420)]
+            else:
+                # Otherwise, pass the input without chunking
+                message_chunks = [escaped_input]
             
             # Send message chunks
             await self.send_message_chunks(message_chunks, timestamp)
