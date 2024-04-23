@@ -2127,21 +2127,27 @@ class RudeChatClient:
 
     async def send_message_chunks(self, message_chunks, timestamp):
         for chunk in message_chunks:
-            await self.send_message(f'PRIVMSG {self.current_channel} :{chunk}')
-            self.gui.insert_text_widget(f"{timestamp}<{self.nickname}> {chunk}\n")
-            self.gui.highlight_nickname()
+            # Split the chunk into lines
+            lines = chunk.splitlines()
 
-            # Check if it's a DM or channel
-            if self.current_channel.startswith(self.chantypes):  # It's a channel
-                self.user_input_channel_message(chunk, timestamp)
-            else:  # It's a DM
-                self.user_input_dm_message(chunk, timestamp)
+            # Send each line separately
+            for line in lines:
+                # Send the line as a message
+                await self.send_message(f'PRIVMSG {self.current_channel} :{line}')
+                self.gui.insert_text_widget(f"{timestamp}<{self.nickname}> {line}\n")
+                self.gui.highlight_nickname()
 
-            # If there's only one item in the list, don't wait
-            if len(message_chunks) == 1:
-                return
-            else:
-                await asyncio.sleep(0.2)
+                # Check if it's a DM or channel
+                if self.current_channel.startswith(self.chantypes):  # It's a channel
+                    self.user_input_channel_message(line, timestamp)
+                else:  # It's a DM
+                    self.user_input_dm_message(line, timestamp)
+
+                # If there's only one item in the list, don't wait
+                if len(message_chunks) == 1 and len(lines) == 1:
+                    return
+                else:
+                    await asyncio.sleep(0.7)
 
     def user_input_channel_message(self, chunk, timestamp):
         if self.server not in self.channel_messages:
