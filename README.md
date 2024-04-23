@@ -14,29 +14,49 @@ RudeIRC assumes conf.server.rude is available and configed properly:
 
 For assistance find me on irc.libera.chat/##rudechat
 
-### Config Example:
+### Server Config Example:
 
 file name: conf.libera.rude
 
         [IRC]
-        server_name = Libera
-        nickname = Rude
-        server = irc.libera.chat
-        auto_join_channels = ##rudechat
-        use_nickserv_auth = False
-        nickserv_password = password
-        port = 6697
-        ssl_enabled = True
-        sasl_enabled = False
-        sasl_username = splithead
-        sasl_password = password
-        use_time_stamp = True
-        show_hostmask = True
+        server_name = Libera # This is the server name. 
+        nickname = Rude # This is your nickname.
+        server = irc.libera.chat # This is the server url. 
+        auto_join_channels = ##rudechat # This is the list of autojoin channels Example: #chan1,#chan2,#chan3
+        use_nickserv_auth = False # Want to use nickserv? False for no True for yes.
+        nickserv_password = password # This would be your nickserv password, using nickserv? Set this.
+        port = 6697 # This is the port you use to connect to the IRC network. 
+        ssl_enabled = True # Do you like SSL? Awesome, so do I. 
+        sasl_enabled = False # Are you skilled enough to use SASL? Sweet, set that up. 
+        sasl_username = splithead # SASL user name. 
+        sasl_password = password # SASL Paassword, if you know you konw. 
+        use_time_stamp = True # Want time stamps to be shown next to nicks? True for yes, False for no. 
+        show_hostmask = True # Want joins, parts, and quits to have full host masks? True for yes, False for no. 
 
-password can be replaced with your nick's password to auto-auth with nickserv.
-to use ssl or not you can designate by port: no ssl: 6667 yes ssl: 6697
-ssl_enabled = False needs port 6667
-ssl_enabled = True needs port 6697(usually)
-sasl_enabled will use SASL to authenticate if SASL is available. Default is False - must be enabled.
+### GUI Config Example:
+
+file name: gui_config.ini
+
+        [GUI]
+        master_color = black # The Master Window Color - Change if you know what you're doing. 
+        family = Hack # This is the font family, Hack is recommended. 
+        size = 10 # Font Size. Obviously. 
+        main_fg_color = #C0FFEE # This is the main chat display window foreground (text color)
+        main_bg_color = black # This is the main chat display window background color.
+        server_fg = #7882ff # This is the main console window or server window foreground (text color)
+        server_bg = black # This is the main console window or server window background color. 
+        
+        [WIDGETS]
+        users_fg = #39ff14 # This is the user list foreground (text color)
+        users_bg = black # This is the user list background color. 
+        channels_fg = white # This is the channels list foreground (text color)
+        channels_bg = black # This is the channels list background color. 
+        entry_fg = #C0FFEE # This is the input Widgets foreground (text color)
+        entry_insertbackground = #C0FFEE # This is the insertbackground color - set as the same as entry_fg for best results, but have fun!
+        entry_bg = black # This is the entry Widgets background color. 
+        entry_label_bg = black # This is the background color of the label directly to the left of the Entry Widget. 
+        entry_label_fg = #C0FFEE # This is the foreground color of the label directly to the left of the Entry Widget.
+        server_listbox_bg = black # This is the server list background color. 
+        server_listbox_fg = white # This is the server list foreground color (text)
 
 ![alt text](https://i.imgur.com/2DmsET8.png)
