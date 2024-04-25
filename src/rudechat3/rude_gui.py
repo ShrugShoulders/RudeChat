@@ -822,6 +822,8 @@ class RudeGui:
                 # Set the GUI reference and update the GUI components
                 self.irc_client.set_gui(self)
                 self.irc_client.update_gui_channel_list()
+                self.clear_topic_label()
+                self.clear_user_listbox()
 
                 # Clear the text widget
                 self.clear_text_widget()
