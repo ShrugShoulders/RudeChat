@@ -1589,6 +1589,9 @@ class RudeChatClient:
                     case "368":  
                         self.handle_endofbanlist(tokens)
 
+                    case "378":
+                        self.command_378(tokens)
+
                     case "379":
                         self.command_379(tokens)
 
@@ -1650,6 +1653,8 @@ class RudeChatClient:
                     case "PING":
                         ping_param = tokens.params[0]
                         await self.send_message(f'PONG {ping_param}')
+                    case "KILL":
+                        self.handle_kill_command(tokens)
                     case "PONG":
                         self.handle_pong(tokens)
                     case _:
@@ -1657,13 +1662,28 @@ class RudeChatClient:
                         if line.startswith(f":{self.server}"):
                             self.handle_server_message(line)
 
+    def handle_kill_command(self, tokens):
+        source = tokens.source
+        user = tokens.params[0]
+        message = tokens.params[1]
+
+        self.gui.insert_server_widget(f"{source} {user}: {message}")
+
+    def command_379(self, tokens):
+        source = tokens.source
+        user = tokens.params[0]
+        connecting_user = tokens.params[1]
+        message = tokens.params[2]
+
+        self.gui.insert_server_widget(f"{source} {user}: {connecting_user} {message}")
+
     def command_379(self, tokens):
         source = tokens.source
         user = tokens.params[0]
         identified_nick = tokens.params[1]
         message = tokens.params[2]
 
-        self.gui.insert_server_widget(f"{source} {user} {identified_nick}: {message}")
+        self.gui.insert_server_widget(f"{source} {user} {identified_nick}: {message}\n")
 
     def command_307(self, tokens):
         source = tokens.source
@@ -1671,28 +1691,28 @@ class RudeChatClient:
         identified_nick = tokens.params[1]
         message = tokens.params[2]
 
-        self.gui.insert_server_widget(f"{source} {user} {identified_nick}: {message}")
+        self.gui.insert_server_widget(f"{source} {user} {identified_nick}: {message}\n")
 
     def command_432(self, tokens):
         source = tokens.source
         user = tokens.params[0]
         message = f"""{tokens.params[2]}"""
 
-        self.gui.insert_server_widget(f"{source} {user}: {message}")
+        self.gui.insert_server_widget(f"{source} {user}: {message}\n")
 
     def command_487(self, tokens):
         source = tokens.source
         user = tokens.params[0]
         message = f"""{tokens.params[1]}"""
 
-        self.gui.insert_server_widget(f"{source} {user}: {message}")
+        self.gui.insert_server_widget(f"{source} {user}: {message}\n")
 
     def command_433(self, tokens):
         source = tokens.source
         user = tokens.params[1]
         message = f"""{tokens.params[2]}"""
 
-        self.gui.insert_server_widget(f"{source} {user}: {message}")
+        self.gui.insert_server_widget(f"{source} {user}: {message}\n")
 
     def handle_already_on_channel(self, tokens):
         channel = tokens.params[2]
@@ -2134,7 +2154,7 @@ class RudeChatClient:
     async def send_message_chunks(self, message_chunks, timestamp):
         for chunk in message_chunks:
             # Split the chunk into lines
-            lines = chunk.splitlines()
+            lines = chunk.split('\n')
 
             # Send each line separately
             for line in lines:
@@ -2199,7 +2219,7 @@ class RudeChatClient:
             lines = escaped_input.splitlines()
             
             # Check the length of the first line
-            first_line = lines[0]  # Remove leading/trailing whitespace
+            first_line = lines[0]
             if len(first_line) > 420:
                 # If the first line is longer than 420 characters, split the input into chunks
                 message_chunks = [escaped_input[i:i+420] for i in range(0, len(escaped_input), 420)]
