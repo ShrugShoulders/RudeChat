@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="RudeChat",
-    version="3.0.0",
+    version="3.0.4",
     description="RudeChat is a Python IRC client designed to be fast, portable, and fun.",
     author="Irish",
     packages=find_packages(where="src"),
@@ -14,6 +14,7 @@ setup(
         'irctokens',
         'plyer',
         'aiofiles',
+        'colorchooser',
     ],
     classifiers=[
         "Programming Language :: Python :: 3",
@@ -27,6 +28,7 @@ setup(
             "Fortune Lists/*",
             "Splash/*",
             "*.rude",
+            "*.ini",
             "nickname_colours.json",
             "rude.ico",
             "rude.png",
