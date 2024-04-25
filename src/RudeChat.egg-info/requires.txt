@@ -1,4 +1,0 @@
-pytz
-asyncio
-irctokens
-plyer
