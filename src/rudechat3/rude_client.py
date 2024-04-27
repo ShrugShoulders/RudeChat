@@ -140,7 +140,7 @@ class RudeChatClient:
             await self._await_welcome_message()
             return  # Successfully connected and received 001
         except (OSError, ConnectionError) as e:
-            self.gui.insert_text_widget(f"Error occurred: {e}. Retrying in {RETRY_DELAY} seconds.\n")
+            self.gui.insert_text_widget(f"Error occurred: {e}. Reconnecting...\n")
             await self.reconnect(config_file)
             return
 
@@ -1598,6 +1598,9 @@ class RudeChatClient:
                     case "401":
                         self.handle_nickname_doesnt_exist(tokens)
 
+                    case "403":
+                        self.command_403(tokens)
+
                     case "442":
                         self.handle_not_on_channel(tokens)
 
@@ -1662,6 +1665,12 @@ class RudeChatClient:
                         if line.startswith(f":{self.server}"):
                             self.handle_server_message(line)
 
+    def command_403(self, tokens):
+        target = tokens.params[1]
+        message = tokens.params[2]
+
+        self.gui.insert_server_widget(f"{message}: {target}")
+
     def handle_kill_command(self, tokens):
         source = tokens.source
         user = tokens.params[0]
@@ -1677,7 +1686,7 @@ class RudeChatClient:
 
         self.gui.insert_server_widget(f"{source} {user}: {connecting_user} {message}")
 
-    def command_379(self, tokens):
+    def command_378(self, tokens):
         source = tokens.source
         user = tokens.params[0]
         identified_nick = tokens.params[1]
