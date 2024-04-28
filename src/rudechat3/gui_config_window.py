@@ -17,6 +17,7 @@ class GuiConfigWindow:
 
         # Create labels and entry fields for main GUI settings
         tk.Label(self.root, text="Main GUI Settings").pack()
+        self.create_setting_entry("Your Nickname Color:", config.get('GUI', 'main_nickname_color'))
         self.create_setting_entry("Master:", config.get('GUI', 'master_color'))
         self.create_setting_entry("Font Family:", config.get('GUI', 'family'))
         self.create_setting_entry("Font Size:", config.get('GUI', 'size'))
@@ -38,6 +39,7 @@ class GuiConfigWindow:
         self.create_setting_entry("Input Label Background:", config.get('WIDGETS', 'entry_label_fg'))
         self.create_setting_entry("Server List Background:", config.get('WIDGETS', 'server_listbox_bg'))
         self.create_setting_entry("Server List Foreground:", config.get('WIDGETS', 'server_listbox_fg'))
+        self.create_setting_entry("Tab Completion:", config.get('WIDGETS', 'tab_complete_terminator'))
 
         # Button to save changes
         ttk.Button(self.root, text="Save", command=self.save_changes).pack()
@@ -60,6 +62,7 @@ class GuiConfigWindow:
         config.read(self.config_file)
 
         # Update config with new values
+        config.set('GUI', 'main_nickname_color', getattr(self, "Your Nickname Color:").get())
         config.set('GUI', 'master_color', getattr(self, "Master:").get())
         config.set('GUI', 'family', getattr(self, "Font Family:").get())
         config.set('GUI', 'size', getattr(self, "Font Size:").get())
@@ -79,6 +82,7 @@ class GuiConfigWindow:
         config.set('WIDGETS', 'entry_label_fg', getattr(self, "Input Label Background:").get())
         config.set('WIDGETS', 'server_listbox_bg', getattr(self, "Server List Background:").get())
         config.set('WIDGETS', 'server_listbox_fg', getattr(self, "Server List Foreground:").get())
+        config.set('WIDGETS', 'tab_complete_terminator', getattr(self, "Tab Completion:").get())
 
         # Write the updated config back to the file
         with open(self.config_file, 'w') as configfile:
