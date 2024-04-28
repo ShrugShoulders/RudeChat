@@ -60,6 +60,7 @@ class RudeChatClient:
         self.server_name = config.get('IRC', 'server_name', fallback=None)
         self.use_time_stamp = config.getboolean('IRC', 'use_time_stamp', fallback=True)
         self.show_full_hostmask = config.getboolean('IRC', 'show_hostmask', fallback=True)
+        self.use_beep_noise = config.getboolean('IRC', 'use_beep_noise', fallback=True)
         self.gui.update_nick_channel_label()
 
     def load_channel_messages(self):
@@ -614,8 +615,8 @@ class RudeChatClient:
             # Trim the message history to the last 100 messages
             self.channel_messages[target] = channel_messages[-100:]
 
-    async def notify_user_of_mention(self, server, channel):
-        notification_msg = f"Mention on {server} in {channel}"
+    async def notify_user_of_mention(self, server, channel, sender, message):
+        notification_msg = f"<{sender}> {message}"
 
         # Check if the mentioned channel is currently selected
         selected_channel = self.current_channel
@@ -629,19 +630,21 @@ class RudeChatClient:
         self.highlight_server()
 
         # Play the beep sound/notification
-        await self.trigger_beep_notification(channel_name=channel, message_content=notification_msg)
+        if self.use_beep_noise == True:
+            await self.trigger_beep_notification(channel_name=channel, message_content=notification_msg)
 
     def highlight_channel(self, channel):
         # Ensure the channel is part of the joined_channels before highlighting
-        if channel in self.joined_channels and self.gui.irc_client == self:
+        if channel in self.joined_channels:
             channel_idx = self.joined_channels.index(channel)
             self.save_highlight(channel, channel_idx, is_mention=True)
 
             # Find and highlight the channel in the GUI listbox
-            for idx in range(self.gui.channel_listbox.size()):
-                if self.gui.channel_listbox.get(idx) == channel:
-                    self.gui.channel_listbox.itemconfig(idx, {'bg': 'red'})
-                    break
+            if self.gui.irc_client == self:
+                for idx in range(self.gui.channel_listbox.size()):
+                    if self.gui.channel_listbox.get(idx) == channel:
+                        self.gui.channel_listbox.itemconfig(idx, {'bg': 'red'})
+                        break
         else:
             pass
 
@@ -707,7 +710,7 @@ class RudeChatClient:
 
     async def notify_user_if_mentioned(self, message, target, sender, timestamp):
         if self.nickname.lower() in message.lower():
-            await self.notify_user_of_mention(self.server, target)
+            await self.notify_user_of_mention(self.server, target, sender, message)
 
             if target in self.mentions:
                 # If the channel is already there, append the new mention to the list of mentions for that channel
