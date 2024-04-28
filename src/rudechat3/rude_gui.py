@@ -195,6 +195,9 @@ class RudeGui:
         self.user_listbox.configure(bg=self.user_listbox_bg, fg=self.user_listbox_fg)
         self.channel_listbox.configure(bg=self.channel_listbox_bg, fg=self.channel_listbox_fg)
         self.server_listbox.configure(bg=self.server_list_bg, fg=self.server_list_fg)
+        self.user_nickname_color = self.user_nickname_color
+        self.tab_complete_terminator = self.tab_complete_terminator
+        self.highlight_nickname()
 
     def read_config(self):
         config_file = os.path.join(self.script_directory, 'gui_config.ini')
@@ -204,6 +207,7 @@ class RudeGui:
             config.read(config_file)
 
             # Read main GUI settings
+            self.user_nickname_color = config.get('GUI', 'main_nickname_color', fallback='#39ff14')
             self.master_bg = config.get('GUI', 'master_color', fallback='black')
             self.font_family = config.get('GUI', 'family', fallback='Hack')
             self.font_size = config.getint('GUI', 'size', fallback=10)
@@ -224,9 +228,11 @@ class RudeGui:
             self.input_label_fg = config.get('WIDGETS', 'entry_label_fg', fallback='#C0FFEE')
             self.server_list_bg = config.get('WIDGETS', 'server_listbox_bg', fallback='black')
             self.server_list_fg = config.get('WIDGETS', 'server_listbox_fg', fallback='white')
+            self.tab_complete_terminator = config.get('WIDGETS', 'tab_complete_terminator', fallback=':')
 
         else:
             # Use default font settings if config file doesn't exist
+            self.user_nickname_color = '#39ff14'
             self.master_bg = 'black'
             self.font_family = 'Hack'
             self.font_size = 10
@@ -239,12 +245,13 @@ class RudeGui:
             self.channel_listbox_fg = 'white'
             self.channel_listbox_bg = 'black'
             self.input_fg = '#C0FFEE'
-            self.input_bg = '#C0FFEE'
-            self.input_insertbackground = 'black'
+            self.input_bg = 'black'
+            self.input_insertbackground = '#C0FFEE'
             self.input_label_bg = 'black'
             self.input_label_fg = '#C0FFEE'
             self.server_list_bg = 'black'
             self.server_list_fg = 'white'
+            self.tab_complete_terminator = ":"
             print("GUI Fallbacks hit.")
 
     def open_gui_config_window(self):
@@ -1023,7 +1030,7 @@ class RudeGui:
             return
 
         # Configure the color for the user's nickname
-        self.text_widget.tag_configure("nickname", foreground="#39ff14")
+        self.text_widget.tag_configure("nickname", foreground=self.user_nickname_color)
 
         # Start at the beginning of the text_widget
         start_idx = "1.0"
@@ -1063,7 +1070,7 @@ class RudeGui:
 
                 # If it's the main user's nickname, set color to green
                 if nickname_with_brackets == f"<{self.irc_client.nickname}>":
-                    nickname_color = "#39ff14"
+                    nickname_color = self.user_nickname_color
 
                 self.text_widget.tag_configure(f"nickname_{nickname_with_brackets}", foreground=nickname_color)
                 self.text_widget.tag_add(f"nickname_{nickname_with_brackets}", start_idx, end_idx)
@@ -1185,4 +1192,4 @@ class RudeGui:
     def append_colon_to_nick(self):
         current_text = self.entry_widget.get()
         self.entry_widget.delete(0, tk.END)
-        self.entry_widget.insert(0, current_text + ": ")
+        self.entry_widget.insert(0, current_text + self.tab_complete_terminator + " ")
