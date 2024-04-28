@@ -12,3 +12,4 @@ sasl_username = splithead
 sasl_password = password
 use_time_stamp = True
 show_hostmask = True
+use_beep_noise = True
