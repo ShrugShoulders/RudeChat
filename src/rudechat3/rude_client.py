@@ -426,7 +426,6 @@ class RudeChatClient:
             try:
                 print("Resetting State")
                 await self.reset_state(reconnect_req=True)
-                self.gui.clients.clear()
 
                 print("Attempt Connection")
                 await self.connect_to_specific_server(server_name=None, reconnect=True)
