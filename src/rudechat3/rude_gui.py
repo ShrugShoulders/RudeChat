@@ -69,7 +69,7 @@ class RudeGui:
 
         # Topic label
         self.current_topic = tk.StringVar(value="Topic: ")
-        self.topic_label = tk.Label(self.server_topic_frame, textvariable=self.current_topic, bg="black", fg="white", padx=5, pady=1)
+        self.topic_label = tk.Label(self.server_topic_frame, textvariable=self.current_topic, padx=5, pady=1)
         self.topic_label.grid(row=1, column=0, sticky='w')
         self.topic_label.bind("<Enter>", self.show_topic_tooltip)
         self.topic_label.bind("<Leave>", self.hide_topic_tooltip)
@@ -88,7 +88,7 @@ class RudeGui:
         self.user_frame = tk.Frame(self.list_frame, bg="black")
         self.user_frame.grid(row=0, column=0, sticky="nsew")
 
-        self.user_label = tk.Label(self.user_frame, text="Users", bg="black", fg="white")
+        self.user_label = tk.Label(self.user_frame, text="Users")
         self.user_label.grid(row=0, column=0, sticky='ew')
 
         self.user_listbox = tk.Listbox(self.user_frame, height=25, width=16)
@@ -103,7 +103,7 @@ class RudeGui:
         self.channel_frame.grid(row=1, column=0, sticky="nsew")
 
         # Label for Servers
-        self.servers_label = tk.Label(self.channel_frame, text="Servers: --s", bg="black", fg="white")
+        self.servers_label = tk.Label(self.channel_frame, text="Servers: --s")
         self.servers_label.grid(row=0, column=0, sticky='ew')  # Make sure label is above the server_listbox
 
         # Server selection
@@ -118,7 +118,7 @@ class RudeGui:
 
         self.server_listbox.bind('<<ListboxSelect>>', self.on_server_change)
 
-        self.channel_label = tk.Label(self.channel_frame, text="Channels", bg="black", fg="white")
+        self.channel_label = tk.Label(self.channel_frame, text="Channels")
         self.channel_label.grid(row=2, column=0, sticky='ew')  # Make sure label is below the server_listbox
 
         self.channel_listbox = tk.Listbox(self.channel_frame, height=17, width=16)
@@ -195,8 +195,13 @@ class RudeGui:
         self.user_listbox.configure(bg=self.user_listbox_bg, fg=self.user_listbox_fg)
         self.channel_listbox.configure(bg=self.channel_listbox_bg, fg=self.channel_listbox_fg)
         self.server_listbox.configure(bg=self.server_list_bg, fg=self.server_list_fg)
+        self.channel_label.configure(bg=self.channel_label_bg, fg=self.channel_label_fg)
+        self.servers_label.configure(bg=self.servers_label_bg, fg=self.servers_label_fg)
+        self.user_label.configure(bg=self.user_label_bg, fg=self.user_label_fg)
+        self.topic_label.configure(bg=self.topic_label_bg, fg=self.topic_label_fg)
         self.user_nickname_color = self.user_nickname_color
         self.tab_complete_terminator = self.tab_complete_terminator
+        self.generate_nickname_colors = self.generate_nickname_colors
         self.highlight_nickname()
 
     def read_config(self):
@@ -208,6 +213,7 @@ class RudeGui:
 
             # Read main GUI settings
             self.user_nickname_color = config.get('GUI', 'main_nickname_color', fallback='#39ff14')
+            self.generate_nickname_colors = config.getboolean('GUI', 'generate_nickname_colors', fallback=True)
             self.master_bg = config.get('GUI', 'master_color', fallback='black')
             self.font_family = config.get('GUI', 'family', fallback='Hack')
             self.font_size = config.getint('GUI', 'size', fallback=10)
@@ -219,6 +225,8 @@ class RudeGui:
             # Read Widget Settings
             self.user_listbox_fg = config.get('WIDGETS', 'users_fg', fallback='#39ff14')
             self.user_listbox_bg = config.get('WIDGETS', 'users_bg', fallback='black')
+            self.user_label_bg = config.get('WIDGETS', 'user_label_bg', fallback='black')
+            self.user_label_fg = config.get('WIDGETS', 'user_label_fg', fallback='white')
             self.channel_listbox_fg = config.get('WIDGETS', 'channels_fg', fallback='white')
             self.channel_listbox_bg = config.get('WIDGETS', 'channels_bg', fallback='black')
             self.input_fg = config.get('WIDGETS', 'entry_fg', fallback='#C0FFEE')
@@ -228,11 +236,18 @@ class RudeGui:
             self.input_label_fg = config.get('WIDGETS', 'entry_label_fg', fallback='#C0FFEE')
             self.server_list_bg = config.get('WIDGETS', 'server_listbox_bg', fallback='black')
             self.server_list_fg = config.get('WIDGETS', 'server_listbox_fg', fallback='white')
+            self.channel_label_bg = config.get('WIDGETS', 'channel_label_bg', fallback='black')
+            self.channel_label_fg = config.get('WIDGETS', 'channel_label_fg', fallback='white')
+            self.servers_label_bg = config.get('WIDGETS', 'servers_label_bg', fallback='black')
+            self.servers_label_fg = config.get('WIDGETS', 'servers_label_fg', fallback='white')
+            self.topic_label_bg = config.get('WIDGETS', 'topic_label_bg', fallback='black')
+            self.topic_label_fg = config.get('WIDGETS', 'topic_label_fg', fallback='white')
             self.tab_complete_terminator = config.get('WIDGETS', 'tab_complete_terminator', fallback=':')
 
         else:
             # Use default font settings if config file doesn't exist
             self.user_nickname_color = '#39ff14'
+            self.generate_nickname_colors = True
             self.master_bg = 'black'
             self.font_family = 'Hack'
             self.font_size = 10
@@ -242,6 +257,8 @@ class RudeGui:
             self.server_bg_color = 'black'
             self.user_listbox_fg = '#39ff14'
             self.user_listbox_bg = 'black'
+            self.user_label_bg = 'black'
+            self.user_label_fg = 'white'
             self.channel_listbox_fg = 'white'
             self.channel_listbox_bg = 'black'
             self.input_fg = '#C0FFEE'
@@ -251,6 +268,12 @@ class RudeGui:
             self.input_label_fg = '#C0FFEE'
             self.server_list_bg = 'black'
             self.server_list_fg = 'white'
+            self.channel_label_bg = 'black'
+            self.channel_label_fg = 'white'
+            self.servers_label_fg = 'white'
+            self.servers_label_bg = 'black'
+            self.topic_label_bg = 'black'
+            self.topic_label_fg = 'white'
             self.tab_complete_terminator = ":"
             print("GUI Fallbacks hit.")
 
@@ -1064,9 +1087,14 @@ class RudeGui:
                 nickname_with_brackets = self.text_widget.get(start_idx, end_idx)
 
                 # If nickname doesn't have an assigned color, generate one
-                if nickname_with_brackets not in self.nickname_colors:
-                    self.nickname_colors[nickname_with_brackets] = self.generate_random_color()
-                nickname_color = self.nickname_colors[nickname_with_brackets]
+                if self.generate_nickname_colors == True:
+                    if nickname_with_brackets not in self.nickname_colors:
+                        self.nickname_colors[nickname_with_brackets] = self.generate_random_color()
+                    nickname_color = self.nickname_colors[nickname_with_brackets]
+                elif self.generate_nickname_colors == False:
+                    if nickname_with_brackets not in self.nickname_colors:
+                        self.nickname_colors[nickname_with_brackets] = self.main_fg_color
+                    nickname_color = self.nickname_colors[nickname_with_brackets]
 
                 # If it's the main user's nickname, set color to green
                 if nickname_with_brackets == f"<{self.irc_client.nickname}>":
@@ -1100,8 +1128,8 @@ class RudeGui:
 
         if channel_name:
             # Ensure channel_name is a string and replace problematic characters
-            channel_name = str(channel_name).replace("#", "channel ")
-            title = f"{title} from {channel_name}"
+            channel_name = str(channel_name).replace("#", "")
+            title = f"{title}"
             if message_content:
                 message = f"{channel_name}: {message_content}"
             else:
