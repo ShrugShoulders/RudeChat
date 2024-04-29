@@ -18,7 +18,7 @@ class GuiConfigWindow:
         # Create labels and entry fields for main GUI settings
         tk.Label(self.root, text="Main GUI Settings").pack()
         self.create_setting_entry("Your Nickname Color:", config.get('GUI', 'main_nickname_color'))
-        self.create_setting_entry("Generage Nickname Colors:", config.get('GUI', 'generate_nickname_colors'))
+        self.create_setting_entry("Generate Nickname Colors:", config.get('GUI', 'generate_nickname_colors'))
         self.create_setting_entry("Master:", config.get('GUI', 'master_color'))
         self.create_setting_entry("Font Family:", config.get('GUI', 'family'))
         self.create_setting_entry("Font Size:", config.get('GUI', 'size'))
@@ -77,7 +77,7 @@ class GuiConfigWindow:
 
         # Update config with new values
         config.set('GUI', 'main_nickname_color', getattr(self, "Your Nickname Color:").get())
-        config.set('GUI', 'generate_nickname_colors', getattr(self, "Generage Nickname Colors:").get())
+        config.set('GUI', 'generate_nickname_colors', getattr(self, "Generate Nickname Colors:").get())
         config.set('GUI', 'master_color', getattr(self, "Master:").get())
         config.set('GUI', 'family', getattr(self, "Font Family:").get())
         config.set('GUI', 'size', getattr(self, "Font Size:").get())

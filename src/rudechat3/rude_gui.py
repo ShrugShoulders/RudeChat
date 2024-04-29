@@ -943,14 +943,17 @@ class RudeGui:
 
     def on_channel_click(self, event):
         loop = asyncio.get_event_loop()
+        # Set background of all entries to group default
+        for i in range(self.channel_listbox.size()):
+            self.channel_listbox.itemconfig(i, {'bg': self.channel_listbox_bg})
         # Get index of clicked item
         clicked_index = self.channel_listbox.curselection()
         if clicked_index:
             clicked_channel = self.channel_listbox.get(clicked_index[0])
             loop.create_task(self.switch_channel(clicked_channel))
 
-            # Clear the background color changes of the clicked channel only
-            self.channel_listbox.itemconfig(clicked_index, {'bg': self.channel_listbox_bg})
+            # Turn background blue
+            self.channel_listbox.itemconfig(clicked_index, {'bg': 'blue'})
             self.highlight_nickname()
 
             # Remove the clicked channel from highlighted_channels dictionary
