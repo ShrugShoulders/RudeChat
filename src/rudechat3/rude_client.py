@@ -432,7 +432,7 @@ class RudeChatClient:
 
                 print("Attempt Connection")
                 await self.connect_to_specific_server(server_name=None, reconnect=True)
-                break
+                return
                     
             except Exception as e:
                 retries += 1
