@@ -635,16 +635,12 @@ class RudeChatClient:
 
     def highlight_channel(self, channel):
         # Ensure the channel is part of the joined_channels before highlighting
-        if channel in self.joined_channels:
-            channel_idx = self.joined_channels.index(channel)
-            self.save_highlight(channel, channel_idx, is_mention=True)
-
+        if channel in self.joined_channels and self.gui.irc_client == self:
             # Find and highlight the channel in the GUI listbox
-            if self.gui.irc_client == self:
-                for idx in range(self.gui.channel_listbox.size()):
-                    if self.gui.channel_listbox.get(idx) == channel:
-                        self.gui.channel_listbox.itemconfig(idx, {'bg': 'red'})
-                        break
+            for idx in range(self.gui.channel_listbox.size()):
+                if self.gui.channel_listbox.get(idx) == channel:
+                    self.gui.channel_listbox.itemconfig(idx, {'bg': 'red'})
+                    break
         else:
             pass
 
@@ -694,7 +690,6 @@ class RudeChatClient:
         if self.should_ignore_sender(sender_hostmask):
             return
 
-        await self.notify_user_if_mentioned(message, target, sender, timestamp)
         if self.is_ctcp_command(message):
             await self.handle_ctcp(tokens)
             return
@@ -704,6 +699,8 @@ class RudeChatClient:
             await self.prepare_direct_message(sender, target, message, timestamp)
         else:
             await self.handle_channel_message(sender, target, message, timestamp)
+
+        await self.notify_user_if_mentioned(message, target, sender, timestamp)
 
     def should_ignore_sender(self, sender_hostmask):
         return any(fnmatch.fnmatch(sender_hostmask, ignored) for ignored in self.ignore_list)
@@ -718,6 +715,8 @@ class RudeChatClient:
             else:
                 # If the channel is not there, create a new entry with the message as the first mention
                 self.mentions[target] = [f'{timestamp} <{sender}> {message}']
+        else:
+            pass
 
     def is_ctcp_command(self, message):
         return message.startswith('\x01') and message.endswith('\x01')
@@ -773,6 +772,12 @@ class RudeChatClient:
         elif self.use_time_stamp == False:
             message_list.append(f"<{sender}> {message}\n")
 
+    def is_it_a_mention(self, message):
+        if self.nickname.lower() in message.lower():
+            return True
+        else:
+            return False
+
     def display_message(self, timestamp, sender, message, target, is_direct=False):
         if target == self.current_channel and self.gui.irc_client == self:
             if self.use_time_stamp == True:
@@ -788,18 +793,27 @@ class RudeChatClient:
                     self.gui.insert_text_widget(f"<{sender}> {message}\n")
                 self.gui.highlight_nickname()
         else:
-            self.highlight_channel_if_not_current(target, sender)
+            user_mention = self.is_it_a_mention(message)
+            if not user_mention:
+                self.highlight_channel_if_not_current(target, sender, user_mention)
+            elif user_mention:
+                self.highlight_channel_if_not_current(target, sender, user_mention)
+            else:
+                pass
 
-    def highlight_channel_if_not_current(self, target, sender):
+    def highlight_channel_if_not_current(self, target, sender, user_mention):
         highlighted_channel = target
         if self.is_direct_message(target):
             highlighted_channel = sender
 
         # Find the channel's index in joined_channels, if it exists
-        if highlighted_channel in self.joined_channels:
+        if highlighted_channel in self.joined_channels and user_mention == False:
             channel_idx = self.joined_channels.index(highlighted_channel)
             self.save_highlight(highlighted_channel, channel_idx, is_mention=False)
             self._highlight_channel_by_name(highlighted_channel, channel_idx)
+        elif highlighted_channel in self.joined_channels and user_mention == True:
+            channel_idx = self.joined_channels.index(highlighted_channel)
+            self.save_highlight(highlighted_channel, channel_idx, is_mention=True)
         else:
             pass
 
@@ -815,16 +829,23 @@ class RudeChatClient:
 
     def save_highlight(self, channel, joined_index, is_mention):
         # Initialize highlighted_channels for server_name if not already done
-        if self.server_name not in self.highlighted_channels:
-            self.highlighted_channels[self.server_name] = {}
+        try:
+            if self.server_name not in self.highlighted_channels:
+                self.highlighted_channels[self.server_name] = {}
 
-        current_highlight = self.highlighted_channels[self.server_name].get(channel)
+            current_highlight = self.highlighted_channels[self.server_name].get(channel)
 
-        if is_mention:
-            self.highlighted_channels[self.server_name][channel] = {'index': joined_index, 'bg': 'red'}
-        else:
-            if not current_highlight or current_highlight['bg'] != 'red':
-                self.highlighted_channels[self.server_name][channel] = {'index': joined_index, 'bg': 'green'}
+            if is_mention and self.gui.irc_client == self:
+                self.highlighted_channels[self.server_name][channel] = {'index': joined_index, 'bg': 'red'}
+            elif is_mention and self.gui.irc_client != self:
+                self.highlighted_channels[self.server_name][channel] = {'index': joined_index, 'bg': 'red'}
+            else:
+                if not current_highlight and is_mention == False:
+                    self.highlighted_channels[self.server_name][channel] = {'index': joined_index, 'bg': 'green'}
+                elif current_highlight['bg'] != 'red':
+                    self.highlighted_channels[self.server_name][channel] = {'index': joined_index, 'bg': 'green'}
+        except Exception as e:
+            print(f"Exception in save_highlight: {e}")
 
     def handle_join(self, tokens):
         user_info = tokens.hostmask.nickname
