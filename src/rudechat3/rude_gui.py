@@ -943,9 +943,15 @@ class RudeGui:
 
     def on_channel_click(self, event):
         loop = asyncio.get_event_loop()
-        # Set background of all entries to group default
-        for i in range(self.channel_listbox.size()):
-            self.channel_listbox.itemconfig(i, {'bg': self.channel_listbox_bg})
+
+        # Set background of currently selected channel back to default
+        current_selected_channel = self.irc_client.current_channel
+        if current_selected_channel:
+            for i in range(self.channel_listbox.size()):
+                if self.channel_listbox.get(i) == current_selected_channel:
+                    self.channel_listbox.itemconfig(i, {'bg': self.channel_listbox_bg})
+                    break
+
         # Get index of clicked item
         clicked_index = self.channel_listbox.curselection()
         if clicked_index:
