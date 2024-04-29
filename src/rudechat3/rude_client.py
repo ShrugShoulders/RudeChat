@@ -61,6 +61,8 @@ class RudeChatClient:
         self.use_time_stamp = config.getboolean('IRC', 'use_time_stamp', fallback=True)
         self.show_full_hostmask = config.getboolean('IRC', 'show_hostmask', fallback=True)
         self.use_beep_noise = config.getboolean('IRC', 'use_beep_noise', fallback=True)
+        self.auto_whois = config.getboolean('IRC', 'auto_whois', fallback=True)
+        self.custom_sounds = config.getboolean('IRC', 'custom_sounds', fallback=False)
         self.gui.update_nick_channel_label()
 
     def load_channel_messages(self):
@@ -657,25 +659,30 @@ class RudeChatClient:
         You've been pinged! Plays a beep or noise on mention.
         """
         script_directory = os.path.dirname(os.path.abspath(__file__))
-        
-        if sys.platform.startswith("linux"):
-            # Linux-specific notification sound using paplay
-            sound_path = os.path.join(script_directory, "Sounds", "Notification4.wav")
-            os.system(f"paplay {sound_path}")
-        elif sys.platform == "darwin":
-            # macOS-specific notification sound using afplay
-            os.system("afplay /System/Library/Sounds/Ping.aiff")
-        elif sys.platform == "win32":
-            # Windows-specific notification using winsound
-            import winsound
-            duration = 75  # milliseconds
-            frequency = 1200  # Hz
-            winsound.Beep(frequency, duration)
-        else:
-            # For other platforms, print a message
-            print("Beep notification not supported on this platform.")
-
         try:
+            if sys.platform.startswith("linux"):
+                # Check if paplay is available
+                if self.custom_sounds:
+                    if shutil.which("paplay"):
+                        # Linux-specific notification sound using paplay
+                        sound_path = os.path.join(script_directory, "Sounds", "Notification4.wav")
+                        os.system(f"paplay {sound_path}")
+                elif not self.custom_sounds:
+                    # Fallback to system bell beep
+                    os.system("echo -e '\a'")
+            elif sys.platform == "darwin":
+                # macOS-specific notification sound using afplay
+                os.system("afplay /System/Library/Sounds/Ping.aiff")
+            elif sys.platform == "win32":
+                # Windows-specific notification using winsound
+                import winsound
+                duration = 75  # milliseconds
+                frequency = 1200  # Hz
+                winsound.Beep(frequency, duration)
+            else:
+                # For other platforms, print a message
+                print("Beep notification not supported on this platform.")
+
             self.gui.trigger_desktop_notification(channel_name, message_content=message_content)
         except Exception as e:
             print(f"Error triggering desktop notification: {e}")
@@ -725,11 +732,14 @@ class RudeChatClient:
         return target == self.nickname
 
     async def get_direct_message_target(self, sender, target):
-        if sender not in self.whois_executed:
-            await self.send_message(f'WHOIS {sender}')
-            self.whois_executed.add(sender)
-            self.gui.scroll_channel_list()
-        return target
+        if self.auto_whois == True:
+            if sender not in self.whois_executed:
+                await self.send_message(f'WHOIS {sender}')
+                self.whois_executed.add(sender)
+                self.gui.scroll_channel_list()
+            return target
+        else:
+            return target
 
     async def prepare_direct_message(self, sender, target, message, timestamp):
         if self.server not in self.channel_messages:

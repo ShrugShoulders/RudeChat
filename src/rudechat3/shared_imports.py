@@ -21,6 +21,7 @@ import tkinter.font as tkFont
 import dataclasses
 import multiprocessing
 import concurrent.futures
+import shutil
 from typing import List, Tuple, NamedTuple
 from plyer import notification
 from tkinter import ttk
