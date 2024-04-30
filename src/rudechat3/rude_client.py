@@ -110,8 +110,6 @@ class RudeChatClient:
             self.gui.insert_text_widget(f"Connection timeout. Please try again later.\n")
         except OSError as e:
             print("OSError Caught In connect_to_server")
-            print("Waiting for timeout: 270 seconds")
-            await asyncio.sleep(270)
             await self.reconnect(config_file)
 
     async def send_initial_commands(self):
@@ -147,8 +145,6 @@ class RudeChatClient:
             return  # Successfully connected and received 001
         except (OSError, ConnectionError) as e:
             print(f"Error occurred in wait_for_welcome: {e}. Reconnecting...\n")
-            print("Waiting for timeout: 270 seconds")
-            await asyncio.sleep(270)
             await self.reconnect(config_file)
             return
 
@@ -433,10 +429,10 @@ class RudeChatClient:
         while retries < MAX_RETRIES:
             try:
                 print("Resetting State")
-                await self.reset_state(reconnect_req=True)
+                await self.reset_state()
 
                 print("Attempt Connection")
-                await self.connect_to_specific_server(server_name=None, reconnect=True)
+                await self.connect(config_file)
                 return
                     
             except Exception as e:
@@ -444,7 +440,7 @@ class RudeChatClient:
                 print(f'Failed to reconnect ({retries}/{MAX_RETRIES}): {e}. Retrying in {RETRY_DELAY} seconds.\n')
                 await asyncio.sleep(RETRY_DELAY)
 
-        print("Maximum reconnection attempts reached. Giving up.")
+        print("Connected")
         return
 
     async def keep_alive(self):
@@ -461,22 +457,18 @@ class RudeChatClient:
                 # If the event loop is stopped, break out of the loop
                 loop_running = False
                 print("Exiting keep_alive loop.")
-                return
 
             except (ConnectionResetError, OSError) as e:
                 print(f"Exception caught in keep_alive: {e}")
                 loop_running = False
-                return
 
             except Exception as e:  # Catch other exceptions
                 print(f"Unhandled exception in keep_alive: {e}")
                 loop_running = False
-                return
 
             except AttributeError as e:  # Catch AttributeError
                 print(f"AttributeError caught in keep_alive: {e}")
                 loop_running = False
-                return
 
     async def auto_save(self):
         loop_running = True
@@ -488,22 +480,18 @@ class RudeChatClient:
             except asyncio.CancelledError:
                 loop_running = False
                 print("Exiting auto_save loop.")
-                return
 
             except (ConnectionResetError, OSError) as e:
                 print(f"Exception caught in auto_save: {e}")
                 loop_running = False
-                return
 
             except Exception as e:  # Catch other exceptions
                 print(f"Unhandled exception in auto_save: {e}")
                 loop_running = False
-                return
 
             except AttributeError as e:  # Catch AttributeError
                 print(f"AttributeError caught in auto_save: {e}")
                 loop_running = False
-                return
 
     async def auto_refresh(self):
         loop_running = True
@@ -515,22 +503,18 @@ class RudeChatClient:
             except asyncio.CancelledError:
                 loop_running = False
                 print("Exiting auto_refresh loop.")
-                return
 
             except (ConnectionResetError, OSError) as e:
                 print(f"Exception caught in auto_refresh: {e}")
                 loop_running = False
-                return
 
             except Exception as e:
                 print(f"Unhandled exception in auto_refresh: {e}")
                 loop_running = False
-                return
 
             except AttributeError as e:
                 print(f"AttributeError caught in auto_refresh: {e}")
                 loop_running = False
-                return
 
     def handle_server_message(self, line):
         self.gui.insert_server_widget(line + "\n")
@@ -1538,16 +1522,12 @@ class RudeChatClient:
                     data = await asyncio.wait_for(self.reader.read(4096), timeout_seconds)
             except OSError as e:
                 print(f"OS ERROR Caught In handle_incoming_message: {e}")
-                print("Disconnected Waiting for timeout in 270 seconds....")
-                await asyncio.sleep(270)
+                loop_running = False
                 await self.reconnect(config_file)
-                return
             except Exception as e:  # General exception catch
                 print(f"An Unexpected Error Occurred In handle_incoming_message: {e}\n")
-                print("Disconnected Waiting for timeout in 270 seconds....")
-                await asyncio.sleep(270)
+                loop_running = False
                 await self.reconnect(config_file)
-                return
             except asyncio.CancelledError:
                 # If the event loop is stopped, break out of the loop
                 loop_running = False
