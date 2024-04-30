@@ -179,6 +179,16 @@ class RudeGui:
 
         self.master.after(0, self.bind_return_key)
 
+    def hidden_windows(self):
+        if not self.show_server_window:
+            self.server_frame.grid_forget()
+            self.server_text_widget.grid_forget()
+        elif self.show_server_window:
+            self.server_frame.grid(row=2, column=0, columnspan=2, sticky='ew')
+            self.server_text_widget.grid(row=0, column=0, sticky='nsew')
+        else:
+            pass
+
     def apply_settings(self):
         # Apply font settings to text widgets
         self.master.configure(bg=self.master_bg)
@@ -202,6 +212,7 @@ class RudeGui:
         self.user_nickname_color = self.user_nickname_color
         self.tab_complete_terminator = self.tab_complete_terminator
         self.generate_nickname_colors = self.generate_nickname_colors
+        self.hidden_windows()
         self.highlight_nickname()
 
     def read_config(self):
@@ -242,6 +253,7 @@ class RudeGui:
             self.servers_label_fg = config.get('WIDGETS', 'servers_label_fg', fallback='white')
             self.topic_label_bg = config.get('WIDGETS', 'topic_label_bg', fallback='black')
             self.topic_label_fg = config.get('WIDGETS', 'topic_label_fg', fallback='white')
+            self.show_server_window = config.getboolean('WIDGETS', 'show_server_window', fallback=True)
             self.tab_complete_terminator = config.get('WIDGETS', 'tab_complete_terminator', fallback=':')
 
         else:
@@ -274,6 +286,7 @@ class RudeGui:
             self.servers_label_bg = 'black'
             self.topic_label_bg = 'black'
             self.topic_label_fg = 'white'
+            self.show_server_window = True
             self.tab_complete_terminator = ":"
             print("GUI Fallbacks hit.")
 
@@ -558,6 +571,7 @@ class RudeGui:
         """
         self.server_menu = Menu(self.server_text_widget, tearoff=0)
         self.server_menu.add_command(label="Copy", command=self.copy_text_server)
+        self.server_menu.add_command(label="Clear", command=self.clear_server_widget)
 
         self.server_text_widget.bind("<Button-3>", self.show_server_menu)
 

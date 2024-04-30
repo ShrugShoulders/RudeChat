@@ -48,6 +48,7 @@ class GuiConfigWindow:
         self.create_setting_entry("Server Label Background:", config.get('WIDGETS', 'servers_label_bg'))
         self.create_setting_entry("Topic Label Foreground:", config.get('WIDGETS', 'topic_label_fg'))
         self.create_setting_entry("Topic Label Background:", config.get('WIDGETS', 'topic_label_bg'))
+        self.create_setting_entry("Show Console Window:", config.get('WIDGETS', 'show_server_window'))
         self.create_setting_entry("Tab Completion:", config.get('WIDGETS', 'tab_complete_terminator'))
 
         # Button to save changes
@@ -105,6 +106,7 @@ class GuiConfigWindow:
         config.set('WIDGETS', 'servers_label_fg', getattr(self, "Server Label Foreground:").get())
         config.set('WIDGETS', 'topic_label_bg', getattr(self, "Topic Label Background:").get())
         config.set('WIDGETS', 'topic_label_fg', getattr(self, "Topic Label Foreground:").get())
+        config.set('WIDGETS', 'show_server_window', getattr(self, "Show Console Window:").get())
         config.set('WIDGETS', 'tab_complete_terminator', getattr(self, "Tab Completion:").get())
 
         # Write the updated config back to the file

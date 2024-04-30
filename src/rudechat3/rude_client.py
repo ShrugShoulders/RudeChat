@@ -111,7 +111,6 @@ class RudeChatClient:
             self.gui.insert_text_widget(f"Connection timeout. Please try again later.\n")
         except OSError as e:
             print("OSError Caught In connect_to_server")
-            await self.reconnect(config_file)
 
     async def send_initial_commands(self):
         self.gui.insert_text_widget(f'Sent client registration commands.\n')
@@ -145,8 +144,7 @@ class RudeChatClient:
             await self._await_welcome_message()
             return  # Successfully connected and received 001
         except (OSError, ConnectionError) as e:
-            print(f"Error occurred in wait_for_welcome: {e}. Reconnecting...\n")
-            await self.reconnect(config_file)
+            print(f"Error occurred in wait_for_welcome: {e}.\n")
             return
 
     def handle_connection_info(self, tokens):
@@ -303,6 +301,8 @@ class RudeChatClient:
         try:
             self.writer.write(f'{message}\r\n'.encode('UTF-8'))
             await asyncio.wait_for(self.writer.drain(), timeout=10)
+        except Exception as e:
+            print(f"Exception in send_message {e}")
         except TimeoutError:
             print("Timeout while sending message.")
 
@@ -387,7 +387,6 @@ class RudeChatClient:
         self.gui.clear_user_listbox()
         self.gui.clear_topic_label()
         self.gui.clear_text_widget()
-        self.gui.clear_server_widget()
         self.joined_channels.clear()
         self.motd_lines.clear()
         self.channel_users.clear()
@@ -413,30 +412,42 @@ class RudeChatClient:
         # Wait for only the not done tasks to be canceled
         await asyncio.gather(*not_done_tasks, return_exceptions=True)
 
+    def grab_server_name(self, config_file):
+        if sys.platform.startswith('win'):
+            split_config = config_file.split("\\")
+            server = split_config[-1].split(".")
+            return server[1]
+        else:
+            split_config = config_file.split("/")
+            server = split_config[-1].split(".")
+            return server[1]
+
     async def reconnect(self, config_file):
-        print(config_file)
+        disconnected_server = self.grab_server_name(config_file)
         MAX_RETRIES = 5
-        RETRY_DELAY = 270
+        RETRY_DELAY = 245
         retries = 0
+        self.gui.insert_server_widget(f"****Resetting State\n")
+        await self.reset_state()
+        self.gui.insert_text_widget(f"You have been \x0304DISCONNECTED\x0F Auto Reconnecting In Progress\x0303...\x0F \n")
         while retries < MAX_RETRIES:
             retries += 1
             try:
-                print("Giving Time For Ping TimeOut: 270seconds")
-                await asyncio.sleep(270)
-                print("Resetting State")
-                await self.reset_state()
+                self.gui.insert_server_widget(f"****Server {disconnected_server} Disconnected\n")
+                self.gui.insert_server_widget(f"****Giving Time For Ping TimeOut: {RETRY_DELAY}seconds\n")
+                await asyncio.sleep(RETRY_DELAY)
 
-                print("Attempt Connection")
+                self.gui.insert_server_widget("****Attempt Connection\n")
                 await self.connect(config_file)
                 self.loop_running = True
-                return "Connected"
+                self.gui.insert_server_widget(f"****Connected: {self.loop_running}\n")
+                return 
                     
             except Exception as e:
                 print(f"Failed to reconnect ({retries}/{MAX_RETRIES}): {e}. Retrying in {RETRY_DELAY} seconds.")
                 await asyncio.sleep(RETRY_DELAY)
 
         print(f"Failed to reconnect ({retries}/{MAX_RETRIES}): {e}. Retrying in {RETRY_DELAY} seconds.")
-        return
 
     async def keep_alive(self):
         while self.loop_running:
