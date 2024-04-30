@@ -800,9 +800,10 @@ class RudeGui:
         self.insert_and_scroll()
 
     async def send_quit_to_all_clients(self, quit_message=None):
+        print(self.clients)
         try:       
             for irc_client in self.clients.values():
-                await self.irc_client.save_channel_messages()
+                await irc_client.save_channel_messages()
                 quit_cmd = f'QUIT :{quit_message}' if quit_message else 'QUIT :RudeChat3 https://github.com/ShrugShoulders/RudeChat'
                 await self.irc_client.send_message(quit_cmd)
         except Exception as e:
@@ -811,7 +812,7 @@ class RudeGui:
     async def stop_all_tasks(self):
         try:
             for irc_client in self.clients.values():
-                await self.irc_client.stop_tasks()
+                await irc_client.stop_tasks()
         except Exception as e:
             print(f"Exception in stop_all_tasks: {e}")
 
@@ -833,6 +834,23 @@ class RudeGui:
         self.server_var.set(server_name)  # Set the current server
         self.server_listbox.select_set(0)
         self.channel_lists[server_name] = irc_client.joined_channels
+
+    def server_checker(self, existing_server):
+        # Get the number of items in the Listbox
+        num_items = self.server_listbox.size()
+
+        # Iterate through each item in the Listbox
+        for i in range(num_items):
+            # Get the text of the current item
+            item_text = self.server_listbox.get(i)
+
+            # Check if the current item matches the server
+            if item_text == existing_server:
+                # Server found, return True
+                return True
+
+        # Server not found, return False
+        return False
 
     def on_server_change(self, event):
         selected_server_index = self.server_listbox.curselection()

@@ -382,7 +382,7 @@ class RudeChatClient:
         for user in self.channel_users.get(channel, []):
             self.gui.user_listbox.insert(tk.END, user)
 
-    async def reset_state(self, reconnect_req=False):
+    async def reset_state(self):
         self.gui.clear_channel_listbox()
         self.gui.clear_user_listbox()
         self.gui.clear_topic_label()
@@ -422,7 +422,7 @@ class RudeChatClient:
             retries += 1
             try:
                 print("Giving Time For Ping TimeOut: 270seconds")
-                await asyncio.sleep(245)
+                await asyncio.sleep(270)
                 print("Resetting State")
                 await self.reset_state()
 
@@ -432,10 +432,10 @@ class RudeChatClient:
                 return "Connected"
                     
             except Exception as e:
-                print(f'Failed to reconnect ({retries}/{MAX_RETRIES}): {e}. Retrying in {RETRY_DELAY} seconds.\n')
+                print(f"Failed to reconnect ({retries}/{MAX_RETRIES}): {e}. Retrying in {RETRY_DELAY} seconds.")
                 await asyncio.sleep(RETRY_DELAY)
 
-        print("Failed To Connect")
+        print(f"Failed to reconnect ({retries}/{MAX_RETRIES}): {e}. Retrying in {RETRY_DELAY} seconds.")
         return
 
     async def keep_alive(self):
@@ -1938,38 +1938,35 @@ class RudeChatClient:
         await self.send_message(f'NOTICE {target} :{message}\n')
         self.gui.insert_text_widget(f"Sent NOTICE to {target}: {message}\n")
 
-    async def connect_to_specific_server(self, server_name, reconnect=False):
+    async def connect_to_specific_server(self, server_name):
         script_directory = os.path.dirname(os.path.abspath(__file__))
         
-        # If reconnect flag is True, find all config files matching the pattern
-        if reconnect and server_name == None:
-            config_files = [
-                os.path.join(script_directory, f)
-                for f in os.listdir(script_directory)
-                if f.startswith("conf.") and f.endswith(".rude")
-            ]
-            
-            # Iterate over the config files found and pass their paths to init_client_with_config
-            for config_file in config_files:
-                await self.gui.init_client_with_config(config_file, server_name)
-            return
-        else:
-            # Otherwise, look for the specific config file
-            config_file = f"conf.{server_name}.rude"
-            config_path = os.path.join(script_directory, config_file)
-            
-            # If config_file is found, pass its path to init_client_with_config
+        config_file = f"conf.{server_name}.rude"
+        config_path = os.path.join(script_directory, config_file)
+        
+        check_server = self.gui.server_checker(server_name)
+
+        # If config_file is found, pass its path to init_client_with_config
+        if check_server:
+            if os.path.exists(config_path):
+                await self.connect(config_file)
+        elif not check_server:
             if os.path.exists(config_path):
                 await self.gui.init_client_with_config(config_path, server_name)
-            else:
-                print(f"Config file '{config_file}' not found.")
-
-    async def disconnect(self):
-        if self.reader and not self.reader.at_eof():
-            self.writer.close()
-            await self.writer.wait_closed()
         else:
-            pass
+            self.gui.insert_server_widget(f"Config file '{config_file}' not found.")
+
+    async def disconnect(self, server_name=None):
+        if server_name:
+            client = self.gui.clients.get(server_name)
+            if client:
+                await client.send_message("QUIT")
+        else:
+            if self.reader and not self.reader.at_eof():
+                self.writer.close()
+                await self.writer.wait_closed()
+            else:
+                pass
 
         self.gui.insert_text_widget("Disconnected\n")
 
@@ -2131,7 +2128,7 @@ class RudeChatClient:
 
             case "quit":
                 quit_message = " ".join(args[1:]) if len(args) > 0 else None
-                await self.save_channel_messages()
+                # Send QUIT command to all clients
                 await self.gui.send_quit_to_all_clients(quit_message)
                 await asyncio.sleep(2)
                 await self.gui.stop_all_tasks()
@@ -2173,13 +2170,17 @@ class RudeChatClient:
                 if server_name:
                     await self.connect_to_specific_server(server_name)
                 else:
-                    await self.connect_to_specific_server(server_name=None, reconnect=True)
+                    self.gui.insert_server_widget("Please Enter A Server Name")
 
             case "disconnect":
-                await self.disconnect()
-                await self.stop_tasks()
-                await self.reset_state(reconnect_req=False)
-
+                server = args[1] if len(args) > 1 else None
+                if server:
+                    await self.disconnect(server)
+                    await self.reset_state()
+                else:
+                    self.gui.insert_server_widget("Client Disconnected.")
+                    await self.disconnect()
+                    await self.reset_state()
             case None:
                 await self.handle_user_input(user_input, timestamp)
 
