@@ -135,7 +135,12 @@ class RudeChatClient:
 
     def handle_motd_end(self, tokens):
         full_motd = "\n".join(self.motd_lines)
-        self.motd_dict[self.server_name] = full_motd
+        
+        if self.server_name in self.motd_dict:
+            self.motd_dict[self.server_name] += full_motd + "\n"
+        else:
+            self.motd_dict[self.server_name] = full_motd + "\n"
+
         self.gui.insert_text_widget(f"Message of the Day:\n{full_motd}\n")
         self.motd_lines.clear()
             
@@ -427,20 +432,20 @@ class RudeChatClient:
         MAX_RETRIES = 5
         RETRY_DELAY = 245
         retries = 0
-        self.gui.insert_server_widget(f"****Resetting State\n")
+        self.add_server_message(f"****Resetting State\n")
         await self.reset_state()
-        self.gui.insert_text_widget(f"You have been \x0304DISCONNECTED\x0F Auto Reconnecting In Progress\x0303...\x0F \n")
+        self.add_server_message(f"You have been \x0304DISCONNECTED\x0F Auto Reconnecting In Progress\x0303... in 245seconds\x0F \n")
         while retries < MAX_RETRIES:
             retries += 1
             try:
-                self.gui.insert_server_widget(f"****Server {disconnected_server} Disconnected\n")
-                self.gui.insert_server_widget(f"****Giving Time For Ping TimeOut: {RETRY_DELAY}seconds\n")
+                self.add_server_message(f"****Server {disconnected_server} Disconnected\n")
+                self.add_server_message(f"****Giving Time For Ping TimeOut: {RETRY_DELAY}seconds\n")
                 await asyncio.sleep(RETRY_DELAY)
 
-                self.gui.insert_server_widget("****Attempt Connection\n")
+                self.add_server_message("****Attempt Connection\n")
                 await self.connect(config_file)
                 self.loop_running = True
-                self.gui.insert_server_widget(f"****Connected: {self.loop_running}\n")
+                self.add_server_message(f"****Connected: {self.loop_running}\n")
                 return 
                     
             except Exception as e:
@@ -520,13 +525,15 @@ class RudeChatClient:
                 self.loop_running = False
 
     def handle_server_message(self, line):
-        self.gui.insert_server_widget(line + "\n")
+        data = line + "\n"
+        self.add_server_message(data)
 
     def handle_notice_message(self, tokens):
         sender = tokens.hostmask if tokens.hostmask else "Server"
         target = tokens.params[0]
         message = tokens.params[1]
-        self.gui.insert_server_widget(f"NOTICE {sender} {target}: {message}\n")
+        data = f"NOTICE {sender} {target}: {message}\n"
+        self.add_server_message(data)
 
     async def handle_ctcp(self, tokens):
         timestamp = datetime.datetime.now().strftime('[%H:%M:%S] ')
@@ -543,24 +550,24 @@ class RudeChatClient:
                 case "VERSION" | "version":
                     if tokens.command == "PRIVMSG":
                         await self.send_message(f'NOTICE {sender} :\x01VERSION RudeChat3.0.4\x01')
-                        self.gui.insert_server_widget(f"CTCP: {sender} {target}: {ctcp_command}\n")
+                        self.add_server_message(f"CTCP: {sender} {target}: {ctcp_command}\n")
                 case "MOO" | "moo":
                     if tokens.command == "PRIVMSG":
                         await self.send_message(f'NOTICE {sender} :\x01MoooOOO! Hi Cow!! RudeChat3.0.4\x01')
-                        self.gui.insert_server_widget(f"CTCP: {sender} {target}: {ctcp_command}\n")
+                        self.add_server_message(f"CTCP: {sender} {target}: {ctcp_command}\n")
                 case "PING":
                     if tokens.command == "PRIVMSG":
                         timestamp = str(int(time.time()))  # Get the current Unix timestamp
                         await self.send_message(f'NOTICE {sender} :\x01PING {ctcp_content} {timestamp}\x01')
-                        self.gui.insert_server_widget(f"CTCP: {sender} {target}: {ctcp_command}\n")
+                        self.add_server_message(f"CTCP: {sender} {target}: {ctcp_command}\n")
                 case "FINGER" | "finger":
                     if tokens.command == "PRIVMSG":
                         await self.send_message(f'NOTICE {sender} :\x01FINGER: {self.nickname} {self.server_name} RudeChat3.0.4\x01')
-                        self.gui.insert_server_widget(f"CTCP: {sender} {target}: {ctcp_command}\n")
+                        self.add_server_message(f"CTCP: {sender} {target}: {ctcp_command}\n")
                 case "CLIENTINFO" | "clientinfo":
                     if tokens.command == "PRIVMSG":
                         await self.send_message(f'NOTICE {sender} :\x01CLIENTINFO VERSION TIME PING FINGER\x01')
-                        self.gui.insert_server_widget(f"CTCP: {sender} {target}: {ctcp_command}\n")
+                        self.add_server_message(f"CTCP: {sender} {target}: {ctcp_command}\n")
                 case "TIME" | "time":
                     if tokens.command == "PRIVMSG":
                         import pytz
@@ -568,11 +575,22 @@ class RudeChatClient:
                         dublin_time = datetime.datetime.now(dublin_tz).strftime("%Y-%m-%d %H:%M:%S")
                         time_reply = "\x01TIME " + dublin_time + "\x01"
                         await self.send_message(f'NOTICE {sender} :{time_reply}')
-                        self.gui.insert_server_widget(f"CTCP: {sender} {target}: {ctcp_command}\n")
+                        self.add_server_message(f"CTCP: {sender} {target}: {ctcp_command}\n")
                 case "ACTION":
                     await self.handle_action_ctcp(timestamp, sender, target, ctcp_content)
                 case _:
                     print(f"Unhandled CTCP command: {ctcp_command}")
+
+    def add_server_message(self, data):
+        if not self.gui.show_server_window:
+            if self.server_name in self.motd_dict:
+                self.motd_dict[self.server_name] += data
+                self.highlight_server(server_activity=True)
+            else:
+                self.motd_dict[self.server_name] = data
+                self.highlight_server(server_activity=True)
+        else:
+            self.gui.insert_server_widget(data)
 
     async def handle_action_ctcp(self, timestamp, sender, target, ctcp_content):
         if self.use_time_stamp == True:
@@ -650,12 +668,17 @@ class RudeChatClient:
         else:
             pass
 
-    def highlight_server(self):
+    def highlight_server(self, server_activity=False):
         for idx in range(self.gui.server_listbox.size()):
             if self.gui.server_listbox.get(idx) == self.server_name and self.gui.irc_client != self:
                 self.gui.server_listbox.itemconfig(idx, {'bg': 'red'})
                 # Store the highlighted server information with red background
                 self.highlighted_servers[self.server_name] = {'index': idx, 'bg': 'red'}
+                break
+            elif self.gui.server_listbox.get(idx) == self.server_name and server_activity == True:
+                self.gui.server_listbox.itemconfig(idx, {'bg': 'green'})
+                # Store the highlighted server information with green background
+                self.highlighted_servers[self.server_name] = {'index': idx, 'bg': 'green'}
                 break
 
     async def trigger_beep_notification(self, channel_name=None, message_content=None):
@@ -1195,7 +1218,9 @@ class RudeChatClient:
     def handle_isupport(self, tokens):
         params = tokens.params[:-1]  # Exclude the trailing "are supported by this server" message
         isupport_message = " ".join(params)
-        self.gui.insert_server_widget(f"ISUPPORT: {isupport_message}\n")
+
+        data = f"ISUPPORT: {isupport_message}\n"
+        self.add_server_message(data)
 
         # Initialize variables with fallback values
         self.mode_to_symbol = {'q': '~', 'a': '&', 'o': '@', 'h': '%', 'v': '+'}
@@ -1437,10 +1462,11 @@ class RudeChatClient:
     def handle_pong(self, tokens):
         pong_server = tokens.params[-1]  # Assumes the server name is the last parameter
         current_time = time.time()
+        data = f"PONG from {pong_server}\n"
         if pong_server.startswith('irc'):
             pass
         else:
-            self.gui.insert_server_widget(f"PONG from {pong_server}\r\n")
+            self.add_server_message(data)
 
         if self.ping_start_time is not None:
             ping_time = current_time - self.ping_start_time
@@ -1448,24 +1474,6 @@ class RudeChatClient:
             self.gui.update_ping_label(ping_time_formatted)
 
         self.ping_start_time = None
-
-    def handle_372(self, tokens):
-        motd_line = tokens.params[-1]
-        self.motd_lines.append(motd_line)
-
-    def handle_376(self, tokens):
-        full_motd = "\n".join(self.motd_lines)
-        self.gui.insert_text_widget(f"Message of the Day:\n{full_motd}\n")
-        self.motd_lines.clear()
-
-    def handle_900(self, tokens):
-        logged_in_as = tokens.params[3]
-        self.gui.insert_server_widget(f"Successfully authenticated as: {logged_in_as}\n")
-
-    def handle_396(self, tokens):
-        hidden_host = tokens.params[1]
-        reason = tokens.params[2]
-        self.gui.insert_server_widget(f"Your host is now hidden as: {hidden_host}. Reason: {reason}\n")
 
     def handle_error(self, tokens):
         error_message = ' '.join(tokens.params) if tokens.params else 'Unknown error'
@@ -1574,15 +1582,6 @@ class RudeChatClient:
                                 
                     case "366":  # End of NAMES list
                         self.handle_end_of_names_list()
-
-                    case "372":
-                        self.handle_372(tokens)
-                    case "376":
-                        self.handle_376(tokens)
-                    case "900":
-                        self.handle_900(tokens)
-                    case "396":
-                        self.handle_396(tokens)
 
                     case "305":
                         message = "You are no longer marked as being away"
@@ -1704,97 +1703,118 @@ class RudeChatClient:
     def command_403(self, tokens):
         target = tokens.params[1]
         message = tokens.params[2]
-
-        self.gui.insert_server_widget(f"{message}: {target}")
+        data = f"{message}: {target}"
+        self.add_server_message(data)
 
     def handle_kill_command(self, tokens):
         source = tokens.source
         user = tokens.params[0]
         message = tokens.params[1]
+        data = f"{source} {user}: {message}"
 
-        self.gui.insert_server_widget(f"{source} {user}: {message}")
+        self.add_server_message(data)
 
     def command_379(self, tokens):
         source = tokens.source
         user = tokens.params[0]
         connecting_user = tokens.params[1]
         message = tokens.params[2]
+        data = f"{source} {user}: {connecting_user} {message}"
 
-        self.gui.insert_server_widget(f"{source} {user}: {connecting_user} {message}")
+        self.add_server_message(data)
 
     def command_378(self, tokens):
         source = tokens.source
         user = tokens.params[0]
         identified_nick = tokens.params[1]
         message = tokens.params[2]
+        data = f"{source} {user} {identified_nick}: {message}\n"
 
-        self.gui.insert_server_widget(f"{source} {user} {identified_nick}: {message}\n")
+        self.add_server_message(data)
 
     def command_307(self, tokens):
         source = tokens.source
         user = tokens.params[0]
         identified_nick = tokens.params[1]
         message = tokens.params[2]
+        data = f"{source} {user} {identified_nick}: {message}\n"
 
-        self.gui.insert_server_widget(f"{source} {user} {identified_nick}: {message}\n")
+        self.add_server_message(data)
 
     def command_432(self, tokens):
         source = tokens.source
         user = tokens.params[0]
         message = f"""{tokens.params[2]}"""
+        data = f"{source} {user}: {message}\n"
 
-        self.gui.insert_server_widget(f"{source} {user}: {message}\n")
+        self.add_server_message(data)
 
     def command_487(self, tokens):
         source = tokens.source
         user = tokens.params[0]
         message = f"""{tokens.params[1]}"""
+        data = f"{source} {user}: {message}\n"
 
-        self.gui.insert_server_widget(f"{source} {user}: {message}\n")
+        self.add_server_message(data)
 
     def command_433(self, tokens):
         source = tokens.source
         user = tokens.params[1]
         message = f"""{tokens.params[2]}"""
+        data = f"{source} {user}: {message}\n"
 
-        self.gui.insert_server_widget(f"{source} {user}: {message}\n")
+        self.add_server_message(data)
 
     def handle_already_on_channel(self, tokens):
         channel = tokens.params[2]
         message = tokens.params[3]
-        self.gui.insert_server_widget(f"{channel}: {message}\n")
+        data = f"{channel}: {message}\n"
+
+        self.add_server_message(data)
 
     def handle_not_on_channel(self, tokens):
         channel = tokens.params[1]
         message = tokens.params[2]
-        self.gui.insert_server_widget(f"{channel}: {message}\n")
+        data = f"{channel}: {message}\n"
+
+        self.add_server_message(data)
 
     def handle_unknown_mode(self, tokens):
         channel = tokens.params[1]
         message = tokens.params[2]
-        self.gui.insert_server_widget(f"Unknown mode for {channel}: {message}\n")
+        data = f"Unknown mode for {channel}: {message}\n"
+
+        self.add_server_message(data)
 
     def handle_mode_info(self, tokens):
         channel = tokens.params[1]
         modes = tokens.params[2]
-        self.gui.insert_server_widget(f"Modes for {channel}: {modes}\n")
+        data = f"Modes for {channel}: {modes}\n"
+
+        self.add_server_message(data)
 
     def handle_creation_time(self, tokens):
         channel = tokens.params[1]
         timestamp = int(tokens.params[2])  # Convert timestamp to an integer if it's a string
         creation_date = datetime.datetime.utcfromtimestamp(timestamp)
         formatted_date = creation_date.strftime('%Y-%m-%d %H:%M:%S UTC')  # Format the date as desired
-        self.gui.insert_server_widget(f"Creation time for {channel}: {formatted_date}\n")
+        data = f"Creation time for {channel}: {formatted_date}\n"
+
+        self.add_server_message(data)
 
     def handle_not_channel_operator(self, tokens):
         channel = tokens.params[1]
         message = tokens.params[2]
-        self.gui.insert_server_widget(f"{channel}: {message}\n")
+        data = f"{channel}: {message}\n"
+
+        self.add_server_message(data)
 
     def handle_328(self, tokens):
         channel = tokens.params[1]
         url = tokens.params[2]
-        self.gui.insert_server_widget(f"URL for {channel} {url}\n")
+        data = f"URL for {channel} {url}\n"
+
+        self.add_server_message(data)
 
     def handle_cannot_join_channel(self, tokens):
         channel_name = tokens.params[1]
@@ -1951,11 +1971,10 @@ class RudeChatClient:
 
     async def connect_to_specific_server(self, server_name):
         script_directory = os.path.dirname(os.path.abspath(__file__))
-        
         config_file = f"conf.{server_name}.rude"
         config_path = os.path.join(script_directory, config_file)
-        
         check_server = self.gui.server_checker(server_name)
+        data = f"Config file '{config_file}' not found."
 
         # If config_file is found, pass its path to init_client_with_config
         if check_server:
@@ -1965,7 +1984,7 @@ class RudeChatClient:
             if os.path.exists(config_path):
                 await self.gui.init_client_with_config(config_path, server_name)
         else:
-            self.gui.insert_server_widget(f"Config file '{config_file}' not found.")
+            self.add_server_message(data)
 
     async def disconnect(self, server_name=None):
         if server_name:
@@ -2181,7 +2200,8 @@ class RudeChatClient:
                 if server_name:
                     await self.connect_to_specific_server(server_name)
                 else:
-                    self.gui.insert_server_widget("Please Enter A Server Name")
+                    data = "Please Enter A Server Name"
+                    self.add_server_message(data)
 
             case "disconnect":
                 server = args[1] if len(args) > 1 else None
@@ -2189,6 +2209,7 @@ class RudeChatClient:
                     await self.disconnect(server)
                     await self.reset_state()
                 else:
+                    self.gui.insert_text_widget("Client Disconnected.")
                     self.gui.insert_server_widget("Client Disconnected.")
                     await self.disconnect()
                     await self.reset_state()

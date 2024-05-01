@@ -879,7 +879,7 @@ class RudeGui:
                 self.irc_client.set_server_name(selected_server)
 
                 # Set the currently selected channel to None
-                self.irc_client.current_channel = ''
+                self.irc_client.current_channel = None
                 
                 # Set the GUI reference and update the GUI components
                 self.irc_client.set_gui(self)
@@ -1006,7 +1006,7 @@ class RudeGui:
 
         # Split the text by '\n' and count the number of lines
         text_lines = self.text_widget.get("1.0", tk.END).split("\n")
-        if len(text_lines) > 103:
+        if len(text_lines) > 103 and channel is not None:
             # Clear the text window
             self.text_widget.config(state=tk.NORMAL)
             self.text_widget.delete(1.0, tk.END)
