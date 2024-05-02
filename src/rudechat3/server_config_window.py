@@ -12,7 +12,6 @@ class ServerConfigWindow:
         self.config = configparser.ConfigParser()
         self.config.read(config_file)
 
-        # Define a dictionary to map config entry names to human-readable labels
         self.label_map = {
             'server_name': 'Server Name',
             'nickname': 'Nickname',
@@ -31,7 +30,6 @@ class ServerConfigWindow:
             'use_beep_noise': 'Use Beep Noise',
             'auto_whois': 'Auto WHOIS',
             'custom_sounds': 'Custom Sounds',
-            # Add more mappings as needed
         }
 
         self.create_widgets()
@@ -55,7 +53,7 @@ class ServerConfigWindow:
                 section_frame.pack(padx=10, pady=5, fill='both', expand=True)
 
                 for option in self.config.options(section):
-                    label_text = self.label_map.get(option, option)  # Use human-readable label if available
+                    label_text = self.label_map.get(option, option)
                     label = ttk.Label(section_frame, text=label_text)
                     label.grid(row=len(self.entries), column=0, padx=5, pady=2, sticky='e')
 
@@ -88,7 +86,7 @@ class ServerConfigWindow:
 
             with open(new_config_file, 'w') as configfile:
                 new_config.write(configfile)
-            
+
             self.close_callback()
         except configparser.NoOptionError as e:
             messagebox.showerror("Error", f"Error saving configuration: Option '{e.option}' not found in section '{e.section}'.")

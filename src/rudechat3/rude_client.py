@@ -94,7 +94,7 @@ class RudeChatClient:
         script_directory = os.path.dirname(os.path.abspath(__file__))
         file_path = os.path.join(script_directory, 'channel_messages.json')
         
-        async with aiofiles.open(file_path, 'w') as file:
+        async with aiofiles.open(file_path, 'a') as file:
             await file.write(json.dumps(self.channel_messages, indent=2))
 
     async def connect(self, config_file):

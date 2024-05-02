@@ -50,8 +50,7 @@ class GuiConfigWindow:
         ])
 
         # Button to save changes
-        ttk.Button(self.root, text="Save", command=self.save_changes).pack()
-        tk.Label(self.root, text="Once you click the Save button the GUI will automatically apply the settings.", wraplength=400).pack()
+        ttk.Button(self.root, text="Apply", command=self.save_changes).pack()
 
     def create_settings_tab(self, tab_name, section, settings):
         tab = ttk.Frame(self.notebook)
