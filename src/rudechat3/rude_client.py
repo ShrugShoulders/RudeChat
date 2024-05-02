@@ -42,8 +42,6 @@ class RudeChatClient:
         self.isupport_flag = False
         self.loop_running = True
         self.message_handling_semaphore = asyncio.Semaphore(50)
-        self.load_channel_messages()
-        self.load_ignore_list()
 
     async def read_config(self, config_file):
         config = configparser.ConfigParser()
@@ -65,6 +63,8 @@ class RudeChatClient:
         self.use_beep_noise = config.getboolean('IRC', 'use_beep_noise', fallback=True)
         self.auto_whois = config.getboolean('IRC', 'auto_whois', fallback=True)
         self.custom_sounds = config.getboolean('IRC', 'custom_sounds', fallback=False)
+        await self.load_channel_messages()
+        self.load_ignore_list()
         self.gui.update_nick_channel_label()
 
     def reload_config(self, config_file):
@@ -80,37 +80,37 @@ class RudeChatClient:
         self.custom_sounds = config.getboolean('IRC', 'custom_sounds', fallback=False)
         self.gui.update_nick_channel_label()
 
-    def load_channel_messages(self):
+    async def load_channel_messages(self):
         script_directory = os.path.dirname(os.path.abspath(__file__))
-        file_path = os.path.join(script_directory, 'channel_messages.json')
+        file_path = os.path.join(script_directory, f'channel_messages_{self.server_name}.json')
         try:
-            with open(file_path, 'r') as file:
-                self.channel_messages = json.load(file)
+            async with aiofiles.open(file_path, 'r') as file:
+                self.channel_messages = json.loads(await file.read())
         except FileNotFoundError:
-            # If the file doesn't exist, initialize an empty dictionary
             self.channel_messages = {}
 
     async def save_channel_messages(self):
         script_directory = os.path.dirname(os.path.abspath(__file__))
-        file_path = os.path.join(script_directory, 'channel_messages.json')
+        file_path = os.path.join(script_directory, f'channel_messages_{self.server_name}.json')
+        lock_file_path = os.path.join(script_directory, f'channel_messages_{self.server_name}.lock')
 
-        # Initialize an empty dictionary to hold the existing data
-        existing_data = {}
+        while os.path.exists(lock_file_path):
+            await asyncio.sleep(0.1)  # Wait for the lock to be released
 
-        try:
-            # Read the existing JSON data from the file
+        async with aiofiles.open(lock_file_path, 'w') as lock_file:
+            await lock_file.write("locked")
+
+        existing_messages = {}
+        if os.path.exists(file_path):
             async with aiofiles.open(file_path, 'r') as file:
-                existing_data = json.loads(await file.read())
-        except FileNotFoundError:
-            # If the file doesn't exist yet, proceed with an empty dictionary
-            pass
+                existing_messages = json.loads(await file.read())
 
-        # Update the existing data with the new channel messages
-        existing_data.update(self.channel_messages)
+        existing_messages.update(self.channel_messages)
 
-        # Write the updated data back to the JSON file
         async with aiofiles.open(file_path, 'w') as file:
-            await file.write(json.dumps(existing_data, indent=2))
+            await file.write(json.dumps(existing_messages, indent=2))
+
+        os.remove(lock_file_path)
 
     async def connect(self, config_file):
         await self.connect_to_server(config_file)
@@ -512,7 +512,7 @@ class RudeChatClient:
     async def auto_save(self):
         while self.loop_running:
             try:
-                await asyncio.sleep(194)
+                await asyncio.sleep(random.randint(70, 194))
                 await self.save_channel_messages()
 
             except asyncio.CancelledError:
