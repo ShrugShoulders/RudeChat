@@ -93,9 +93,24 @@ class RudeChatClient:
     async def save_channel_messages(self):
         script_directory = os.path.dirname(os.path.abspath(__file__))
         file_path = os.path.join(script_directory, 'channel_messages.json')
-        
-        async with aiofiles.open(file_path, 'a') as file:
-            await file.write(json.dumps(self.channel_messages, indent=2))
+
+        # Initialize an empty dictionary to hold the existing data
+        existing_data = {}
+
+        try:
+            # Read the existing JSON data from the file
+            async with aiofiles.open(file_path, 'r') as file:
+                existing_data = json.loads(await file.read())
+        except FileNotFoundError:
+            # If the file doesn't exist yet, proceed with an empty dictionary
+            pass
+
+        # Update the existing data with the new channel messages
+        existing_data.update(self.channel_messages)
+
+        # Write the updated data back to the JSON file
+        async with aiofiles.open(file_path, 'w') as file:
+            await file.write(json.dumps(existing_data, indent=2))
 
     async def connect(self, config_file):
         await self.connect_to_server(config_file)
@@ -1654,6 +1669,12 @@ class RudeChatClient:
                     case "401":
                         self.handle_nickname_doesnt_exist(tokens)
 
+                    case "396":
+                        self.command_396(tokens)
+
+                    case "900":
+                        self.command_900(tokens)
+
                     case "403":
                         self.command_403(tokens)
 
@@ -1720,6 +1741,15 @@ class RudeChatClient:
                         print(f"Debug: Unhandled command {tokens.command}. Full line: {line}")
                         if line.startswith(f":{self.server}"):
                             self.handle_server_message(line)
+
+    def command_900(self, tokens):
+        logged_in_as = tokens.params[3]
+        self.gui.insert_server_widget(f"Successfully authenticated as: {logged_in_as}\n")
+
+    def command_396(self, tokens):
+        hidden_host = tokens.params[1]
+        reason = tokens.params[2]
+        self.gui.insert_server_widget(f"Your host is now hidden as: {hidden_host}. Reason: {reason}\n")
 
     def command_403(self, tokens):
         target = tokens.params[1]
