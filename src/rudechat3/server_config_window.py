@@ -12,6 +12,28 @@ class ServerConfigWindow:
         self.config = configparser.ConfigParser()
         self.config.read(config_file)
 
+        # Define a dictionary to map config entry names to human-readable labels
+        self.label_map = {
+            'server_name': 'Server Name',
+            'nickname': 'Nickname',
+            'server': 'Server Address',
+            'auto_join_channels': 'Auto-Join Channels',
+            'use_nickserv_auth': 'Use NickServ Authentication',
+            'nickserv_password': 'NickServ Password',
+            'port': 'Port',
+            'ssl_enabled': 'SSL Enabled',
+            'sasl_enabled': 'SASL Enabled',
+            'sasl_username': 'SASL Username',
+            'sasl_password': 'SASL Password',
+            'use_time_stamp': 'Use Time Stamp',
+            'show_hostmask': 'Show Hostmask',
+            'show_join_part_quit_nick': 'Show Join/Part/Quit Messages',
+            'use_beep_noise': 'Use Beep Noise',
+            'auto_whois': 'Auto WHOIS',
+            'custom_sounds': 'Custom Sounds',
+            # Add more mappings as needed
+        }
+
         self.create_widgets()
 
     def create_widgets(self):
@@ -33,7 +55,8 @@ class ServerConfigWindow:
                 section_frame.pack(padx=10, pady=5, fill='both', expand=True)
 
                 for option in self.config.options(section):
-                    label = ttk.Label(section_frame, text=option)
+                    label_text = self.label_map.get(option, option)  # Use human-readable label if available
+                    label = ttk.Label(section_frame, text=label_text)
                     label.grid(row=len(self.entries), column=0, padx=5, pady=2, sticky='e')
 
                     entry = ttk.Entry(section_frame)
