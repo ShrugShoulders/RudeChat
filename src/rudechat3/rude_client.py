@@ -94,23 +94,36 @@ class RudeChatClient:
         file_path = os.path.join(script_directory, f'channel_messages_{self.server_name}.json')
         lock_file_path = os.path.join(script_directory, f'channel_messages_{self.server_name}.lock')
 
-        while os.path.exists(lock_file_path):
-            await asyncio.sleep(0.1)  # Wait for the lock to be released
+        try:
+            # Acquire the lock
+            while os.path.exists(lock_file_path):
+                await asyncio.sleep(0.1)  # Wait for the lock to be released
 
-        async with aiofiles.open(lock_file_path, 'w') as lock_file:
-            await lock_file.write("locked")
+            async with aiofiles.open(lock_file_path, 'w') as lock_file:
+                await lock_file.write("locked")
 
-        existing_messages = {}
-        if os.path.exists(file_path):
-            async with aiofiles.open(file_path, 'r') as file:
-                existing_messages = json.loads(await file.read())
+            # Read existing data
+            existing_messages = {}
+            if os.path.exists(file_path):
+                async with aiofiles.open(file_path, 'r') as file:
+                    existing_messages = json.loads(await file.read())
 
-        existing_messages.update(self.channel_messages)
+            # Update existing data with new channel messages
+            existing_messages.update(self.channel_messages)
 
-        async with aiofiles.open(file_path, 'w') as file:
-            await file.write(json.dumps(existing_messages, indent=2))
+            # Write the updated data back to the file
+            async with aiofiles.open(file_path, 'w') as file:
+                await file.write(json.dumps(existing_messages, indent=2))
 
-        os.remove(lock_file_path)
+        except Exception as e:
+            print(f"Error occurred while saving channel messages: {e}")
+
+        finally:
+            # Release the lock
+            try:
+                os.remove(lock_file_path)
+            except Exception as e:
+                print(f"Error occurred while removing lock file: {e}")
 
     async def connect(self, config_file):
         await self.connect_to_server(config_file)
