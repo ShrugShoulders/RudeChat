@@ -12,6 +12,7 @@ sasl_username = splithead
 sasl_password = password
 use_time_stamp = True
 show_hostmask = True
+show_join_part_quit_nick = True
 use_beep_noise = True
 auto_whois = True
 custom_sounds = False

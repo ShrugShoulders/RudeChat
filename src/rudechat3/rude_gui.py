@@ -524,6 +524,18 @@ class RudeGui:
         loop.create_task(self.irc_client.update_available_macros())
     
     def open_client_config_window(self):
+        def after_config_window_close():
+            # Reload configuration after the configuration window is closed
+            print(f"Reloading Config...{config_window.config_file}")
+            self.irc_client.reload_config(config_window.config_file)
+
+        def close_window():
+            root.destroy()
+
+        def on_config_window_close():
+            root.after(100, after_config_window_close)  # Wait a short time before reloading config
+            root.after(200, close_window)
+
         root = tk.Tk()
         root.title("Configuration Window")
 
@@ -536,7 +548,7 @@ class RudeGui:
             root.destroy()
             return
 
-        config_window = ServerConfigWindow(root, os.path.join(self.script_directory, config_files[0]))
+        config_window = ServerConfigWindow(root, os.path.join(self.script_directory, config_files[0]), on_config_window_close)
 
         def on_config_change(event):
             selected_config_file = selected_config_file_var.get()
@@ -950,7 +962,7 @@ class RudeGui:
             if hasattr(self, 'text_widget') and self.text_widget.winfo_exists():
                 self.text_widget.see(tk.END)
         except Exception as e:
-            print(f"General Error in on_enter_key: {e}")
+            pass
 
     def handle_arrow_keys(self, event):
         if event.keysym == 'Up':
@@ -1253,7 +1265,7 @@ class RudeGui:
             self.tab_complete_index = (self.tab_complete_index + 1) % len(self.tab_complete_completions)
 
         # Set up a timer to append ": " after half a second if no more tab presses
-        self.tab_completion_timer = self.master.after(300, self.append_colon_to_nick)
+        self.tab_completion_timer = self.master.after(250, self.append_colon_to_nick)
 
         # Prevent default behavior of the Tab key
         return 'break'

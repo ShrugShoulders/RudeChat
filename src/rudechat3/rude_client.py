@@ -61,6 +61,20 @@ class RudeChatClient:
         self.server_name = config.get('IRC', 'server_name', fallback=None)
         self.use_time_stamp = config.getboolean('IRC', 'use_time_stamp', fallback=True)
         self.show_full_hostmask = config.getboolean('IRC', 'show_hostmask', fallback=True)
+        self.show_join_part_quit_nick = config.getboolean('IRC', 'show_join_part_quit_nick', fallback=True)
+        self.use_beep_noise = config.getboolean('IRC', 'use_beep_noise', fallback=True)
+        self.auto_whois = config.getboolean('IRC', 'auto_whois', fallback=True)
+        self.custom_sounds = config.getboolean('IRC', 'custom_sounds', fallback=False)
+        self.gui.update_nick_channel_label()
+
+    def reload_config(self, config_file):
+        config = configparser.ConfigParser()
+        config.read(config_file)
+        
+        # Reload specific variables
+        self.use_time_stamp = config.getboolean('IRC', 'use_time_stamp', fallback=True)
+        self.show_full_hostmask = config.getboolean('IRC', 'show_hostmask', fallback=True)
+        self.show_join_part_quit_nick = config.getboolean('IRC', 'show_join_part_quit_nick', fallback=True)
         self.use_beep_noise = config.getboolean('IRC', 'use_beep_noise', fallback=True)
         self.auto_whois = config.getboolean('IRC', 'auto_whois', fallback=True)
         self.custom_sounds = config.getboolean('IRC', 'custom_sounds', fallback=False)
@@ -884,7 +898,7 @@ class RudeChatClient:
         except Exception as e:
             print(f"Exception in save_highlight: {e}")
 
-    def handle_join(self, tokens):
+    def handle_join(self, tokens): #add options to show or hide these messages. 
         user_info = tokens.hostmask.nickname
         user_mask = tokens.hostmask
         channel = tokens.params[0]
@@ -899,14 +913,16 @@ class RudeChatClient:
         if channel not in self.channel_messages[self.server]:
             self.channel_messages[self.server][channel] = []
 
-        self.channel_messages[self.server][channel].append(join_message)
+        if self.show_join_part_quit_nick:
+            self.channel_messages[self.server][channel].append(join_message)
 
         self.trim_messages(channel, self.server)
 
         # Display the message in the text_widget only if the channel matches the current channel
         if channel == self.current_channel and self.gui.irc_client == self:
-            self.gui.insert_text_widget(join_message)
-            self.gui.highlight_nickname()
+            if self.show_join_part_quit_nick:
+                self.gui.insert_text_widget(join_message)
+                self.gui.highlight_nickname()
 
         # If the user joining is the client's user, just return
         if user_info == self.nickname:
@@ -942,15 +958,17 @@ class RudeChatClient:
         if channel not in self.channel_messages[self.server]:
             self.channel_messages[self.server][channel] = []
 
-        self.channel_messages[self.server][channel].append(part_message)
+        if self.show_join_part_quit_nick:
+            self.channel_messages[self.server][channel].append(part_message)
 
         # Trim the messages list if it exceeds 100 lines
         self.trim_messages(channel, self.server)
 
         # Display the message in the text_widget only if the channel matches the current channel
         if channel == self.current_channel and self.gui.irc_client == self:
-            self.gui.insert_text_widget(part_message)
-            self.gui.highlight_nickname()
+            if self.show_join_part_quit_nick:
+                self.gui.insert_text_widget(part_message)
+                self.gui.highlight_nickname()
 
         # Check if the user is in the channel_users list for the channel
         user_found = False
@@ -991,16 +1009,17 @@ class RudeChatClient:
                         self.channel_messages[self.server] = {}
                     if channel not in self.channel_messages[self.server]:
                         self.channel_messages[self.server][channel] = []
-
-                    self.channel_messages[self.server][channel].append(quit_message)
+                    if self.show_join_part_quit_nick:
+                        self.channel_messages[self.server][channel].append(quit_message)
 
                     # Trim the messages list if it exceeds 100 lines
                     self.trim_messages(channel, self.server)
 
                     # Display the message in the text_widget only if the channel matches the current channel
                     if channel == self.current_channel and self.gui.irc_client == self:
-                        self.gui.insert_text_widget(quit_message)
-                        self.gui.highlight_nickname()
+                        if self.show_join_part_quit_nick:
+                            self.gui.insert_text_widget(quit_message)
+                            self.gui.highlight_nickname()
 
                     break
 
@@ -1031,15 +1050,17 @@ class RudeChatClient:
                         self.channel_messages[self.server] = {}
                     if channel not in self.channel_messages[self.server]:
                         self.channel_messages[self.server][channel] = []
-                    self.channel_messages[self.server][channel].append(f"<@> {old_nick} has changed their nickname to {new_nick}\n")
+                    if self.show_join_part_quit_nick:
+                        self.channel_messages[self.server][channel].append(f"<@> {old_nick} has changed their nickname to {new_nick}\n")
 
                     # Trim the messages list if it exceeds 100 lines
                     self.trim_messages(channel, self.server)
                     
                     # Insert message into the text widget only if this is the current channel
                     if channel == self.current_channel and self.gui.irc_client == self:
-                        self.gui.insert_text_widget(f"<@> {old_nick} has changed their nickname to {new_nick}\n")
-                        self.gui.highlight_nickname()
+                        if self.show_join_part_quit_nick:
+                            self.gui.insert_text_widget(f"<@> {old_nick} has changed their nickname to {new_nick}\n")
+                            self.gui.highlight_nickname()
 
                     break
 
@@ -2778,11 +2799,11 @@ class RudeChatClient:
         self.server_name = server_name
         self.gui.update_nick_channel_label()
 
-    def display_last_messages(self, channel, num=100, server_name=None):
+    def display_last_messages(self, channel, server_name=None):
         if server_name:
             messages = self.channel_messages.get(server_name, {}).get(channel, [])
 
-        for message in messages[-num:]:
+        for message in messages:
             self.gui.insert_text_widget(message)
 
     def display_server_motd(self, server_name=None):

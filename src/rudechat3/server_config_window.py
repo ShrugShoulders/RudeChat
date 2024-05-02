@@ -4,9 +4,10 @@ import configparser
 import os
 
 class ServerConfigWindow:
-    def __init__(self, parent, config_file):
+    def __init__(self, parent, config_file, close_callback):
         self.parent = parent
         self.config_file = config_file
+        self.close_callback = close_callback
 
         self.config = configparser.ConfigParser()
         self.config.read(config_file)
@@ -64,9 +65,8 @@ class ServerConfigWindow:
 
             with open(new_config_file, 'w') as configfile:
                 new_config.write(configfile)
-
-            messagebox.showinfo("Success", f"Configuration saved successfully as {new_config_file}.")
-            self.parent.destroy()
+            
+            self.close_callback()
         except configparser.NoOptionError as e:
             messagebox.showerror("Error", f"Error saving configuration: Option '{e.option}' not found in section '{e.section}'.")
         except Exception as e:
