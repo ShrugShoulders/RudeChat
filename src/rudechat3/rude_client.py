@@ -1757,12 +1757,14 @@ class RudeChatClient:
 
     def command_900(self, tokens):
         logged_in_as = tokens.params[3]
-        self.gui.insert_server_widget(f"Successfully authenticated as: {logged_in_as}\n")
+        data = f"Successfully authenticated as: {logged_in_as}\n"
+        self.add_server_message(data)
 
     def command_396(self, tokens):
         hidden_host = tokens.params[1]
         reason = tokens.params[2]
-        self.gui.insert_server_widget(f"Your host is now hidden as: {hidden_host}. Reason: {reason}\n")
+        data = f"Your host is now hidden as: {hidden_host}. Reason: {reason}\n"
+        self.add_server_message(data)
 
     def command_403(self, tokens):
         target = tokens.params[1]

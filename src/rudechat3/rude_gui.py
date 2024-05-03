@@ -905,6 +905,7 @@ class RudeGui:
                 # Display the MOTD if available
                 self.show_startup_art()
                 self.irc_client.display_server_motd(selected_server)
+                self.highlight_nickname()
                 self.text_widget.see(tk.END)
 
                 # Set the background color of the selected server to black
