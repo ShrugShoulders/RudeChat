@@ -30,6 +30,9 @@ class ServerConfigWindow:
             'use_beep_noise': 'Use Beep Noise',
             'auto_whois': 'Auto WHOIS',
             'custom_sounds': 'Custom Sounds',
+            'mention_note_color': 'Mention Channel Highlight',
+            'activity_note_color': 'Activity Channel Highlight',
+            'use_logging': 'Turn Logging On/Off'
         }
 
         self.create_widgets()

@@ -57,12 +57,15 @@ class RudeChatClient:
         self.sasl_username = config.get('IRC', 'sasl_username', fallback=None)
         self.sasl_password = config.get('IRC', 'sasl_password', fallback=None)
         self.server_name = config.get('IRC', 'server_name', fallback=None)
+        self.mention_note_color = config.get('IRC', 'mention_note_color', fallback='red')
+        self.activity_note_color = config.get('IRC', 'activity_note_color', fallback='green')
         self.use_time_stamp = config.getboolean('IRC', 'use_time_stamp', fallback=True)
         self.show_full_hostmask = config.getboolean('IRC', 'show_hostmask', fallback=True)
         self.show_join_part_quit_nick = config.getboolean('IRC', 'show_join_part_quit_nick', fallback=True)
         self.use_beep_noise = config.getboolean('IRC', 'use_beep_noise', fallback=True)
         self.auto_whois = config.getboolean('IRC', 'auto_whois', fallback=True)
         self.custom_sounds = config.getboolean('IRC', 'custom_sounds', fallback=False)
+        self.use_logging = config.getboolean('IRC', 'use_logging', fallback=True)
         await self.load_channel_messages()
         self.load_ignore_list()
         self.gui.update_nick_channel_label()
@@ -72,12 +75,15 @@ class RudeChatClient:
         config.read(config_file)
         
         # Reload specific variables
+        self.mention_note_color = config.get('IRC', 'mention_note_color', fallback='red')
+        self.activity_note_color = config.get('IRC', 'activity_note_color', fallback='green')
         self.use_time_stamp = config.getboolean('IRC', 'use_time_stamp', fallback=True)
         self.show_full_hostmask = config.getboolean('IRC', 'show_hostmask', fallback=True)
         self.show_join_part_quit_nick = config.getboolean('IRC', 'show_join_part_quit_nick', fallback=True)
         self.use_beep_noise = config.getboolean('IRC', 'use_beep_noise', fallback=True)
         self.auto_whois = config.getboolean('IRC', 'auto_whois', fallback=True)
         self.custom_sounds = config.getboolean('IRC', 'custom_sounds', fallback=False)
+        self.use_logging = config.getboolean('IRC', 'use_logging', fallback=True)
         self.gui.update_nick_channel_label()
 
     async def load_channel_messages(self):
@@ -415,7 +421,7 @@ class RudeChatClient:
                         highlighted_info['index'] = new_index
 
                         # Set the background color directly based on the dictionary entry
-                        bg_color = highlighted_info.get('bg', 'red')
+                        bg_color = highlighted_info.get('bg', self.mention_note_color)
                         self.gui.channel_listbox.itemconfig(new_index, {'bg': bg_color})
 
                         # Update the dictionary with the new index
@@ -476,6 +482,7 @@ class RudeChatClient:
         retries = 0
         self.add_server_message(f"****Resetting State\n")
         await self.reset_state()
+        self.gui.insert_text_widget(f"You have been \x0304DISCONNECTED\x0F Auto Reconnecting In Progress\x0303... in 245seconds\x0F \n")
         self.add_server_message(f"You have been \x0304DISCONNECTED\x0F Auto Reconnecting In Progress\x0303... in 245seconds\x0F \n")
         while retries < MAX_RETRIES:
             retries += 1
@@ -635,34 +642,37 @@ class RudeChatClient:
             self.gui.insert_server_widget(data)
 
     async def handle_action_ctcp(self, timestamp, sender, target, ctcp_content):
-        if self.use_time_stamp == True:
-            action_message = f"{timestamp}* {sender} {ctcp_content}\n"
-        elif self.use_time_stamp == False:
-            action_message = f"* {sender} {ctcp_content}\n"
+        try:
+            if self.use_time_stamp == True:
+                action_message = f"{timestamp}* {sender} {ctcp_content}\n"
+            elif self.use_time_stamp == False:
+                action_message = f"* {sender} {ctcp_content}\n"
 
-        # Update the message history
-        if self.server not in self.channel_messages:
-            self.channel_messages[self.server] = {}
-        if target not in self.channel_messages[self.server]:
-            self.channel_messages[self.server][target] = []
+            # Update the message history
+            if self.server not in self.channel_messages:
+                self.channel_messages[self.server] = {}
+            if target not in self.channel_messages[self.server]:
+                self.channel_messages[self.server][target] = []
 
-        self.channel_messages[self.server][target].append(action_message)
+            self.channel_messages[self.server][target].append(action_message)
 
-        # Trim the messages list
-        self.trim_messages(target, self.server)
+            # Trim the messages list
+            self.trim_messages(target, self.server)
 
-        # Display the message in the text_widget if the target matches the current channel or DM
-        if target == self.current_channel and self.gui.irc_client == self:
-            self.gui.insert_text_widget(action_message)
-            self.gui.highlight_nickname()
-        else:
-            # If it's not the currently viewed channel, highlight the channel in green in the Listbox
-            for idx in range(self.gui.channel_listbox.size()):
-                if self.gui.channel_listbox.get(idx) == target:
-                    current_bg = self.gui.channel_listbox.itemcget(idx, 'bg')
-                    if current_bg != 'red':
-                        self.gui.channel_listbox.itemconfig(idx, {'bg':'green'})
-                    break
+            # Display the message in the text_widget if the target matches the current channel or DM
+            if target == self.current_channel and self.gui.irc_client == self:
+                self.gui.insert_text_widget(action_message)
+                self.gui.highlight_nickname()
+            else:
+                # If it's not the currently viewed channel, highlight the channel in green in the Listbox
+                for idx in range(self.gui.channel_listbox.size()):
+                    if self.gui.channel_listbox.get(idx) == target:
+                        current_bg = self.gui.channel_listbox.itemcget(idx, 'bg')
+                        if current_bg != 'red':
+                            self.gui.channel_listbox.itemconfig(idx, {'bg':self.activity_note_color})
+                        break
+        except Exception as e:
+            print(f"Exception in handle_action_ctcp: {e}")
 
     def trim_messages(self, target, server_name=None):
         # Check if the target server exists in channel_messages
@@ -700,28 +710,34 @@ class RudeChatClient:
             await self.trigger_beep_notification(channel_name=channel, message_content=notification_msg)
 
     def highlight_channel(self, channel):
-        # Ensure the channel is part of the joined_channels before highlighting
-        if channel in self.joined_channels and self.gui.irc_client == self:
-            # Find and highlight the channel in the GUI listbox
-            for idx in range(self.gui.channel_listbox.size()):
-                if self.gui.channel_listbox.get(idx) == channel:
-                    self.gui.channel_listbox.itemconfig(idx, {'bg': 'red'})
-                    break
-        else:
-            pass
+        try:
+            # Ensure the channel is part of the joined_channels before highlighting
+            if channel in self.joined_channels and self.gui.irc_client == self:
+                # Find and highlight the channel in the GUI listbox
+                for idx in range(self.gui.channel_listbox.size()):
+                    if self.gui.channel_listbox.get(idx) == channel:
+                        self.gui.channel_listbox.itemconfig(idx, {'bg': self.mention_note_color})
+                        break
+            else:
+                pass
+        except Exception as e:
+            print(f"Exception in highlighted_channel: {e}")
 
     def highlight_server(self, server_activity=False):
-        for idx in range(self.gui.server_listbox.size()):
-            if self.gui.server_listbox.get(idx) == self.server_name and self.gui.irc_client != self:
-                self.gui.server_listbox.itemconfig(idx, {'bg': 'red'})
-                # Store the highlighted server information with red background
-                self.highlighted_servers[self.server_name] = {'index': idx, 'bg': 'red'}
-                break
-            elif self.gui.server_listbox.get(idx) == self.server_name and server_activity == True:
-                self.gui.server_listbox.itemconfig(idx, {'bg': 'green'})
-                # Store the highlighted server information with green background
-                self.highlighted_servers[self.server_name] = {'index': idx, 'bg': 'green'}
-                break
+        try:
+            for idx in range(self.gui.server_listbox.size()):
+                if self.gui.server_listbox.get(idx) == self.server_name and self.gui.irc_client != self:
+                    self.gui.server_listbox.itemconfig(idx, {'bg': self.mention_note_color})
+                    # Store the highlighted server information with red background
+                    self.highlighted_servers[self.server_name] = {'index': idx, 'bg': self.mention_note_color}
+                    break
+                elif self.gui.server_listbox.get(idx) == self.server_name and server_activity == True:
+                    self.gui.server_listbox.itemconfig(idx, {'bg': self.activity_note_color})
+                    # Store the highlighted server information with green background
+                    self.highlighted_servers[self.server_name] = {'index': idx, 'bg': self.activity_note_color}
+                    break
+        except Exception as e:
+            print(f"Exception in highlight_server: {e}")
 
     async def trigger_beep_notification(self, channel_name=None, message_content=None):
         """
@@ -903,7 +919,7 @@ class RudeChatClient:
                 if self.gui.channel_listbox.get(idx) == highlighted_channel:
                     current_bg = self.gui.channel_listbox.itemcget(idx, 'bg')
                     if current_bg != 'red':
-                        self.gui.channel_listbox.itemconfig(idx, {'bg': 'green'})
+                        self.gui.channel_listbox.itemconfig(idx, {'bg': self.activity_note_color})
                     break
 
     def save_highlight(self, channel, joined_index, is_mention):
@@ -915,14 +931,14 @@ class RudeChatClient:
             current_highlight = self.highlighted_channels[self.server_name].get(channel)
 
             if is_mention and self.gui.irc_client == self:
-                self.highlighted_channels[self.server_name][channel] = {'index': joined_index, 'bg': 'red'}
+                self.highlighted_channels[self.server_name][channel] = {'index': joined_index, 'bg': self.mention_note_color}
             elif is_mention and self.gui.irc_client != self:
-                self.highlighted_channels[self.server_name][channel] = {'index': joined_index, 'bg': 'red'}
+                self.highlighted_channels[self.server_name][channel] = {'index': joined_index, 'bg': self.mention_note_color}
             else:
                 if not current_highlight and is_mention == False:
-                    self.highlighted_channels[self.server_name][channel] = {'index': joined_index, 'bg': 'green'}
+                    self.highlighted_channels[self.server_name][channel] = {'index': joined_index, 'bg': self.activity_note_color}
                 elif current_highlight['bg'] != 'red':
-                    self.highlighted_channels[self.server_name][channel] = {'index': joined_index, 'bg': 'green'}
+                    self.highlighted_channels[self.server_name][channel] = {'index': joined_index, 'bg': self.activity_note_color}
         except Exception as e:
             print(f"Exception in save_highlight: {e}")
 
@@ -1897,6 +1913,8 @@ class RudeChatClient:
         """
         Logs your chats for later use.
         """
+        if not self.use_logging:
+            return
         timestamp = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 
         # Split the message into lines
@@ -2187,7 +2205,7 @@ class RudeChatClient:
                 channel_name = args[1]
                 if channel_name in self.joined_channels:
                     self.current_channel = channel_name
-                    self.display_last_messages(self.current_channel)
+                    self.display_last_messages(self.current_channel, self.server)
                     self.gui.highlight_nickname()
                 else:
                     self.gui.insert_text_widget(f"Not a member of channel {channel_name}\n")

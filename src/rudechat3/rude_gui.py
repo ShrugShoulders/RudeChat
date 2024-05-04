@@ -212,6 +212,7 @@ class RudeGui:
         self.user_nickname_color = self.user_nickname_color
         self.tab_complete_terminator = self.tab_complete_terminator
         self.generate_nickname_colors = self.generate_nickname_colors
+        self.channel_select_color = self.channel_select_color
         self.hidden_windows()
         self.highlight_nickname()
 
@@ -254,6 +255,7 @@ class RudeGui:
             self.topic_label_bg = config.get('WIDGETS', 'topic_label_bg', fallback='black')
             self.topic_label_fg = config.get('WIDGETS', 'topic_label_fg', fallback='white')
             self.show_server_window = config.getboolean('WIDGETS', 'show_server_window', fallback=True)
+            self.channel_select_color = config.get('WIDGETS', 'channel_select_color', fallback='blue')
             self.tab_complete_terminator = config.get('WIDGETS', 'tab_complete_terminator', fallback=':')
 
         else:
@@ -287,6 +289,7 @@ class RudeGui:
             self.topic_label_bg = 'black'
             self.topic_label_fg = 'white'
             self.show_server_window = True
+            self.channel_select_color = 'blue'
             self.tab_complete_terminator = ":"
             print("GUI Fallbacks hit.")
 
@@ -1004,7 +1007,7 @@ class RudeGui:
             loop.create_task(self.switch_channel(clicked_channel))
 
             # Turn background blue
-            self.channel_listbox.itemconfig(clicked_index, {'bg': 'blue'})
+            self.channel_listbox.itemconfig(clicked_index, {'bg': self.channel_select_color})
             self.highlight_nickname()
 
             # Remove the clicked channel from highlighted_channels dictionary
