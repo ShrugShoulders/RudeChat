@@ -1916,7 +1916,7 @@ class RudeChatClient:
         """
         Logs your chats for later use.
         """
-        print(f"[log_message DEBUG]Server: {server}, Channel: {channel}, Sender: {sender}, Message: {message}, If Is Sent: {is_sent}")
+        #print(f"[log_message DEBUG]Server: {server}, Channel: {channel}, Sender: {sender}, Message: {message}, If Is Sent: {is_sent}")
         if not self.use_logging:
             return
         timestamp = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')

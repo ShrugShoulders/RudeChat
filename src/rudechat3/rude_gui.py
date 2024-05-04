@@ -829,7 +829,6 @@ class RudeGui:
         self.insert_and_scroll()
 
     async def send_quit_to_all_clients(self, quit_message=None):
-        print(self.clients)
         try:       
             for irc_client in self.clients.values():
                 await irc_client.save_channel_messages()
