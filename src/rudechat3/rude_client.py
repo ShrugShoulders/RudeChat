@@ -827,19 +827,22 @@ class RudeChatClient:
             return target
 
     async def prepare_direct_message(self, sender, target, message, timestamp):
-        if self.server not in self.channel_messages:
-            self.channel_messages[self.server] = {}
-        if sender not in self.channel_messages[self.server]:
-            self.channel_messages[self.server][sender] = []
-
-        if self.is_direct_message(target) and sender not in self.joined_channels:
-            self.joined_channels.append(sender)
-            self.gui.channel_lists[self.server] = self.joined_channels
-            self.update_gui_channel_list()
-
-        self.save_message(self.server, target, sender, message, is_sent=False)
         self.log_message(self.server_name, target, sender, message, is_sent=False)
-        self.display_message(timestamp, sender, message, target, is_direct=True)
+        try:
+            if self.server not in self.channel_messages:
+                self.channel_messages[self.server] = {}
+            if sender not in self.channel_messages[self.server]:
+                self.channel_messages[self.server][sender] = []
+
+            if self.is_direct_message(target) and sender not in self.joined_channels:
+                self.joined_channels.append(sender)
+                self.gui.channel_lists[self.server] = self.joined_channels
+                self.update_gui_channel_list()
+
+            self.save_message(self.server, target, sender, message, is_sent=False)
+            self.display_message(timestamp, sender, message, target, is_direct=True)
+        except Exception as e:
+            print(f"Exception in prepare_direct_message: {e}")
 
     async def handle_channel_message(self, sender, target, message, timestamp):
         if self.server not in self.channel_messages:
@@ -1913,6 +1916,7 @@ class RudeChatClient:
         """
         Logs your chats for later use.
         """
+        print(f"[log_message DEBUG]Server: {server}, Channel: {channel}, Sender: {sender}, Message: {message}, If Is Sent: {is_sent}")
         if not self.use_logging:
             return
         timestamp = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
@@ -1948,6 +1952,8 @@ class RudeChatClient:
         logs_directory = os.path.join(script_directory, 'Logs')
 
         try:
+            if channel == self.nickname:
+                channel = sender
             # Create the Logs directory if it doesn't exist
             os.makedirs(logs_directory, exist_ok=True)
 
