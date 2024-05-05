@@ -59,6 +59,7 @@ class RudeChatClient:
         self.server_name = config.get('IRC', 'server_name', fallback=None)
         self.znc_connection = config.getboolean('IRC', 'znc_connection', fallback=False)
         self.znc_password = config.get('IRC', 'znc_password', fallback=None)
+        self.ignore_cert = config.get('IRC', 'ignore_cert', fallback=False)
 
         self.mention_note_color = config.get('IRC', 'mention_note_color', fallback='red')
         self.activity_note_color = config.get('IRC', 'activity_note_color', fallback='green')
@@ -146,13 +147,22 @@ class RudeChatClient:
 
         try:
             if self.ssl_enabled:
-                context = ssl.create_default_context(ssl.Purpose.SERVER_AUTH)
-                context.check_hostname = True
-                context.verify_mode = ssl.CERT_REQUIRED
-                self.reader, self.writer = await asyncio.wait_for(
-                    asyncio.open_connection(self.server, self.port, ssl=context),
-                    timeout=TIMEOUT
-                )
+                if not self.ignore_cert:
+                    context = ssl.create_default_context(ssl.Purpose.SERVER_AUTH)
+                    context.check_hostname = True
+                    context.verify_mode = ssl.CERT_REQUIRED
+                    self.reader, self.writer = await asyncio.wait_for(
+                        asyncio.open_connection(self.server, self.port, ssl=context),
+                        timeout=TIMEOUT
+                    )
+                elif self.ignore_cert:
+                    context = ssl.create_default_context()
+                    context.check_hostname = False
+                    context.verify_mode = ssl.CERT_NONE
+                    self.reader, self.writer = await asyncio.wait_for(
+                        asyncio.open_connection(self.server, self.port, ssl=context),
+                        timeout=TIMEOUT
+                    )
             else:
                 self.reader, self.writer = await asyncio.wait_for(
                     asyncio.open_connection(self.server, self.port),

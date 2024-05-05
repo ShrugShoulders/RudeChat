@@ -21,3 +21,4 @@ custom_sounds = False
 use_logging = True
 znc_connection = False
 znc_password = password
+ignore_cert = False
