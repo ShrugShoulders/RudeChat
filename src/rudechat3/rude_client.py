@@ -328,7 +328,9 @@ class RudeChatClient:
                             return
                         elif self.znc_connection:
                             await self.automatic_join()
+                            self.gui.insert_text_widget(f"ZNC Detected: Syncing now....")
                             await self.auto_topic_nicklist()
+                            self.gui.insert_text_widget(f"Sync Complete, Enjoy!")
                             return
                         elif sasl_authenticated and self.isupport_flag:
                             await self.automatic_join()
