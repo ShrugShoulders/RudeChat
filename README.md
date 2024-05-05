@@ -32,6 +32,15 @@ file name: conf.libera.rude
         sasl_password = password # SASL Paassword, if you know you konw. 
         use_time_stamp = True # Want time stamps to be shown next to nicks? True for yes, False for no. 
         show_hostmask = True # Want joins, parts, and quits to have full host masks? True for yes, False for no. 
+        show_join_part_quit_nick = True # This enabled or disables showing joins parts and nick messages. 
+        use_beep_noise = True # Enables beep notifications. 
+        auto_whois = True # Enables or Disables auto whois capabilities. 
+        custom_sounds = False # Custom Sounds - Linux Only.
+        use_logging = True # Disables or Enables Logging. 
+        znc_connection = False # Tells the client you're using a ZNC. 
+        znc_password = password # Password for ZNC Server. 
+        ignore_cert = False # You can ignore ssl certs that are not signed. 
+        znc_user = Rude # User name for ZNC. 
 
 ### GUI Config Example:
 
@@ -58,5 +67,14 @@ file name: gui_config.ini
         entry_label_fg = #C0FFEE # This is the foreground color of the label directly to the left of the Entry Widget.
         server_listbox_bg = black # This is the server list background color. 
         server_listbox_fg = white # This is the server list foreground color (text)
+        tab_complete_terminator = : # Don't like to end your nickname tab complets with a colon? Change it!
+        channel_label_bg = black # Label for Channel list background
+        channel_label_fg = white # Label color for Channel List foreground
+        servers_label_bg = black # Servers label background
+        servers_label_fg = white # Servers label foreground 
+        topic_label_bg = black # Topic Label background. 
+        topic_label_fg = white # Topic Label Text Color
+        channel_select_color = blue # Channel selected color
+        show_server_window = False # Server Window Toggle. 
 
 ![alt text](https://i.imgur.com/2DmsET8.png)
