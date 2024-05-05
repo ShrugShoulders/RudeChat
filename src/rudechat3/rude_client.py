@@ -183,7 +183,7 @@ class RudeChatClient:
         if self.znc_connection:
             await self.send_message(f'NICK {self.znc_user}')
             await self.send_message(f'USER {self.znc_user} 0 * :{self.znc_user}')
-        elif not znc_connection:
+        elif not self.znc_connection:
             await self.send_message(f'NICK {self.nickname}')
             await self.send_message(f'USER {self.nickname} 0 * :{self.nickname}')
         
@@ -272,7 +272,6 @@ class RudeChatClient:
             buffer += decoded_data
             while '\r\n' in buffer:
                 line, buffer = buffer.split('\r\n', 1)
-                print(f"Server Connection Line {line}")
                 tokens = irctokens.tokenise(line)
 
                 match tokens.command:
@@ -1667,7 +1666,7 @@ class RudeChatClient:
                         continue
 
                     # Debug statement to print the line before tokenizing
-                    print(f"Debug: About to tokenize the line - '{line}'")
+                    #print(f"Debug: About to tokenize the line - '{line}'")
 
                     tokens = irctokens.tokenise(line)
                 except ValueError as e:
