@@ -330,9 +330,6 @@ class RudeChatClient:
                             return
                         elif self.znc_connection:
                             await self.automatic_join()
-                            self.gui.insert_text_widget(f"ZNC Detected: Syncing now....\n")
-                            await self.auto_topic_nicklist()
-                            self.gui.insert_text_widget(f"Sync Complete, Enjoy!\n")
                             return
                         elif sasl_authenticated and self.isupport_flag:
                             await self.automatic_join()
@@ -566,6 +563,41 @@ class RudeChatClient:
             except AttributeError as e:  # Catch AttributeError
                 print(f"AttributeError caught in keep_alive: {e}")
                 self.loop_running = False
+
+    async def znc_sync(self):
+        syncing = True
+        sync_counter = 0
+        while syncing:
+            try:
+                if self.znc_connection and sync_counter == 0:
+                    await asyncio.sleep(10)
+                    self.gui.insert_text_widget(f"ZNC Detected: Syncing now....\n")
+                    await self.auto_topic_nicklist()
+                    self.gui.insert_text_widget(f"Sync Complete, Enjoy!\n")
+                    sync_counter += 1
+                    syncing = False
+                    break
+                else:
+                    sync_counter += 1
+                    syncing = False
+                    break
+
+            except asyncio.CancelledError:
+                # If the event loop is stopped, break out of the loop
+                print("Exiting znc_sync loop.")
+                syncing = False
+                break
+
+            except (ConnectionResetError, OSError) as e:
+                print(f"Exception caught in znc_sync: {e}")
+                syncing = False
+                break
+
+            except Exception as e:  # Catch other exceptions
+                print(f"Unhandled exception in znc_sync: {e}")
+                syncing = False
+                break
+        return
 
     async def auto_save(self):
         while self.loop_running:
