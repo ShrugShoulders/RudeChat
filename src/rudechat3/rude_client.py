@@ -1499,8 +1499,25 @@ class RudeChatClient:
                     ignore_suggestion = f"*!{self.whois_data[nickname]['Username']}@{self.whois_data[nickname]['Hostname']}"
                     whois_response += f"\nSuggested /ignore mask: {ignore_suggestion}\n"
 
-                    self.gui.insert_text_widget(whois_response)
+                    self.whois_display(whois_response)
                     await self.save_whois_to_file(nickname)
+
+    def whois_display(self, whois_response):
+        try:
+            whois_channel = "&WHOIS&"
+            self.joined_channels.append(whois_channel)
+            self.gui.channel_lists[self.server] = self.joined_channels
+            self.update_gui_channel_list()
+
+            # Add help data to the channel history
+            if whois_channel not in self.channel_messages[self.server]:
+                self.channel_messages[self.server][whois_channel] = [] 
+            self.channel_messages[self.server][whois_channel].append(f"{whois_response}\n")
+
+            # Update the GUI
+            self.gui.insert_and_scroll()
+        except Exception as e:
+            print(f"Exception in help: {e}")
 
     async def save_whois_to_file(self, nickname):
         """Save WHOIS data for a given nickname to a file."""
@@ -1704,8 +1721,7 @@ class RudeChatClient:
             
             if not self.use_colors:
                 # Remove IRC colors and formatting using regular expressions
-                cleaned_data = re.sub(r'\x03(?:\d{1,2}(?:,\d{1,2})?)?', '', cleaned_data)  # Remove color codes
-                cleaned_data = re.sub(r'[\x02\x0F\x16\x1D\x1F]', '', cleaned_data)  # Remove formatting codes
+                cleaned_data = re.sub(r'\x03(?:\d{1,2}(?:,\d{1,2})?)?', '', cleaned_data)
             
             buffer += cleaned_data
 
