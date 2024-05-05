@@ -328,9 +328,9 @@ class RudeChatClient:
                             return
                         elif self.znc_connection:
                             await self.automatic_join()
-                            self.gui.insert_text_widget(f"ZNC Detected: Syncing now....")
+                            self.gui.insert_text_widget(f"ZNC Detected: Syncing now....\n")
                             await self.auto_topic_nicklist()
-                            self.gui.insert_text_widget(f"Sync Complete, Enjoy!")
+                            self.gui.insert_text_widget(f"Sync Complete, Enjoy!\n")
                             return
                         elif sasl_authenticated and self.isupport_flag:
                             await self.automatic_join()
@@ -1568,6 +1568,8 @@ class RudeChatClient:
         current_time = time.time()
         data = f"PONG from {pong_server}\n"
         if pong_server.startswith('irc'):
+            pass
+        elif self.znc_connection and '.' in pong_server:
             pass
         else:
             self.add_server_message(data)
