@@ -10,6 +10,7 @@ ssl_enabled = True
 sasl_enabled = False
 sasl_username = splithead
 sasl_password = password
+use_irc_colors = True
 mention_note_color = red
 activity_note_color = green
 use_time_stamp = True

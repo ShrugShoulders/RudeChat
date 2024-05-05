@@ -61,6 +61,7 @@ class RudeChatClient:
         self.znc_password = config.get('IRC', 'znc_password', fallback=None)
         self.ignore_cert = config.get('IRC', 'ignore_cert', fallback=False)
         self.znc_user = config.get('IRC', 'znc_user', fallback=None)
+        self.use_colors = config.getboolean('IRC', 'use_irc_colors', fallback=False)
 
         self.mention_note_color = config.get('IRC', 'mention_note_color', fallback='red')
         self.activity_note_color = config.get('IRC', 'activity_note_color', fallback='green')
@@ -89,6 +90,7 @@ class RudeChatClient:
         self.auto_whois = config.getboolean('IRC', 'auto_whois', fallback=True)
         self.custom_sounds = config.getboolean('IRC', 'custom_sounds', fallback=False)
         self.use_logging = config.getboolean('IRC', 'use_logging', fallback=True)
+        self.use_colors = config.getboolean('IRC', 'use_irc_colors', fallback=False)
         self.gui.update_nick_channel_label()
 
     async def load_channel_messages(self):
@@ -1654,6 +1656,12 @@ class RudeChatClient:
 
             decoded_data = data.decode('UTF-8', errors='ignore')
             cleaned_data = decoded_data.replace("\x06", "")  # Remove the character with ASCII value 6
+            
+            if not self.use_colors:
+                # Remove IRC colors and formatting using regular expressions
+                cleaned_data = re.sub(r'\x03(?:\d{1,2}(?:,\d{1,2})?)?', '', cleaned_data)  # Remove color codes
+                cleaned_data = re.sub(r'[\x02\x0F\x16\x1D\x1F]', '', cleaned_data)  # Remove formatting codes
+            
             buffer += cleaned_data
 
             while '\n' in buffer:
@@ -2341,6 +2349,13 @@ class RudeChatClient:
                     self.gui.insert_server_widget("Client Disconnected.")
                     await self.disconnect()
                     await self.reset_state()
+
+            case "sync":
+                if self.znc_connection:
+                    self.gui.insert_text_widget(f"Syncing Nicks & Channel Topics...")
+                    await self.auto_topic_nicklist()
+                else:
+                    self.gui.insert_text_widget("You're Not Using A ZNC")
             case None:
                 await self.handle_user_input(user_input, timestamp)
 
@@ -2889,6 +2904,9 @@ class RudeChatClient:
                 "/help - Redisplays this message",
                 "/disconnect - Will disconnect you from the currently connected servers",
                 "/connect <server_name> - Will connect you to the given server, is case sensitive.",
+            ],
+            "ZNC Commands": [
+                "/sync - Syncs your nickname list and channel topics.",
             ],
         }
 
