@@ -60,6 +60,7 @@ class RudeChatClient:
         self.znc_connection = config.getboolean('IRC', 'znc_connection', fallback=False)
         self.znc_password = config.get('IRC', 'znc_password', fallback=None)
         self.ignore_cert = config.get('IRC', 'ignore_cert', fallback=False)
+        self.znc_user = config.get('IRC', 'znc_user', fallback=None)
 
         self.mention_note_color = config.get('IRC', 'mention_note_color', fallback='red')
         self.activity_note_color = config.get('IRC', 'activity_note_color', fallback='green')
@@ -179,8 +180,12 @@ class RudeChatClient:
 
     async def send_initial_commands(self):
         self.gui.insert_text_widget(f'Sent client registration commands.\n')
-        await self.send_message(f'NICK {self.nickname}')
-        await self.send_message(f'USER {self.nickname} 0 * :{self.nickname}')
+        if self.znc_connection:
+            await self.send_message(f'NICK {self.znc_user}')
+            await self.send_message(f'USER {self.znc_user} 0 * :{self.znc_user}')
+        elif not znc_connection:
+            await self.send_message(f'NICK {self.nickname}')
+            await self.send_message(f'USER {self.nickname} 0 * :{self.nickname}')
         
         # Start capability negotiation
         if self.sasl_enabled:
@@ -239,6 +244,14 @@ class RudeChatClient:
         for channel in self.auto_join_channels:
             await self.join_channel(channel)
             await asyncio.sleep(0.1)
+
+    async def auto_topic_nicklist(self):
+        for channel in self.auto_join_channels:
+            # Send NAMES command
+            await self.send_message(f"NAMES {channel}")
+            # Send TOPIC command
+            await self.send_message(f"TOPIC {channel}")
+            await asyncio.sleep(0.2)
 
     async def _await_welcome_message(self):
         self.gui.insert_text_widget(f'Waiting for welcome message from the server.\n')
@@ -316,6 +329,7 @@ class RudeChatClient:
                             return
                         elif self.znc_connection:
                             await self.automatic_join()
+                            await self.auto_topic_nicklist()
                             return
                         elif sasl_authenticated and self.isupport_flag:
                             await self.automatic_join()
