@@ -431,6 +431,17 @@ class RudeChatClient:
             self.gui.channel_lists[self.server] = self.joined_channels
             self.update_gui_channel_list()
 
+    async def detach_channel(self, channel):
+        if channel in self.joined_channels:
+            self.joined_channels.remove(channel)
+            
+            # Remove the channel entry from the highlighted_channels dictionary
+            if self.server_name in self.highlighted_channels:
+                self.highlighted_channels[self.server_name].pop(channel, None)
+
+            self.gui.channel_lists[self.server] = self.joined_channels
+            self.update_gui_channel_list()
+
     def update_gui_channel_list(self):
         # Clear existing items
         self.gui.channel_listbox.delete(0, tk.END)
@@ -2381,6 +2392,14 @@ class RudeChatClient:
                     self.gui.insert_server_widget("Client Disconnected.")
                     await self.disconnect()
                     await self.reset_state()
+
+            case "detach":
+                channel = args[1] if len(args) > 1 else None
+                if channel and self.znc_connection:
+                    await self.send_message(f"detach {channel}")
+                    await self.detach_channel(channel)
+                else:
+                    self.gui.insert_text_widget("You're either not connect to a ZNC or haven't provided a channel.")
 
             case "sync":
                 if self.znc_connection:
