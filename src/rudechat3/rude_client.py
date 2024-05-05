@@ -441,6 +441,8 @@ class RudeChatClient:
 
             self.gui.channel_lists[self.server] = self.joined_channels
             self.update_gui_channel_list()
+            self.gui.insert_text_widget(f"You have \x02DETACHED\x0F from \x02{channel}\x0F\n")
+            self.gui.insert_text_widget(f"To \x02REATTACH\x0F simply issue a normal /join \x02{channel}\x0F\n")
 
     def update_gui_channel_list(self):
         # Clear existing items
@@ -2399,7 +2401,7 @@ class RudeChatClient:
                     await self.send_message(f"detach {channel}")
                     await self.detach_channel(channel)
                 else:
-                    self.gui.insert_text_widget("You're either not connect to a ZNC or haven't provided a channel.")
+                    self.gui.insert_text_widget("You're either not connected to a ZNC or haven't provided a channel.")
 
             case "sync":
                 if self.znc_connection:
@@ -2902,6 +2904,7 @@ class RudeChatClient:
         # Categories and their associated commands
         categories = {
             "Channel Management": [
+                "_________",
                 "Use Your Right Click for Config and more.",
                 "To use formatting use the format control characters as follows",
                 "/join <channel> - Joins a channel",
@@ -2916,6 +2919,7 @@ class RudeChatClient:
                 "/mentions to show all mentions of your nickname. /mentions clear to clear these messages",
             ],
             "String Formatting": [
+                "_________",
                 "\\x02 - Bold",
                 "\\x1D - Italic",
                 "\\x1F - Underline",
@@ -2927,11 +2931,13 @@ class RudeChatClient:
                 "When using the GUI for format select first the type of format example: bold. Then select the color.",
             ],
             "Private Messaging": [
+                "_________",
                 "/query <nickname> - Opens a DM with a user",
                 "/cq <nickname> - Closes a DM with a user",
                 "/msg <nickname> [message] - Sends a private message to a user",
             ],
             "User Commands": [
+                "_________",
                 "/nick <new nickname> - Changes the user's nickname",
                 "/away [message] - Sets the user as away",
                 "/back - Removes the 'away' status",
@@ -2941,32 +2947,49 @@ class RudeChatClient:
                 "/clear - clears the chat window and removes all messages for the current channel",
             ],
             "Server Interaction": [
+                "_________",
                 "/ping [user] - Pings the currently selected server, if user is specified it will ping that user.",
                 "/quote <IRC command> - Sends raw IRC message to the server",
                 "/CTCP <nickname> <command> - Sends a CTCP request",
                 "/mode <mode> [channel] - Sets mode for user (optionally in a specific channel)",
             ],
             "Broadcasting": [
+                "_________",
                 "/mac <macro> - sends a chosen macro to a channel /mac - shows available macros",
                 "/notice <target> [message]",
             ],
             "Help and Connection": [
+                "_________",
                 "/quit - Closes connection and client",
                 "/help - Redisplays this message",
                 "/disconnect - Will disconnect you from the currently connected servers",
                 "/connect <server_name> - Will connect you to the given server, is case sensitive.",
             ],
             "ZNC Commands": [
+                "_________",
                 "/sync - Syncs your nickname list and channel topics.",
+                "/detach - Detaches you from the given channel Example: /detach #channel",
             ],
         }
 
-        # Display the categorized commands
-        for category, commands in categories.items():
-            self.gui.insert_text_widget(f"\n{category}:\n")
-            for cmd in commands:
-                self.gui.insert_text_widget(f"{cmd}\n")
-                self.gui.insert_and_scroll()
+        try:
+            help_channel = "&HELP&"
+            self.joined_channels.append(help_channel)
+            self.gui.channel_lists[self.server] = self.joined_channels
+            self.update_gui_channel_list()
+
+            # Add help data to the channel history
+            for category, commands in categories.items():
+                if help_channel not in self.channel_messages[self.server]:
+                    self.channel_messages[self.server][help_channel] = [] 
+                self.channel_messages[self.server][help_channel].append(f"{category}:\n")
+                for cmd in commands:
+                    self.channel_messages[self.server][help_channel].append(f"{cmd}\n")
+
+            # Update the GUI
+            self.gui.insert_and_scroll()
+        except Exception as e:
+            print(f"Exception in help: {e}")
 
     def set_gui(self, gui):
         self.gui = gui
