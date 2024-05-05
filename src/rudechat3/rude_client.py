@@ -57,6 +57,9 @@ class RudeChatClient:
         self.sasl_username = config.get('IRC', 'sasl_username', fallback=None)
         self.sasl_password = config.get('IRC', 'sasl_password', fallback=None)
         self.server_name = config.get('IRC', 'server_name', fallback=None)
+        self.znc_connection = config.getboolean('IRC', 'znc_connection', fallback=False)
+        self.znc_password = config.get('IRC', 'znc_password', fallback=None)
+
         self.mention_note_color = config.get('IRC', 'mention_note_color', fallback='red')
         self.activity_note_color = config.get('IRC', 'activity_note_color', fallback='green')
         self.use_time_stamp = config.getboolean('IRC', 'use_time_stamp', fallback=True)
@@ -155,6 +158,10 @@ class RudeChatClient:
                     asyncio.open_connection(self.server, self.port),
                     timeout=TIMEOUT
                 )
+
+            if self.znc_connection:
+                await self.send_message(f'PASS {self.znc_password}')
+
         except asyncio.TimeoutError:
             self.gui.insert_text_widget(f"Connection timeout. Please try again later.\n")
         except OSError as e:
@@ -242,6 +249,7 @@ class RudeChatClient:
             buffer += decoded_data
             while '\r\n' in buffer:
                 line, buffer = buffer.split('\r\n', 1)
+                print(f"Server Connection Line {line}")
                 tokens = irctokens.tokenise(line)
 
                 match tokens.command:
@@ -294,6 +302,9 @@ class RudeChatClient:
                         self.handle_motd_end(tokens)
                         motd_received = True
                         if not self.use_nickserv_auth and not self.sasl_enabled:
+                            await self.automatic_join()
+                            return
+                        elif self.znc_connection:
                             await self.automatic_join()
                             return
                         elif sasl_authenticated and self.isupport_flag:
@@ -1632,7 +1643,7 @@ class RudeChatClient:
                         continue
 
                     # Debug statement to print the line before tokenizing
-                    #print(f"Debug: About to tokenize the line - '{line}'")
+                    print(f"Debug: About to tokenize the line - '{line}'")
 
                     tokens = irctokens.tokenise(line)
                 except ValueError as e:

@@ -19,3 +19,5 @@ use_beep_noise = True
 auto_whois = True
 custom_sounds = False
 use_logging = True
+znc_connection = False
+znc_password = password
