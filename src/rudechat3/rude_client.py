@@ -484,10 +484,11 @@ class RudeChatClient:
             self.gui.user_listbox.insert(tk.END, user)
 
     async def reset_state(self):
-        self.gui.clear_channel_listbox()
-        self.gui.clear_user_listbox()
-        self.gui.clear_topic_label()
-        self.gui.clear_text_widget()
+        #self.gui.clear_channel_listbox()
+        #self.gui.clear_user_listbox()
+        #self.gui.clear_topic_label()
+        #self.gui.clear_text_widget()
+        self.motd_dict.clear()
         self.joined_channels.clear()
         self.motd_lines.clear()
         self.channel_users.clear()
