@@ -911,7 +911,7 @@ class RudeChatClient:
             self.highlight_channel(channel)
 
             channel_idx = self.joined_channels.index(channel)
-            self.save_highlight(highlighted_channel, channel_idx, is_mention=True)
+            self.save_highlight(channel, channel_idx, is_mention=True)
             await self.send_message(f"NAMES {channel}")
             await self.send_message(f"TOPIC {channel}")
         except Exception as e:
