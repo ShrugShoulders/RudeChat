@@ -256,6 +256,14 @@ class RudeChatClient:
             await self.send_message(f"TOPIC {channel}")
             await asyncio.sleep(0.2)
 
+    def server_message_handler(self, tokens):
+        if len(tokens.params) > 3:
+            params_combined = ' '.join(tokens.params[1:])
+            self.add_server_message(params_combined + "\n")
+        else:
+            data = tokens.params[1]
+            self.add_server_message(data + "\n")
+
     async def _await_welcome_message(self):
         self.gui.insert_text_widget(f'Waiting for welcome message from the server.\n')
         buffer = ""
@@ -302,6 +310,26 @@ class RudeChatClient:
                         self.gui.insert_text_widget(f'Connected to the server: {self.server}:{self.port}\n')
                         received_001 = True
                         self.gui.insert_and_scroll()
+
+                    case "002":
+                        self.server_message_handler(tokens)
+                    case "003":
+                        self.server_message_handler(tokens)
+                    case "004":
+                        self.server_message_handler(tokens)
+
+                    case "251":
+                        self.server_message_handler(tokens)
+                    case "252":
+                        self.server_message_handler(tokens)
+                    case "254":
+                        self.server_message_handler(tokens)
+                    case "255":
+                        self.server_message_handler(tokens)
+                    case "265":
+                        self.server_message_handler(tokens)
+                    case "NICK":
+                        await self.handle_nick(tokens)
 
                     case "005":
                         self.handle_isupport(tokens)
@@ -353,6 +381,7 @@ class RudeChatClient:
                         got_396 = True
 
                     case _:
+                        self.save_error(tokens, line)
                         self.gui.insert_and_scroll()
 
     async def handle_cap(self, tokens):
@@ -1901,9 +1930,21 @@ class RudeChatClient:
                     case "PONG":
                         self.handle_pong(tokens)
                     case _:
-                        print(f"Debug: Unhandled command {tokens.command}. Full line: {line}")
+                        self.save_error(tokens, line)
                         if line.startswith(f":{self.server}"):
                             self.handle_server_message(line)
+
+    def save_error(self, tokens, line):
+        script_directory = os.path.dirname(os.path.abspath(__file__))
+        error_log_path = os.path.join(script_directory, "token_error_log.txt")
+        error = f"Debug: Unhandled command {tokens.command}. Full line: {line}\n"
+
+        try:
+            with open(error_log_path, "a") as error_log_file:
+                error_log_file.write(error)
+        except FileNotFoundError:
+            with open(error_log_path, "w") as error_log_file:
+                error_log_file.write(error)
 
     def command_900(self, tokens):
         logged_in_as = tokens.params[3]
