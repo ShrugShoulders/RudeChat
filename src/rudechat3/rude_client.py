@@ -18,6 +18,7 @@ class RudeChatClient:
         self.motd_lines = []
         self.chantypes = ''
         self.ignore_list = []
+        self.detached_channels = []
         self.current_channel = ''
         self.nickname = ''
         self.motd_dict = {}
@@ -433,6 +434,7 @@ class RudeChatClient:
 
     async def detach_channel(self, channel):
         if channel in self.joined_channels:
+            self.detached_channels.append(channel)
             self.joined_channels.remove(channel)
             
             # Remove the channel entry from the highlighted_channels dictionary
@@ -885,6 +887,12 @@ class RudeChatClient:
         if self.nickname.lower() in message.lower():
             await self.notify_user_of_mention(self.server, target, sender, message)
 
+            if target in self.detached_channels and self.znc_connection:
+                await self.auto_attach(target)
+
+            if target not in self.detached_channels and target not in self.joined_channels and self.znc_connection:
+                await self.auto_attach(target)
+
             if target in self.mentions:
                 # If the channel is already there, append the new mention to the list of mentions for that channel
                 self.mentions[target].append(f'{timestamp} <{sender}> {message}')
@@ -893,6 +901,21 @@ class RudeChatClient:
                 self.mentions[target] = [f'{timestamp} <{sender}> {message}']
         else:
             pass
+
+    async def auto_attach(self, channel):
+        try:
+            self.joined_channels.append(channel)
+            self.gui.channel_lists[self.server] = self.joined_channels
+            self.update_gui_channel_list()
+
+            self.highlight_channel(channel)
+
+            channel_idx = self.joined_channels.index(channel)
+            self.save_highlight(highlighted_channel, channel_idx, is_mention=True)
+            await self.send_message(f"NAMES {channel}")
+            await self.send_message(f"TOPIC {channel}")
+        except Exception as e:
+            print(f"Exception in auto_attach: {e}")
 
     def is_ctcp_command(self, message):
         return message.startswith('\x01') and message.endswith('\x01')
