@@ -386,7 +386,7 @@ class RudeChatClient:
                         if not self.use_nickserv_auth and not self.sasl_enabled and not self.znc_connection:
                             await self.automatic_join()
                             return
-                        elif self.znc_connection and not self.sasl_enabled and not self.use_nickserv_auth:
+                        elif self.znc_connection and self.isupport_flag and not self.sasl_enabled and not self.use_nickserv_auth:
                             await self.automatic_join()
                             znc_connected = True
                         elif sasl_authenticated and self.isupport_flag and not self.znc_connection:
