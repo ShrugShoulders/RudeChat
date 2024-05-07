@@ -276,6 +276,7 @@ class RudeChatClient:
         logged_in = False
         nickserv_sent = False
         got_396 = False
+        znc_connected = False
         count_366 = 0
 
         while True:
@@ -340,6 +341,9 @@ class RudeChatClient:
                         await self.handle_privmsg(tokens)
                     case "MODE":
                         self.handle_mode(tokens)
+                    case "305":
+                        message = "You are no longer marked as being away"
+                        self.gui.insert_text_widget(f"{message}\n")
                     case "306":
                         message = "You have been marked as being away"
                         self.gui.insert_text_widget(f"{message}\n")
@@ -353,7 +357,7 @@ class RudeChatClient:
                     case "366":  # End of NAMES list
                         self.handle_end_of_names_list()
                         count_366 += 1
-                        if len(self.joined_channels) == count_366 and self.znc_connection:
+                        if len(self.joined_channels) == count_366 and znc_connected:
                             return
 
                     case "005":
@@ -382,8 +386,9 @@ class RudeChatClient:
                         if not self.use_nickserv_auth and not self.sasl_enabled and not self.znc_connection:
                             await self.automatic_join()
                             return
-                        elif self.znc_connection:
+                        elif self.znc_connection and not self.sasl_enabled and not self.use_nickserv_auth:
                             await self.automatic_join()
+                            znc_connected = True
                         elif sasl_authenticated and self.isupport_flag and not self.znc_connection:
                             await self.automatic_join()
                             return
