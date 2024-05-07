@@ -250,10 +250,13 @@ class RudeChatClient:
 
     async def auto_topic_nicklist(self):
         for channel in self.auto_join_channels:
-            # Send NAMES command
-            await self.send_message(f"NAMES {channel}")
-            # Send TOPIC command
-            await self.send_message(f"TOPIC {channel}")
+            if channel in self.joined_channels:
+                # Check if topic is empty
+                if not self.gui.channel_topics.get(self.server, {}).get(channel):
+                    await self.send_message(f"TOPIC {channel}")
+                # Check if names list is empty
+                if not self.channel_users.get(channel):
+                    await self.send_message(f"NAMES {channel}")
             await asyncio.sleep(0.2)
 
     def server_message_handler(self, tokens):
@@ -278,6 +281,7 @@ class RudeChatClient:
         got_396 = False
         znc_connected = False
         count_366 = 0
+        got_topic = 0
 
         while True:
             data = await self.reader.read(4096)
@@ -353,6 +357,7 @@ class RudeChatClient:
                     case "332" | "333" | "TOPIC":
                         print("Topic Got")
                         self.handle_topic(tokens)
+                        got_topic += 1
 
                     case "353":  # NAMES list
                         print("Names List")
@@ -362,7 +367,7 @@ class RudeChatClient:
                         self.handle_end_of_names_list()
                         count_366 += 1
                         print(count_366)
-                        if len(self.joined_channels) == count_366 and znc_connected:
+                        if len(self.joined_channels) >= count_366 and len(self.joined_channels) >= got_topic and znc_connected:
                             print("Returned: ZNC Connected")
                             return
 
