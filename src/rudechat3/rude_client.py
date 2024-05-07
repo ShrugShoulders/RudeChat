@@ -53,7 +53,7 @@ class RudeChatClient:
         self.nickname = config.get('IRC', 'nickname')
         self.use_nickserv_auth = config.getboolean('IRC', 'use_nickserv_auth', fallback=False)
         self.nickserv_password = config.get('IRC', 'nickserv_password') if self.use_nickserv_auth else None
-        self.auto_join_channels = config.get('IRC', 'auto_join_channels').split(',')
+        self.auto_join_channels = config.get('IRC', 'auto_join_channels', fallback=None).split(',')
         self.sasl_enabled = config.getboolean('IRC', 'sasl_enabled', fallback=False)
         self.sasl_username = config.get('IRC', 'sasl_username', fallback=None)
         self.sasl_password = config.get('IRC', 'sasl_password', fallback=None)
@@ -367,7 +367,7 @@ class RudeChatClient:
                         self.handle_end_of_names_list()
                         count_366 += 1
                         print(count_366)
-                        if len(self.joined_channels) >= count_366 and len(self.joined_channels) >= got_topic and znc_connected:
+                        if count_366 >= len(self.joined_channels) and got_topic >= len(self.joined_channels) and znc_connected:
                             print("Returned: ZNC Connected")
                             return
 
@@ -398,7 +398,10 @@ class RudeChatClient:
                             await self.automatic_join()
                             return
                         elif self.znc_connection and self.isupport_flag and not self.sasl_enabled and not self.use_nickserv_auth:
-                            await self.automatic_join()
+                            if self.auto_join_channels != None:
+                                await self.automatic_join()
+                            else:
+                                return
                             znc_connected = True
                             print(f"Flag: {znc_connected}, config: {self.znc_connection}")
                         elif sasl_authenticated and self.isupport_flag and not self.znc_connection:
@@ -2430,9 +2433,9 @@ class RudeChatClient:
             case "quit":
                 quit_message = " ".join(args[1:]) if len(args) > 0 else None
                 # Send QUIT command to all clients
-                await self.gui.send_quit_to_all_clients(quit_message)
+                await self.send_message(f"QUIT :{quit_message}")
                 await asyncio.sleep(2)
-                await self.gui.stop_all_tasks()
+                self.loop_running = False
                 self.master.destroy()
                 return False
 
