@@ -342,7 +342,7 @@ class RudeChatClient:
                     case "NICK":
                         await self.handle_nick(tokens)
                     case "JOIN":
-                        self.handle_join(tokens)
+                        pass
                     case "PRIVMSG":
                         await self.handle_privmsg(tokens)
                     case "MODE":
@@ -400,10 +400,12 @@ class RudeChatClient:
                         elif self.znc_connection and self.isupport_flag and not self.sasl_enabled and not self.use_nickserv_auth:
                             if self.auto_join_channels != None:
                                 await self.automatic_join()
+                                znc_connected = True
+                                print(f"Flag: {znc_connected}, config: {self.znc_connection}")
                             else:
+                                znc_connected = True
+                                print(f"Flag: {znc_connected}, config: {self.znc_connection}")
                                 return
-                            znc_connected = True
-                            print(f"Flag: {znc_connected}, config: {self.znc_connection}")
                         elif sasl_authenticated and self.isupport_flag and not self.znc_connection:
                             await self.automatic_join()
                             return
@@ -656,7 +658,7 @@ class RudeChatClient:
     async def auto_save(self):
         while self.loop_running:
             try:
-                await asyncio.sleep(random.randint(70, 194))
+                await asyncio.sleep(60)
                 await self.save_channel_messages()
 
             except asyncio.CancelledError:
