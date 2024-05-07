@@ -54,6 +54,7 @@ class RudeChatClient:
         self.use_nickserv_auth = config.getboolean('IRC', 'use_nickserv_auth', fallback=False)
         self.nickserv_password = config.get('IRC', 'nickserv_password') if self.use_nickserv_auth else None
         self.auto_join_channels = config.get('IRC', 'auto_join_channels', fallback=None).split(',')
+        self.use_auto_join = config.getboolean('IRC', 'use_auto_join', fallback=True)
         self.sasl_enabled = config.getboolean('IRC', 'sasl_enabled', fallback=False)
         self.sasl_username = config.get('IRC', 'sasl_username', fallback=None)
         self.sasl_password = config.get('IRC', 'sasl_password', fallback=None)
@@ -244,9 +245,12 @@ class RudeChatClient:
         await self.send_message(f'PONG {ping_param}')
 
     async def automatic_join(self):
-        for channel in self.auto_join_channels:
-            await self.join_channel(channel)
-            await asyncio.sleep(0.1)
+        if self.auto_join_channels != None:
+            for channel in self.auto_join_channels:
+                await self.join_channel(channel)
+                await asyncio.sleep(0.1)
+        else:
+            pass
 
     async def auto_topic_nicklist(self):
         for channel in self.auto_join_channels:
@@ -293,6 +297,7 @@ class RudeChatClient:
             while '\r\n' in buffer:
                 line, buffer = buffer.split('\r\n', 1)
                 tokens = irctokens.tokenise(line)
+                print(line)
 
                 match tokens.command:
                     case "NOTICE":
@@ -310,8 +315,11 @@ class RudeChatClient:
                         await self.handle_sasl_successful()
                         sasl_authenticated = True
                         if logged_in and sasl_authenticated and self.isupport_flag and motd_received:
-                            await self.automatic_join()
-                            return
+                            if self.use_auto_join:
+                                await self.automatic_join()
+                                return
+                            elif not self.use_auto_join:
+                                return
 
                     case "904":
                         self.gui.insert_text_widget("Handling SASL failed message\n")
@@ -342,7 +350,7 @@ class RudeChatClient:
                     case "NICK":
                         await self.handle_nick(tokens)
                     case "JOIN":
-                        pass
+                        self.handle_join(tokens)
                     case "PRIVMSG":
                         await self.handle_privmsg(tokens)
                     case "MODE":
@@ -355,20 +363,16 @@ class RudeChatClient:
                         self.gui.insert_text_widget(f"{message}\n")
 
                     case "332" | "333" | "TOPIC":
-                        print("Topic Got")
                         self.handle_topic(tokens)
                         got_topic += 1
 
                     case "353":  # NAMES list
-                        print("Names List")
                         self.handle_names_list(tokens)
                                 
                     case "366":  # End of NAMES list
                         self.handle_end_of_names_list()
                         count_366 += 1
-                        print(count_366)
                         if count_366 >= len(self.joined_channels) and got_topic >= len(self.joined_channels) and znc_connected:
-                            print("Returned: ZNC Connected")
                             return
 
                     case "005":
@@ -395,20 +399,23 @@ class RudeChatClient:
                         self.handle_motd_end(tokens)
                         motd_received = True
                         if not self.use_nickserv_auth and not self.sasl_enabled and not self.znc_connection:
-                            await self.automatic_join()
-                            return
+                            if self.use_auto_join:
+                                await self.automatic_join()
+                                return
+                            elif not self.use_auto_join:
+                                return
                         elif self.znc_connection and self.isupport_flag and not self.sasl_enabled and not self.use_nickserv_auth:
-                            if self.auto_join_channels != None:
+                            if self.use_auto_join:
                                 await self.automatic_join()
                                 znc_connected = True
-                                print(f"Flag: {znc_connected}, config: {self.znc_connection}")
-                            else:
+                            elif not self.use_auto_join:
                                 znc_connected = True
-                                print(f"Flag: {znc_connected}, config: {self.znc_connection}")
                                 return
                         elif sasl_authenticated and self.isupport_flag and not self.znc_connection:
-                            await self.automatic_join()
-                            return
+                            if self.use_auto_join:
+                                await self.automatic_join()
+                            elif not self.use_auto_join:
+                                return
                         elif self.use_nickserv_auth and not self.sasl_enabled:
                             await self.send_message(f'PRIVMSG NickServ :IDENTIFY {self.nickname} {self.nickserv_password}\r\n')
                             self.gui.insert_text_widget(f"Sent NickServ authentication.\n")
@@ -420,8 +427,11 @@ class RudeChatClient:
                     case "900":
                         logged_in = True
                         if self.use_nickserv_auth and logged_in and nickserv_sent and not self.sasl_enabled:
-                            await self.automatic_join()
-                            return
+                            if self.use_auto_join:
+                                await self.automatic_join()
+                                return
+                            elif not self.use_auto_join:
+                                return
 
                     case "396":
                         got_396 = True
