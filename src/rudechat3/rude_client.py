@@ -349,15 +349,19 @@ class RudeChatClient:
                         self.gui.insert_text_widget(f"{message}\n")
 
                     case "332" | "333" | "TOPIC":
+                        print("Topic Got")
                         self.handle_topic(tokens)
 
                     case "353":  # NAMES list
+                        print("Names List")
                         self.handle_names_list(tokens)
                                 
                     case "366":  # End of NAMES list
                         self.handle_end_of_names_list()
                         count_366 += 1
+                        print(count_366)
                         if len(self.joined_channels) == count_366 and znc_connected:
+                            print("Returned: ZNC Connected")
                             return
 
                     case "005":
@@ -389,6 +393,7 @@ class RudeChatClient:
                         elif self.znc_connection and self.isupport_flag and not self.sasl_enabled and not self.use_nickserv_auth:
                             await self.automatic_join()
                             znc_connected = True
+                            print(f"Flag: {znc_connected}, config: {self.znc_connection}")
                         elif sasl_authenticated and self.isupport_flag and not self.znc_connection:
                             await self.automatic_join()
                             return
