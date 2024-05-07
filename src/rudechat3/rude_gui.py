@@ -936,7 +936,6 @@ class RudeGui:
             irc_client.tasks["auto_save"] = asyncio.create_task(irc_client.auto_save(), name="auto_save_task")
             irc_client.tasks["auto_refresh"] = asyncio.create_task(irc_client.auto_refresh(), name="auto_refresh_task")
             irc_client.tasks["handle_incoming_message"] = asyncio.create_task(irc_client.handle_incoming_message(config_file), name="handle_incoming_message_task")
-            irc_client.tasks["znc_sync"] = asyncio.create_task(irc_client.znc_sync(), name="znc_sync_task")
 
             self.bind_return_key()
         except Exception as e:

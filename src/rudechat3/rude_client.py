@@ -260,6 +260,9 @@ class RudeChatClient:
         if len(tokens.params) > 3:
             params_combined = ' '.join(tokens.params[1:])
             self.add_server_message(params_combined + "\n")
+        elif len(tokens.params) == 3:
+            params_combined = ' '.join(tokens.params[1:])
+            self.add_server_message(params_combined + "\n")
         else:
             data = tokens.params[1]
             self.add_server_message(data + "\n")
@@ -273,6 +276,7 @@ class RudeChatClient:
         logged_in = False
         nickserv_sent = False
         got_396 = False
+        count_366 = 0
 
         while True:
             data = await self.reader.read(4096)
@@ -330,6 +334,27 @@ class RudeChatClient:
                         self.server_message_handler(tokens)
                     case "NICK":
                         await self.handle_nick(tokens)
+                    case "JOIN":
+                        self.handle_join(tokens)
+                    case "PRIVMSG":
+                        await self.handle_privmsg(tokens)
+                    case "MODE":
+                        self.handle_mode(tokens)
+                    case "306":
+                        message = "You have been marked as being away"
+                        self.gui.insert_text_widget(f"{message}\n")
+
+                    case "332" | "333" | "TOPIC":
+                        self.handle_topic(tokens)
+
+                    case "353":  # NAMES list
+                        self.handle_names_list(tokens)
+                                
+                    case "366":  # End of NAMES list
+                        self.handle_end_of_names_list()
+                        count_366 += 1
+                        if len(self.joined_channels) == count_366 and self.znc_connection:
+                            return
 
                     case "005":
                         self.handle_isupport(tokens)
@@ -354,13 +379,12 @@ class RudeChatClient:
                     case "376":
                         self.handle_motd_end(tokens)
                         motd_received = True
-                        if not self.use_nickserv_auth and not self.sasl_enabled:
+                        if not self.use_nickserv_auth and not self.sasl_enabled and not self.znc_connection:
                             await self.automatic_join()
                             return
                         elif self.znc_connection:
                             await self.automatic_join()
-                            return
-                        elif sasl_authenticated and self.isupport_flag:
+                        elif sasl_authenticated and self.isupport_flag and not self.znc_connection:
                             await self.automatic_join()
                             return
                         elif self.use_nickserv_auth and not self.sasl_enabled:
@@ -608,41 +632,6 @@ class RudeChatClient:
             except AttributeError as e:  # Catch AttributeError
                 print(f"AttributeError caught in keep_alive: {e}")
                 self.loop_running = False
-
-    async def znc_sync(self):
-        syncing = True
-        sync_counter = 0
-        while syncing:
-            try:
-                if self.znc_connection and sync_counter == 0:
-                    await asyncio.sleep(10)
-                    self.gui.insert_text_widget(f"ZNC Detected: Syncing now....\n")
-                    await self.auto_topic_nicklist()
-                    self.gui.insert_text_widget(f"Sync Complete, Enjoy!\n")
-                    sync_counter += 1
-                    syncing = False
-                    break
-                else:
-                    sync_counter += 1
-                    syncing = False
-                    break
-
-            except asyncio.CancelledError:
-                # If the event loop is stopped, break out of the loop
-                print("Exiting znc_sync loop.")
-                syncing = False
-                break
-
-            except (ConnectionResetError, OSError) as e:
-                print(f"Exception caught in znc_sync: {e}")
-                syncing = False
-                break
-
-            except Exception as e:  # Catch other exceptions
-                print(f"Unhandled exception in znc_sync: {e}")
-                syncing = False
-                break
-        return
 
     async def auto_save(self):
         while self.loop_running:
