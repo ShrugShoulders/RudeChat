@@ -291,6 +291,8 @@ class RudeChatClient:
                 tokens = irctokens.tokenise(line)
 
                 match tokens.command:
+                    case "NOTICE":
+                        self.handle_notice_message(tokens)
                     case "CAP":
                         self.gui.insert_text_widget("Handling CAP message\n")
                         await self.handle_cap(tokens)
@@ -696,7 +698,10 @@ class RudeChatClient:
         target = tokens.params[0]
         message = tokens.params[1]
         data = f"NOTICE {sender} {target}: {message}\n"
-        self.add_server_message(data)
+        if self.znc_connection:
+            self.gui.insert_text_widget(f"{data}")
+        else:
+            self.add_server_message(data)
 
     async def handle_ctcp(self, tokens):
         timestamp = datetime.datetime.now().strftime('[%H:%M:%S] ')
