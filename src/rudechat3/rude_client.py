@@ -245,7 +245,7 @@ class RudeChatClient:
         await self.send_message(f'PONG {ping_param}')
 
     async def automatic_join(self):
-        if self.auto_join_channels != None:
+        if self.use_auto_join:
             for channel in self.auto_join_channels:
                 await self.join_channel(channel)
                 await asyncio.sleep(0.1)
@@ -274,6 +274,15 @@ class RudeChatClient:
             data = tokens.params[1]
             self.add_server_message(data + "\n")
 
+    def join_znc_channel(self, tokens):
+        channel = tokens.params[0]
+
+        if self.znc_connection:
+            self.joined_channels.append(channel)
+            self.gui.channel_lists[self.server] = self.joined_channels
+            self.update_gui_channel_list()
+            return
+
     async def _await_welcome_message(self):
         self.gui.insert_text_widget(f'Waiting for welcome message from the server.\n')
         buffer = ""
@@ -286,6 +295,20 @@ class RudeChatClient:
         znc_connected = False
         count_366 = 0
         got_topic = 0
+        last_366_time = None
+        TIMEOUT_SECONDS = 0.5
+
+        def reset_timer():
+            nonlocal last_366_time
+            if not self.use_auto_join:
+                last_366_time = asyncio.get_event_loop().time()
+
+        def check_timeout():
+            nonlocal last_366_time
+            if not self.use_auto_join:
+                if last_366_time is None:
+                    return False
+                return asyncio.get_event_loop().time() - last_366_time > TIMEOUT_SECONDS
 
         while True:
             data = await self.reader.read(4096)
@@ -297,7 +320,6 @@ class RudeChatClient:
             while '\r\n' in buffer:
                 line, buffer = buffer.split('\r\n', 1)
                 tokens = irctokens.tokenise(line)
-                print(line)
 
                 match tokens.command:
                     case "NOTICE":
@@ -350,7 +372,8 @@ class RudeChatClient:
                     case "NICK":
                         await self.handle_nick(tokens)
                     case "JOIN":
-                        self.handle_join(tokens)
+                        print(line)
+                        self.join_znc_channel(tokens)
                     case "PRIVMSG":
                         await self.handle_privmsg(tokens)
                     case "MODE":
@@ -362,6 +385,9 @@ class RudeChatClient:
                         message = "You have been marked as being away"
                         self.gui.insert_text_widget(f"{message}\n")
 
+                    case "328":
+                        self.handle_328(tokens)
+
                     case "332" | "333" | "TOPIC":
                         self.handle_topic(tokens)
                         got_topic += 1
@@ -372,8 +398,8 @@ class RudeChatClient:
                     case "366":  # End of NAMES list
                         self.handle_end_of_names_list()
                         count_366 += 1
-                        if count_366 >= len(self.joined_channels) and got_topic >= len(self.joined_channels) and znc_connected:
-                            return
+                        if not self.use_auto_join:
+                            reset_timer()
 
                     case "005":
                         self.handle_isupport(tokens)
@@ -408,15 +434,16 @@ class RudeChatClient:
                             if self.use_auto_join:
                                 await self.automatic_join()
                                 znc_connected = True
+                                return
                             elif not self.use_auto_join:
                                 znc_connected = True
-                                return
                         elif sasl_authenticated and self.isupport_flag and not self.znc_connection:
                             if self.use_auto_join:
                                 await self.automatic_join()
+                                return
                             elif not self.use_auto_join:
                                 return
-                        elif self.use_nickserv_auth and not self.sasl_enabled:
+                        elif self.use_nickserv_auth and not self.sasl_enabled and not self.znc_connection:
                             await self.send_message(f'PRIVMSG NickServ :IDENTIFY {self.nickname} {self.nickserv_password}\r\n')
                             self.gui.insert_text_widget(f"Sent NickServ authentication.\n")
                             nickserv_sent = True
@@ -439,6 +466,9 @@ class RudeChatClient:
                     case _:
                         self.save_error(tokens, line)
                         self.gui.insert_and_scroll()
+                if check_timeout():
+                    # Timeout occurred
+                    return
 
     async def handle_cap(self, tokens):
         if not self.sasl_enabled:
