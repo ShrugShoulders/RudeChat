@@ -510,10 +510,13 @@ class RudeChatClient:
         try:
             self.writer.write(f'{message}\r\n'.encode('UTF-8'))
             await asyncio.wait_for(self.writer.drain(), timeout=10)
-        except Exception as e:
-            print(f"Exception in send_message {e}")
+        except (BrokenPipeError, asyncio.streams.StreamWriterError) as e:
+            print("Connection lost while sending message.")
+            self.loop_running = False
         except TimeoutError:
             print("Timeout while sending message.")
+        except Exception as e:
+            print(f"Exception in send_message: {e}")
 
     def is_valid_channel(self, channel):
         return any(channel.startswith(prefix) for prefix in self.chantypes)
@@ -1024,18 +1027,19 @@ class RudeChatClient:
     async def prepare_direct_message(self, sender, target, message, timestamp):
         self.log_message(self.server_name, target, sender, message, is_sent=False)
         try:
-            if self.server not in self.channel_messages:
-                self.channel_messages[self.server] = {}
-            if sender not in self.channel_messages[self.server]:
-                self.channel_messages[self.server][sender] = []
+            if sender != self.nickname:
+                if self.server not in self.channel_messages:
+                    self.channel_messages[self.server] = {}
+                if sender not in self.channel_messages[self.server]:
+                    self.channel_messages[self.server][sender] = []
 
-            if self.is_direct_message(target) and sender not in self.joined_channels:
-                self.joined_channels.append(sender)
-                self.gui.channel_lists[self.server] = self.joined_channels
-                self.update_gui_channel_list()
+                if self.is_direct_message(target) and sender not in self.joined_channels:
+                        self.joined_channels.append(sender)
+                        self.gui.channel_lists[self.server] = self.joined_channels
+                        self.update_gui_channel_list()
 
-            self.save_message(self.server, target, sender, message, is_sent=False)
-            self.display_message(timestamp, sender, message, target, is_direct=True)
+                self.save_message(self.server, target, sender, message, is_sent=False)
+                self.display_message(timestamp, sender, message, target, is_direct=True)
         except Exception as e:
             print(f"Exception in prepare_direct_message: {e}")
 
@@ -2147,7 +2151,6 @@ class RudeChatClient:
         """
         Logs your chats for later use.
         """
-        #print(f"[log_message DEBUG]Server: {server}, Channel: {channel}, Sender: {sender}, Message: {message}, If Is Sent: {is_sent}")
         if not self.use_logging:
             return
         timestamp = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
@@ -2347,9 +2350,9 @@ class RudeChatClient:
                 await self.send_message(raw_command)
                 self.gui.insert_text_widget(f"Sent raw command: {raw_command}\n")
 
-            case "mentions":  # new command to print or clear mentions
+            case "mentions":
                 if len(args) > 1 and args[1] == "clear":
-                    self.mentions.clear()  # Clear the mentions dictionary
+                    self.mentions.clear()  
                     self.gui.insert_text_widget(f"All mentions have been cleared.\n")
                 elif not self.mentions:
                     self.gui.insert_text_widget(f"No mentions found.\n")
