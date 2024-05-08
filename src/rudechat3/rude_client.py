@@ -1824,8 +1824,11 @@ class RudeChatClient:
                 print(f"An Unexpected Error Occurred In handle_incoming_message: {e}\n")
                 self.loop_running = False
                 await self.reconnect(config_file)
+            except (BrokenPipeError, asyncio.streams.StreamWriterError) as e:
+                print("Connection lost while sending message.")
+                self.loop_running = False
+                await self.reconnect(config_file)
             except asyncio.CancelledError:
-                # If the event loop is stopped, break out of the loop
                 self.loop_running = False
                 print("Exiting handle_incoming_message loop.")
 
