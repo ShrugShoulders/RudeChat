@@ -278,10 +278,14 @@ class RudeChatClient:
         channel = tokens.params[0]
 
         if self.znc_connection and not self.use_auto_join:
-            self.joined_channels.append(channel)
-            self.gui.channel_lists[self.server] = self.joined_channels
-            self.update_gui_channel_list()
-            return
+            # Get the items in the listbox
+            listbox_items = self.gui.channel_listbox.get(0, "end")
+            
+            # Check if the channel is already in the listbox
+            if channel not in listbox_items:
+                self.joined_channels.append(channel)
+                self.gui.channel_lists[self.server] = self.joined_channels
+                self.update_gui_channel_list()
 
     async def _await_welcome_message(self):
         self.gui.insert_text_widget(f'Waiting for welcome message from the server.\n')
@@ -296,7 +300,7 @@ class RudeChatClient:
         count_366 = 0
         got_topic = 0
         last_366_time = None
-        TIMEOUT_SECONDS = 0.5
+        TIMEOUT_SECONDS = 0.3
 
         def reset_timer():
             nonlocal last_366_time
