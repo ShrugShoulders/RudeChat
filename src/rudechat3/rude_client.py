@@ -277,7 +277,7 @@ class RudeChatClient:
     def join_znc_channel(self, tokens):
         channel = tokens.params[0]
 
-        if self.znc_connection:
+        if self.znc_connection and not self.use_auto_join:
             self.joined_channels.append(channel)
             self.gui.channel_lists[self.server] = self.joined_channels
             self.update_gui_channel_list()
@@ -372,7 +372,6 @@ class RudeChatClient:
                     case "NICK":
                         await self.handle_nick(tokens)
                     case "JOIN":
-                        print(line)
                         self.join_znc_channel(tokens)
                     case "PRIVMSG":
                         await self.handle_privmsg(tokens)
@@ -400,6 +399,9 @@ class RudeChatClient:
                         count_366 += 1
                         if not self.use_auto_join:
                             reset_timer()
+                        elif self.use_auto_join:
+                            if count_366 >= len(self.joined_channels) and got_topic >= len(self.joined_channels) and znc_connected:
+                                return
 
                     case "005":
                         self.handle_isupport(tokens)
@@ -434,7 +436,6 @@ class RudeChatClient:
                             if self.use_auto_join:
                                 await self.automatic_join()
                                 znc_connected = True
-                                return
                             elif not self.use_auto_join:
                                 znc_connected = True
                         elif sasl_authenticated and self.isupport_flag and not self.znc_connection:
