@@ -100,12 +100,8 @@ class RudeChatClient:
         file_path = os.path.join(script_directory, f'channel_messages_{self.server_name}.json')
         try:
             async with aiofiles.open(file_path, 'r') as file:
-                file_content = await file.read()
-                if file_content:
-                    self.channel_messages = json.loads(file_content)
-                else:
-                    self.channel_messages = {}
-        except (FileNotFoundError, json.JSONDecodeError):
+                self.channel_messages = json.loads(await file.read())
+        except FileNotFoundError:
             self.channel_messages = {}
 
     async def save_channel_messages(self):
@@ -363,6 +359,10 @@ class RudeChatClient:
                         self.server_message_handler(tokens)
                     case "004":
                         self.server_message_handler(tokens)
+                    case "005":
+                        self.handle_isupport(tokens)
+                        self.isupport_flag = True
+                        self.gui.insert_and_scroll()
 
                     case "251":
                         self.server_message_handler(tokens)
@@ -407,11 +407,6 @@ class RudeChatClient:
                         elif self.use_auto_join:
                             if count_366 >= len(self.joined_channels) and got_topic >= len(self.joined_channels) and znc_connected:
                                 return
-
-                    case "005":
-                        self.handle_isupport(tokens)
-                        self.isupport_flag = True
-                        self.gui.insert_and_scroll()
 
                     case "250":
                         self.handle_connection_info(tokens)
@@ -511,11 +506,9 @@ class RudeChatClient:
         try:
             self.writer.write(f'{message}\r\n'.encode('UTF-8'))
             await asyncio.wait_for(self.writer.drain(), timeout=10)
-        except (BrokenPipeError, asyncio.streams.StreamWriterError) as e:
-            print("Connection lost while sending message.")
+        except (BrokenPipeError, TimeoutError) as e:
+            print("Connection lost or timeout while sending message.")
             self.loop_running = False
-        except TimeoutError:
-            print("Timeout while sending message.")
         except Exception as e:
             print(f"Exception in send_message: {e}")
 
@@ -696,11 +689,11 @@ class RudeChatClient:
                 print(f"Exception caught in keep_alive: {e}")
                 self.loop_running = False
 
-            except Exception as e:  # Catch other exceptions
+            except Exception as e:
                 print(f"Unhandled exception in keep_alive: {e}")
                 self.loop_running = False
 
-            except AttributeError as e:  # Catch AttributeError
+            except AttributeError as e:
                 print(f"AttributeError caught in keep_alive: {e}")
                 self.loop_running = False
 
