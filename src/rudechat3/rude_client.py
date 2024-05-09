@@ -100,8 +100,12 @@ class RudeChatClient:
         file_path = os.path.join(script_directory, f'channel_messages_{self.server_name}.json')
         try:
             async with aiofiles.open(file_path, 'r') as file:
-                self.channel_messages = json.loads(await file.read())
-        except FileNotFoundError:
+                file_content = await file.read()
+                if file_content:
+                    self.channel_messages = json.loads(file_content)
+                else:
+                    self.channel_messages = {}
+        except (FileNotFoundError, json.JSONDecodeError):
             self.channel_messages = {}
 
     async def save_channel_messages(self):
