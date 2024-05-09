@@ -274,15 +274,12 @@ class RudeChatClient:
             data = tokens.params[1]
             self.add_server_message(data + "\n")
 
-    def join_znc_channel(self, tokens):
+    async def join_znc_channel(self, tokens):
         channel = tokens.params[0]
 
         if self.znc_connection and not self.use_auto_join:
-            # Get the items in the listbox
-            listbox_items = self.gui.channel_listbox.get(0, "end")
-            
-            # Check if the channel is already in the listbox
-            if channel not in listbox_items:
+            # Check if the channel is already in the list of joined channels
+            if channel not in self.joined_channels:
                 self.joined_channels.append(channel)
                 self.gui.channel_lists[self.server] = self.joined_channels
                 self.update_gui_channel_list()
@@ -376,7 +373,7 @@ class RudeChatClient:
                     case "NICK":
                         await self.handle_nick(tokens)
                     case "JOIN":
-                        self.join_znc_channel(tokens)
+                        await self.join_znc_channel(tokens)
                     case "PRIVMSG":
                         await self.handle_privmsg(tokens)
                     case "MODE":
@@ -399,7 +396,7 @@ class RudeChatClient:
                         self.handle_names_list(tokens)
                                 
                     case "366":  # End of NAMES list
-                        self.handle_end_of_names_list()
+                        self.handle_end_of_names_list(tokens)
                         count_366 += 1
                         if not self.use_auto_join:
                             reset_timer()
@@ -1723,25 +1720,25 @@ class RudeChatClient:
                 f.write(f"{channel} - Users: {info['user_count']} - Topic: {info['topic']}\n")
 
     def handle_names_list(self, tokens):
-        self.current_channel = tokens.params[2]
+        current_channel = tokens.params[2]
         users = tokens.params[3].split(" ")
 
         # If this channel isn't in channel_users, initialize it with an empty list
-        if self.current_channel not in self.channel_users:
-            self.channel_users[self.current_channel] = []
+        if current_channel not in self.channel_users:
+            self.channel_users[current_channel] = []
 
         # Append the users to the channel's list only if they are not already in it
         for user in users:
-            if user not in self.channel_users[self.current_channel]:
-                self.channel_users[self.current_channel].append(user)
+            if user not in self.channel_users[current_channel]:
+                self.channel_users[current_channel].append(user)
 
-    def handle_end_of_names_list(self):
-        if self.current_channel:
+    def handle_end_of_names_list(self, tokens):
+        current_channel = tokens.params[1]
+        if current_channel:
             # Sort the entire list of users for the channel
-            sorted_users = self.sort_users(self.channel_users[self.current_channel], self.current_channel)
-            self.channel_users[self.current_channel] = sorted_users
-            self.update_user_listbox(self.current_channel)  # Pass current_channel here
-            self.current_channel = ""
+            sorted_users = self.sort_users(self.channel_users[current_channel], current_channel)
+            self.channel_users[current_channel] = sorted_users
+            self.update_user_listbox(current_channel)  # Pass current_channel here
 
     def handle_pong(self, tokens):
         pong_server = tokens.params[-1]  # Assumes the server name is the last parameter
@@ -1875,7 +1872,7 @@ class RudeChatClient:
                         self.handle_names_list(tokens)
                                 
                     case "366":  # End of NAMES list
-                        self.handle_end_of_names_list()
+                        self.handle_end_of_names_list(tokens)
 
                     case "305":
                         message = "You are no longer marked as being away"
