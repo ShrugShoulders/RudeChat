@@ -977,10 +977,12 @@ class RudeChatClient:
             await self.notify_user_of_mention(self.server, target, sender, message)
 
             if target in self.detached_channels and self.znc_connection:
-                await self.auto_attach(target)
+                if target != self.nickname:
+                    await self.auto_attach(target)
 
             if target not in self.detached_channels and target not in self.joined_channels and self.znc_connection:
-                await self.auto_attach(target)
+                if target != self.nickname:
+                    await self.auto_attach(target)
 
             if target in self.mentions:
                 # If the channel is already there, append the new mention to the list of mentions for that channel
@@ -1619,11 +1621,12 @@ class RudeChatClient:
     def whois_display(self, whois_response):
         try:
             whois_channel = "&WHOIS&"
-            self.joined_channels.append(whois_channel)
-            self.gui.channel_lists[self.server] = self.joined_channels
-            self.update_gui_channel_list()
+            if whois_channel not in self.joined_channels:
+                self.joined_channels.append(whois_channel)
+                self.gui.channel_lists[self.server] = self.joined_channels
+                self.update_gui_channel_list()
 
-            # Add help data to the channel history
+            # Add data to the channel history
             if whois_channel not in self.channel_messages[self.server]:
                 self.channel_messages[self.server][whois_channel] = [] 
             self.channel_messages[self.server][whois_channel].append(f"{whois_response}\n")
@@ -3118,17 +3121,18 @@ class RudeChatClient:
 
         try:
             help_channel = "&HELP&"
-            self.joined_channels.append(help_channel)
-            self.gui.channel_lists[self.server] = self.joined_channels
-            self.update_gui_channel_list()
+            if help_channel not in self.joined_channels:
+                self.joined_channels.append(help_channel)
+                self.gui.channel_lists[self.server] = self.joined_channels
+                self.update_gui_channel_list()
 
-            # Add help data to the channel history
-            for category, commands in categories.items():
-                if help_channel not in self.channel_messages[self.server]:
-                    self.channel_messages[self.server][help_channel] = [] 
-                self.channel_messages[self.server][help_channel].append(f"{category}:\n")
-                for cmd in commands:
-                    self.channel_messages[self.server][help_channel].append(f"{cmd}\n")
+                # Add help data to the channel history
+                for category, commands in categories.items():
+                    if help_channel not in self.channel_messages[self.server]:
+                        self.channel_messages[self.server][help_channel] = [] 
+                    self.channel_messages[self.server][help_channel].append(f"{category}:\n")
+                    for cmd in commands:
+                        self.channel_messages[self.server][help_channel].append(f"{cmd}\n")
 
             # Update the GUI
             self.gui.insert_and_scroll()
