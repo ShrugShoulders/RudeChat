@@ -3146,11 +3146,10 @@ class RudeChatClient:
         self.server_name = server_name
         self.gui.update_nick_channel_label()
 
-    def display_last_messages(self, channel, server_name=None):
+    def display_last_messages(self, channel, num=100, server_name=None):
         if server_name:
             messages = self.channel_messages.get(server_name, {}).get(channel, [])
-
-        for message in messages:
+        for message in messages[-num:]:
             self.gui.insert_text_widget(message)
 
     def display_server_motd(self, server_name=None):

@@ -62,6 +62,7 @@ class RudeGui:
         self.channel_topics = {}
         self.entry_history = []
         self.history_index = 0
+        self.last_selected_index = None
 
         # Server and Topic Frame
         self.server_topic_frame = tk.Frame(self.master, bg="black")
@@ -128,6 +129,8 @@ class RudeGui:
         self.channel_scrollbar.grid(row=3, column=1, sticky='ns')
         self.channel_listbox.bind('<ButtonRelease-1>', self.on_channel_click)
         self.channel_listbox.bind("<Button-3>", self.show_channel_list_menu)
+        self.master.bind("<Control-Tab>", self.switch_to_next_channel)
+        self.master.bind("<Alt-KeyPress>", self._switch_to_index)
 
         # Server frame
         self.server_frame = tk.Frame(self.master, height=100, bg="black")
@@ -987,6 +990,84 @@ class RudeGui:
         elif self.history_index == len(self.entry_history) - 1:
             self.history_index += 1
             self.entry_widget.delete(0, tk.END)
+
+    def _switch_to_index(self, event):
+        key = event.char
+        if key.isdigit():
+            index = int(key)
+            self.switch_to_index(event, index)
+
+    def switch_to_index(self, event, index):
+        loop = asyncio.get_event_loop()
+
+        # Set background of currently selected channel back to default
+        current_selected_channel = self.irc_client.current_channel
+        if current_selected_channel:
+            for i in range(self.channel_listbox.size()):
+                if self.channel_listbox.get(i) == current_selected_channel:
+                    self.channel_listbox.itemconfig(i, {'bg': self.channel_listbox_bg})
+                    break
+
+        # Get the channel name at the specified index
+        next_channel = self.channel_listbox.get(index)
+
+        # Switch to the channel at the specified index
+        loop.create_task(self.switch_channel(next_channel))
+
+        # Turn background blue for the next channel
+        self.channel_listbox.itemconfig(index, {'bg': self.channel_select_color})
+        self.highlight_nickname()
+
+        # Remove the next channel from highlighted_channels dictionary if present
+        if self.irc_client.server_name in self.irc_client.highlighted_channels:
+            server_highlighted_channels = self.irc_client.highlighted_channels[self.irc_client.server_name]
+            if next_channel in server_highlighted_channels:
+                del server_highlighted_channels[next_channel]
+
+        # Prevent further event processing
+        return "break"
+
+    def switch_to_next_channel(self, event):
+        loop = asyncio.get_event_loop()
+
+        # Set background of currently selected channel back to default
+        current_selected_channel = self.irc_client.current_channel
+        if current_selected_channel:
+            for i in range(self.channel_listbox.size()):
+                if self.channel_listbox.get(i) == current_selected_channel:
+                    self.channel_listbox.itemconfig(i, {'bg': self.channel_listbox_bg})
+                    break
+
+        # Get index of currently selected item
+        selected_index = self.channel_listbox.curselection()
+
+        # Calculate index of the next item down
+        if self.last_selected_index is None:
+            next_index = 0
+        else:
+            next_index = (self.last_selected_index + 1) % self.channel_listbox.size()
+
+        # Get the channel name of the next item down
+        next_channel = self.channel_listbox.get(next_index)
+
+        # Switch to the next channel
+        loop.create_task(self.switch_channel(next_channel))
+
+        # Turn background blue for the next channel
+        self.channel_listbox.itemconfig(next_index, {'bg': self.channel_select_color})
+        self.highlight_nickname()
+
+        # Remove the next channel from highlighted_channels dictionary if present
+        if self.irc_client.server_name in self.irc_client.highlighted_channels:
+            server_highlighted_channels = self.irc_client.highlighted_channels[self.irc_client.server_name]
+            if next_channel in server_highlighted_channels:
+                del server_highlighted_channels[next_channel]
+
+        # Update last selected index
+        self.last_selected_index = next_index
+
+        # Prevent further event processing
+        return "break"
 
     def on_channel_click(self, event):
         loop = asyncio.get_event_loop()
