@@ -131,6 +131,7 @@ class RudeGui:
         self.channel_listbox.bind("<Button-3>", self.show_channel_list_menu)
         self.master.bind("<Control-Tab>", self.switch_to_next_channel)
         self.master.bind("<Alt-KeyPress>", self._switch_to_index)
+        self.master.bind("<Alt-s>", self.cycle_servers)
 
         # Server frame
         self.server_frame = tk.Frame(self.master, height=100, bg="black")
@@ -882,6 +883,22 @@ class RudeGui:
 
         # Server not found, return False
         return False
+
+    def cycle_servers(self, event):
+        num_servers = self.server_listbox.size()
+        current_index = self.server_listbox.curselection()
+
+        if current_index:
+            current_index = int(current_index[0])
+            next_index = (current_index + 1) % num_servers
+        else:
+            next_index = 0
+
+        # Select the next server in the listbox
+        self.server_listbox.selection_clear(0, tk.END)
+        self.server_listbox.selection_set(next_index)
+        self.server_listbox.see(next_index)
+        self.on_server_change(None)
 
     def on_server_change(self, event):
         selected_server_index = self.server_listbox.curselection()
