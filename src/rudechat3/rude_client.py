@@ -750,6 +750,7 @@ class RudeChatClient:
         data = f"NOTICE {sender} {target}: {message}\n"
         if self.znc_connection:
             self.gui.insert_text_widget(f"{data}")
+            self.add_server_message(data)
         else:
             self.add_server_message(data)
 
