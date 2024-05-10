@@ -1733,10 +1733,14 @@ class RudeChatClient:
     def handle_end_of_names_list(self, tokens):
         current_channel = tokens.params[1]
         if current_channel:
-            # Sort the entire list of users for the channel
-            sorted_users = self.sort_users(self.channel_users[current_channel], current_channel)
+            # Get the list of users for the current channel or an empty list if the key doesn't exist
+            channel_users = self.channel_users.get(current_channel, [])
+            # Sort the list of users
+            sorted_users = self.sort_users(channel_users, current_channel)
+            # Update the channel users with the sorted list
             self.channel_users[current_channel] = sorted_users
-            self.update_user_listbox(current_channel)  # Pass current_channel here
+            # Update the user listbox
+            self.update_user_listbox(current_channel)
 
     def handle_pong(self, tokens):
         pong_server = tokens.params[-1]  # Assumes the server name is the last parameter
