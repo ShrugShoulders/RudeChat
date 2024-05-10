@@ -3051,7 +3051,6 @@ class RudeChatClient:
         # Categories and their associated commands
         categories = {
             "Channel Management": [
-                "_________",
                 "Use Your Right Click for Config and more.",
                 "To use formatting use the format control characters as follows",
                 "/join <channel> - Joins a channel",
@@ -3064,9 +3063,9 @@ class RudeChatClient:
                 "/invite <user> <channel> - invites a user to a channel",
                 "/kick <user> <channel> [message]",
                 "/mentions to show all mentions of your nickname. /mentions clear to clear these messages",
+                "_________",
             ],
             "String Formatting": [
-                "_________",
                 "\\x02 - Bold",
                 "\\x1D - Italic",
                 "\\x1F - Underline",
@@ -3076,15 +3075,15 @@ class RudeChatClient:
                 "\\x16 - Inverse control character. Swaps the color",
                 "Example: \\x0304example text\\x0F",
                 "When using the GUI for format select first the type of format example: bold. Then select the color.",
+                "_________",
             ],
             "Private Messaging": [
-                "_________",
                 "/query <nickname> - Opens a DM with a user",
                 "/cq <nickname> - Closes a DM with a user",
                 "/msg <nickname> [message] - Sends a private message to a user",
+                "_________",
             ],
             "User Commands": [
-                "_________",
                 "/nick <new nickname> - Changes the user's nickname",
                 "/away [message] - Sets the user as away",
                 "/back - Removes the 'away' status",
@@ -3092,30 +3091,37 @@ class RudeChatClient:
                 "/whois <nickname> - Shows information about a user",
                 "/me <action text> - Sends an action to the current channel",
                 "/clear - clears the chat window and removes all messages for the current channel",
+                "_________",
             ],
             "Server Interaction": [
-                "_________",
                 "/ping [user] - Pings the currently selected server, if user is specified it will ping that user.",
                 "/quote <IRC command> - Sends raw IRC message to the server",
                 "/CTCP <nickname> <command> - Sends a CTCP request",
                 "/mode <mode> [channel] - Sets mode for user (optionally in a specific channel)",
+                "_________",
             ],
             "Broadcasting": [
-                "_________",
                 "/mac <macro> - sends a chosen macro to a channel /mac - shows available macros",
                 "/notice <target> [message]",
+                "_________",
             ],
             "Help and Connection": [
-                "_________",
                 "/quit - Closes connection and client",
                 "/help - Redisplays this message",
                 "/disconnect - Will disconnect you from the currently connected servers",
                 "/connect <server_name> - Will connect you to the given server, is case sensitive.",
+                "_________",
             ],
             "ZNC Commands": [
-                "_________",
                 "/sync - Syncs your nickname list and channel topics.",
                 "/detach - Detaches you from the given channel Example: /detach #channel",
+                "_________",
+            ],
+            "Key Bindings": [
+                "Alt+num(0,9) - switches to that channels index in the channel list. 0 is first channel",
+                "Alt+s - Cycles through the servers",
+                "ctrl+tab - Cycles through the channels",
+                "_________",
             ],
         }
 
