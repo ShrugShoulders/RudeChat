@@ -63,6 +63,7 @@ class RudeGui:
         self.entry_history = []
         self.history_index = 0
         self.last_selected_index = None
+        self.previous_server_index = None
 
         # Server and Topic Frame
         self.server_topic_frame = tk.Frame(self.master, bg="black")
@@ -237,6 +238,7 @@ class RudeGui:
             self.main_bg_color = config.get('GUI', 'main_bg_color', fallback='black')
             self.server_fg_color = config.get('GUI', 'server_fg', fallback='#7882ff')
             self.server_bg_color = config.get('GUI', 'server_bg', fallback='black')
+            self.selected_list_server = config.get('GUI', 'selected_list_server', fallback='blue')
 
             # Read Widget Settings
             self.user_listbox_fg = config.get('WIDGETS', 'users_fg', fallback='#39ff14')
@@ -273,6 +275,7 @@ class RudeGui:
             self.main_bg_color = 'black'
             self.server_fg_color = '#7882ff'
             self.server_bg_color = 'black'
+            self.selected_list_server = 'blue'
             self.user_listbox_fg = '#39ff14'
             self.user_listbox_bg = 'black'
             self.user_label_bg = 'black'
@@ -901,20 +904,30 @@ class RudeGui:
         self.on_server_change(None)
 
     def on_server_change(self, event):
+        # Get the index of the currently selected server
         selected_server_index = self.server_listbox.curselection()
-        
+
+        # If there's a selected server
         if selected_server_index:
-            selected_server = self.server_listbox.get(selected_server_index)  # Get the selected server from the listbox
+            # If there's a previous server, reset its background color to black
+            if self.previous_server_index is not None:
+                self.server_listbox.itemconfig(self.previous_server_index, {'bg': self.server_list_bg, 'fg': self.server_list_fg})
+
+            # Get the selected server from the listbox
+            selected_server = self.server_listbox.get(selected_server_index)
+
+            # Update the current server in the IRC client
             self.irc_client.current_server = selected_server
             self.irc_client = self.clients.get(selected_server, None)
-            
+
+            # If the IRC client exists
             if self.irc_client:
                 # Set the server name in the RudeChatClient instance
                 self.irc_client.set_server_name(selected_server)
 
                 # Set the currently selected channel to None
                 self.irc_client.current_channel = None
-                
+
                 # Set the GUI reference and update the GUI components
                 self.irc_client.set_gui(self)
                 self.irc_client.update_gui_channel_list()
@@ -930,8 +943,13 @@ class RudeGui:
                 self.highlight_nickname()
                 self.text_widget.see(tk.END)
 
-                # Set the background color of the selected server to black
-                self.server_listbox.itemconfig(selected_server_index, {'bg': self.server_list_bg, 'fg': self.server_list_fg})
+                # Set the background color of the selected server to blue
+                self.server_listbox.itemconfig(selected_server_index, {'bg': self.selected_list_server, 'fg': self.server_list_fg})
+
+            # Update the previous_server_index to the currently selected server index
+            self.previous_server_index = selected_server_index
+
+
 
     async def init_client_with_config(self, config_file, fallback_server_name):
         try:

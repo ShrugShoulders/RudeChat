@@ -695,11 +695,9 @@ class RudeChatClient:
 
             except Exception as e:
                 print(f"Unhandled exception in keep_alive: {e}")
-                self.loop_running = False
 
             except AttributeError as e:
                 print(f"AttributeError caught in keep_alive: {e}")
-                self.loop_running = False
 
     async def auto_save(self):
         while self.loop_running:
@@ -717,16 +715,14 @@ class RudeChatClient:
 
             except Exception as e:  # Catch other exceptions
                 print(f"Unhandled exception in auto_save: {e}")
-                self.loop_running = False
 
             except AttributeError as e:  # Catch AttributeError
                 print(f"AttributeError caught in auto_save: {e}")
-                self.loop_running = False
 
     async def auto_refresh(self):
         while self.loop_running:
             try:
-                await asyncio.sleep(30)
+                await asyncio.sleep(45)
                 await self.gui.refresh_text_widget()
 
             except asyncio.CancelledError:
@@ -739,11 +735,9 @@ class RudeChatClient:
 
             except Exception as e:
                 print(f"Unhandled exception in auto_refresh: {e}")
-                self.loop_running = False
 
             except AttributeError as e:
                 print(f"AttributeError caught in auto_refresh: {e}")
-                self.loop_running = False
 
     def handle_server_message(self, line):
         data = line + "\n"
