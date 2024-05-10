@@ -550,7 +550,7 @@ class RudeGui:
         config_files.sort()
 
         if not config_files:
-            messagebox.showwarning("Warning", "No configuration files found.")
+            tk.messagebox.showwarning("Warning", "No configuration files found.")
             root.destroy()
             return
 
