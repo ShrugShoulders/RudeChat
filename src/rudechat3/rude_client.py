@@ -3053,7 +3053,6 @@ class RudeChatClient:
         categories = {
             "Channel Management": [
                 "Use Your Right Click for Config and more.",
-                "To use formatting use the format control characters as follows",
                 "/join <channel> - Joins a channel",
                 "/part <channel> - Leaves a channel",
                 "/ch - Shows channels joined",
@@ -3067,6 +3066,7 @@ class RudeChatClient:
                 "_________",
             ],
             "String Formatting": [
+                "To use formatting use the format control characters as follows",
                 "\\x02 - Bold",
                 "\\x1D - Italic",
                 "\\x1F - Underline",
@@ -3102,7 +3102,6 @@ class RudeChatClient:
                 "_________",
             ],
             "Broadcasting": [
-                "/mac <macro> - sends a chosen macro to a channel /mac - shows available macros",
                 "/notice <target> [message]",
                 "_________",
             ],
@@ -3122,6 +3121,14 @@ class RudeChatClient:
                 "Alt+num(0,9) - switches to that channels index in the channel list. 0 is first channel",
                 "Alt+s - Cycles through the servers",
                 "ctrl+tab - Cycles through the channels",
+                "_________",
+            ],
+            "Fun": [
+                "/cowsay: Built in, /cowsay <text> | /cowsay <fortune list>",
+                "/fortune: Built in, /fortune <fortune list>",
+                "/mac <macro> - sends a chosen macro to a channel /mac - shows available macros",
+                "Fortune Lists: dadjoke(jokes your dad makes), yomama(YO MAMA SO FAT), the rules(Ferengi Rules of Acquisition)",
+                "Add your own fortune lists to the Fortune List folder in site-packages for python."
                 "_________",
             ],
         }
