@@ -301,7 +301,7 @@ class RudeChatClient:
         count_366 = 0
         got_topic = 0
         last_366_time = None
-        TIMEOUT_SECONDS = 0.3
+        TIMEOUT_SECONDS = 1
 
         def reset_timer():
             nonlocal last_366_time
@@ -378,6 +378,8 @@ class RudeChatClient:
                         self.server_message_handler(tokens)
                     case "265":
                         self.server_message_handler(tokens)
+                    case "QUIT":
+                        self.handle_quit(tokens)
                     case "NICK":
                         await self.handle_nick(tokens)
                     case "JOIN":
