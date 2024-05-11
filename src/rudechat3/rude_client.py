@@ -285,14 +285,15 @@ class RudeChatClient:
             # Check if the server entry exists
             if self.server not in self.channel_messages:
                 self.channel_messages[self.server] = {}
+                
+            # Add the channel entry if it doesn't exist
+            if channel not in self.channel_messages[self.server]:
+                self.channel_messages[self.server][channel] = []
             
             # Check if the channel is already in the list of joined channels
             if channel not in self.joined_channels:
                 self.joined_channels.append(channel)
                 self.gui.channel_lists[self.server] = self.joined_channels
-                # Add the channel entry if it doesn't exist
-                if channel not in self.channel_messages[self.server]:
-                    self.channel_messages[self.server][channel] = []
                 self.update_gui_channel_list()
 
     async def _await_welcome_message(self):
@@ -544,6 +545,14 @@ class RudeChatClient:
         if channel in self.joined_channels:
             self.gui.insert_text_widget(f"You are already in channel {channel}.\n")
             return
+
+        # Ensure the server entry exists in the dictionary
+        if self.server not in self.channel_messages:
+            self.channel_messages[self.server] = {}
+
+        # Ensure the channel entry exists in the dictionary
+        if channel not in self.channel_messages[self.server]:
+            self.channel_messages[self.server][channel] = []
 
         await self.send_message(f'JOIN {channel}')
         self.joined_channels.append(channel)
