@@ -1163,8 +1163,7 @@ class RudeGui:
 
         if is_channel:
             # It's a channel
-            if server in self.irc_client.channel_messages and \
-                    channel_name in self.irc_client.channel_messages[server]:
+            if server in self.irc_client.channel_messages:
 
                 self.irc_client.current_channel = channel_name
                 self.update_nick_channel_label()

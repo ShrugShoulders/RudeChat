@@ -281,11 +281,18 @@ class RudeChatClient:
     async def join_znc_channel(self, tokens):
         channel = tokens.params[0]
 
-        if self.znc_connection and not self.use_auto_join:
+        if self.znc_connection:
+            # Check if the server entry exists
+            if self.server not in self.channel_messages:
+                self.channel_messages[self.server] = {}
+            
             # Check if the channel is already in the list of joined channels
             if channel not in self.joined_channels:
                 self.joined_channels.append(channel)
                 self.gui.channel_lists[self.server] = self.joined_channels
+                # Add the channel entry if it doesn't exist
+                if channel not in self.channel_messages[self.server]:
+                    self.channel_messages[self.server][channel] = []
                 self.update_gui_channel_list()
 
     async def _await_welcome_message(self):
@@ -1716,7 +1723,10 @@ class RudeChatClient:
         self.channel_window = ChannelListWindow(self, self.master)
 
     async def save_channel_list_to_file(self):
-        with open("channel_list.txt", "w", encoding='utf-8') as f:
+        script_directory = os.path.dirname(os.path.abspath(__file__))
+        channel_list_path = os.path.join(script_directory, "channel_list.txt")
+
+        with open(channel_list_path, "w", encoding='utf-8') as f:
             for channel, info in self.download_channel_list.items():
                 f.write(f"{channel} - Users: {info['user_count']} - Topic: {info['topic']}\n")
 
