@@ -43,6 +43,7 @@ class RudeChatClient:
         self.isupport_flag = False
         self.loop_running = True
         self.message_handling_semaphore = asyncio.Semaphore(50)
+        self.delete_lock_files()
 
     async def read_config(self, config_file):
         config = configparser.ConfigParser()
@@ -94,6 +95,17 @@ class RudeChatClient:
         self.use_logging = config.getboolean('IRC', 'use_logging', fallback=True)
         self.use_colors = config.getboolean('IRC', 'use_irc_colors', fallback=False)
         self.gui.update_nick_channel_label()
+
+    def delete_lock_files(self):
+        script_directory = os.path.dirname(os.path.abspath(__file__))
+        lock_file_pattern = os.path.join(script_directory, '*.lock')
+        lock_files = glob.glob(lock_file_pattern)
+
+        for lock_file in lock_files:
+            try:
+                os.remove(lock_file)
+            except OSError as e:
+                print(f"Error deleting {lock_file}: {e}")
 
     async def load_channel_messages(self):
         script_directory = os.path.dirname(os.path.abspath(__file__))
