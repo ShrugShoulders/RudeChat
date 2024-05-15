@@ -188,19 +188,20 @@ class RudeChatClient:
 
     async def send_initial_commands(self):
         self.gui.insert_text_widget(f'Sent client registration commands.\n')
-        if self.znc_connection:
-            await self.send_message(f'NICK {self.znc_user}')
-            await self.send_message(f'USER {self.znc_user} 0 * :{self.znc_user}')
-        elif not self.znc_connection:
-            await self.send_message(f'NICK {self.nickname}')
-            await self.send_message(f'USER {self.nickname} 0 * :{self.nickname}')
-        
+
         # Start capability negotiation
         if self.sasl_enabled:
             self.gui.insert_text_widget("Beginning SASL Authentication\n")
             await self.send_message('CAP LS 302')
         else:
             self.gui.insert_text_widget("SASL is not enabled.\n")
+
+        if self.znc_connection:
+            await self.send_message(f'NICK {self.znc_user}')
+            await self.send_message(f'USER {self.znc_user} 0 * :{self.znc_user}')
+        elif not self.znc_connection:
+            await self.send_message(f'NICK {self.nickname}')
+            await self.send_message(f'USER {self.nickname} 0 * :{self.nickname}')
 
     def handle_motd_line(self, tokens):
         motd_line = tokens.params[-1]  # Assumes the MOTD line is the last parameter
@@ -260,12 +261,11 @@ class RudeChatClient:
         for channel in self.auto_join_channels:
             if channel in self.joined_channels:
                 # Check if topic is empty
-                if not self.gui.channel_topics.get(self.server, {}).get(channel):
+                if len(self.gui.channel_topics.get(self.server, {}).get(channel, [])) < 10:
                     await self.send_message(f"TOPIC {channel}")
                 # Check if names list is empty
-                if not self.channel_users.get(channel):
+                if len(self.channel_users.get(channel, [])) < 10:
                     await self.send_message(f"NAMES {channel}")
-            await asyncio.sleep(0.2)
 
     def server_message_handler(self, tokens):
         if len(tokens.params) > 3:
@@ -285,7 +285,7 @@ class RudeChatClient:
             # Check if the server entry exists
             if self.server not in self.channel_messages:
                 self.channel_messages[self.server] = {}
-                
+
             # Add the channel entry if it doesn't exist
             if channel not in self.channel_messages[self.server]:
                 self.channel_messages[self.server][channel] = []
