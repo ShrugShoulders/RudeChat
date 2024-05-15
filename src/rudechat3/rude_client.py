@@ -380,6 +380,8 @@ class RudeChatClient:
                         self.server_message_handler(tokens)
                     case "252":
                         self.server_message_handler(tokens)
+                    case "253":
+                        self.server_message_handler(tokens)
                     case "254":
                         self.server_message_handler(tokens)
                     case "255":
@@ -479,7 +481,8 @@ class RudeChatClient:
                         got_396 = True
 
                     case _:
-                        self.save_error(tokens, line)
+                        input_line = f"_await_welcome_message: {line}"
+                        self.save_error(tokens, input_line)
                         self.gui.insert_and_scroll()
                 if check_timeout():
                     # Timeout occurred
@@ -1878,6 +1881,8 @@ class RudeChatClient:
                 match tokens.command:
                     case "ERROR":
                         self.handle_error(tokens)
+                    case "412":
+                        pass
                     case "353":  # NAMES list
                         self.handle_names_list(tokens)
                                 
@@ -2003,7 +2008,8 @@ class RudeChatClient:
                     case "PONG":
                         self.handle_pong(tokens)
                     case _:
-                        self.save_error(tokens, line)
+                        input_line = f"handle_incoming_message: {line}"
+                        self.save_error(tokens, input_line)
                         if line.startswith(f":{self.server}"):
                             self.handle_server_message(line)
 
