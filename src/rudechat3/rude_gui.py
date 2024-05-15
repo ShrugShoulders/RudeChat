@@ -973,6 +973,7 @@ class RudeGui:
             irc_client.tasks["keep_alive"] = asyncio.create_task(irc_client.keep_alive(), name="keep_alive_task")
             irc_client.tasks["auto_save"] = asyncio.create_task(irc_client.auto_save(), name="auto_save_task")
             irc_client.tasks["auto_refresh"] = asyncio.create_task(irc_client.auto_refresh(), name="auto_refresh_task")
+            irc_client.tasks["auto_trim"] = asyncio.create_task(irc_client.auto_trim(), name="auto_trim_task")
             irc_client.tasks["handle_incoming_message"] = asyncio.create_task(irc_client.handle_incoming_message(config_file), name="handle_incoming_message_task")
 
             self.bind_return_key()

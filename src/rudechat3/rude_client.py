@@ -309,7 +309,7 @@ class RudeChatClient:
         count_366 = 0
         got_topic = 0
         last_366_time = None
-        TIMEOUT_SECONDS = 1
+        TIMEOUT_SECONDS = 0.5
 
         def reset_timer():
             nonlocal last_366_time
@@ -737,6 +737,26 @@ class RudeChatClient:
             except AttributeError as e:  # Catch AttributeError
                 print(f"AttributeError caught in auto_save: {e}")
 
+    async def auto_trim(self):
+        while self.loop_running:
+            try:
+                await asyncio.sleep(80)
+                self.trim_messages()
+
+            except asyncio.CancelledError:
+                self.loop_running = False
+                print("Exiting auto_trim loop.")
+
+            except (ConnectionResetError, OSError) as e:
+                print(f"Exception caught in auto_trim: {e}")
+                self.loop_running = False
+
+            except Exception as e:  # Catch other exceptions
+                print(f"Unhandled exception in auto_trim: {e}")
+
+            except AttributeError as e:  # Catch AttributeError
+                print(f"AttributeError caught in auto_trim: {e}")
+
     async def auto_refresh(self):
         while self.loop_running:
             try:
@@ -844,9 +864,6 @@ class RudeChatClient:
 
             self.channel_messages[self.server][target].append(action_message)
 
-            # Trim the messages list
-            self.trim_messages(target, self.server)
-
             # Display the message in the text_widget if the target matches the current channel or DM
             if target == self.current_channel and self.gui.irc_client == self:
                 self.gui.insert_text_widget(action_message)
@@ -862,22 +879,11 @@ class RudeChatClient:
         except Exception as e:
             print(f"Exception in handle_action_ctcp: {e}")
 
-    def trim_messages(self, target, server_name=None):
-        # Check if the target server exists in channel_messages
-        if server_name is not None and server_name in self.channel_messages:
-            # Get the channels (or DMs) for the target server
-            server_channels = self.channel_messages[server_name]
-            # Check if the target channel exists in the server's channels
-            if target in server_channels:
-                # Get the message history for the target channel
-                channel_messages = server_channels[target]
+    def trim_messages(self):
+        for server, channels in self.channel_messages.items():
+            for channel in channels:
                 # Trim the message history to the last 100 messages
-                server_channels[target] = channel_messages[-100:]
-        elif target in self.channel_messages:
-            # If server_name is not provided, check if the target exists directly in channel_messages
-            channel_messages = self.channel_messages[target]
-            # Trim the message history to the last 100 messages
-            self.channel_messages[target] = channel_messages[-100:]
+                channels[channel] = channels[channel][-100:]
 
     async def notify_user_of_mention(self, server, channel, sender, message):
         notification_msg = f"<{sender}> {message}"
@@ -1175,8 +1181,6 @@ class RudeChatClient:
         if self.show_join_part_quit_nick:
             self.channel_messages[self.server][channel].append(join_message)
 
-        self.trim_messages(channel, self.server)
-
         # Display the message in the text_widget only if the channel matches the current channel
         if channel == self.current_channel and self.gui.irc_client == self:
             if self.show_join_part_quit_nick:
@@ -1219,9 +1223,6 @@ class RudeChatClient:
 
         if self.show_join_part_quit_nick:
             self.channel_messages[self.server][channel].append(part_message)
-
-        # Trim the messages list if it exceeds 100 lines
-        self.trim_messages(channel, self.server)
 
         # Display the message in the text_widget only if the channel matches the current channel
         if channel == self.current_channel and self.gui.irc_client == self:
@@ -1271,9 +1272,6 @@ class RudeChatClient:
                     if self.show_join_part_quit_nick:
                         self.channel_messages[self.server][channel].append(quit_message)
 
-                    # Trim the messages list if it exceeds 100 lines
-                    self.trim_messages(channel, self.server)
-
                     # Display the message in the text_widget only if the channel matches the current channel
                     if channel == self.current_channel and self.gui.irc_client == self:
                         if self.show_join_part_quit_nick:
@@ -1311,9 +1309,6 @@ class RudeChatClient:
                         self.channel_messages[self.server][channel] = []
                     if self.show_join_part_quit_nick:
                         self.channel_messages[self.server][channel].append(f"<@> {old_nick} has changed their nickname to {new_nick}\n")
-
-                    # Trim the messages list if it exceeds 100 lines
-                    self.trim_messages(channel, self.server)
                     
                     # Insert message into the text widget only if this is the current channel
                     if channel == self.current_channel and self.gui.irc_client == self:
@@ -1380,7 +1375,7 @@ class RudeChatClient:
         user = tokens.params[2] if len(tokens.params) > 2 else None
 
         # Ignore ban and unban and quiet modes
-        ignored_modes = ['+b', '-b', '-q', '+q', 'q', 'b']
+        ignored_modes = ['+b', '-b', '-q', '+q', 'q', 'b', '+m', 'm']
         if mode_change in ignored_modes:
             message = f"<!> {mode_change} mode for {user if user else 'unknown'}\n"
             if channel == self.current_channel and self.gui.irc_client == self:
@@ -1418,9 +1413,6 @@ class RudeChatClient:
 
                 self.channel_messages[self.server][channel].append(message)
 
-                # Trim the messages list if it exceeds 100 lines
-                self.trim_messages(channel, self.server)
-
             # Handle removal of modes
             elif mode_change.startswith('-'):
                 mode = mode_change[1]
@@ -1449,9 +1441,6 @@ class RudeChatClient:
                     self.channel_messages[self.server][channel] = []
 
                 self.channel_messages[self.server][channel].append(message)
-
-                # Trim the messages list if it exceeds 100 lines
-                self.trim_messages(channel, self.server)
 
                 if not user_modes:
                     if user in current_modes:
@@ -1697,9 +1686,6 @@ class RudeChatClient:
         # Display the kick message in the chat window only if the channel is the current channel
         kick_message_content = f"<X> {kicked_nickname} has been kicked from {channel} by {tokens.hostmask.nickname} ({reason})"
         self.channel_messages[self.server][channel].append(kick_message_content + "\n")
-
-        # Trim the messages list if it exceeds 100 lines
-        self.trim_messages(channel, self.server)
 
         if channel == self.current_channel and self.gui.irc_client == self:
             self.gui.insert_text_widget(kick_message_content + "\n")
@@ -2826,9 +2812,6 @@ class RudeChatClient:
                 self.channel_messages[server_name][channel] = []
             self.channel_messages[server_name][channel].append(formatted_message)
 
-        # Trim the history if it exceeds 100 lines
-        self.trim_messages(channel, server_name)
-
     async def handle_cowsay_command(self, args):
         script_directory = os.path.dirname(os.path.abspath(__file__))
 
@@ -3063,9 +3046,6 @@ class RudeChatClient:
             self.channel_messages[self.server][self.current_channel].append(f"{timestamp}{formatted_message}\n")
         elif self.use_time_stamp == False:
             self.channel_messages[self.server][self.current_channel].append(f"{formatted_message}\n")
-
-        # Trim the messages list if it exceeds 100 lines
-        self.trim_messages(self.current_channel, self.server)
 
     def display_help(self):
         # Categories and their associated commands
