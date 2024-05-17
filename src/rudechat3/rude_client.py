@@ -633,6 +633,7 @@ class RudeChatClient:
 
         # Update the highlighted_channels dictionary with the new indexes
         self.highlighted_channels[self.server_name] = updated_highlighted_channels
+        self.gui.scroll_channel_list()
 
     def update_gui_user_list(self, channel):
         self.gui.user_listbox.delete(0, tk.END)
@@ -1053,7 +1054,6 @@ class RudeChatClient:
             if sender not in self.whois_executed:
                 await self.send_message(f'WHOIS {sender}')
                 self.whois_executed.add(sender)
-                self.gui.scroll_channel_list()
             return target
         else:
             return target
@@ -1960,6 +1960,9 @@ class RudeChatClient:
                     case "403":
                         self.command_403(tokens)
 
+                    case "404":
+                        self.command_404(tokens)
+
                     case "442":
                         self.handle_not_on_channel(tokens)
 
@@ -2036,6 +2039,12 @@ class RudeChatClient:
         except FileNotFoundError:
             with open(error_log_path, "w") as error_log_file:
                 error_log_file.write(error)
+
+    def command_404(self, tokens):
+        channel = tokens.params[1]
+        message = tokens.params[2]
+        data = f"{channel}: {message}"
+        self.add_server_message(data)
 
     def command_900(self, tokens):
         logged_in_as = tokens.params[3]
