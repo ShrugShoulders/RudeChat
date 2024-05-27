@@ -1390,6 +1390,7 @@ class RudeChatClient:
         user = tokens.params[2] if len(tokens.params) > 2 else None
 
         if user is None: 
+            # Handle Channel Modes.
             message = f"<!> {mode_change} mode for {channel}"
             if channel == self.current_channel and self.gui.irc_client == self:
                 self.gui.insert_text_widget(f"{message}")
