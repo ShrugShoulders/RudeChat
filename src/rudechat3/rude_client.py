@@ -736,7 +736,7 @@ class RudeChatClient:
     async def auto_save(self):
         while self.loop_running:
             try:
-                await asyncio.sleep(60)
+                await asyncio.sleep(194)
                 await self.save_channel_messages()
 
             except asyncio.CancelledError:
@@ -1389,8 +1389,21 @@ class RudeChatClient:
         mode_change = tokens.params[1]
         user = tokens.params[2] if len(tokens.params) > 2 else None
 
+        if user is None: 
+            message = f"<!> {mode_change} mode for {channel}"
+            if channel == self.current_channel and self.gui.irc_client == self:
+                self.gui.insert_text_widget(f"{message}")
+                self.gui.highlight_nickname()
+            if self.server not in self.channel_messages:
+                self.channel_messages[self.server] = {}
+            if channel not in self.channel_messages[self.server]:
+                self.channel_messages[self.server][channel] = []
+            self.channel_messages[self.server][channel].append(message)
+
+            return
+
         # Ignore ban and unban and quiet modes
-        ignored_modes = ['+b', '-b', '-q', '+q', 'q', 'b', '+m', 'm']
+        ignored_modes = ['+b', '-b', '-q', '+q', 'q', 'b']
         if mode_change in ignored_modes:
             message = f"<!> {mode_change} mode for {user if user else 'unknown'}\n"
             if channel == self.current_channel and self.gui.irc_client == self:
