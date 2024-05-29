@@ -1562,7 +1562,6 @@ class RudeChatClient:
                     'setting': list(mode_categories[2]),
                     'no_parameter': list(mode_categories[3])
                 }
-                print(self.chanmodes)
 
     async def handle_who_reply(self, tokens):
         """
@@ -1904,7 +1903,7 @@ class RudeChatClient:
                         continue
 
                     # Debug statement to print the line before tokenizing
-                    print(f"Debug: About to tokenize the line - '{line}'")
+                    #print(f"Debug: About to tokenize the line - '{line}'")
 
                     tokens = irctokens.tokenise(line)
                 except ValueError as e:
