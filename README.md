@@ -1,7 +1,6 @@
 # RudeChat IRC Client: For Fun & Reasons.
-## Installation        
-To install cd to RudeChat3 folder where the .toml is && run the installer for your OS. 
-
+## Installation    
+To install on Linux cd to RudeChat3 folder and pip install.
 It will pip install all needed libraries and then RudeChat3. 
 
 You can then run rudechat in your terminal/cmd/powershell to open RudeChat.
