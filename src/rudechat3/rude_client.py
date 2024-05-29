@@ -13,7 +13,6 @@ class RudeChatClient:
         self.chan_limit = 0
         self.channellen = 0
         self.topiclen = 0
-        self.chanmodes = []
         self.joined_channels = []
         self.motd_lines = []
         self.chantypes = ''
@@ -1388,10 +1387,11 @@ class RudeChatClient:
         channel = tokens.params[0]
         mode_change = tokens.params[1]
         user = tokens.params[2] if len(tokens.params) > 2 else None
+        stripped_mode = mode_change.lstrip('+-')
 
-        if user is None: 
+        if stripped_mode in self.chanmodes.get('no_parameter', []) or stripped_mode in self.chanmodes.get('parameter', []):
             # Handle Channel Modes.
-            message = f"<!> {mode_change} mode for {channel}"
+            message = f"<!> {mode_change} mode for {channel}\n"
             if channel == self.current_channel and self.gui.irc_client == self:
                 self.gui.insert_text_widget(f"{message}")
                 self.gui.highlight_nickname()
@@ -1403,10 +1403,24 @@ class RudeChatClient:
 
             return
 
-        # Ignore ban and unban and quiet modes
-        ignored_modes = ['+b', '-b', '-q', '+q', 'q', 'b']
-        if mode_change in ignored_modes:
+        if stripped_mode in self.chanmodes.get('list', []):
+            # Handle User Modes
             message = f"<!> {mode_change} mode for {user if user else 'unknown'}\n"
+            if channel == self.current_channel and self.gui.irc_client == self:
+                self.gui.insert_text_widget(f"{message}")
+                self.gui.highlight_nickname()
+
+            # Update the message history for the channel
+            if self.server not in self.channel_messages:
+                self.channel_messages[self.server] = {}
+            if channel not in self.channel_messages[self.server]:
+                self.channel_messages[self.server][channel] = []
+            self.channel_messages[self.server][channel].append(message)
+
+            return
+
+        if stripped_mode in self.chanmodes.get('setting', []):
+            message = f"<!> {mode_change} {user} set for {channel}\n"
             if channel == self.current_channel and self.gui.irc_client == self:
                 self.gui.insert_text_widget(f"{message}")
                 self.gui.highlight_nickname()
@@ -1451,8 +1465,6 @@ class RudeChatClient:
                         u.replace(symbol_to_remove, '') if u.endswith(user) else u
                         for u in self.channel_users.get(channel, [])
                     ]
-                else:
-                    print(f"Unknown mode: {mode}")
 
                 user_modes = current_modes.get(user, set())
                 user_modes.discard(mode)
@@ -1520,15 +1532,6 @@ class RudeChatClient:
         data = f"ISUPPORT: {isupport_message}\n"
         self.add_server_message(data)
 
-        # Initialize variables with fallback values
-        self.mode_to_symbol = {'q': '~', 'a': '&', 'o': '@', 'h': '%', 'v': '+'}
-        self.chantypes = "#"
-        self.chanmodes = ['e', 'I', 'b', 'q', 'k', 'f', 'l', 'j', 'C', 'F', 'L', 'M', 'P', 'Q', 'R', 'S', 'T', 'c', 'g', 'i', 'm', 'n', 'p', 'r', 's', 't', 'u', 'z']
-        self.nicknamelen = 16
-        self.chan_limit = 250
-        self.channellen = 50
-        self.topiclen = 390
-
         # Parse ISUPPORT parameters
         for param in params:
             if param.startswith("PREFIX="):
@@ -1552,7 +1555,14 @@ class RudeChatClient:
                 self.topiclen = int(topic_len)
             elif param.startswith("CHANMODES="):
                 _, chan_modes = param.split("=")
-                self.chanmodes = [c for c in chan_modes if c != ',']
+                mode_categories = chan_modes.split(',')
+                self.chanmodes = {
+                    'list': list(mode_categories[0]),
+                    'parameter': list(mode_categories[1]),
+                    'setting': list(mode_categories[2]),
+                    'no_parameter': list(mode_categories[3])
+                }
+                print(self.chanmodes)
 
     async def handle_who_reply(self, tokens):
         """
@@ -1894,7 +1904,7 @@ class RudeChatClient:
                         continue
 
                     # Debug statement to print the line before tokenizing
-                    #print(f"Debug: About to tokenize the line - '{line}'")
+                    print(f"Debug: About to tokenize the line - '{line}'")
 
                     tokens = irctokens.tokenise(line)
                 except ValueError as e:
@@ -2998,14 +3008,24 @@ class RudeChatClient:
         """Sets the mode for a specified target in a specified channel.
         If target is None, sets the mode for the channel.
         """
-        if mode and target:
-            await self.send_message(f'MODE {channel} {mode} {target}')
-        elif mode:
-            # Check if the mode is in the list of channel modes
-            if mode in self.chanmodes:
+        stripped_mode = mode.lstrip('+-')
+
+        if stripped_mode in self.chanmodes.get('list', []):
+            if mode and target:
+                await self.send_message(f'MODE {channel} {mode} {target}')
+
+        elif stripped_mode in self.chanmodes.get('no_parameter', []):
+            await self.send_message(f'MODE {channel} {mode}')
+
+        elif stripped_mode in self.chanmodes.get('setting', []):
+            if mode and target:
+                await self.send_message(f'MODE {channel} {mode} {target}')
+
+        elif stripped_mode in self.chanmodes.get('parameter', []):
+            if mode and target:
+                await self.send_message(f'MODE {channel} {mode} {target}')
+            elif mode:
                 await self.send_message(f'MODE {channel} {mode}')
-            else:
-                self.gui.insert_text_widget(f"Mode {mode} is not valid for the channel.")
         else:
             await self.send_message(f'MODE {channel}')
 
