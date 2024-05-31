@@ -3040,6 +3040,7 @@ class RudeChatClient:
             self.gui.insert_text_widget("No channel selected. Use /join to join a channel.\n")
 
     async def refresh_user_list_for_current_channel(self):
+        self.gui.clear_user_listbox()
         if self.current_channel:
             await self.send_message(f'NAMES {self.current_channel}')
         else:
