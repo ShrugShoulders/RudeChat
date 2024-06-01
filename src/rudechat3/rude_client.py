@@ -1385,81 +1385,64 @@ class RudeChatClient:
 
     def handle_mode(self, tokens):
         channel = tokens.params[0]
-        mode_change = tokens.params[1]
-        user = tokens.params[2] if len(tokens.params) > 2 else None
-        stripped_mode = mode_change.lstrip('+-')
+        mode_changes = tokens.params[1]
+        users = tokens.params[2:] if len(tokens.params) > 2 else []
+        
+        user_index = 0
+        adding = None
 
-        if stripped_mode in self.chanmodes.get('no_parameter', []) or stripped_mode in self.chanmodes.get('parameter', []):
-            # Handle Channel Modes.
-            message = f"<!> {mode_change} mode for {channel}\n"
-            if channel == self.current_channel and self.gui.irc_client == self:
-                self.gui.insert_text_widget(f"{message}")
-                self.gui.highlight_nickname()
-            if self.server not in self.channel_messages:
-                self.channel_messages[self.server] = {}
-            if channel not in self.channel_messages[self.server]:
-                self.channel_messages[self.server][channel] = []
-            self.channel_messages[self.server][channel].append(message)
+        for mode_change in mode_changes:
+            if mode_change in '+-':
+                adding = mode_change == '+'
+                continue
 
-            return
+            mode = mode_change
+            user = users[user_index] if user_index < len(users) else None
+            stripped_mode = mode.lstrip('+-')
 
-        if stripped_mode in self.chanmodes.get('list', []):
-            # Handle User Modes
-            message = f"<!> {mode_change} mode for {user if user else 'unknown'}\n"
-            if channel == self.current_channel and self.gui.irc_client == self:
-                self.gui.insert_text_widget(f"{message}")
-                self.gui.highlight_nickname()
+            if adding is None:
+                continue
 
-            # Update the message history for the channel
-            if self.server not in self.channel_messages:
-                self.channel_messages[self.server] = {}
-            if channel not in self.channel_messages[self.server]:
-                self.channel_messages[self.server][channel] = []
-            self.channel_messages[self.server][channel].append(message)
-
-            return
-
-        if stripped_mode in self.chanmodes.get('setting', []):
-            message = f"<!> {mode_change} {user} set for {channel}\n"
-            if channel == self.current_channel and self.gui.irc_client == self:
-                self.gui.insert_text_widget(f"{message}")
-                self.gui.highlight_nickname()
-
-            # Update the message history for the channel
-            if self.server not in self.channel_messages:
-                self.channel_messages[self.server] = {}
-            if channel not in self.channel_messages[self.server]:
-                self.channel_messages[self.server][channel] = []
-            self.channel_messages[self.server][channel].append(message)
-
-            return
-
-        if channel in self.joined_channels and user:
             current_modes = self.user_modes.get(channel, {})
 
-            # Handle addition of modes
-            if mode_change.startswith('+'):
-                mode = mode_change[1]
+            if adding:
+                if stripped_mode in self.chanmodes.get('no_parameter', []) or stripped_mode in self.chanmodes.get('parameter', []):
+                    message = f"<!> +{mode} mode for {channel}\n"
+                    self._log_channel_message(channel, message)
+                    continue
+
+                if stripped_mode in self.chanmodes.get('list', []):
+                    message = f"<!> +{mode} mode for {user if user else 'unknown'}\n"
+                    self._log_channel_message(channel, message)
+                    continue
+
+                if stripped_mode in self.chanmodes.get('setting', []):
+                    message = f"<!> +{mode} {user} set for {channel}\n"
+                    self._log_channel_message(channel, message)
+                    continue
+
                 current_modes.setdefault(user, set()).add(mode)
-                
-                # Show message and save to history
                 message = f"<+> {user} has been given mode +{mode}\n"
-                if channel == self.current_channel and self.gui.irc_client == self:
-                    self.gui.insert_text_widget(f"{message}")
-                    self.gui.highlight_nickname()
+                self._log_channel_message(channel, message)
+                user_index += 1
 
-                # Update the message history for the channel
-                if self.server not in self.channel_messages:
-                    self.channel_messages[self.server] = {}
-                if channel not in self.channel_messages[self.server]:
-                    self.channel_messages[self.server][channel] = []
+            else:
+                if stripped_mode in self.chanmodes.get('no_parameter', []) or stripped_mode in self.chanmodes.get('parameter', []):
+                    message = f"<&> -{mode} mode for {channel}\n"
+                    self._log_channel_message(channel, message)
+                    continue
 
-                self.channel_messages[self.server][channel].append(message)
+                if stripped_mode in self.chanmodes.get('list', []):
+                    message = f"<&> -{mode} mode for {user if user else 'unknown'}\n"
+                    self._log_channel_message(channel, message)
+                    continue
 
-            # Handle removal of modes
-            elif mode_change.startswith('-'):
-                mode = mode_change[1]
-                if mode in self.mode_to_symbol:  # <-- Check here
+                if stripped_mode in self.chanmodes.get('setting', []):
+                    message = f"<&> -{mode} {user} set for {channel}\n"
+                    self._log_channel_message(channel, message)
+                    continue
+
+                if mode in self.mode_to_symbol:
                     symbol_to_remove = self.mode_to_symbol[mode]
                     self.channel_users[channel] = [
                         u.replace(symbol_to_remove, '') if u.endswith(user) else u
@@ -1469,50 +1452,46 @@ class RudeChatClient:
                 user_modes = current_modes.get(user, set())
                 user_modes.discard(mode)
 
-                # Show message and save to history
                 message = f"<-> {user} has had mode +{mode} removed\n"
-                if channel == self.current_channel and self.gui.irc_client == self:
-                    self.gui.insert_text_widget(f"{message}")
-                    self.gui.highlight_nickname()
-
-                # Update the message history for the channel
-                if self.server not in self.channel_messages:
-                    self.channel_messages[self.server] = {}
-                if channel not in self.channel_messages[self.server]:
-                    self.channel_messages[self.server][channel] = []
-
-                self.channel_messages[self.server][channel].append(message)
+                self._log_channel_message(channel, message)
 
                 if not user_modes:
                     if user in current_modes:
-                        del current_modes[user]  # Remove the user's entry if no modes left
+                        del current_modes[user]
                     else:
                         print(f"User {user} not found in current modes. Adding with no modes.")
                         user_modes = set()
-
-                        # Check for special characters in the user's nickname and add corresponding modes
                         if '@' in user:
-                            user_modes.add('o')  # Add the '@' mode
+                            user_modes.add('o')
                         if '+' in user:
-                            user_modes.add('v')  # Add the '+' mode ~&@%+
+                            user_modes.add('v')
                         if '~' in user:
                             user_modes.add('q')
                         if '&' in user:
                             user_modes.add('a')
                         if '%' in user:
                             user_modes.add('h')
-
-                        current_modes[user] = user_modes  # Add the user with an empty set of modes
+                        current_modes[user] = user_modes
                 else:
-                    current_modes[user] = user_modes  # Update the user's modes
+                    current_modes[user] = user_modes
 
-            self.user_modes[channel] = current_modes
+                self.user_modes[channel] = current_modes
+                user_index += 1
 
-            # Update the user list to reflect the new modes
             sorted_users = self.sort_users(self.channel_users.get(channel, []), channel)
             self.channel_users[channel] = sorted_users
-
             self.update_user_listbox(channel)
+        return #:lykos!lykos@lykos/bot MODE #werewolf -vv ponycat Eire
+
+    def _log_channel_message(self, channel, message):
+        if channel == self.current_channel and self.gui.irc_client == self:
+            self.gui.insert_text_widget(f"{message}")
+            self.gui.highlight_nickname()
+        if self.server not in self.channel_messages:
+            self.channel_messages[self.server] = {}
+        if channel not in self.channel_messages[self.server]:
+            self.channel_messages[self.server][channel] = []
+        self.channel_messages[self.server][channel].append(message)
 
     def update_user_listbox(self, channel):
         current_users = self.channel_users.get(channel, [])
@@ -1903,7 +1882,7 @@ class RudeChatClient:
                         continue
 
                     # Debug statement to print the line before tokenizing
-                    #print(f"Debug: About to tokenize the line - '{line}'")
+                    print(f"Debug: About to tokenize the line - '{line}'")
 
                     tokens = irctokens.tokenise(line)
                 except ValueError as e:
@@ -2716,7 +2695,7 @@ class RudeChatClient:
                 elif self.use_time_stamp == False:
                     self.gui.insert_text_widget(f"<{self.nickname}> {formatted_message}")
                 self.gui.highlight_nickname()
-                await asyncio.sleep(0.5)
+                await asyncio.sleep(0.6)
                 await self.append_to_channel_history(self.current_channel, line)
         else:
             self.gui.insert_text_widget(f"Unknown ASCII art macro: {macro_name}. Type '/mac' to see available macros.\n")
@@ -3187,7 +3166,7 @@ class RudeChatClient:
                 "/cowsay: Built in, /cowsay <text> | /cowsay <fortune list>",
                 "/fortune: Built in, /fortune <fortune list>",
                 "/mac <macro> - sends a chosen macro to a channel /mac - shows available macros",
-                "Fortune Lists: dadjoke(jokes your dad makes), yomama(YO MAMA SO FAT), the rules(Ferengi Rules of Acquisition)",
+                "Fortune Lists: dadjoke(jokes your dad makes), yomama(YO MAMA SO FAT), therules(Ferengi Rules of Acquisition)",
                 "Add your own fortune lists to the Fortune List folder in site-packages for python."
                 "_________",
             ],
