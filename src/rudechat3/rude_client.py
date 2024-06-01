@@ -1481,7 +1481,7 @@ class RudeChatClient:
             sorted_users = self.sort_users(self.channel_users.get(channel, []), channel)
             self.channel_users[channel] = sorted_users
             self.update_user_listbox(channel)
-        return #:lykos!lykos@lykos/bot MODE #werewolf -vv ponycat Eire
+        return 
 
     def _log_channel_message(self, channel, message):
         if channel == self.current_channel and self.gui.irc_client == self:
