@@ -735,7 +735,7 @@ class RudeChatClient:
     async def auto_save(self):
         while self.loop_running:
             try:
-                await asyncio.sleep(194)
+                await asyncio.sleep(60)
                 await self.save_channel_messages()
 
             except asyncio.CancelledError:
@@ -1882,7 +1882,7 @@ class RudeChatClient:
                         continue
 
                     # Debug statement to print the line before tokenizing
-                    print(f"Debug: About to tokenize the line - '{line}'")
+                    #print(f"Debug: About to tokenize the line - '{line}'")
 
                     tokens = irctokens.tokenise(line)
                 except ValueError as e:
@@ -2062,14 +2062,14 @@ class RudeChatClient:
     def command_403(self, tokens):
         target = tokens.params[1]
         message = tokens.params[2]
-        data = f"{message}: {target}"
+        data = f"{message}: {target}\n"
         self.add_server_message(data)
 
     def handle_kill_command(self, tokens):
         source = tokens.source
         user = tokens.params[0]
         message = tokens.params[1]
-        data = f"{source} {user}: {message}"
+        data = f"{source} {user}: {message}\n"
 
         self.add_server_message(data)
 
@@ -2078,7 +2078,7 @@ class RudeChatClient:
         user = tokens.params[0]
         connecting_user = tokens.params[1]
         message = tokens.params[2]
-        data = f"{source} {user}: {connecting_user} {message}"
+        data = f"{source} {user}: {connecting_user} {message}\n"
 
         self.add_server_message(data)
 
