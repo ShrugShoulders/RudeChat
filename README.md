@@ -8,7 +8,7 @@ You can then run rudechat in your terminal to start RudeChat.
 
 To install on Windows Download the installer.
 
-It will install to %LOCALAPPDATA%\RudeChat3
+It will install to %LOCALAPPDATA%\Programs\RudeChat3
 
 It is suggested that you use: https://github.com/source-foundry/Hack as your font.
         
