@@ -4,6 +4,7 @@ from .server_config_window import ServerConfigWindow
 from .rude_colours import RudeColours
 from .format_decoder import Attribute, decoder
 from .gui_config_window import GuiConfigWindow
+from .rude_popout import RudePopOut
 from .shared_imports import *
 
 class RudeGui:
@@ -61,6 +62,8 @@ class RudeGui:
         self.clients = {}
         self.channel_topics = {}
         self.entry_history = []
+        self.popped_out_channels = []
+        self.pop_out_windows = {}
         self.history_index = 0
         self.last_selected_index = None
         self.previous_server_index = None
@@ -624,10 +627,23 @@ class RudeGui:
             selected_channel = self.channel_listbox.get(selected_channel_index)
             if '#' in selected_channel:
                 menu.add_command(label="Leave Channel", command=self.leave_channel_from_menu)
+                menu.add_command(label="Pop Out Channel", command=self.open_pop_out_window)
             else:
                 menu.add_command(label="Close Query", command=self.close_query_from_menu)
+                menu.add_command(label="Pop Out Query", command=self.open_pop_out_window)
         
         return menu
+
+    def open_pop_out_window(self):
+        selected_channel = self.channel_listbox.get(self.channel_listbox.curselection())
+        if selected_channel not in self.pop_out_windows:
+            self.popped_out_channels.append(selected_channel)
+            self.channel_listbox.delete(self.channel_listbox.curselection())
+            self.irc_client.current_channel = ""
+            root = tk.Tk()
+            app = RudePopOut(root, selected_channel, self.irc_client, self.irc_client.nickname, self)
+            self.pop_out_windows[selected_channel] = app
+            root.mainloop()
 
     def show_channel_list_menu(self, event):
         menu = self.create_channel_list_menu()

@@ -43,6 +43,7 @@ class RudeChatClient:
         self.loop_running = True
         self.message_handling_semaphore = asyncio.Semaphore(50)
         self.delete_lock_files()
+        self.loop = asyncio.get_event_loop()
 
     async def read_config(self, config_file):
         config = configparser.ConfigParser()
@@ -405,6 +406,8 @@ class RudeChatClient:
                         await self.handle_nick(tokens)
                     case "JOIN":
                         await self.join_znc_channel(tokens)
+                        if not self.use_auto_join:
+                            reset_timer()
                     case "PRIVMSG":
                         await self.handle_privmsg(tokens)
                     case "MODE":
@@ -422,6 +425,8 @@ class RudeChatClient:
                     case "332" | "333" | "TOPIC":
                         self.handle_topic(tokens)
                         got_topic += 1
+                        if not self.use_auto_join:
+                            reset_timer()
 
                     case "353":  # NAMES list
                         self.handle_names_list(tokens)
@@ -604,7 +609,8 @@ class RudeChatClient:
         self.gui.channel_listbox.delete(0, tk.END)
 
         for chan in self.joined_channels:
-            self.gui.channel_listbox.insert(tk.END, chan)
+            if chan not in self.gui.popped_out_channels:
+                self.gui.channel_listbox.insert(tk.END, chan)
 
         # Update and restore the highlighted background color for all previously highlighted channels
         updated_highlighted_channels = {}
@@ -683,7 +689,10 @@ class RudeChatClient:
     async def reconnect(self, config_file):
         disconnected_server = self.grab_server_name(config_file)
         MAX_RETRIES = 5
-        RETRY_DELAY = 245
+        if self.znc_connection:
+            RETRY_DELAY = 1
+        else:
+            RETRY_DELAY = 245
         retries = 0
         self.add_server_message(f"****Resetting State\n")
         await self.reset_state()
@@ -897,8 +906,8 @@ class RudeChatClient:
     def trim_messages(self):
         for server, channels in self.channel_messages.items():
             for channel in channels:
-                # Trim the message history to the last 100 messages
-                channels[channel] = channels[channel][-100:]
+                # Trim the message history to the last 150 messages
+                channels[channel] = channels[channel][-150:]
 
     async def notify_user_of_mention(self, server, channel, sender, message):
         notification_msg = f"<{sender}> {message}"
@@ -1072,9 +1081,25 @@ class RudeChatClient:
                         self.update_gui_channel_list()
 
                 self.save_message(self.server, target, sender, message, is_sent=False)
-                self.display_message(timestamp, sender, message, target, is_direct=True)
+                if sender not in self.gui.popped_out_channels:
+                    self.display_message(timestamp, sender, message, target, is_direct=True)
+                if sender in self.gui.popped_out_channels:
+                    self.pip_to_pop_out(timestamp, sender, message, target)
+
         except Exception as e:
             print(f"Exception in prepare_direct_message: {e}")
+
+    def pip_to_pop_out(self, timestamp, sender, message, target):
+        if target in self.gui.pop_out_windows:
+            window = self.gui.pop_out_windows[target]
+            formatted_message = f"{timestamp}<{sender}> {message}\n"
+            window.insert_text(formatted_message)
+            window.highlight_nickname()
+        elif sender in self.gui.pop_out_windows:
+            window = self.gui.pop_out_windows[sender]
+            formatted_message = f"{timestamp}<{sender}> {message}\n"
+            window.insert_text(formatted_message)
+            window.highlight_nickname()
 
     async def handle_channel_message(self, sender, target, message, timestamp):
         if self.server not in self.channel_messages:
@@ -1083,7 +1108,11 @@ class RudeChatClient:
             self.channel_messages[self.server][target] = []
         self.save_message(self.server, target, sender, message, is_sent=False)
         self.log_message(self.server_name, target, sender, message, is_sent=False)
-        self.display_message(timestamp, sender, message, target, is_direct=False)
+        if target not in self.gui.popped_out_channels:
+            if target not in self.gui.pop_out_windows:
+                self.display_message(timestamp, sender, message, target, is_direct=False)
+        if target in self.gui.popped_out_channels:
+            self.pip_to_pop_out(timestamp, sender, message, target)
 
     def save_message(self, server, target, sender, message, is_sent):
         timestamp = datetime.datetime.now().strftime('[%H:%M:%S] ')
@@ -2678,6 +2707,7 @@ class RudeChatClient:
             self.gui.insert_text_widget(f"No channel selected. Use /join to join a channel.\n")
 
     async def handle_mac_command(self, args):
+        counter = 0
         if len(args) < 2:
             available_macros = ", ".join(self.ASCII_ART_MACROS.keys())
             self.gui.insert_text_widget(f"Available ASCII art macros: {available_macros}\n")
@@ -2688,14 +2718,19 @@ class RudeChatClient:
         if macro_name in self.ASCII_ART_MACROS:
             current_time = datetime.datetime.now().strftime('[%H:%M:%S] ')
             for line in self.ASCII_ART_MACROS[macro_name].splitlines():
-                formatted_message = self.format_message(line, current_time)
-                await self.send_message(f'PRIVMSG {self.current_channel} :{formatted_message}')
-                if self.use_time_stamp == True:
-                    self.gui.insert_text_widget(f"{current_time}<{self.nickname}> {formatted_message}")
-                elif self.use_time_stamp == False:
-                    self.gui.insert_text_widget(f"<{self.nickname}> {formatted_message}")
-                self.gui.highlight_nickname()
-                await asyncio.sleep(0.6)
+                if counter < 4:
+                    formatted_message = self.format_message(line, current_time)
+                    await self.send_message(f'PRIVMSG {self.current_channel} :{formatted_message}')
+                    if self.use_time_stamp == True:
+                        self.gui.insert_text_widget(f"{current_time}<{self.nickname}> {formatted_message}")
+                    elif self.use_time_stamp == False:
+                        self.gui.insert_text_widget(f"<{self.nickname}> {formatted_message}")
+                    self.gui.highlight_nickname()
+                    counter += 1
+                    await asyncio.sleep(1.9)
+                else:
+                    counter = 0
+                    await asyncio.sleep(random.uniform(2.5, 3.5))
                 await self.append_to_channel_history(self.current_channel, line)
         else:
             self.gui.insert_text_widget(f"Unknown ASCII art macro: {macro_name}. Type '/mac' to see available macros.\n")
@@ -3199,7 +3234,7 @@ class RudeChatClient:
         self.server_name = server_name
         self.gui.update_nick_channel_label()
 
-    def display_last_messages(self, channel, num=100, server_name=None):
+    def display_last_messages(self, channel, num=150, server_name=None):
         if server_name:
             messages = self.channel_messages.get(server_name, {}).get(channel, [])
         for message in messages[-num:]:
