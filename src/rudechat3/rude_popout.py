@@ -8,7 +8,7 @@ import json
 import re
 import random
 from threading import Thread
-from tkinter import scrolledtext, Listbox, Scrollbar
+from tkinter import scrolledtext, Listbox, Scrollbar, Tk, Frame, Label, Entry, Listbox, Menu, Scrollbar, StringVar, PhotoImage 
 from .format_decoder import Attribute, decoder
 
 class RudePopOut:
@@ -35,7 +35,7 @@ class RudePopOut:
         # Main text widget (scrolled text)
         self.text_widget = scrolledtext.ScrolledText(self.frame, wrap=tk.WORD)
         self.text_widget.grid(row=0, column=0, sticky="nsew")
-        self.text_widget.configure(bg=self.widgets_bg_color, fg=self.widgets_fg_color)
+        self.text_widget.configure(bg=self.widgets_bg_color, fg=self.widgets_fg_color, font=(self.font_family, self.font_size))
 
         # User list frame
         self.user_frame = tk.Frame(self.frame, bg="black")
@@ -59,7 +59,7 @@ class RudePopOut:
         self.entry.grid(row=1, column=0, sticky='ew', padx=10, pady=5)
         self.entry.bind('<Return>', self.send_text)
         self.entry.bind('<Tab>', self.handle_tab_complete)
-        self.entry.configure(bg=self.entry_bg_color, fg=self.entry_fg_color, insertbackground=self.entry_insertbackground)
+        self.entry.configure(bg=self.input_bg, fg=self.input_fg, insertbackground=self.input_insertbackground, font=(self.font_family, self.font_size))
 
         # Close button (smaller size)
         self.close_button = tk.Button(self.frame, text="Pop In", command=self.close_window, width=8)
@@ -73,6 +73,7 @@ class RudePopOut:
         self.tab_completion_timer = None
         self.tab_complete_terminator = ":"
 
+        self.init_input_menu()
         self.update_gui_user_list(selected_channel)
 
     def load_configuration(self):
@@ -86,13 +87,17 @@ class RudePopOut:
         self.main_bg_color = config.get('GUI', 'main_bg_color')
         self.widgets_fg_color = config.get('WIDGETS', 'entry_fg')
         self.widgets_bg_color = config.get('WIDGETS', 'entry_bg')
-        self.entry_fg_color = config.get('WIDGETS', 'entry_fg')
-        self.entry_bg_color = config.get('WIDGETS', 'entry_bg')
-        self.entry_insertbackground = config.get('WIDGETS', 'entry_insertbackground')
         self.button_fg_color = config.get('WIDGETS', 'entry_fg')
         self.button_bg_color = config.get('WIDGETS', 'entry_bg')
         self.user_nickname_color = config.get('GUI', 'main_nickname_color', fallback='#39ff14')
         self.generate_nickname_colors = config.getboolean('GUI', 'generate_nickname_colors', fallback=True)
+        self.font_family = config.get('GUI', 'family', fallback='Hack')
+        self.font_size = config.getint('GUI', 'size', fallback=10)
+        self.input_fg = config.get('WIDGETS', 'entry_fg', fallback='#C0FFEE')
+        self.input_bg = config.get('WIDGETS', 'entry_bg', fallback='black')
+        self.input_insertbackground = config.get('WIDGETS', 'entry_insertbackground', fallback='#C0FFEE')
+        self.input_label_bg = config.get('WIDGETS', 'entry_label_bg', fallback='black')
+        self.input_label_fg = config.get('WIDGETS', 'entry_label_fg', fallback='#C0FFEE')
 
     def send_text(self, event=None):
         try:
@@ -100,7 +105,8 @@ class RudePopOut:
             timestamp = datetime.datetime.now().strftime('[%H:%M:%S]')
             if user_text:
                 # Insert text in the main text widget
-                self.insert_text(f"{timestamp} <{self.nick_name}> {user_text}\n")
+                escaped_text = self.main_app.escape_color_codes(user_text)
+                self.insert_text(f"{timestamp} <{self.nick_name}> {escaped_text}\n")
                 self.entry.delete(0, tk.END)
 
                 # Determine the server and current channel
@@ -113,13 +119,13 @@ class RudePopOut:
                 if current_channel not in self.irc_client.channel_messages[server]:
                     self.irc_client.channel_messages[server][current_channel] = []
 
-                self.irc_client.channel_messages[server][current_channel].append(f"{timestamp} <{self.nick_name}> {user_text}\n")
+                self.irc_client.channel_messages[server][current_channel].append(f"{timestamp} <{self.nick_name}> {escaped_text}\n")
 
-                self.log_message(self.irc_client.server_name, current_channel, self.nick_name, user_text, is_sent=True)
+                self.log_message(self.irc_client.server_name, current_channel, self.nick_name, escaped_text, is_sent=True)
 
                 # Send the message through the IRC client
                 asyncio.run_coroutine_threadsafe(
-                    self.irc_client.send_message(f"PRIVMSG {current_channel} :{user_text}"), 
+                    self.irc_client.send_message(f"PRIVMSG {current_channel} :{escaped_text}"), 
                     self.irc_client.loop
                 )
                 self.highlight_nickname()
@@ -453,3 +459,114 @@ class RudePopOut:
     def open_url(self, event, url):
         import webbrowser
         webbrowser.open(url)
+
+    def init_input_menu(self):
+        """
+        Right click menu for the Input Widget.
+        """
+        self.input_menu = Menu(self.entry, tearoff=0)
+        self.input_menu.add_command(label="Cut", command=self.cut_text)
+        self.input_menu.add_command(label="Copy", command=self.copy_text)
+        self.input_menu.add_command(label="Paste", command=self.paste_text)
+        self.input_menu.add_command(label="Select All", command=self.select_all_text)
+
+        # First set of IRC colors
+        irc_colors_menu = Menu(self.input_menu, tearoff=0)
+        irc_colors = [
+            ("White", "00"),
+            ("Black", "01"),
+            ("Blue", "02"),
+            ("Green", "03"),
+            ("Red", "04"),
+            ("Brown", "05"),
+            ("Purple", "06"),
+            ("Orange", "07"),
+            ("Yellow", "08"),
+            ("Lime", "09"),
+            ("Teal", "10"),
+            ("Cyan", "11"),
+            ("Royal", "12"),
+            ("Pink", "13"),
+            ("Grey", "14"),
+            ("Silver", "15"),
+        ]
+
+        for color_name, color_code in irc_colors:
+            irc_colors_menu.add_command(label=color_name, command=lambda code=color_code: self.insert_irc_color(code))
+
+        self.input_menu.add_cascade(label="IRC Color", menu=irc_colors_menu)
+
+        # Additional IRC colors
+        additional_irc_colors_menu = Menu(self.input_menu, tearoff=0)
+        # Simple representation for color names
+        additional_irc_colors = [(f"Color {i}", f"{i:02}") for i in range(16, 99)]
+
+        for color_name, color_code in additional_irc_colors:
+            additional_irc_colors_menu.add_command(label=color_name, command=lambda code=color_code: self.insert_irc_color(code))
+
+        self.input_menu.add_cascade(label="Extended IRC Color", menu=additional_irc_colors_menu)
+
+        text_format_menu = Menu(self.input_menu, tearoff=0)
+        text_format_options = [
+            ("Bold", "\x02"),
+            ("Italic", "\x1D"),
+            ("Underline", "\x1F"),
+            ("Strike Through", "\x1E"),
+            ("Inverse", "\x16")
+        ]
+
+        for format_name, format_code in text_format_options:
+            text_format_menu.add_command(label=format_name, command=lambda code=format_code: self.insert_text_format(code))
+
+        self.input_menu.add_cascade(label="Text Format", menu=text_format_menu)
+
+        self.entry.bind("<Button-3>", self.show_input_menu)
+
+    def insert_text_format(self, format_code):
+        """
+        Insert text format code around selected text or at cursor position.
+        """
+        selected_text = self.entry.selection_get()
+        if selected_text:
+            start_index = self.entry.index(tk.SEL_FIRST)
+            end_index = self.entry.index(tk.SEL_LAST)
+            self.entry.delete(tk.SEL_FIRST, tk.SEL_LAST)
+            self.entry.insert("insert", f"{format_code}{selected_text}\x0F")
+            self.entry.select_range(start_index, end_index + len(format_code)*2)
+            self.entry.icursor(end_index + len(format_code) + 1)
+        else:
+            self.entry.insert("insert", format_code)
+
+    def insert_irc_color(self, color_code):
+        """
+        Insert IRC color code around selected text or at cursor position.
+        """
+        selected_text = self.entry.selection_get()
+        if selected_text:
+            start_index = self.entry.index(tk.SEL_FIRST)
+            end_index = self.entry.index(tk.SEL_LAST)
+            self.entry.delete(tk.SEL_FIRST, tk.SEL_LAST)
+            self.entry.insert("insert", f"\x03{color_code}{selected_text}\x03")
+            self.entry.select_range(start_index, end_index + 3)
+            self.entry.icursor(end_index + 4)
+        else:
+            self.entry.insert("insert", f"\x03{color_code}")
+
+    def show_input_menu(self, event):
+        try:
+            self.input_menu.tk_popup(event.x_root, event.y_root)
+        finally:
+            self.input_menu.grab_release()
+
+    def cut_text(self):
+        self.entry.event_generate("<<Cut>>")
+
+    def copy_text(self):
+        self.entry.event_generate("<<Copy>>")
+
+    def paste_text(self):
+        self.entry.event_generate("<<Paste>>")
+
+    def select_all_text(self):
+        self.entry.select_range(0, tk.END)
+        self.entry.icursor(tk.END)
