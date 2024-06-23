@@ -625,9 +625,11 @@ class RudeGui:
         selected_channel_index = self.channel_listbox.curselection()
         if selected_channel_index:
             selected_channel = self.channel_listbox.get(selected_channel_index)
-            if '#' in selected_channel:
+            if selected_channel.startswith('#'):
                 menu.add_command(label="Leave Channel", command=self.leave_channel_from_menu)
                 menu.add_command(label="Pop Out Channel", command=self.open_pop_out_window)
+            elif selected_channel.startswith('&'):
+                menu.add_command(label="Close", command=self.close_query_from_menu)
             else:
                 menu.add_command(label="Close Query", command=self.close_query_from_menu)
                 menu.add_command(label="Pop Out Query", command=self.open_pop_out_window)

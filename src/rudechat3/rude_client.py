@@ -1076,20 +1076,25 @@ class RudeChatClient:
                     self.channel_messages[self.server][sender] = []
 
                 if self.is_direct_message(target) and sender not in self.joined_channels:
-                        self.joined_channels.append(sender)
-                        self.gui.channel_lists[self.server] = self.joined_channels
-                        self.update_gui_channel_list()
+                    self.joined_channels.append(sender)
+                    self.gui.channel_lists[self.server] = self.joined_channels
+                    self.update_gui_channel_list()
 
                 self.save_message(self.server, target, sender, message, is_sent=False)
+
+                # Use asyncio.gather to handle both display and piping to pop out concurrently
+                tasks = []
                 if sender not in self.gui.popped_out_channels:
-                    self.display_message(timestamp, sender, message, target, is_direct=True)
+                    tasks.append(self.display_message(timestamp, sender, message, target, is_direct=True))
+                    await asyncio.gather(*tasks)
                 if sender in self.gui.popped_out_channels:
-                    self.pip_to_pop_out(timestamp, sender, message, target)
+                    tasks.append(self.pip_to_pop_out(timestamp, sender, message, target))
+                    await asyncio.gather(*tasks)
 
         except Exception as e:
             print(f"Exception in prepare_direct_message: {e}")
 
-    def pip_to_pop_out(self, timestamp, sender, message, target):
+    async def pip_to_pop_out(self, timestamp, sender, message, target):
         if target in self.gui.pop_out_windows:
             window = self.gui.pop_out_windows[target]
             formatted_message = f"{timestamp}<{sender}> {message}\n"
@@ -1108,11 +1113,16 @@ class RudeChatClient:
             self.channel_messages[self.server][target] = []
         self.save_message(self.server, target, sender, message, is_sent=False)
         self.log_message(self.server_name, target, sender, message, is_sent=False)
+
+        # Use asyncio.gather to handle both display and piping to pop out concurrently
+        tasks = []
         if target not in self.gui.popped_out_channels:
             if target not in self.gui.pop_out_windows:
-                self.display_message(timestamp, sender, message, target, is_direct=False)
+                tasks.append(self.display_message(timestamp, sender, message, target, is_direct=False))
+                await asyncio.gather(*tasks)
         if target in self.gui.popped_out_channels:
-            self.pip_to_pop_out(timestamp, sender, message, target)
+            tasks.append(self.pip_to_pop_out(timestamp, sender, message, target))
+            await asyncio.gather(*tasks)
 
     def save_message(self, server, target, sender, message, is_sent):
         timestamp = datetime.datetime.now().strftime('[%H:%M:%S] ')
@@ -1137,7 +1147,7 @@ class RudeChatClient:
         else:
             return False
 
-    def display_message(self, timestamp, sender, message, target, is_direct=False):
+    async def display_message(self, timestamp, sender, message, target, is_direct=False):
         if target == self.current_channel and self.gui.irc_client == self:
             if self.use_time_stamp == True:
                 self.gui.insert_text_widget(f"{timestamp}<{sender}> {message}\n")

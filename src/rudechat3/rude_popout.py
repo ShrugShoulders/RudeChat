@@ -356,8 +356,17 @@ class RudePopOut:
     def insert_and_scroll(self):
         self.text_widget.see(tk.END)
 
+    def trim_text_widget(self):
+        """Trim the text widget to only hold a maximum of 150 lines."""
+        lines = self.text_widget.get("1.0", tk.END).split("\n")
+        if len(lines) > 150:
+            self.text_widget.config(state=tk.NORMAL)  # Enable text widget editing
+            self.text_widget.delete("1.0", f"{len(lines) - 150}.0")  # Delete excess lines
+            self.text_widget.config(state=tk.DISABLED)  # Disable text widget editing
+
     def insert_text(self, message):
         try:
+            self.trim_text_widget()
             urls = self.find_urls(message)
 
             # Set the Text widget state to NORMAL before inserting and configuring tags
