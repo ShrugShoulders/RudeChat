@@ -28,6 +28,13 @@ class RudePopOut:
         self.root.configure(bg=self.main_bg_color)
         self.root.title(f"{selected_channel}")
 
+        # Topic label
+        self.topic_label = tk.Label(self.root, text="Channel Topic", bg=self.topic_label_bg, fg=self.topic_label_fg)
+        self.topic_label.grid(row=0, column=0, columnspan=2, sticky="ew", padx=10, pady=5)
+        self.topic_label.bind("<Enter>", self.show_topic_tooltip)
+        self.topic_label.bind("<Leave>", self.hide_topic_tooltip)
+        self.tooltip = None
+
         # Create a main frame for the pop-out window
         self.frame = tk.Frame(self.root, bg="black")
         self.frame.grid(row=1, column=0, columnspan=2, sticky="nsew")
@@ -74,6 +81,8 @@ class RudePopOut:
         self.tab_complete_terminator = ":"
 
         self.init_input_menu()
+        self.set_topic(selected_channel)
+        self.display_last_messages(selected_channel)
         self.update_gui_user_list(selected_channel)
 
     def load_configuration(self):
@@ -98,6 +107,8 @@ class RudePopOut:
         self.input_insertbackground = config.get('WIDGETS', 'entry_insertbackground', fallback='#C0FFEE')
         self.input_label_bg = config.get('WIDGETS', 'entry_label_bg', fallback='black')
         self.input_label_fg = config.get('WIDGETS', 'entry_label_fg', fallback='#C0FFEE')
+        self.topic_label_bg = config.get('WIDGETS', 'topic_label_bg', fallback='black')
+        self.topic_label_fg = config.get('WIDGETS', 'topic_label_fg', fallback='white')
 
     def send_text(self, event=None):
         try:
@@ -579,3 +590,45 @@ class RudePopOut:
     def select_all_text(self):
         self.entry.select_range(0, tk.END)
         self.entry.icursor(tk.END)
+
+    def display_last_messages(self, channel, num=150):
+        server_name = self.irc_client.server
+        if server_name:
+            messages = self.irc_client.channel_messages.get(server_name, {}).get(channel, [])
+        for message in messages[-num:]:
+            self.insert_text(message)
+            self.highlight_nickname()
+
+    def show_topic_tooltip(self, event):
+        try:
+            channel_name = self.selected_channel
+            server_topics = self.main_app.channel_topics.get(self.irc_client.server, {})
+            topic = server_topics.get(channel_name, "N/A")
+        except Exception as e:
+            print(f"Could Not Get Topic {e}")
+        if self.tooltip:
+            self.tooltip.destroy()
+        x, y, _, _ = self.topic_label.bbox("insert")
+        x += self.topic_label.winfo_rootx() + 25
+        y += self.topic_label.winfo_rooty() + 25
+        self.tooltip = tk.Toplevel(self.topic_label)
+        self.tooltip.wm_overrideredirect(True)
+        self.tooltip.wm_geometry(f"+{x}+{y}")
+        
+        # Specify the wraplength in pixels (e.g., 200 pixels)
+        label = tk.Label(self.tooltip, text=topic, justify='left', wraplength=800)
+        label.pack()
+
+    def hide_topic_tooltip(self, event):
+        if self.tooltip:
+            self.tooltip.destroy()
+        self.tooltip = None
+
+    def set_topic(self, channel_name):
+        # Retrieve the topic
+        try:
+            server_topics = self.main_app.channel_topics.get(self.irc_client.server, {})
+            topic = server_topics.get(channel_name, "N/A")
+            self.topic_label.configure(text=f"{topic}")
+        except Exception as e:
+            print(f"Exception in set_topic: {e}")

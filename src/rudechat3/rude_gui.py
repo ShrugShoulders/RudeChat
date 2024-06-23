@@ -637,6 +637,7 @@ class RudeGui:
         return menu
 
     def open_pop_out_window(self):
+        self.clear_text_widget()
         selected_channel = self.channel_listbox.get(self.channel_listbox.curselection())
         if selected_channel not in self.pop_out_windows:
             self.popped_out_channels.append(selected_channel)
