@@ -7,6 +7,7 @@ import datetime
 import json
 import re
 import random
+import webbrowser
 from threading import Thread
 from tkinter import scrolledtext, Listbox, Scrollbar, Tk, Frame, Label, Entry, Listbox, Menu, Scrollbar, StringVar, PhotoImage 
 from .format_decoder import Attribute, decoder
@@ -384,12 +385,10 @@ class RudePopOut:
             self.text_widget.config(state=tk.NORMAL)
 
             formatted_text = decoder(message)
-
-            # Run URL tagging in a separate thread
-            url_thread = Thread(target=self.tag_urls_async, args=(urls,))
-            url_thread.start()
-
             self.tag_text(formatted_text)
+
+            # Start tagging URLs using the non-blocking approach
+            self.tag_urls(urls)
         except Exception as e:
             print(f"Exception in insert_text {e}")
 
@@ -444,32 +443,28 @@ class RudePopOut:
             tag_config['background'] = hex_background
         return tag_config
 
-    def tag_urls_async(self, urls):
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
+    def tag_urls(self, urls, index=0):
+        if index < len(urls):
+            url = urls[index]
+            tag_name = f"url_{url}"
+            self.text_widget.tag_configure(tag_name, foreground="blue", underline=1)
 
-        tasks = [self.tag_url(url) for url in urls]
-        loop.run_until_complete(asyncio.gather(*tasks))
+            start_idx = "1.0"
+            while True:
+                start_idx = self.text_widget.search(url, start_idx, tk.END)
+                if not start_idx:
+                    break
+                end_idx = f"{start_idx}+{len(url)}c"
+                self.text_widget.tag_add(tag_name, start_idx, end_idx)
+                self.text_widget.tag_bind(tag_name, "<Button-1>", lambda event, url=url: self.open_url(event, url))
+                start_idx = end_idx
 
-        loop.close()
-
-        # Set the Text widget state back to DISABLED after configuring tags
-        self.text_widget.config(state=tk.DISABLED)
-        self.insert_and_scroll()
-
-    async def tag_url(self, url):
-        tag_name = f"url_{url}"
-        self.text_widget.tag_configure(tag_name, foreground="blue", underline=1)
-
-        start_idx = "1.0"
-        while True:
-            start_idx = self.text_widget.search(url, start_idx, tk.END, tag_name)
-            if not start_idx:
-                break
-            end_idx = f"{start_idx}+{len(url)}c"
-            self.text_widget.tag_add(tag_name, start_idx, end_idx)
-            self.text_widget.tag_bind(tag_name, "<Button-1>", lambda event, url=url: self.open_url(event, url))
-            start_idx = end_idx
+            # Schedule the next URL tagging
+            self.text_widget.after(1, self.tag_urls, urls, index + 1)
+        else:
+            # Set the Text widget state back to DISABLED after configuring tags
+            self.text_widget.config(state=tk.DISABLED)
+            self.insert_and_scroll()
 
     def find_urls(self, text):
         # A "simple" regex to detect URLs
@@ -477,7 +472,6 @@ class RudePopOut:
         return url_pattern.findall(text)
 
     def open_url(self, event, url):
-        import webbrowser
         webbrowser.open(url)
 
     def init_input_menu(self):
@@ -629,6 +623,12 @@ class RudePopOut:
         try:
             server_topics = self.main_app.channel_topics.get(self.irc_client.server, {})
             topic = server_topics.get(channel_name, "N/A")
+            
+            # Truncate the topic to the first 100 characters if necessary
+            if len(topic) > 100:
+                topic = topic[:100] + '...'
+            
             self.topic_label.configure(text=f"{topic}")
         except Exception as e:
             print(f"Exception in set_topic: {e}")
+

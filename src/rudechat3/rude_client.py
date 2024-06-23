@@ -321,7 +321,7 @@ class RudeChatClient:
         count_366 = 0
         got_topic = 0
         last_366_time = None
-        TIMEOUT_SECONDS = 0.5
+        TIMEOUT_SECONDS = 10
 
         def reset_timer():
             nonlocal last_366_time
@@ -1235,10 +1235,13 @@ class RudeChatClient:
             self.channel_messages[self.server][channel].append(join_message)
 
         # Display the message in the text_widget only if the channel matches the current channel
-        if channel == self.current_channel and self.gui.irc_client == self:
+        if channel == self.current_channel and self.gui.irc_client == self and channel not in self.gui.popped_out_channels:
             if self.show_join_part_quit_nick:
                 self.gui.insert_text_widget(join_message)
                 self.gui.highlight_nickname()
+        if channel in self.gui.popped_out_channels:
+            if self.show_join_part_quit_nick:
+                self.pipe_mode_to_pop_out(join_message, channel)
 
         # If the user joining is the client's user, just return
         if user_info == self.nickname:
@@ -1278,10 +1281,13 @@ class RudeChatClient:
             self.channel_messages[self.server][channel].append(part_message)
 
         # Display the message in the text_widget only if the channel matches the current channel
-        if channel == self.current_channel and self.gui.irc_client == self:
+        if channel == self.current_channel and self.gui.irc_client == self and channel not in self.gui.popped_out_channels:
             if self.show_join_part_quit_nick:
                 self.gui.insert_text_widget(part_message)
                 self.gui.highlight_nickname()
+        if channel in self.gui.popped_out_channels:
+            if self.show_join_part_quit_nick:
+                self.pipe_mode_to_pop_out(part_message, channel)
 
         # Check if the user is in the channel_users list for the channel
         user_found = False
@@ -1326,10 +1332,13 @@ class RudeChatClient:
                         self.channel_messages[self.server][channel].append(quit_message)
 
                     # Display the message in the text_widget only if the channel matches the current channel
-                    if channel == self.current_channel and self.gui.irc_client == self:
+                    if channel == self.current_channel and self.gui.irc_client == self and channel not in self.gui.popped_out_channels:
                         if self.show_join_part_quit_nick:
                             self.gui.insert_text_widget(quit_message)
                             self.gui.highlight_nickname()
+                    if channel in self.gui.popped_out_channels:
+                        if self.show_join_part_quit_nick:
+                            self.pipe_mode_to_pop_out(quit_message, channel)
 
                     break
 
@@ -1340,6 +1349,7 @@ class RudeChatClient:
     async def handle_nick(self, tokens):
         old_nick = tokens.hostmask.nickname
         new_nick = tokens.params[0]
+        message = f"<@> {old_nick} has changed their nickname to {new_nick}\n"
 
         # Update the user's nick in all channel_users lists they are part of
         for channel, users in self.channel_users.items():
@@ -1364,10 +1374,13 @@ class RudeChatClient:
                         self.channel_messages[self.server][channel].append(f"<@> {old_nick} has changed their nickname to {new_nick}\n")
                     
                     # Insert message into the text widget only if this is the current channel
-                    if channel == self.current_channel and self.gui.irc_client == self:
+                    if channel == self.current_channel and self.gui.irc_client == self and channel not in self.gui.popped_out_channels:
                         if self.show_join_part_quit_nick:
-                            self.gui.insert_text_widget(f"<@> {old_nick} has changed their nickname to {new_nick}\n")
+                            self.gui.insert_text_widget(message)
                             self.gui.highlight_nickname()
+                    if channel in self.gui.popped_out_channels:
+                        if self.show_join_part_quit_nick:
+                            self.pipe_mode_to_pop_out(message, channel)
 
                     break
 
@@ -1522,10 +1535,24 @@ class RudeChatClient:
             self.update_user_listbox(channel)
         return 
 
+    def pipe_mode_to_pop_out(self, message, target):
+        if target in self.gui.pop_out_windows:
+            try:
+                window = self.gui.pop_out_windows[target]
+                formatted_message = f"{message}"
+                window.insert_text(formatted_message)
+                window.highlight_nickname()
+                return
+            except Exception as e:
+                print(f"Exception in pipe_mode_to_pop_out: {e}")
+
     def _log_channel_message(self, channel, message):
         if channel == self.current_channel and self.gui.irc_client == self:
-            self.gui.insert_text_widget(f"{message}")
-            self.gui.highlight_nickname()
+            if channel not in self.gui.popped_out_channels:
+                self.gui.insert_text_widget(f"{message}")
+                self.gui.highlight_nickname()
+        if channel in self.gui.popped_out_channels:
+            self.pipe_mode_to_pop_out(message, channel)
         if self.server not in self.channel_messages:
             self.channel_messages[self.server] = {}
         if channel not in self.channel_messages[self.server]:
@@ -1537,11 +1564,14 @@ class RudeChatClient:
         sorted_users = self.sort_users(current_users, channel)
         
         # Only update the user listbox if the channel is the currently selected channel
-        if channel == self.current_channel and self.gui.irc_client == self:
+        if channel == self.current_channel and self.gui.irc_client == self and channel not in self.gui.popped_out_channels:
             # Update the Tkinter Listbox to reflect the current users in the channel
             self.gui.user_listbox.delete(0, tk.END)  # Clear existing items
             for user in sorted_users:
                 self.gui.user_listbox.insert(tk.END, user)
+        if channel in self.gui.popped_out_channels:
+            window = self.gui.pop_out_windows[channel]
+            window.update_gui_user_list(channel)
                        
     def handle_isupport(self, tokens):
         params = tokens.params[:-1]  # Exclude the trailing "are supported by this server" message
