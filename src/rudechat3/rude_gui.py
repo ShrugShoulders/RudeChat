@@ -1205,7 +1205,7 @@ class RudeGui:
         else:
             self.clear_user_listbox()
             # Set current channel to the DM
-            self.irc_client.nickname = nickname
+            nickname = self.irc_client.nickname
             self.irc_client.current_channel = channel_name
             self.user_listbox.insert(tk.END, nickname)
             self.user_listbox.insert(tk.END, channel_name)

@@ -80,6 +80,8 @@ class RudePopOut:
         self.entry.grid(row=1, column=0, sticky='ew', padx=10, pady=5)
         self.entry.bind('<Return>', self.send_text)
         self.entry.bind('<Tab>', self.handle_tab_complete)
+        self.entry.bind('<Up>', self.handle_arrow_keys)
+        self.entry.bind('<Down>', self.handle_arrow_keys)
         self.entry.configure(bg=self.input_bg, fg=self.input_fg, insertbackground=self.input_insertbackground, font=(self.font_family, self.font_size))
 
         # Close button (smaller size)
@@ -88,6 +90,8 @@ class RudePopOut:
         self.close_button.configure(bg=self.button_bg_color, fg=self.button_fg_color)
 
         # Initialize tab completion related attributes
+        self.entry_history = []
+        self.history_index = 0
         self.tab_complete_completions = []
         self.tab_complete_index = 0
         self.last_tab_time = 0
@@ -147,6 +151,14 @@ class RudePopOut:
                 self.pop_command_parser(user_text)
                 self.entry.delete(0, tk.END)
             else:
+                self.entry_history.append(user_text)
+
+                # Limit the entry_history to the last 10 messages
+                if len(self.entry_history) > 10:
+                    self.entry_history.pop(0)
+
+                # Reset history_index to the end of entry_history
+                self.history_index = len(self.entry_history)
                 # Insert text in the main text widget
                 self.insert_text(f"{timestamp} <{self.nick_name}> {escaped_text}\n")
                 self.entry.delete(0, tk.END)
@@ -170,6 +182,27 @@ class RudePopOut:
                 self.highlight_nickname()
         except Exception as e:
             print(f"Exception in send_text: {e}")
+
+    def handle_arrow_keys(self, event):
+        if event.keysym == 'Up':
+            self.show_previous_entry()
+        elif event.keysym == 'Down':
+            self.show_next_entry()
+
+    def show_previous_entry(self):
+        if self.history_index > 0:
+            self.history_index -= 1
+            self.entry.delete(0, tk.END)
+            self.entry.insert(0, self.entry_history[self.history_index])
+
+    def show_next_entry(self):
+        if self.history_index < len(self.entry_history) - 1:
+            self.history_index += 1
+            self.entry.delete(0, tk.END)
+            self.entry.insert(0, self.entry_history[self.history_index])
+        elif self.history_index == len(self.entry_history) - 1:
+            self.history_index += 1
+            self.entry.delete(0, tk.END)
 
     def pop_command_parser(self, user_input):
         channel = self.selected_channel
