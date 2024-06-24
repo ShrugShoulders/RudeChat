@@ -249,9 +249,17 @@ class RudePopOut:
         # Clear existing items in user listbox
         self.user_listbox.delete(0, tk.END)
         
-        # Populate with users for the given channel
-        for user in self.irc_client.channel_users.get(channel, []):
-            self.user_listbox.insert(tk.END, user)
+        # Get the list of users for the given channel
+        users = self.irc_client.channel_users.get(channel, [])
+
+        if users:
+            # Populate with users for the given channel
+            for user in users:
+                self.user_listbox.insert(tk.END, user)
+        else:
+            # Handle the case when there are no users in the channel
+            self.user_listbox.insert(tk.END, self.nick_name)
+            self.user_listbox.insert(tk.END, self.selected_channel)
 
     def load_nickname_colors(self):
         nickname_colors_path = os.path.join(self.script_directory, 'nickname_colours.json')
@@ -367,7 +375,8 @@ class RudePopOut:
         if current_channel in self.irc_client.channel_users:
             user_list = self.irc_client.channel_users[current_channel]
         else:
-            return
+            # Fallback to the user list from the GUI's user listbox
+            user_list = self.user_listbox.get(0, tk.END)
 
         # Remove @ and + symbols from nicknames
         user_list_cleaned = [nick.lstrip('~&@%+') for nick in user_list]
@@ -712,7 +721,7 @@ class RudePopOut:
         # Retrieve the topic
         try:
             server_topics = self.main_app.channel_topics.get(self.irc_client.server, {})
-            topic = server_topics.get(channel_name, "N/A")
+            topic = server_topics.get(channel_name, channel_name)
             
             # Truncate the topic to the first 100 characters if necessary
             if len(topic) > 100:

@@ -1203,11 +1203,12 @@ class RudeGui:
                 self.insert_text_widget(f"Not a member of channel {channel_name}\n")
 
         else:
-            # It's a DM
-            self.user_listbox.delete(0, tk.END)
-
+            self.clear_user_listbox()
             # Set current channel to the DM
+            self.irc_client.nickname = nickname
             self.irc_client.current_channel = channel_name
+            self.user_listbox.insert(tk.END, nickname)
+            self.user_listbox.insert(tk.END, channel_name)
             self.update_nick_channel_label()
 
             # Display the last messages for the current DM
@@ -1379,7 +1380,7 @@ class RudeGui:
         if current_channel in self.irc_client.channel_users:
             user_list = self.irc_client.channel_users[current_channel]
         else:
-            return
+            user_list = self.user_listbox.get(0, tk.END)
 
         # Remove @ and + symbols from nicknames
         user_list_cleaned = [nick.lstrip('~&@%+') for nick in user_list]

@@ -311,6 +311,7 @@ class RudeChatClient:
     async def _await_welcome_message(self):
         self.gui.insert_text_widget(f'Waiting for welcome message from the server.\n')
         buffer = ""
+        sync = True
         received_001 = False
         motd_received = False
         sasl_authenticated = False
@@ -330,6 +331,13 @@ class RudeChatClient:
 
         def check_timeout():
             nonlocal last_366_time
+            nonlocal sync
+            if motd_received:
+                if sync:
+                    self.gui.insert_text_widget(f'Syncing with ZNC: ')
+                    sync = False
+                else:
+                    self.gui.insert_text_widget(f'\x0303@\x0F')
             if not self.use_auto_join:
                 if last_366_time is None:
                     return False
@@ -413,12 +421,9 @@ class RudeChatClient:
                     case "MODE":
                         self.handle_mode(tokens)
                     case "305":
-                        message = "You are no longer marked as being away"
-                        self.gui.insert_text_widget(f"{message}\n")
+                        pass
                     case "306":
-                        message = "You have been marked as being away"
-                        self.gui.insert_text_widget(f"{message}\n")
-
+                        pass
                     case "328":
                         self.handle_328(tokens)
 
@@ -2802,7 +2807,7 @@ class RudeChatClient:
 
     async def load_ascii_art_macros(self):
         """Load ASCII art from files into a dictionary asynchronously."""
-        self.gui.insert_text_widget("Loading ASCII art macros...\n")
+        self.gui.insert_text_widget("\nLoading ASCII art macros...\n")
         script_directory = os.path.dirname(os.path.abspath(__file__))
         ASCII_ART_DIRECTORY = os.path.join(script_directory, 'Art')
 
