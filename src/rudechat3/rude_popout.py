@@ -288,6 +288,9 @@ class RudePopOut:
                 )
                 self.insert_text(invite_message)
 
+            case _:
+                pass
+
     def handle_action(self, args, channel, timestamp):
         action_message = ' '.join(args[1:])
         escaped_input = self.main_app.escape_color_codes(action_message)

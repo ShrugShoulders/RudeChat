@@ -323,6 +323,9 @@ class RudeChatClient:
         got_topic = 0
         last_366_time = None
         TIMEOUT_SECONDS = 0.2
+        MAX_WAIT_TIME = 45
+
+        start_time = asyncio.get_event_loop().time()
 
         def reset_timer():
             nonlocal last_366_time
@@ -508,6 +511,12 @@ class RudeChatClient:
                 if check_timeout():
                     # Timeout occurred
                     return
+
+            # Check for overall timeout
+            elapsed_time = asyncio.get_event_loop().time() - start_time
+            if elapsed_time > MAX_WAIT_TIME:
+                self.gui.insert_text_widget("\nMaximum sync time exceeded\n")
+                return
 
     async def handle_cap(self, tokens):
         if not self.sasl_enabled:
