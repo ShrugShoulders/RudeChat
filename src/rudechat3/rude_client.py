@@ -323,7 +323,7 @@ class RudeChatClient:
         got_topic = 0
         last_366_time = None
         TIMEOUT_SECONDS = 0.2
-        MAX_WAIT_TIME = 45
+        MAX_WAIT_TIME = 60
 
         start_time = asyncio.get_event_loop().time()
 
@@ -411,6 +411,8 @@ class RudeChatClient:
                         self.server_message_handler(tokens)
                     case "265":
                         self.server_message_handler(tokens)
+                    case "PART":
+                        self.handle_part(tokens)
                     case "QUIT":
                         self.handle_quit(tokens)
                     case "NICK":
@@ -1100,33 +1102,39 @@ class RudeChatClient:
 
                 self.save_message(self.server, target, sender, message, is_sent=False)
 
-                # Use asyncio.gather to handle both display and piping to pop out concurrently
-                tasks = []
+                # Collect tasks
+                main_tasks = []
+                pop_out_tasks = []
+                main_count = 0
+                pop_count = 0
                 if sender not in self.gui.popped_out_channels:
-                    tasks.append(self.display_message(timestamp, sender, message, target, is_direct=True))
-                    await asyncio.gather(*tasks)
+                    main_tasks.append(self.display_message(timestamp, sender, message, target, is_direct=True))
                 if sender in self.gui.popped_out_channels:
-                    tasks.append(self.pip_to_pop_out(timestamp, sender, message, target))
-                    await asyncio.gather(*tasks)
+                    pop_out_tasks.append(self.pip_to_pop_out(timestamp, sender, message, target))
+
+                # Execute all tasks
+                if main_tasks:
+                    if main_count == 2:
+                        main_count = 0
+                        pass
+                    else:
+                        await self.main_task_gather(main_tasks)
+                        main_count += 1
+                if pop_out_tasks:
+                    if pop_count == 2:
+                        pop_count = 0
+                        pass
+                    else:
+                        await self.pop_out_task_gather(pop_out_tasks)
+                        pop_count += 1
 
         except Exception as e:
             print(f"Exception in prepare_direct_message: {e}")
 
     async def pip_to_pop_out(self, timestamp, sender, message, target):
-        if target in self.gui.pop_out_windows:
-            window = self.gui.pop_out_windows[target]
-            if self.use_time_stamp == True:
-                formatted_message = f"{timestamp}<{sender}> {message}\n"
-            elif self.use_time_stamp == False:
-                formatted_message = f"<{sender}> {message}\n"
-            window.insert_text(formatted_message)
-            window.highlight_nickname()
-        elif sender in self.gui.pop_out_windows:
-            window = self.gui.pop_out_windows[sender]
-            if self.use_time_stamp == True:
-                formatted_message = f"{timestamp}<{sender}> {message}\n"
-            elif self.use_time_stamp == False:
-                formatted_message = f"<{sender}> {message}\n"
+        window = self.gui.pop_out_windows.get(target) or self.gui.pop_out_windows.get(sender)
+        if window:
+            formatted_message = f"{timestamp}<{sender}> {message}\n" if self.use_time_stamp else f"<{sender}> {message}\n"
             window.insert_text(formatted_message)
             window.highlight_nickname()
 
@@ -1138,15 +1146,37 @@ class RudeChatClient:
         self.save_message(self.server, target, sender, message, is_sent=False)
         self.log_message(self.server_name, target, sender, message, is_sent=False)
 
-        # Use asyncio.gather to handle both display and piping to pop out concurrently
-        tasks = []
+        main_tasks = []
+        pop_out_tasks = []
+        main_count = 0
+        pop_count = 0
         if target not in self.gui.popped_out_channels:
             if target not in self.gui.pop_out_windows:
-                tasks.append(self.display_message(timestamp, sender, message, target, is_direct=False))
-                await asyncio.gather(*tasks)
+                main_tasks.append(self.display_message(timestamp, sender, message, target, is_direct=False))
         if target in self.gui.popped_out_channels:
-            tasks.append(self.pip_to_pop_out(timestamp, sender, message, target))
-            await asyncio.gather(*tasks)
+            pop_out_tasks.append(self.pip_to_pop_out(timestamp, sender, message, target))
+
+        # Execute all tasks
+        if main_tasks:
+            if main_count == 2:
+                main_count = 0
+                pass
+            else:
+                await self.main_task_gather(main_tasks)
+                main_count += 1
+        if pop_out_tasks:
+            if pop_count == 2:
+                pop_count = 0
+                pass
+            else:
+                await self.pop_out_task_gather(pop_out_tasks)
+                pop_count += 1
+
+    async def main_task_gather(self, main_tasks):
+        await asyncio.gather(*main_tasks)
+
+    async def pop_out_task_gather(self, pop_out_tasks):
+        await asyncio.gather(*pop_out_tasks)
 
     def save_message(self, server, target, sender, message, is_sent):
         timestamp = datetime.datetime.now().strftime('[%H:%M:%S] ')
