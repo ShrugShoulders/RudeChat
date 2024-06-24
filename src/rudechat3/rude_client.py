@@ -406,8 +406,6 @@ class RudeChatClient:
                         await self.handle_nick(tokens)
                     case "JOIN":
                         await self.join_znc_channel(tokens)
-                        if not self.use_auto_join:
-                            reset_timer()
                     case "PRIVMSG":
                         await self.handle_privmsg(tokens)
                         if not self.use_auto_join:

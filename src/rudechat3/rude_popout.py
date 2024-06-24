@@ -29,6 +29,10 @@ class RudePopOut:
         self.root.configure(bg=self.main_bg_color)
         self.root.title(f"{selected_channel}")
 
+        # Configure root window to expand elements when resized
+        self.root.rowconfigure(1, weight=1)
+        self.root.columnconfigure(0, weight=1)
+
         # Topic label
         self.topic_label = tk.Label(self.root, text="Channel Topic", bg=self.topic_label_bg, fg=self.topic_label_fg)
         self.topic_label.grid(row=0, column=0, columnspan=2, sticky="ew", padx=10, pady=5)
@@ -40,6 +44,11 @@ class RudePopOut:
         self.frame = tk.Frame(self.root, bg="black")
         self.frame.grid(row=1, column=0, columnspan=2, sticky="nsew")
 
+        # Configure frame to expand elements when resized
+        self.frame.rowconfigure(0, weight=1)
+        self.frame.columnconfigure(0, weight=1)
+        self.frame.columnconfigure(1, weight=0)
+
         # Main text widget (scrolled text)
         self.text_widget = scrolledtext.ScrolledText(self.frame, wrap=tk.WORD)
         self.text_widget.grid(row=0, column=0, sticky="nsew")
@@ -48,6 +57,10 @@ class RudePopOut:
         # User list frame
         self.user_frame = tk.Frame(self.frame, bg="black")
         self.user_frame.grid(row=0, column=1, sticky="nsew")
+        
+        # Configure user frame to expand elements when resized
+        self.user_frame.rowconfigure(1, weight=1)
+        self.user_frame.columnconfigure(0, weight=1)
 
         # Label for Users
         self.user_label = tk.Label(self.user_frame, text="Users", bg=self.widgets_bg_color, fg='white')
