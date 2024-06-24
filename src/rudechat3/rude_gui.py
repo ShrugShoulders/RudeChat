@@ -506,6 +506,7 @@ class RudeGui:
     def show_input_menu(self, event):
         try:
             self.input_menu.tk_popup(event.x_root, event.y_root)
+            self.master.bind("<Motion>", self.check_input_mouse_position)
         finally:
             self.input_menu.grab_release()
 
@@ -586,9 +587,47 @@ class RudeGui:
 
     def show_message_menu(self, event):
         try:
+            # Open the popup menu
             self.message_menu.tk_popup(event.x_root, event.y_root)
+            # Bind the <Motion> event to a function that checks if the mouse is over the menu
+            self.master.bind("<Motion>", self.check_mouse_position)
         finally:
             self.message_menu.grab_release()
+
+    def check_input_mouse_position(self, event):
+        try:
+            menu_x1 = self.input_menu.winfo_rootx()
+            menu_y1 = self.input_menu.winfo_rooty()
+            menu_x2 = menu_x1 + self.input_menu.winfo_width()
+            menu_y2 = menu_y1 + self.input_menu.winfo_height()
+
+            if not (menu_x1 <= event.x_root <= menu_x2 and menu_y1 <= event.y_root <= menu_y2):
+                self.input_menu.unpost()
+                self.master.unbind("<Motion>")
+        except Exception as e:
+            print(f"Exception in check_mouse_position: {e}")
+
+    def check_mouse_position(self, event):
+        # Get the position of the menu
+        menu_x1 = self.message_menu.winfo_rootx()
+        menu_y1 = self.message_menu.winfo_rooty()
+        menu_x2 = menu_x1 + self.message_menu.winfo_width()
+        menu_y2 = menu_y1 + self.message_menu.winfo_height()
+
+        # Check if the mouse is outside the menu
+        if not (menu_x1 <= event.x_root <= menu_x2 and menu_y1 <= event.y_root <= menu_y2):
+            self.message_menu.unpost()
+            self.master.unbind("<Motion>")
+
+    def check_user_mouse_position(self, event, menu):
+        menu_x1 = menu.winfo_rootx()
+        menu_y1 = menu.winfo_rooty()
+        menu_x2 = menu_x1 + menu.winfo_width()
+        menu_y2 = menu_y1 + menu.winfo_height()
+
+        if not (menu_x1 <= event.x_root <= menu_x2 and menu_y1 <= event.y_root <= menu_y2):
+            menu.unpost()
+            self.master.unbind("<Motion>")
 
     def init_server_menu(self):
         """
@@ -617,6 +656,7 @@ class RudeGui:
     def show_user_list_menu(self, event):
         menu = self.create_user_list_menu()
         menu.post(event.x_root, event.y_root)
+        self.master.bind("<Motion>", lambda e: self.check_user_mouse_position(e, menu))
 
     def create_channel_list_menu(self):
         menu = tk.Menu(self.channel_listbox, tearoff=0)
@@ -651,6 +691,7 @@ class RudeGui:
     def show_channel_list_menu(self, event):
         menu = self.create_channel_list_menu()
         menu.post(event.x_root, event.y_root)
+        self.master.bind("<Motion>", lambda e: self.check_user_mouse_position(e, menu))
 
     def copy_text_user(self):
         self.user_listbox.event_generate("<<Copy>>")

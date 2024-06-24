@@ -322,7 +322,7 @@ class RudeChatClient:
         count_366 = 0
         got_topic = 0
         last_366_time = None
-        TIMEOUT_SECONDS = 0.3
+        TIMEOUT_SECONDS = 0.2
 
         def reset_timer():
             nonlocal last_366_time

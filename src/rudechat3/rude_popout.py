@@ -99,6 +99,7 @@ class RudePopOut:
         self.tab_complete_terminator = ":"
 
         self.init_input_menu()
+        self.init_message_menu()
         self.set_topic(selected_channel)
         self.display_last_messages(selected_channel)
         self.update_gui_user_list(selected_channel)
@@ -132,6 +133,38 @@ class RudePopOut:
         self.topic_label_fg = config.get('WIDGETS', 'topic_label_fg', fallback='white')
         self.user_listbox_fg = config.get('WIDGETS', 'users_fg', fallback='#39ff14')
         self.user_listbox_bg = config.get('WIDGETS', 'users_bg', fallback='black')
+
+    def init_message_menu(self):
+        """
+        Right click menu for the main chat window.
+        """
+        self.message_menu = Menu(self.text_widget, tearoff=0)
+        self.message_menu.add_command(label="Copy", command=self.copy_text_message)
+        self.text_widget.bind("<Button-3>", self.show_message_menu)
+
+    def show_message_menu(self, event):
+        try:
+            # Open the popup menu
+            self.message_menu.tk_popup(event.x_root, event.y_root)
+            # Bind the <Motion> event to a function that checks if the mouse is over the menu
+            self.root.bind("<Motion>", self.check_mouse_position)
+        finally:
+            self.message_menu.grab_release()
+
+    def check_mouse_position(self, event):
+        # Get the position of the menu
+        menu_x1 = self.message_menu.winfo_rootx()
+        menu_y1 = self.message_menu.winfo_rooty()
+        menu_x2 = menu_x1 + self.message_menu.winfo_width()
+        menu_y2 = menu_y1 + self.message_menu.winfo_height()
+
+        # Check if the mouse is outside the menu
+        if not (menu_x1 <= event.x_root <= menu_x2 and menu_y1 <= event.y_root <= menu_y2):
+            self.message_menu.unpost()
+            self.root.unbind("<Motion>")
+
+    def copy_text_message(self):
+        self.text_widget.event_generate("<<Copy>>")
 
     def send_text(self, event=None):
         try:
@@ -701,8 +734,22 @@ class RudePopOut:
     def show_input_menu(self, event):
         try:
             self.input_menu.tk_popup(event.x_root, event.y_root)
+            self.root.bind("<Motion>", self.check_input_mouse_position)
         finally:
             self.input_menu.grab_release()
+
+    def check_input_mouse_position(self, event):
+        try:
+            menu_x1 = self.input_menu.winfo_rootx()
+            menu_y1 = self.input_menu.winfo_rooty()
+            menu_x2 = menu_x1 + self.input_menu.winfo_width()
+            menu_y2 = menu_y1 + self.input_menu.winfo_height()
+
+            if not (menu_x1 <= event.x_root <= menu_x2 and menu_y1 <= event.y_root <= menu_y2):
+                self.input_menu.unpost()
+                self.root.unbind("<Motion>")
+        except Exception as e:
+            print(f"Exception in check_mouse_position: {e}")
 
     def cut_text(self):
         self.entry.event_generate("<<Cut>>")
