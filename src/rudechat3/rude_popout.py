@@ -54,7 +54,7 @@ class RudePopOut:
         self.user_label.grid(row=0, column=0, sticky='ew')
 
         # User listbox
-        self.user_listbox = Listbox(self.user_frame, height=25, width=16, bg=self.widgets_bg_color, fg=self.widgets_fg_color)
+        self.user_listbox = Listbox(self.user_frame, height=25, width=16, bg=self.user_listbox_bg, fg=self.user_listbox_fg)
         self.user_listbox.grid(row=1, column=0, sticky='nsew')
 
         # User list scrollbar
@@ -86,6 +86,9 @@ class RudePopOut:
         self.display_last_messages(selected_channel)
         self.update_gui_user_list(selected_channel)
 
+        # Bind the window close event & act on it
+        self.root.protocol("WM_DELETE_WINDOW", self.close_window)
+
     def load_configuration(self):
         # Load configuration from gui_config.ini
         config = configparser.ConfigParser()
@@ -110,20 +113,30 @@ class RudePopOut:
         self.input_label_fg = config.get('WIDGETS', 'entry_label_fg', fallback='#C0FFEE')
         self.topic_label_bg = config.get('WIDGETS', 'topic_label_bg', fallback='black')
         self.topic_label_fg = config.get('WIDGETS', 'topic_label_fg', fallback='white')
+        self.user_listbox_fg = config.get('WIDGETS', 'users_fg', fallback='#39ff14')
+        self.user_listbox_bg = config.get('WIDGETS', 'users_bg', fallback='black')
 
     def send_text(self, event=None):
         try:
             user_text = self.entry.get()
+            if not user_text:
+                return
+
             timestamp = datetime.datetime.now().strftime('[%H:%M:%S]')
-            if user_text:
+            escaped_text = self.main_app.escape_color_codes(user_text)
+            current_channel = self.selected_channel
+
+            # Determine the server and current channel
+            server = self.irc_client.server
+
+            # Check if the text is a command
+            if user_text.startswith('/'):
+                self.pop_command_parser(user_text)
+                self.entry.delete(0, tk.END)
+            else:
                 # Insert text in the main text widget
-                escaped_text = self.main_app.escape_color_codes(user_text)
                 self.insert_text(f"{timestamp} <{self.nick_name}> {escaped_text}\n")
                 self.entry.delete(0, tk.END)
-
-                # Determine the server and current channel
-                server = self.irc_client.server
-                current_channel = self.selected_channel
 
                 # Update channel_messages dictionary
                 if server not in self.irc_client.channel_messages:
@@ -140,9 +153,71 @@ class RudePopOut:
                     self.irc_client.send_message(f"PRIVMSG {current_channel} :{escaped_text}"), 
                     self.irc_client.loop
                 )
+
                 self.highlight_nickname()
         except Exception as e:
             print(f"Exception in send_text: {e}")
+
+    def pop_command_parser(self, user_input):
+        channel = self.selected_channel
+        args = user_input[1:].split() if user_input.startswith('/') else []
+        primary_command = args[0].lower() if args else None
+
+        timestamp = datetime.datetime.now().strftime('[%H:%M:%S]')
+
+        match primary_command:
+            case "me":
+                self.handle_action(args, channel, timestamp)
+            case "whois" | "help" | "list" | "ping":
+                asyncio.run_coroutine_threadsafe(
+                    self.irc_client.command_parser(user_input),
+                    self.irc_client.loop
+                )
+            case "notice":
+                if len(args) < 3:
+                    self.insert_text("Usage: /notice <target> <message>\n")
+                    return
+                notice_message = ' '.join(args)
+                asyncio.run_coroutine_threadsafe(
+                    self.irc_client.command_parser(user_input),
+                    self.irc_client.loop
+                )
+                self.insert_text(f"NOTICE {channel} {notice_message}")
+            case "kick":
+                if len(args) < 3:
+                    self.insert_text("Usage: /kick <user> <channel> [reason]\n")
+                    return
+                user = args[1].lstrip('~&@%+')
+                channel = args[2]
+                reason = ' '.join(args[3:]) if len(args) > 3 else None
+                kick_message = f"Kicked {user} from {channel} for {reason}\n"
+                asyncio.run_coroutine_threadsafe(
+                    self.irc_client.command_parser(user_input),
+                    self.irc_client.loop
+                )
+                self.insert_text(f"{kick_message}")
+            case "invite":
+                if len(args) < 3:
+                    self.insert_text("Usage: /invite <user> <channel>\n")
+                    return
+                user = args[1]
+                channel = args[2]
+                invite_message = f"Invited {user} to {channel}\n"
+                asyncio.run_coroutine_threadsafe(
+                    self.irc_client.command_parser(user_input),
+                    self.irc_client.loop
+                )
+                self.insert_text(invite_message)
+
+    def handle_action(self, args, channel, timestamp):
+        action_message = ' '.join(args[1:])
+        escaped_input = self.main_app.escape_color_codes(action_message)
+        formatted_message = f"* {self.nick_name} {escaped_input}"
+        asyncio.run_coroutine_threadsafe(
+            self.irc_client.send_message(f"PRIVMSG {channel} :\x01ACTION {escaped_input}\x01"), 
+            self.irc_client.loop
+        )
+        self.insert_text(f"{timestamp} {formatted_message}\n")
 
     def close_window(self):
         # Add the channel back to the channel_listbox
@@ -152,8 +227,10 @@ class RudePopOut:
             self.main_app.popped_out_channels.remove(self.selected_channel)
         if self.selected_channel in self.main_app.pop_out_windows:
             del self.main_app.pop_out_windows[self.selected_channel]
-        # Close the window
-        self.root.destroy()
+        # Close the window if it exists
+        if self.root:
+            self.root.destroy()
+            self.root = None
 
     def update_gui_user_list(self, channel):
         # Clear existing items in user listbox

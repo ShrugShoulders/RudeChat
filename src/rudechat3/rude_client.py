@@ -321,7 +321,7 @@ class RudeChatClient:
         count_366 = 0
         got_topic = 0
         last_366_time = None
-        TIMEOUT_SECONDS = 10
+        TIMEOUT_SECONDS = 0.3
 
         def reset_timer():
             nonlocal last_366_time
@@ -410,6 +410,8 @@ class RudeChatClient:
                             reset_timer()
                     case "PRIVMSG":
                         await self.handle_privmsg(tokens)
+                        if not self.use_auto_join:
+                            reset_timer()
                     case "MODE":
                         self.handle_mode(tokens)
                     case "305":
@@ -889,9 +891,13 @@ class RudeChatClient:
             self.channel_messages[self.server][target].append(action_message)
 
             # Display the message in the text_widget if the target matches the current channel or DM
-            if target == self.current_channel and self.gui.irc_client == self:
+            if target == self.current_channel and self.gui.irc_client == self and target not in self.gui.popped_out_channels:
                 self.gui.insert_text_widget(action_message)
                 self.gui.highlight_nickname()
+            if target in self.gui.popped_out_channels:
+                window = self.gui.pop_out_windows[target]
+                window.insert_text(action_message)
+                window.highlight_nickname()
             else:
                 # If it's not the currently viewed channel, highlight the channel in green in the Listbox
                 for idx in range(self.gui.channel_listbox.size()):
@@ -1097,12 +1103,18 @@ class RudeChatClient:
     async def pip_to_pop_out(self, timestamp, sender, message, target):
         if target in self.gui.pop_out_windows:
             window = self.gui.pop_out_windows[target]
-            formatted_message = f"{timestamp}<{sender}> {message}\n"
+            if self.use_time_stamp == True:
+                formatted_message = f"{timestamp}<{sender}> {message}\n"
+            elif self.use_time_stamp == False:
+                formatted_message = f"<{sender}> {message}\n"
             window.insert_text(formatted_message)
             window.highlight_nickname()
         elif sender in self.gui.pop_out_windows:
             window = self.gui.pop_out_windows[sender]
-            formatted_message = f"{timestamp}<{sender}> {message}\n"
+            if self.use_time_stamp == True:
+                formatted_message = f"{timestamp}<{sender}> {message}\n"
+            elif self.use_time_stamp == False:
+                formatted_message = f"<{sender}> {message}\n"
             window.insert_text(formatted_message)
             window.highlight_nickname()
 
