@@ -74,6 +74,7 @@ class RudePopOut:
         self.user_scrollbar = Scrollbar(self.user_frame, orient="vertical", command=self.user_listbox.yview)
         self.user_listbox.config(yscrollcommand=self.user_scrollbar.set)
         self.user_scrollbar.grid(row=1, column=1, sticky='ns')
+        self.user_listbox.bind("<Button-3>", self.show_user_list_menu)
 
         # Entry widget for message input
         self.entry = tk.Entry(self.frame)
@@ -134,6 +135,40 @@ class RudePopOut:
         self.user_listbox_fg = config.get('WIDGETS', 'users_fg', fallback='#39ff14')
         self.user_listbox_bg = config.get('WIDGETS', 'users_bg', fallback='black')
 
+    def whois_from_menu(self):
+        selected_user_index = self.user_listbox.curselection()
+        if selected_user_index:
+            selected_user = self.user_listbox.get(selected_user_index)
+            cleaned_nickname = selected_user.lstrip('~&@%+')
+            user_input = f"/whois {cleaned_nickname}"
+            asyncio.run_coroutine_threadsafe(
+                self.irc_client.command_parser(user_input),
+                self.irc_client.loop
+            )
+
+    def kick_user_from_channel(self):
+        selected_user_index = self.user_listbox.curselection()
+        if selected_user_index:
+            selected_user = self.user_listbox.get(selected_user_index)
+            user_input = f"/kick {selected_user} {self.selected_channel} Bye <3"
+            asyncio.run_coroutine_threadsafe(
+                self.irc_client.command_parser(user_input),
+                self.irc_client.loop
+            )
+
+    def create_user_list_menu(self):
+        menu = tk.Menu(self.user_listbox, tearoff=0)
+        #menu.add_command(label="Open Query", command=self.open_query_from_menu)
+        #menu.add_command(label="Copy", command=self.copy_text_user)
+        menu.add_command(label="Whois", command=self.whois_from_menu)
+        menu.add_command(label="Kick", command=self.kick_user_from_channel)
+        return menu
+
+    def show_user_list_menu(self, event):
+        menu = self.create_user_list_menu()
+        menu.post(event.x_root, event.y_root)
+        self.root.bind("<Motion>", lambda e: self.check_user_mouse_position(e, menu))
+
     def init_message_menu(self):
         """
         Right click menu for the main chat window.
@@ -147,21 +182,9 @@ class RudePopOut:
             # Open the popup menu
             self.message_menu.tk_popup(event.x_root, event.y_root)
             # Bind the <Motion> event to a function that checks if the mouse is over the menu
-            self.root.bind("<Motion>", self.check_mouse_position)
+            self.root.bind("<Motion>", self.check_message_mouse_position)
         finally:
             self.message_menu.grab_release()
-
-    def check_mouse_position(self, event):
-        # Get the position of the menu
-        menu_x1 = self.message_menu.winfo_rootx()
-        menu_y1 = self.message_menu.winfo_rooty()
-        menu_x2 = menu_x1 + self.message_menu.winfo_width()
-        menu_y2 = menu_y1 + self.message_menu.winfo_height()
-
-        # Check if the mouse is outside the menu
-        if not (menu_x1 <= event.x_root <= menu_x2 and menu_y1 <= event.y_root <= menu_y2):
-            self.message_menu.unpost()
-            self.root.unbind("<Motion>")
 
     def copy_text_message(self):
         self.text_widget.event_generate("<<Copy>>")
@@ -744,18 +767,29 @@ class RudePopOut:
         finally:
             self.input_menu.grab_release()
 
-    def check_input_mouse_position(self, event):
+    def check_mouse_position(self, event, menu):
         try:
-            menu_x1 = self.input_menu.winfo_rootx()
-            menu_y1 = self.input_menu.winfo_rooty()
-            menu_x2 = menu_x1 + self.input_menu.winfo_width()
-            menu_y2 = menu_y1 + self.input_menu.winfo_height()
+            # Get the position of the menu
+            menu_x1 = menu.winfo_rootx()
+            menu_y1 = menu.winfo_rooty()
+            menu_x2 = menu_x1 + menu.winfo_width()
+            menu_y2 = menu_y1 + menu.winfo_height()
 
+            # Check if the mouse is outside the menu
             if not (menu_x1 <= event.x_root <= menu_x2 and menu_y1 <= event.y_root <= menu_y2):
-                self.input_menu.unpost()
+                menu.unpost()
                 self.root.unbind("<Motion>")
         except Exception as e:
             print(f"Exception in check_mouse_position: {e}")
+
+    def check_input_mouse_position(self, event):
+        self.check_mouse_position(event, self.input_menu)
+
+    def check_message_mouse_position(self, event):
+        self.check_mouse_position(event, self.message_menu)
+
+    def check_user_mouse_position(self, event, menu):
+        self.check_mouse_position(event, menu)
 
     def cut_text(self):
         self.entry.event_generate("<<Cut>>")

@@ -826,8 +826,11 @@ class RudeChatClient:
         target = tokens.params[0]
         message = tokens.params[1]
         data = f"NOTICE {sender} {target}: {message}\n"
-        if self.znc_connection:
+        if self.znc_connection and target not in self.gui.popped_out_channels:
             self.gui.insert_text_widget(f"{data}")
+            self.add_server_message(data)
+        elif self.znc_connection and target in self.gui.popped_out_channels:
+            self.pipe_mode_to_pop_out(message, target)
             self.add_server_message(data)
         else:
             self.add_server_message(data)
@@ -1840,12 +1843,14 @@ class RudeChatClient:
             self.channel_messages[self.server][channel] = []
 
         # Display the kick message in the chat window only if the channel is the current channel
-        kick_message_content = f"<X> {kicked_nickname} has been kicked from {channel} by {tokens.hostmask.nickname} ({reason})"
-        self.channel_messages[self.server][channel].append(kick_message_content + "\n")
+        kick_message_content = f"<X> {kicked_nickname} has been kicked from {channel} by {tokens.hostmask.nickname} ({reason})\n"
+        self.channel_messages[self.server][channel].append(kick_message_content)
 
-        if channel == self.current_channel and self.gui.irc_client == self:
-            self.gui.insert_text_widget(kick_message_content + "\n")
+        if channel == self.current_channel and self.gui.irc_client == self and channel not in self.gui.popped_out_channels:
+            self.gui.insert_text_widget(kick_message_content)
             self.gui.highlight_nickname()
+        if channel in self.gui.popped_out_channels:
+            self.pipe_mode_to_pop_out(kick_message_content, channel)
 
         # Remove the user from the channel_users list for the channel
         user_found = False
