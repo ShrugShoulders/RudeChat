@@ -302,8 +302,6 @@ class RudePopOut:
         self.insert_text(f"{timestamp} {formatted_message}\n")
 
     def close_window(self):
-        # Add the channel back to the channel_listbox
-        self.main_app.channel_listbox.insert(tk.END, self.selected_channel)
         # Remove the channel and window from the popped_out_channels and pop_out_windows
         if self.selected_channel in self.main_app.popped_out_channels:
             self.main_app.popped_out_channels.remove(self.selected_channel)
@@ -311,6 +309,7 @@ class RudePopOut:
             del self.main_app.pop_out_windows[self.selected_channel]
         # Close the window if it exists
         if self.root:
+            self.irc_client.update_gui_channel_list()
             self.root.destroy()
             self.root = None
 
