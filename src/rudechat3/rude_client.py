@@ -2623,8 +2623,7 @@ class RudeChatClient:
                 channel_name = args[1]
                 if channel_name in self.joined_channels:
                     self.current_channel = channel_name
-                    self.display_last_messages(self.current_channel, self.server)
-                    self.gui.highlight_nickname()
+                    await self.pop_out_return(channel_name)
                 else:
                     self.gui.insert_text_widget(f"Not a member of channel {channel_name}\n")
 
