@@ -1118,15 +1118,23 @@ class RudeChatClient:
                         main_count = 0
                         pass
                     else:
-                        await self.main_task_gather(main_tasks)
-                        main_count += 1
+                        for tasks in main_tasks:
+                            if main_count == 2:
+                                break
+                            else:
+                                await self.main_task_gather(main_tasks)
+                                main_count += 1
                 if pop_out_tasks:
                     if pop_count == 2:
                         pop_count = 0
                         pass
                     else:
-                        await self.pop_out_task_gather(pop_out_tasks)
-                        pop_count += 1
+                        for tasks in pop_out_tasks:
+                            if pop_count == 2:
+                                break
+                            else:
+                                await self.pop_out_task_gather(pop_out_tasks)
+                                pop_count += 1
 
         except Exception as e:
             print(f"Exception in prepare_direct_message: {e}")
@@ -1162,15 +1170,23 @@ class RudeChatClient:
                 main_count = 0
                 pass
             else:
-                await self.main_task_gather(main_tasks)
-                main_count += 1
+                for tasks in main_tasks:
+                    if main_count == 2:
+                        break
+                    else:
+                        await self.main_task_gather(main_tasks)
+                        main_count += 1
         if pop_out_tasks:
             if pop_count == 2:
                 pop_count = 0
                 pass
             else:
-                await self.pop_out_task_gather(pop_out_tasks)
-                pop_count += 1
+                for tasks in pop_out_tasks:
+                    if pop_count == 2:
+                        break
+                    else:
+                        await self.pop_out_task_gather(pop_out_tasks)
+                        pop_count += 1
 
     async def main_task_gather(self, main_tasks):
         await asyncio.gather(*main_tasks)
