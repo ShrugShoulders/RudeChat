@@ -2621,11 +2621,11 @@ class RudeChatClient:
 
             case "sw":
                 channel_name = args[1]
-                if channel_name in self.joined_channels:
+                if channel_name in self.joined_channels and channel_users not in self.gui.popped_out_channels:
                     self.current_channel = channel_name
                     await self.pop_out_return(channel_name)
                 else:
-                    self.gui.insert_text_widget(f"Not a member of channel {channel_name}\n")
+                    self.gui.insert_text_widget(f"Not a member of channel or Channel in Pop Out Window: {channel_name}\n")
 
             case "topic":
                 new_topic = ' '.join(args[1:])
