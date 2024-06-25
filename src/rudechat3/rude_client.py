@@ -2621,7 +2621,7 @@ class RudeChatClient:
 
             case "sw":
                 channel_name = args[1]
-                if channel_name in self.joined_channels and channel_users not in self.gui.popped_out_channels:
+                if channel_name in self.joined_channels and channel_name not in self.gui.popped_out_channels:
                     self.current_channel = channel_name
                     await self.pop_out_return(channel_name)
                 else:
