@@ -3354,3 +3354,15 @@ class RudeChatClient:
         if server_name:
             messages = self.motd_dict.get(server_name, [])
             self.gui.insert_text_widget(f"{messages}\n")
+
+    async def pop_out_switch(self):
+        # Get the existing channel list from the channel_listbox
+        channel_list = self.gui.channel_listbox.get(0, self.gui.channel_listbox.size())
+
+        # Pick a channel at random from the channel list
+        if channel_list:
+            channel = random.choice(channel_list)
+            await self.gui.switch_channel(channel)
+
+    async def pop_out_return(self, channel):
+        await self.gui.switch_channel(channel)

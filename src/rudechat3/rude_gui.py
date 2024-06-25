@@ -666,7 +666,11 @@ class RudeGui:
         return menu
 
     def open_pop_out_window(self):
+        loop = asyncio.get_event_loop()
         self.clear_text_widget()
+        self.clear_user_listbox()
+        self.clear_topic_label()
+        loop.create_task(self.irc_client.pop_out_switch())
         selected_channel = self.channel_listbox.get(self.channel_listbox.curselection())
         if selected_channel not in self.pop_out_windows:
             self.popped_out_channels.append(selected_channel)
