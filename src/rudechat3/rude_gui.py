@@ -1079,7 +1079,9 @@ class RudeGui:
     def _switch_to_index(self, event):
         key = event.char
         if key.isdigit():
-            index = int(key)
+            index = int(key) - 1
+            if index == -1:
+                index = 9  # Make the '0' key correspond to the tenth channel
             self.switch_to_index(event, index)
 
     def switch_to_index(self, event, index):
