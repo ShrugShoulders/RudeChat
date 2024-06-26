@@ -1061,7 +1061,11 @@ class RudeChatClient:
         return any(fnmatch.fnmatch(sender_hostmask, ignored) for ignored in self.ignore_list)
 
     async def notify_user_if_mentioned(self, message, target, sender, timestamp):
-        if self.nickname.lower() in message.lower():
+        # Compile a regex pattern to match the exact nickname
+        pattern = re.compile(r'\b' + re.escape(self.nickname) + r'\b', re.IGNORECASE)
+        
+        # Check if the exact nickname is mentioned in the message
+        if pattern.search(message):
             await self.notify_user_of_mention(self.server, target, sender, message)
 
             if self.znc_connection:
