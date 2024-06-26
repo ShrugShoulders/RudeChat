@@ -773,11 +773,11 @@ class RudeChatClient:
                 print(f"Exception caught in keep_alive: {e}")
                 self.loop_running = False
 
-            except Exception as e:
-                print(f"Unhandled exception in keep_alive: {e}")
-
             except AttributeError as e:
                 print(f"AttributeError caught in keep_alive: {e}")
+
+            except Exception as e:
+                print(f"Unhandled exception in keep_alive: {e}")
 
     async def auto_save(self):
         while self.loop_running:
@@ -793,11 +793,11 @@ class RudeChatClient:
                 print(f"Exception caught in auto_save: {e}")
                 self.loop_running = False
 
-            except Exception as e:  # Catch other exceptions
-                print(f"Unhandled exception in auto_save: {e}")
-
             except AttributeError as e:  # Catch AttributeError
                 print(f"AttributeError caught in auto_save: {e}")
+
+            except Exception as e:  # Catch other exceptions
+                print(f"Unhandled exception in auto_save: {e}")
 
     async def auto_trim(self):
         while self.loop_running:
@@ -813,11 +813,11 @@ class RudeChatClient:
                 print(f"Exception caught in auto_trim: {e}")
                 self.loop_running = False
 
-            except Exception as e:  # Catch other exceptions
-                print(f"Unhandled exception in auto_trim: {e}")
-
             except AttributeError as e:  # Catch AttributeError
                 print(f"AttributeError caught in auto_trim: {e}")
+
+            except Exception as e:  # Catch other exceptions
+                print(f"Unhandled exception in auto_trim: {e}")
 
     async def auto_refresh(self):
         while self.loop_running:
@@ -830,14 +830,14 @@ class RudeChatClient:
                 print("Exiting auto_refresh loop.")
 
             except (ConnectionResetError, OSError) as e:
-                print(f"Exception caught in auto_refresh: {e}")
+                print(f"OSERROR/Connection Error caught in auto_refresh: {e}")
                 self.loop_running = False
+
+            except AttributeError as e:
+                pass
 
             except Exception as e:
                 print(f"Unhandled exception in auto_refresh: {e}")
-
-            except AttributeError as e:
-                print(f"AttributeError caught in auto_refresh: {e}")
 
     def handle_server_message(self, line):
         data = line + "\n"
