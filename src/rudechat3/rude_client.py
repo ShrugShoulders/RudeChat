@@ -524,7 +524,7 @@ class RudeChatClient:
                         self.gui.insert_text_widget(f'\n\x0307\x02Processing Messages: \x0F')
                         for tokens in PRIVMSGTOKENS:
                             self.gui.insert_text_widget(f'\x0303\x02{random.choice(symbol_list)}\x0F')
-                            await self.handle_privmsg(tokens)
+                            await self.handle_privmsg(tokens, znc_privmsg=True)
                         return self.gui.insert_text_widget(f'\n\x0303\x02DONE!\x0F\n')
 
             # Check for overall timeout
@@ -536,7 +536,7 @@ class RudeChatClient:
                     self.gui.insert_text_widget(f'\x0307\x02Processing Messages: \x0F')
                     for tokens in PRIVMSGTOKENS:
                         self.gui.insert_text_widget(f'\x0303\x02{random.choice(symbol_list)}\x0F')
-                        await self.handle_privmsg(tokens)
+                        await self.handle_privmsg(tokens, znc_privmsg=True)
                     return self.gui.insert_text_widget(f'\n\x0303\x02DONE!\x0F\n')
                 else:
                     self.gui.insert_text_widget("\nMaximum sync time exceeded\n")
@@ -1035,7 +1035,7 @@ class RudeChatClient:
         except Exception as e:
             print(f"Error triggering desktop notification: {e}")
 
-    async def handle_privmsg(self, tokens):
+    async def handle_privmsg(self, tokens, znc_privmsg=False):
         timestamp = datetime.datetime.now().strftime('[%H:%M:%S] ')
         sender = tokens.hostmask.nickname
         target = tokens.params[0]
@@ -1051,9 +1051,9 @@ class RudeChatClient:
 
         if self.is_direct_message(target):
             target = await self.get_direct_message_target(sender, target)
-            await self.prepare_direct_message(sender, target, message, timestamp)
+            await self.prepare_direct_message(sender, target, message, timestamp, znc_privmsg)
         else:
-            await self.handle_channel_message(sender, target, message, timestamp)
+            await self.handle_channel_message(sender, target, message, timestamp, znc_privmsg)
 
         await self.notify_user_if_mentioned(message, target, sender, timestamp)
 
@@ -1101,7 +1101,7 @@ class RudeChatClient:
         else:
             return target
 
-    async def prepare_direct_message(self, sender, target, message, timestamp):
+    async def prepare_direct_message(self, sender, target, message, timestamp, znc_privmsg):
         self.log_message(self.server_name, target, sender, message, is_sent=False)
         try:
             if sender != self.nickname:
@@ -1112,16 +1112,19 @@ class RudeChatClient:
                     self.gui.channel_lists[self.server] = self.joined_channels
                     self.update_gui_channel_list()
 
-                self.save_message(self.server, target, sender, message, is_sent=False)
-
-                main_tasks = []
-                pop_out_tasks = []
-                if sender not in self.gui.popped_out_channels:
-                    main_tasks.append(self.display_message(timestamp, sender, message, target, is_direct=True))
+                if znc_privmsg:
+                    self.save_message(self.server, target, sender, message, is_sent=False)
                 else:
-                    pop_out_tasks.append(self.pip_to_pop_out(timestamp, sender, message, target))
+                    self.save_message(self.server, target, sender, message, is_sent=False)
 
-                await self.gather_message_tasks(main_tasks, pop_out_tasks)
+                    main_tasks = []
+                    pop_out_tasks = []
+                    if sender not in self.gui.popped_out_channels:
+                        main_tasks.append(self.display_message(timestamp, sender, message, target, is_direct=True))
+                    else:
+                        pop_out_tasks.append(self.pip_to_pop_out(timestamp, sender, message, target))
+
+                    await self.gather_message_tasks(main_tasks, pop_out_tasks)
 
         except Exception as e:
             print(f"Exception in prepare_direct_message: {e}")
@@ -1133,25 +1136,33 @@ class RudeChatClient:
             window.insert_text(formatted_message)
             window.highlight_nickname()
 
-    async def handle_channel_message(self, sender, target, message, timestamp):
-        if self.server not in self.channel_messages:
-            self.channel_messages[self.server] = {}
-        if target not in self.channel_messages[self.server]:
-            self.channel_messages[self.server][target] = []
-        self.save_message(self.server, target, sender, message, is_sent=False)
-        self.log_message(self.server_name, target, sender, message, is_sent=False)
+    async def handle_channel_message(self, sender, target, message, timestamp, znc_privmsg):
+        if znc_privmsg:
+            if self.server not in self.channel_messages:
+                self.channel_messages[self.server] = {}
+            if target not in self.channel_messages[self.server]:
+                self.channel_messages[self.server][target] = []
+            self.save_message(self.server, target, sender, message, is_sent=False)
+            self.log_message(self.server_name, target, sender, message, is_sent=False)
+        else:
+            if self.server not in self.channel_messages:
+                self.channel_messages[self.server] = {}
+            if target not in self.channel_messages[self.server]:
+                self.channel_messages[self.server][target] = []
+            self.save_message(self.server, target, sender, message, is_sent=False)
+            self.log_message(self.server_name, target, sender, message, is_sent=False)
 
-        main_tasks = []
-        pop_out_tasks = []
-        try:
-            if target not in self.gui.popped_out_channels:
-                main_tasks.append(self.display_message(timestamp, sender, message, target, is_direct=True))
-            else:
-                pop_out_tasks.append(self.pip_to_pop_out(timestamp, sender, message, target))
+            main_tasks = []
+            pop_out_tasks = []
+            try:
+                if target not in self.gui.popped_out_channels:
+                    main_tasks.append(self.display_message(timestamp, sender, message, target, is_direct=True))
+                else:
+                    pop_out_tasks.append(self.pip_to_pop_out(timestamp, sender, message, target))
 
-            await self.gather_message_tasks(main_tasks, pop_out_tasks)
-        except Exception as e:
-            print(f"Exception on gathering channel messages: {e}")
+                await self.gather_message_tasks(main_tasks, pop_out_tasks)
+            except Exception as e:
+                print(f"Exception on gathering channel messages: {e}")
 
     async def gather_message_tasks(self, main_tasks, pop_out_tasks):
         interleaved_tasks = []
@@ -1165,7 +1176,7 @@ class RudeChatClient:
                 interleaved_tasks.append(pop_out_tasks[i])
             if i + 1 < pop_len:
                 interleaved_tasks.append(pop_out_tasks[i + 1])
-                
+
             # Add two tasks from main_tasks if available
             if i < main_len:
                 interleaved_tasks.append(main_tasks[i])
