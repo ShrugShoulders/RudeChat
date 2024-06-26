@@ -675,10 +675,27 @@ class RudeGui:
         if selected_channel not in self.pop_out_windows:
             self.popped_out_channels.append(selected_channel)
             self.channel_listbox.delete(self.channel_listbox.curselection())
-            self.irc_client.current_channel = ""
             root = tk.Tk()
             app = RudePopOut(root, selected_channel, self.irc_client, self.irc_client.nickname, self)
             self.pop_out_windows[selected_channel] = app
+            root.mainloop()
+
+    def open_dm_pop_out_from_window(self, user):
+        if user not in self.pop_out_windows:
+            self.popped_out_channels.append(user)
+            
+            # Get all items in the channel_listbox
+            channel_list = self.channel_listbox.get(0, self.channel_listbox.size())
+            
+            # Find the index of the given user
+            if user in channel_list:
+                user_index = channel_list.index(user)
+                # Delete the user from the channel_listbox using the found index
+                self.channel_listbox.delete(user_index)
+            
+            root = tk.Tk()
+            app = RudePopOut(root, user, self.irc_client, self.irc_client.nickname, self)
+            self.pop_out_windows[user] = app
             root.mainloop()
 
     def show_channel_list_menu(self, event):

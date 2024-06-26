@@ -156,12 +156,27 @@ class RudePopOut:
                 self.irc_client.loop
             )
 
+    def copy_text_user(self):
+        self.user_listbox.event_generate("<<Copy>>")
+
+    def open_query_from_menu(self):
+        selected_user_index = self.user_listbox.curselection()
+        if selected_user_index:
+            selected_user = self.user_listbox.get(selected_user_index)
+            cleaned_nickname = selected_user.lstrip("~&@%+")
+            user_input = f"/query {cleaned_nickname}"
+            asyncio.run_coroutine_threadsafe(
+                self.irc_client.command_parser(user_input),
+                self.irc_client.loop
+            )
+            self.main_app.open_dm_pop_out_from_window(cleaned_nickname)
+
     def create_user_list_menu(self):
         menu = tk.Menu(self.user_listbox, tearoff=0)
-        #menu.add_command(label="Open Query", command=self.open_query_from_menu)
-        #menu.add_command(label="Copy", command=self.copy_text_user)
+        menu.add_command(label="Open Query", command=self.open_query_from_menu)
         menu.add_command(label="Whois", command=self.whois_from_menu)
         menu.add_command(label="Kick", command=self.kick_user_from_channel)
+        menu.add_command(label="Copy", command=self.copy_text_user)
         return menu
 
     def show_user_list_menu(self, event):

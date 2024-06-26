@@ -56,6 +56,7 @@ class RudeChatClient:
         self.nickserv_password = config.get('IRC', 'nickserv_password') if self.use_nickserv_auth else None
         self.auto_join_channels = config.get('IRC', 'auto_join_channels', fallback=None).split(',')
         self.use_auto_join = config.getboolean('IRC', 'use_auto_join', fallback=True)
+        self.auto_rejoin = config.getboolean('IRC', 'auto_rejoin', fallback=True)
         self.sasl_enabled = config.getboolean('IRC', 'sasl_enabled', fallback=False)
         self.sasl_username = config.get('IRC', 'sasl_username', fallback=None)
         self.sasl_password = config.get('IRC', 'sasl_password', fallback=None)
@@ -1828,7 +1829,7 @@ class RudeChatClient:
         message = f"Server Time from {server_name}: {local_time}"
         self.gui.insert_text_widget(message)
 
-    def handle_kick_event(self, tokens):
+    async def handle_kick_event(self, tokens):
         """
         Handle the KICK event from the server.
         """
@@ -1864,6 +1865,31 @@ class RudeChatClient:
         if user_found:
             # Update the user listbox for the channel
             self.update_user_listbox(channel)
+
+        if kicked_nickname == self.nickname:
+            try:
+                if self.auto_rejoin:
+                    await self.auto_rejoin_channel(channel)
+                else:
+                    await self.remove_kicked_channel(channel)
+            except Exception as e:
+                print(f"Exception upon attempting to remove kicked channel or auto_rejoin: {e}")
+
+    async def remove_kicked_channel(self, channel):
+        if channel in self.joined_channels:
+            self.joined_channels.remove(channel)
+
+            # Remove the channel entry from the highlighted_channels dictionary
+            if self.server_name in self.highlighted_channels:
+                self.highlighted_channels[self.server_name].pop(channel, None)
+
+            self.gui.channel_lists[self.server] = self.joined_channels
+            self.update_gui_channel_list()
+
+    async def auto_rejoin_channel(self, channel):
+        await self.remove_kicked_channel(channel)
+        await asyncio.sleep(1)
+        await self.join_channel(channel)
 
     async def handle_list_response(self, tokens):
         channel_name = tokens.params[1]
@@ -2146,7 +2172,7 @@ class RudeChatClient:
                         await self.save_channel_list_to_file()
 
                     case "KICK":
-                        self.handle_kick_event(tokens)
+                        await self.handle_kick_event(tokens)
                     case "NOTICE":
                         self.handle_notice_message(tokens)
                     case "PRIVMSG":
