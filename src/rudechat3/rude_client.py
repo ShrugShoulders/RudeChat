@@ -325,15 +325,11 @@ class RudeChatClient:
         last_366_time = None
         TIMEOUT_SECONDS = 0.2
         MAX_WAIT_TIME = 60
+        PRIVMSGTOKENS = []
 
         start_time = asyncio.get_event_loop().time()
 
-        def reset_timer():
-            nonlocal last_366_time
-            if not self.use_auto_join:
-                last_366_time = asyncio.get_event_loop().time()
-
-        def check_timeout():
+        def reset_timer(symbol):
             nonlocal last_366_time
             nonlocal sync
             if motd_received:
@@ -341,7 +337,12 @@ class RudeChatClient:
                     self.gui.insert_text_widget(f'Syncing with ZNC: ')
                     sync = False
                 else:
-                    self.gui.insert_text_widget(f'\x0303@\x0F')
+                    self.gui.insert_text_widget(f'\x0303\x02{symbol}\x0F')
+            if not self.use_auto_join:
+                last_366_time = asyncio.get_event_loop().time()
+
+        def check_timeout():
+            nonlocal last_366_time
             if not self.use_auto_join:
                 if last_366_time is None:
                     return False
@@ -420,10 +421,12 @@ class RudeChatClient:
                         await self.handle_nick(tokens)
                     case "JOIN":
                         await self.join_znc_channel(tokens)
-                    case "PRIVMSG":
-                        await self.handle_privmsg(tokens)
                         if not self.use_auto_join:
-                            reset_timer()
+                            reset_timer("#")
+                    case "PRIVMSG":
+                        PRIVMSGTOKENS.append(tokens)
+                        if not self.use_auto_join:
+                            reset_timer("&")
                     case "MODE":
                         self.handle_mode(tokens)
                     case "305":
@@ -437,7 +440,7 @@ class RudeChatClient:
                         self.handle_topic(tokens)
                         got_topic += 1
                         if not self.use_auto_join:
-                            reset_timer()
+                            reset_timer("%")
 
                     case "353":  # NAMES list
                         self.handle_names_list(tokens)
@@ -446,7 +449,7 @@ class RudeChatClient:
                         self.handle_end_of_names_list(tokens)
                         count_366 += 1
                         if not self.use_auto_join:
-                            reset_timer()
+                            reset_timer("@")
                         elif self.use_auto_join:
                             if count_366 >= len(self.joined_channels) and got_topic >= len(self.joined_channels) and znc_connected:
                                 return
@@ -513,12 +516,16 @@ class RudeChatClient:
                         self.gui.insert_and_scroll()
                 if check_timeout():
                     # Timeout occurred
+                    for tokens in PRIVMSGTOKENS:
+                        await self.handle_privmsg(tokens)
                     return
 
             # Check for overall timeout
             elapsed_time = asyncio.get_event_loop().time() - start_time
             if elapsed_time > MAX_WAIT_TIME:
                 self.gui.insert_text_widget("\nMaximum sync time exceeded\n")
+                for tokens in PRIVMSGTOKENS:
+                    await self.handle_privmsg(tokens)
                 return
 
     async def handle_cap(self, tokens):

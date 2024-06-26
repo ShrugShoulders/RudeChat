@@ -219,8 +219,8 @@ class RudePopOut:
 
             # Check if the text is a command
             if user_text.startswith('/'):
-                self.pop_command_parser(user_text)
                 self.entry.delete(0, tk.END)
+                self.pop_command_parser(user_text)
             else:
                 self.entry_history.append(user_text)
 
@@ -325,9 +325,20 @@ class RudePopOut:
                     self.irc_client.loop
                 )
                 self.insert_text(invite_message)
+            case "query":
+                if len(args) < 2:
+                    self.insert_text(f"Error: Please provide a nickname for the query command.\n")
+                    return
+                user = args[1]
+                asyncio.run_coroutine_threadsafe(
+                    self.irc_client.command_parser(user_input),
+                    self.irc_client.loop
+                )
+                self.main_app.open_dm_pop_out_from_window(user)
 
             case _:
                 pass
+        return
 
     def handle_action(self, args, channel, timestamp):
         action_message = ' '.join(args[1:])
