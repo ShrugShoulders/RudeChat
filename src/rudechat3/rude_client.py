@@ -755,7 +755,7 @@ class RudeChatClient:
 
         print(f"Failed to reconnect ({retries}/{MAX_RETRIES}): {e}. Retrying in {RETRY_DELAY} seconds.")
 
-    async def keep_alive(self):
+    async def keep_alive(self, config_file):
         while self.loop_running:
             try:
                 # Measure ping time before sending PING
@@ -770,8 +770,9 @@ class RudeChatClient:
                 print("Exiting keep_alive loop.")
 
             except (ConnectionResetError, OSError) as e:
-                print(f"Exception caught in keep_alive: {e}")
+                print(f"Connection Exception caught in keep_alive: {e}")
                 self.loop_running = False
+                await self.reconnect(config_file)
 
             except AttributeError as e:
                 print(f"AttributeError caught in keep_alive: {e}")
@@ -1118,6 +1119,18 @@ class RudeChatClient:
 
                 if znc_privmsg:
                     self.save_message(self.server, target, sender, message, is_sent=False)
+                    user_mention = self.is_it_a_mention(message)
+                    if not user_mention:
+                        self.highlight_channel_if_not_current(target, sender, user_mention)
+                    elif user_mention:
+                        self.highlight_channel_if_not_current(target, sender, user_mention)
+                elif sender != self.current_channel and sender not in self.gui.popped_out_channels:
+                    self.save_message(self.server, target, sender, message, is_sent=False)
+                    user_mention = self.is_it_a_mention(message)
+                    if not user_mention:
+                        self.highlight_channel_if_not_current(target, sender, user_mention)
+                    elif user_mention:
+                        self.highlight_channel_if_not_current(target, sender, user_mention)
                 else:
                     self.save_message(self.server, target, sender, message, is_sent=False)
 
@@ -1148,6 +1161,25 @@ class RudeChatClient:
                 self.channel_messages[self.server][target] = []
             self.save_message(self.server, target, sender, message, is_sent=False)
             self.log_message(self.server_name, target, sender, message, is_sent=False)
+            user_mention = self.is_it_a_mention(message)
+            if not user_mention:
+                self.highlight_channel_if_not_current(target, sender, user_mention)
+            elif user_mention:
+                self.highlight_channel_if_not_current(target, sender, user_mention)
+
+        elif target != self.current_channel and target not in self.gui.popped_out_channels:
+            if self.server not in self.channel_messages:
+                self.channel_messages[self.server] = {}
+            if target not in self.channel_messages[self.server]:
+                self.channel_messages[self.server][target] = []
+            self.save_message(self.server, target, sender, message, is_sent=False)
+            self.log_message(self.server_name, target, sender, message, is_sent=False)
+            user_mention = self.is_it_a_mention(message)
+            if not user_mention:
+                self.highlight_channel_if_not_current(target, sender, user_mention)
+            elif user_mention:
+                self.highlight_channel_if_not_current(target, sender, user_mention)
+
         else:
             if self.server not in self.channel_messages:
                 self.channel_messages[self.server] = {}
@@ -1188,6 +1220,11 @@ class RudeChatClient:
                 interleaved_tasks.append(main_tasks[i + 1])
 
             i += 2
+
+            # Check if interleaved_tasks length exceeds 15 and send ping
+            if main_len > 15 or pop_len > 15:
+                print(f"Got {len(interleaved_tasks)} interleaved tasks, sent ping")
+                await self.send_message(f'PING {self.server}')
 
         await asyncio.gather(*interleaved_tasks)
 
