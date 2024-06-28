@@ -1125,7 +1125,7 @@ class RudeGui:
             if next_channel in server_highlighted_channels:
                 del server_highlighted_channels[next_channel]
 
-        # Prevent further event processing
+        self.channel_listbox.see(index)
         return "break"
 
     def switch_to_next_channel(self, event):
@@ -1164,6 +1164,7 @@ class RudeGui:
 
         # Update last selected index
         self.last_selected_index = next_index
+        self.channel_listbox.see(next_index)
 
         # Prevent further event processing
         return "break"
@@ -1253,7 +1254,6 @@ class RudeGui:
 
     def insert_and_scroll(self):
         self.text_widget.see(tk.END)
-        self.server_text_widget.see(tk.END)
 
     def clear_chat_window(self):
         current_channel = self.irc_client.current_channel

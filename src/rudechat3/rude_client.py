@@ -832,7 +832,7 @@ class RudeChatClient:
     async def auto_trim(self):
         while self.loop_running:
             try:
-                await asyncio.sleep(80)
+                await asyncio.sleep(240)
                 self.trim_messages()
 
             except asyncio.CancelledError:
@@ -3417,7 +3417,7 @@ class RudeChatClient:
     def display_last_messages(self, channel, num=150, server_name=None):
         if server_name:
             messages = self.channel_messages.get(server_name, {}).get(channel, [])
-        for message in messages:
+        for message in messages[-num:]:
             self.gui.insert_text_widget(message)
 
     def display_server_motd(self, server_name=None):
