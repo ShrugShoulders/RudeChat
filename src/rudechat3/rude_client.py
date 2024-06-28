@@ -13,13 +13,13 @@ class RudeChatClient:
         self.chan_limit = 0
         self.channellen = 0
         self.topiclen = 0
-        self.joined_channels = []
-        self.motd_lines = []
-        self.chantypes = ''
-        self.ignore_list = []
-        self.detached_channels = []
         self.current_channel = ''
         self.nickname = ''
+        self.chantypes = ''
+        self.joined_channels = []
+        self.motd_lines = []
+        self.ignore_list = []
+        self.detached_channels = []
         self.motd_dict = {}
         self.channel_messages = {}
         self.channel_users = {}
@@ -96,6 +96,32 @@ class RudeChatClient:
         self.use_logging = config.getboolean('IRC', 'use_logging', fallback=True)
         self.use_colors = config.getboolean('IRC', 'use_irc_colors', fallback=False)
         self.gui.update_nick_channel_label()
+
+    def track_objects(self):
+        objects_to_track = {
+            'joined_channels': self.joined_channels,
+            'motd_lines': self.motd_lines,
+            'ignore_list': self.ignore_list,
+            'detached_channels': self.detached_channels,
+            'motd_dict': self.motd_dict,
+            'channel_messages': self.channel_messages,
+            'channel_users': self.channel_users,
+            'user_modes': self.user_modes,
+            'mode_to_symbol': self.mode_to_symbol,
+            'whois_data': self.whois_data,
+            'download_channel_list': self.download_channel_list,
+            'highlighted_channels': self.highlighted_channels,
+            'highlighted_servers': self.highlighted_servers,
+            'mentions': self.mentions,
+            'ASCII_ART_MACROS': self.ASCII_ART_MACROS,
+            'client_event_loops': self.client_event_loops,
+            'tasks': self.tasks,
+        }
+
+        for name, obj in objects_to_track.items():
+            filename = f'{name}_refs.png'
+            objgraph.show_refs([obj], filename=filename)
+            print(f'Generated {filename}')
 
     def delete_lock_files(self):
         script_directory = os.path.dirname(os.path.abspath(__file__))
@@ -293,6 +319,9 @@ class RudeChatClient:
 
     async def join_znc_channel(self, tokens):
         channel = tokens.params[0]
+        user_info = tokens.hostmask.nickname
+        if user_info != self.nickname:
+            return
 
         if self.znc_connection:
             # Check if the server entry exists
@@ -820,26 +849,6 @@ class RudeChatClient:
             except Exception as e:  # Catch other exceptions
                 print(f"Unhandled exception in auto_trim: {e}")
 
-    async def auto_refresh(self):
-        while self.loop_running:
-            try:
-                await asyncio.sleep(45)
-                await self.gui.refresh_text_widget()
-
-            except asyncio.CancelledError:
-                self.loop_running = False
-                print("Exiting auto_refresh loop.")
-
-            except (ConnectionResetError, OSError) as e:
-                print(f"OSERROR/Connection Error caught in auto_refresh: {e}")
-                self.loop_running = False
-
-            except AttributeError as e:
-                pass
-
-            except Exception as e:
-                print(f"Unhandled exception in auto_refresh: {e}")
-
     def handle_server_message(self, line):
         data = line + "\n"
         self.add_server_message(data)
@@ -951,9 +960,9 @@ class RudeChatClient:
 
     def trim_messages(self):
         for server, channels in self.channel_messages.items():
-            for channel in channels:
+            for channel, messages in channels.items():
                 # Trim the message history to the last 150 messages
-                channels[channel] = channels[channel][-150:]
+                channels[channel] = messages[-150:]
 
     async def notify_user_of_mention(self, server, channel, sender, message):
         notification_msg = f"<{sender}> {message}"
@@ -2721,6 +2730,7 @@ class RudeChatClient:
             case "quit":
                 quit_message = " ".join(args[1:]) if len(args) > 0 else None
                 # Send QUIT command to all clients
+                self.track_objects()
                 await self.send_message(f"QUIT :{quit_message}")
                 await asyncio.sleep(2)
                 self.loop_running = False
@@ -3407,7 +3417,7 @@ class RudeChatClient:
     def display_last_messages(self, channel, num=150, server_name=None):
         if server_name:
             messages = self.channel_messages.get(server_name, {}).get(channel, [])
-        for message in messages[-num:]:
+        for message in messages:
             self.gui.insert_text_widget(message)
 
     def display_server_motd(self, server_name=None):

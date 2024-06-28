@@ -798,19 +798,20 @@ class RudeGui:
         self.tooltip = None
 
     def insert_text_widget(self, message):
-        # Highlight URLs in blue and underline
-        urls = self.find_urls(message)
+        try:
+            self.trim_text_widget()
+            urls = self.find_urls(message)
 
-        # Set the Text widget state to NORMAL before inserting and configuring tags
-        self.text_widget.config(state=tk.NORMAL)
+            # Set the Text widget state to NORMAL before inserting and configuring tags
+            self.text_widget.config(state=tk.NORMAL)
 
-        formatted_text = decoder(message)
+            formatted_text = decoder(message)
+            self.tag_text(formatted_text)
 
-        # Run URL tagging in a separate thread
-        url_thread = Thread(target=self.tag_urls_async, args=(urls,))
-        url_thread.start()
-
-        self.tag_text(formatted_text)
+            # Start tagging URLs using the non-blocking approach
+            self.tag_urls(urls)
+        except Exception as e:
+            print(f"Exception in insert_text {e}")
 
     def tag_text(self, formatted_text):
         # Initialize a cache for tag configurations to avoid redundant setups
@@ -863,32 +864,28 @@ class RudeGui:
             tag_config['background'] = hex_background
         return tag_config
 
-    def tag_urls_async(self, urls):
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
+    def tag_urls(self, urls, index=0):
+        if index < len(urls):
+            url = urls[index]
+            tag_name = f"url_{url}"
+            self.text_widget.tag_configure(tag_name, foreground="blue", underline=1)
 
-        tasks = [self.tag_url(url) for url in urls]
-        loop.run_until_complete(asyncio.gather(*tasks))
+            start_idx = "1.0"
+            while True:
+                start_idx = self.text_widget.search(url, start_idx, tk.END)
+                if not start_idx:
+                    break
+                end_idx = f"{start_idx}+{len(url)}c"
+                self.text_widget.tag_add(tag_name, start_idx, end_idx)
+                self.text_widget.tag_bind(tag_name, "<Button-1>", lambda event, url=url: self.open_url(event, url))
+                start_idx = end_idx
 
-        loop.close()
-
-        # Set the Text widget state back to DISABLED after configuring tags
-        self.text_widget.config(state=tk.DISABLED)
-        self.insert_and_scroll()
-
-    async def tag_url(self, url):
-        tag_name = f"url_{url}"
-        self.text_widget.tag_configure(tag_name, foreground="blue", underline=1)
-
-        start_idx = "1.0"
-        while True:
-            start_idx = self.text_widget.search(url, start_idx, tk.END, tag_name)
-            if not start_idx:
-                break
-            end_idx = f"{start_idx}+{len(url)}c"
-            self.text_widget.tag_add(tag_name, start_idx, end_idx)
-            self.text_widget.tag_bind(tag_name, "<Button-1>", lambda event, url=url: self.open_url(event, url))
-            start_idx = end_idx
+            # Schedule the next URL tagging
+            self.text_widget.after(1, self.tag_urls, urls, index + 1)
+        else:
+            # Set the Text widget state back to DISABLED after configuring tags
+            self.text_widget.config(state=tk.DISABLED)
+            self.insert_and_scroll()
 
     def find_urls(self, text):
         # A "simple" regex to detect URLs
@@ -896,7 +893,6 @@ class RudeGui:
         return url_pattern.findall(text)
 
     def open_url(self, event, url):
-        import webbrowser
         webbrowser.open(url)
 
     def insert_server_widget(self, message):
@@ -1042,7 +1038,6 @@ class RudeGui:
             # Create and store references to tasks
             irc_client.tasks["keep_alive"] = asyncio.create_task(irc_client.keep_alive(config_file), name="keep_alive_task")
             irc_client.tasks["auto_save"] = asyncio.create_task(irc_client.auto_save(), name="auto_save_task")
-            irc_client.tasks["auto_refresh"] = asyncio.create_task(irc_client.auto_refresh(), name="auto_refresh_task")
             irc_client.tasks["auto_trim"] = asyncio.create_task(irc_client.auto_trim(), name="auto_trim_task")
             irc_client.tasks["handle_incoming_message"] = asyncio.create_task(irc_client.handle_incoming_message(config_file), name="handle_incoming_message_task")
 
@@ -1106,8 +1101,6 @@ class RudeGui:
             self.switch_to_index(event, index)
 
     def switch_to_index(self, event, index):
-        loop = asyncio.get_event_loop()
-
         # Set background of currently selected channel back to default
         current_selected_channel = self.irc_client.current_channel
         if current_selected_channel:
@@ -1120,7 +1113,7 @@ class RudeGui:
         next_channel = self.channel_listbox.get(index)
 
         # Switch to the channel at the specified index
-        loop.create_task(self.switch_channel(next_channel))
+        self.switch_channel(next_channel)
 
         # Turn background blue for the next channel
         self.channel_listbox.itemconfig(index, {'bg': self.channel_select_color})
@@ -1136,8 +1129,6 @@ class RudeGui:
         return "break"
 
     def switch_to_next_channel(self, event):
-        loop = asyncio.get_event_loop()
-
         # Set background of currently selected channel back to default
         current_selected_channel = self.irc_client.current_channel
         if current_selected_channel:
@@ -1159,7 +1150,7 @@ class RudeGui:
         next_channel = self.channel_listbox.get(next_index)
 
         # Switch to the next channel
-        loop.create_task(self.switch_channel(next_channel))
+        self.switch_channel(next_channel)
 
         # Turn background blue for the next channel
         self.channel_listbox.itemconfig(next_index, {'bg': self.channel_select_color})
@@ -1178,8 +1169,6 @@ class RudeGui:
         return "break"
 
     def on_channel_click(self, event):
-        loop = asyncio.get_event_loop()
-
         # Set background of currently selected channel back to default
         current_selected_channel = self.irc_client.current_channel
         if current_selected_channel:
@@ -1192,7 +1181,7 @@ class RudeGui:
         clicked_index = self.channel_listbox.curselection()
         if clicked_index:
             clicked_channel = self.channel_listbox.get(clicked_index[0])
-            loop.create_task(self.switch_channel(clicked_channel))
+            self.switch_channel(clicked_channel)
 
             # Turn background blue
             self.channel_listbox.itemconfig(clicked_index, {'bg': self.channel_select_color})
@@ -1204,25 +1193,15 @@ class RudeGui:
                 if clicked_channel in server_highlighted_channels:
                     del server_highlighted_channels[clicked_channel]
 
-    async def refresh_text_widget(self):
-        channel = self.irc_client.current_channel
-        server = self.irc_client.server
+    def trim_text_widget(self):
+        """Trim the text widget to only hold a maximum of 150 lines."""
+        lines = self.text_widget.get("1.0", tk.END).split("\n")
+        if len(lines) > 150:
+            self.text_widget.config(state=tk.NORMAL)  # Enable text widget editing
+            self.text_widget.delete("1.0", f"{len(lines) - 150}.0")  # Delete excess lines
+            self.text_widget.config(state=tk.DISABLED)  # Disable text widget editing
 
-        # Split the text by '\n' and count the number of lines
-        text_lines = self.text_widget.get("1.0", tk.END).split("\n")
-        if len(text_lines) > 103 and channel is not None:
-            # Clear the text window
-            self.text_widget.config(state=tk.NORMAL)
-            self.text_widget.delete(1.0, tk.END)
-            self.text_widget.config(state=tk.DISABLED)
-            # Refresh using display_last_messages
-            self.irc_client.display_last_messages(channel, server_name=server)
-            self.highlight_nickname()
-            self.insert_and_scroll()
-        else:
-            pass
-
-    async def switch_channel(self, channel_name):
+    def switch_channel(self, channel_name):
         server = self.irc_client.server  # Assume the server is saved in the irc_client object
 
         # Clear the text window
