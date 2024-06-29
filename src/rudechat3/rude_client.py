@@ -407,28 +407,14 @@ class RudeChatClient:
                         self.gui.insert_text_widget(f'Connected to the server: {self.server}:{self.port}\n')
                         received_001 = True
                         self.gui.insert_and_scroll()
-                    case "002":
-                        self.server_message_handler(tokens)
-                    case "003":
-                        self.server_message_handler(tokens)
-                    case "004":
+                    case "002" | "003" | "004":
                         self.server_message_handler(tokens)
                     case "005":
                         self.handle_isupport(tokens)
                         self.isupport_flag = True
                         self.gui.insert_and_scroll()
 
-                    case "251":
-                        self.server_message_handler(tokens)
-                    case "252":
-                        self.server_message_handler(tokens)
-                    case "253":
-                        self.server_message_handler(tokens)
-                    case "254":
-                        self.server_message_handler(tokens)
-                    case "255":
-                        self.server_message_handler(tokens)
-                    case "265":
+                    case "251" | "252" | "253" | "254" | "255" | "265":
                         self.server_message_handler(tokens)
                     case "311" | "312" | "313" | "317" | "319" | "301" | "671" | "338" | "318" | "330":
                         await self.handle_whois_replies(tokens.command, tokens)
@@ -450,9 +436,7 @@ class RudeChatClient:
 
                     case "MODE":
                         self.handle_mode(tokens)
-                    case "305":
-                        pass
-                    case "306":
+                    case "305" | "306":
                         pass
                     case "328":
                         self.handle_328(tokens)
@@ -1210,11 +1194,6 @@ class RudeChatClient:
             interleaved_tasks.extend(pop_out_tasks[min_len:])
         if main_len > min_len:
             interleaved_tasks.extend(main_tasks[min_len:])
-
-        # Send a ping if tasks length exceeds 15
-        if len(main_tasks) > 15 or len(pop_out_tasks) > 15:
-            print(f"Got {len(interleaved_tasks)} interleaved tasks, sent ping")
-            await self.send_message(f'PING {self.server}')
 
         # Gather tasks
         await asyncio.gather(*interleaved_tasks)
