@@ -3207,8 +3207,6 @@ class RudeChatClient:
         elif stripped_mode in self.mode_to_symbol:
             if target:
                 await self.send_message(f'MODE {channel} {mode} {target}')
-            else:
-                await self.send_message(f'MODE {channel} {mode}')
         else:
             await self.send_message(f'MODE {channel}')
 
