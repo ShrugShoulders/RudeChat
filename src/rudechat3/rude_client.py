@@ -137,8 +137,12 @@ class RudeChatClient:
             # Read existing data
             existing_messages = {}
             if os.path.exists(file_path):
-                async with aiofiles.open(file_path, 'r') as file:
-                    existing_messages = json.loads(await file.read())
+                try:
+                    async with aiofiles.open(file_path, 'r') as file:
+                        existing_messages = json.loads(await file.read())
+                except json.JSONDecodeError:
+                    print("JSON decode error occurred, initializing with an empty dictionary.")
+                    existing_messages = {}
 
             # Update existing data with new channel messages
             existing_messages.update(self.channel_messages)
@@ -800,7 +804,7 @@ class RudeChatClient:
     async def auto_trim(self):
         while self.loop_running:
             try:
-                await asyncio.sleep(240)
+                await asyncio.sleep(125)
                 self.trim_messages()
 
             except asyncio.CancelledError:
@@ -2690,8 +2694,6 @@ class RudeChatClient:
 
             case "quit":
                 quit_message = " ".join(args[1:]) if len(args) > 0 else None
-                # Send QUIT command to all clients
-                self.track_objects()
                 await self.send_message(f"QUIT :{quit_message}")
                 await asyncio.sleep(2)
                 self.loop_running = False
