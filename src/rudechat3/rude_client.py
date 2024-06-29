@@ -97,32 +97,6 @@ class RudeChatClient:
         self.use_colors = config.getboolean('IRC', 'use_irc_colors', fallback=False)
         self.gui.update_nick_channel_label()
 
-    def track_objects(self):
-        objects_to_track = {
-            'joined_channels': self.joined_channels,
-            'motd_lines': self.motd_lines,
-            'ignore_list': self.ignore_list,
-            'detached_channels': self.detached_channels,
-            'motd_dict': self.motd_dict,
-            'channel_messages': self.channel_messages,
-            'channel_users': self.channel_users,
-            'user_modes': self.user_modes,
-            'mode_to_symbol': self.mode_to_symbol,
-            'whois_data': self.whois_data,
-            'download_channel_list': self.download_channel_list,
-            'highlighted_channels': self.highlighted_channels,
-            'highlighted_servers': self.highlighted_servers,
-            'mentions': self.mentions,
-            'ASCII_ART_MACROS': self.ASCII_ART_MACROS,
-            'client_event_loops': self.client_event_loops,
-            'tasks': self.tasks,
-        }
-
-        for name, obj in objects_to_track.items():
-            filename = f'{name}_refs.png'
-            objgraph.show_refs([obj], filename=filename)
-            print(f'Generated {filename}')
-
     def delete_lock_files(self):
         script_directory = os.path.dirname(os.path.abspath(__file__))
         lock_file_pattern = os.path.join(script_directory, '*.lock')
@@ -358,6 +332,20 @@ class RudeChatClient:
 
         start_time = asyncio.get_event_loop().time()
 
+        async def insert_processing_symbols(PRIVMSGTOKENS):
+            symbol_list = ['░', '▒', '▓', '█']
+            num_tokens = len(PRIVMSGTOKENS)
+            block_thresholds = [num_tokens // len(symbol_list) * (i + 1) for i in range(len(symbol_list))]
+
+            self.gui.insert_text_widget(f'\n\x0307\x02Processing Messages: \x0F')
+            for i, tokens in enumerate(PRIVMSGTOKENS):
+                for j, threshold in enumerate(block_thresholds):
+                    if i < threshold:
+                        self.gui.insert_text_widget(f'\x0303{symbol_list[j]}\x0F')
+                        break
+                await self.handle_privmsg(tokens, znc_privmsg=True)
+            self.gui.insert_text_widget(f'\n\x0303\x02DONE!\x0F\n')
+
         def reset_timer(symbol):
             nonlocal last_366_time
             nonlocal sync
@@ -441,6 +429,8 @@ class RudeChatClient:
                         self.server_message_handler(tokens)
                     case "265":
                         self.server_message_handler(tokens)
+                    case "311" | "312" | "313" | "317" | "319" | "301" | "671" | "338" | "318" | "330":
+                        await self.handle_whois_replies(tokens.command, tokens)
                     case "PART":
                         self.handle_part(tokens)
                     case "QUIT":
@@ -549,27 +539,20 @@ class RudeChatClient:
                 if check_timeout():
                     # Timeout occurred
                     if self.znc_connection:
-                        symbol_list = ['!', '@', '#', '$', '%', '&', '~', '*', '+', '=', '?']
-                        self.gui.insert_text_widget(f'\n\x0307\x02Processing Messages: \x0F')
-                        for tokens in PRIVMSGTOKENS:
-                            self.gui.insert_text_widget(f'\x0303\x02{random.choice(symbol_list)}\x0F')
-                            await self.handle_privmsg(tokens, znc_privmsg=True)
-                        return self.gui.insert_text_widget(f'\n\x0303\x02DONE!\x0F\n')
+                        await insert_processing_symbols(PRIVMSGTOKENS)
+                        return
 
             # Check for overall timeout
             elapsed_time = asyncio.get_event_loop().time() - start_time
             if elapsed_time > MAX_WAIT_TIME:
                 if self.znc_connection:
-                    symbol_list = ['!', '@', '#', '$', '%', '&', '~', '*', '+', '=', '?']
-                    self.gui.insert_text_widget("\nMaximum sync time exceeded\n")
-                    self.gui.insert_text_widget(f'\x0307\x02Processing Messages: \x0F')
-                    for tokens in PRIVMSGTOKENS:
-                        self.gui.insert_text_widget(f'\x0303\x02{random.choice(symbol_list)}\x0F')
-                        await self.handle_privmsg(tokens, znc_privmsg=True)
-                    return self.gui.insert_text_widget(f'\n\x0303\x02DONE!\x0F\n')
-                else:
-                    self.gui.insert_text_widget("\nMaximum sync time exceeded\n")
-                    return
+                    if znc_connection:
+                        gui.insert_text_widget("\nMaximum sync time exceeded\n")
+                        await insert_processing_symbols(PRIVMSGTOKENS)
+                        return
+                    else:
+                        gui.insert_text_widget("\nMaximum sync time exceeded\n")
+                        return
 
     async def handle_cap(self, tokens):
         if not self.sasl_enabled:
@@ -1211,30 +1194,28 @@ class RudeChatClient:
 
     async def gather_message_tasks(self, main_tasks, pop_out_tasks):
         interleaved_tasks = []
+
+        # Interleave tasks efficiently
         main_len = len(main_tasks)
         pop_len = len(pop_out_tasks)
-        i = 0
+        min_len = min(main_len, pop_len)
 
-        while i < main_len or i < pop_len:
-            # Add two tasks from pop_out_tasks if available
-            if i < pop_len:
-                interleaved_tasks.append(pop_out_tasks[i])
-            if i + 1 < pop_len:
-                interleaved_tasks.append(pop_out_tasks[i + 1])
+        for i in range(0, min_len, 2):
+            interleaved_tasks.extend([pop_out_tasks[i], pop_out_tasks[i + 1]])
+            interleaved_tasks.extend([main_tasks[i], main_tasks[i + 1]])
 
-            # Add two tasks from main_tasks if available
-            if i < main_len:
-                interleaved_tasks.append(main_tasks[i])
-            if i + 1 < main_len:
-                interleaved_tasks.append(main_tasks[i + 1])
+        # Handle remaining tasks
+        if pop_len > min_len:
+            interleaved_tasks.extend(pop_out_tasks[min_len:])
+        if main_len > min_len:
+            interleaved_tasks.extend(main_tasks[min_len:])
 
-            i += 2
+        # Send a ping if tasks length exceeds 15
+        if len(main_tasks) > 15 or len(pop_out_tasks) > 15:
+            print(f"Got {len(interleaved_tasks)} interleaved tasks, sent ping")
+            await self.send_message(f'PING {self.server}')
 
-            # Check if interleaved_tasks length exceeds 15 and send ping
-            if main_len > 15 or pop_len > 15:
-                print(f"Got {len(interleaved_tasks)} interleaved tasks, sent ping")
-                await self.send_message(f'PING {self.server}')
-
+        # Gather tasks
         await asyncio.gather(*interleaved_tasks)
 
     def save_message(self, server, target, sender, message, is_sent):
@@ -1758,7 +1739,7 @@ class RudeChatClient:
             self.who_details = []
 
     async def handle_whois_replies(self, command, tokens):
-            nickname = tokens.params[1]
+            nickname = tokens.params[1] 
 
             if command == "311":
                 username = tokens.params[2]
@@ -2895,23 +2876,26 @@ class RudeChatClient:
             return
 
         macro_name = args[1]
+        selected_channel = self.current_channel  # Store the currently selected channel
+
         if macro_name in self.ASCII_ART_MACROS:
             current_time = datetime.datetime.now().strftime('[%H:%M:%S] ')
             for line in self.ASCII_ART_MACROS[macro_name].splitlines():
                 if counter < 4:
                     formatted_message = self.format_message(line, current_time)
-                    await self.send_message(f'PRIVMSG {self.current_channel} :{formatted_message}')
-                    if self.use_time_stamp == True:
-                        self.gui.insert_text_widget(f"{current_time}<{self.nickname}> {formatted_message}")
-                    elif self.use_time_stamp == False:
-                        self.gui.insert_text_widget(f"<{self.nickname}> {formatted_message}")
-                    self.gui.highlight_nickname()
+                    await self.send_message(f'PRIVMSG {selected_channel} :{formatted_message}')
+                    if selected_channel == self.current_channel:
+                        if self.use_time_stamp:
+                            self.gui.insert_text_widget(f"{current_time}<{self.nickname}> {formatted_message}")
+                        else:
+                            self.gui.insert_text_widget(f"<{self.nickname}> {formatted_message}")
+                        self.gui.highlight_nickname()
                     counter += 1
                     await asyncio.sleep(1.9)
                 else:
                     counter = 0
                     await asyncio.sleep(random.uniform(2.5, 3.5))
-                await self.append_to_channel_history(self.current_channel, line)
+                await self.append_to_channel_history(selected_channel, line)
         else:
             self.gui.insert_text_widget(f"Unknown ASCII art macro: {macro_name}. Type '/mac' to see available macros.\n")
 
@@ -3425,14 +3409,14 @@ class RudeChatClient:
             messages = self.motd_dict.get(server_name, [])
             self.gui.insert_text_widget(f"{messages}\n")
 
-    async def pop_out_switch(self):
+    def pop_out_switch(self):
         # Get the existing channel list from the channel_listbox
         channel_list = self.gui.channel_listbox.get(0, self.gui.channel_listbox.size())
 
         # Pick a channel at random from the channel list
         if channel_list:
             channel = random.choice(channel_list)
-            await self.gui.switch_channel(channel)
+            self.gui.switch_channel(channel)
 
     async def pop_out_return(self, channel):
         await self.gui.switch_channel(channel)

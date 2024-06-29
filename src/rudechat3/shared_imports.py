@@ -23,8 +23,6 @@ import dataclasses
 import multiprocessing
 import concurrent.futures
 import shutil
-import objgraph
-import gc
 import webbrowser
 from typing import List, Tuple, NamedTuple
 from plyer import notification
