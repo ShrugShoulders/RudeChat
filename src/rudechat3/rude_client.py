@@ -295,6 +295,7 @@ class RudeChatClient:
         channel = tokens.params[0]
         user_info = tokens.hostmask.nickname
         if user_info != self.nickname:
+            self.handle_join(tokens)
             return
 
         if self.znc_connection:
@@ -795,7 +796,7 @@ class RudeChatClient:
     async def auto_save(self):
         while self.loop_running:
             try:
-                await asyncio.sleep(60)
+                await asyncio.sleep(30)
                 await self.save_channel_messages()
 
             except asyncio.CancelledError:
