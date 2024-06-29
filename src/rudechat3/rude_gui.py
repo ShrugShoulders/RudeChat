@@ -816,10 +816,6 @@ class RudeGui:
         # Initialize a cache for tag configurations to avoid redundant setups
         tag_cache = {}
         
-        # Initialize variables to track current tag configuration
-        current_tag_name = None
-        current_tag_config = {}
-
         for text, attributes in formatted_text:
             # Create a tag name based on the attributes
             tag_name = "_".join(str(attr) for attr in attributes)
@@ -830,17 +826,9 @@ class RudeGui:
                 tag_config = self.configure_tag_based_on_attributes(attributes)
                 self.text_widget.tag_configure(tag_name, **tag_config)
                 tag_cache[tag_name] = tag_config
-            else:
-                # Use cached configuration
-                tag_config = tag_cache[tag_name]
-
-            # Update current tag configuration if it has changed
-            if tag_name != current_tag_name:
-                current_tag_name = tag_name
-                current_tag_config = tag_config
 
             # Insert the formatted text with the current tag
-            self.text_widget.insert(tk.END, text, (current_tag_name,))
+            self.text_widget.insert(tk.END, text, (tag_name,))
 
     def configure_tag_based_on_attributes(self, attributes):
         # This method configures tag based on attributes efficiently
