@@ -335,6 +335,27 @@ class RudePopOut:
                     self.irc_client.loop
                 )
                 self.main_app.open_dm_pop_out_from_window(user)
+            case "mode":
+                if len(args) < 2:
+                    self.insert_text("Error: Please provide a mode and a channel.\n")
+                    self.insert_text("Usage: /mode [channel] [+|-][mode flags] [target]\n")
+                    self.insert_text("Example for channel: /mode #channel_name +o username\n")
+                    self.insert_text("Example for user: /mode #channel_name +o username\n")
+                    return
+
+                channel = args[1]
+                mode = None
+                target = None
+
+                if len(args) > 2:
+                    mode = args[2]
+
+                if len(args) > 3:
+                    target = args[3]
+                asyncio.run_coroutine_threadsafe(
+                    self.irc_client.set_mode(channel, mode, target),
+                    self.irc_client.loop
+                )
 
             case _:
                 pass
