@@ -553,14 +553,13 @@ class RudeChatClient:
             elapsed_time = asyncio.get_event_loop().time() - start_time
             if elapsed_time > MAX_WAIT_TIME:
                 if self.znc_connection:
-                    if znc_connection:
-                        gui.insert_text_widget("\nMaximum sync time exceeded\n")
-                        await insert_processing_symbols(PRIVMSGTOKENS)
-                        await asyncio.sleep(0.000001)
-                        return
-                    else:
-                        gui.insert_text_widget("\nMaximum sync time exceeded\n")
-                        return
+                    self.gui.insert_text_widget("\nMaximum sync time exceeded\n")
+                    await insert_processing_symbols(PRIVMSGTOKENS)
+                    await asyncio.sleep(0.000001)
+                    return
+                else:
+                    gui.insert_text_widget("\nMaximum sync time exceeded\n")
+                    return
 
     async def handle_cap(self, tokens):
         if not self.sasl_enabled:
