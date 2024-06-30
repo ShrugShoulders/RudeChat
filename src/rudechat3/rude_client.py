@@ -346,7 +346,6 @@ class RudeChatClient:
             for i, tokens in enumerate(PRIVMSGTOKENS):
                 for j, threshold in enumerate(block_thresholds):
                     if i < threshold:
-                        await asyncio.sleep(0.000001)
                         self.gui.insert_text_widget(f'\x0303{symbol_list[j]}\x0F')
                         break
                 await self.handle_privmsg(tokens, znc_privmsg=True)
@@ -356,7 +355,7 @@ class RudeChatClient:
             nonlocal last_366_time
             nonlocal sync
             if not self.use_auto_join:
-                last_366_time = asyncio.get_event_loop().time() + 0.01
+                last_366_time = asyncio.get_event_loop().time()
                 if motd_received:
                     if sync:
                         self.gui.insert_text_widget(f'\x0307\x02Syncing with ZNC:\x0F ')
