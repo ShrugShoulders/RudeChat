@@ -387,6 +387,10 @@ class RudePopOut:
             self.root.destroy()
             self.root = None
 
+    def destroy_window(self):
+        self.root.destroy()
+        self.root = None
+
     def update_gui_user_list(self, channel):
         # Clear existing items in user listbox
         self.user_listbox.delete(0, tk.END)
@@ -777,35 +781,43 @@ class RudePopOut:
 
         self.entry.bind("<Button-3>", self.show_input_menu)
 
-    def insert_text_format(self, format_code):
-        """
-        Insert text format code around selected text or at cursor position.
-        """
-        selected_text = self.entry.selection_get()
-        if selected_text:
-            start_index = self.entry.index(tk.SEL_FIRST)
-            end_index = self.entry.index(tk.SEL_LAST)
-            self.entry.delete(tk.SEL_FIRST, tk.SEL_LAST)
-            self.entry.insert("insert", f"{format_code}{selected_text}\x0F")
-            self.entry.select_range(start_index, end_index + len(format_code)*2)
-            self.entry.icursor(end_index + len(format_code) + 1)
-        else:
-            self.entry.insert("insert", format_code)
-
     def insert_irc_color(self, color_code):
         """
         Insert IRC color code around selected text or at cursor position.
         """
-        selected_text = self.entry.selection_get()
+        try:
+            selected_text = self.entry_widget.selection_get()
+            start_index = self.entry_widget.index(tk.SEL_FIRST)
+            end_index = self.entry_widget.index(tk.SEL_LAST)
+        except Exception as e:
+            selected_text = None
+
         if selected_text:
-            start_index = self.entry.index(tk.SEL_FIRST)
-            end_index = self.entry.index(tk.SEL_LAST)
-            self.entry.delete(tk.SEL_FIRST, tk.SEL_LAST)
-            self.entry.insert("insert", f"\x03{color_code}{selected_text}\x03")
-            self.entry.select_range(start_index, end_index + 3)
-            self.entry.icursor(end_index + 4)
+            self.entry_widget.delete(start_index, end_index)
+            self.entry_widget.insert(start_index, f"\x03{color_code}{selected_text}\x03")
+            self.entry_widget.select_range(start_index, end_index + 3)
+            self.entry_widget.icursor(end_index + 4)
         else:
-            self.entry.insert("insert", f"\x03{color_code}")
+            self.entry_widget.insert("insert", f"\x03{color_code}")
+
+    def insert_text_format(self, format_code):
+        """
+        Insert text format code around selected text or at cursor position.
+        """
+        try:
+            selected_text = self.entry_widget.selection_get()
+            start_index = self.entry_widget.index(tk.SEL_FIRST)
+            end_index = self.entry_widget.index(tk.SEL_LAST)
+        except Exception as e:
+            selected_text = None
+
+        if selected_text:
+            self.entry_widget.delete(start_index, end_index)
+            self.entry_widget.insert(start_index, f"{format_code}{selected_text}\x0F")
+            self.entry_widget.select_range(start_index, end_index + len(format_code) + 1)
+            self.entry_widget.icursor(end_index + len(format_code) + 1)
+        else:
+            self.entry_widget.insert("insert", format_code)
 
     def show_input_menu(self, event):
         try:
