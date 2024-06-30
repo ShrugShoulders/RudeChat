@@ -380,6 +380,12 @@ class RudeChatClient:
             while '\r\n' in buffer:
                 line, buffer = buffer.split('\r\n', 1)
                 tokens = irctokens.tokenise(line)
+                if check_timeout():
+                    # Timeout occurred
+                    if self.znc_connection:
+                        await insert_processing_symbols(PRIVMSGTOKENS)
+                        await asyncio.sleep(0.000001)
+                        return
 
                 match tokens.command:
                     case "NOTICE":
@@ -465,6 +471,7 @@ class RudeChatClient:
                         count_366 += 1
                         if not self.use_auto_join:
                             reset_timer("@")
+
                         elif self.use_auto_join:
                             if count_366 >= len(self.joined_channels) and got_topic >= len(self.joined_channels) and znc_connected:
                                 return
@@ -539,6 +546,7 @@ class RudeChatClient:
                     # Timeout occurred
                     if self.znc_connection:
                         await insert_processing_symbols(PRIVMSGTOKENS)
+                        await asyncio.sleep(0.000001)
                         return
 
             # Check for overall timeout
@@ -548,6 +556,7 @@ class RudeChatClient:
                     if znc_connection:
                         gui.insert_text_widget("\nMaximum sync time exceeded\n")
                         await insert_processing_symbols(PRIVMSGTOKENS)
+                        await asyncio.sleep(0.000001)
                         return
                     else:
                         gui.insert_text_widget("\nMaximum sync time exceeded\n")
@@ -3053,6 +3062,9 @@ class RudeChatClient:
 
     def cowsay(self, message):
         """Formats the given message in a 'cowsay' format."""
+        def random_color():
+            """Returns a random IRC color code."""
+            return f'\x03{random.randint(2, 15):02d}'
 
         # Find the longest line in the input message to determine the maximum width.
         max_line_length = max(len(line) for line in message.split('\n'))
@@ -3094,7 +3106,12 @@ class RudeChatClient:
                ||----w |
                ||     ||"""
 
-        return f"{top_border}\n{combined_message}\n{bottom_border}{cow}"
+        # Apply random colors
+        top_border_colored = random_color() + top_border + '\x0F'
+        bottom_border_colored = random_color() + bottom_border + '\x0F'
+        combined_message_colored = '\n'.join([random_color() + line + '\x0F' for line in combined_message.split('\n')])
+
+        return f"{top_border_colored}\n{combined_message_colored}\n{bottom_border_colored}{cow}"
 
     def wrap_text(self, text, width=100):
         """Dont spam that channel"""
@@ -3113,6 +3130,7 @@ class RudeChatClient:
     async def fortune_cowsay(self, file_name=None):
         timestamp = datetime.datetime.now().strftime('[%H:%M:%S] ')
         file_name = self.get_fortune_file(file_name)
+        selected_channel = self.current_channel
 
         with open(file_name, 'r', encoding='utf-8') as f:
             fortunes = f.read().strip().split('%')
@@ -3126,15 +3144,17 @@ class RudeChatClient:
                 formatted_message = f"{timestamp}<{self.nickname}> {line}\n"
             elif self.use_time_stamp == False:
                 formatted_message = f"<{self.nickname}> {line}\n"
-            await self.send_message(f'PRIVMSG {self.current_channel} :{line}')
-            self.gui.insert_text_widget(formatted_message)
-            self.gui.highlight_nickname()
+            await self.send_message(f'PRIVMSG {selected_channel} :{line}')
             await asyncio.sleep(0.4)
-            await self.append_to_channel_history(self.current_channel, line)
+            await self.append_to_channel_history(selected_channel, line)
+            if selected_channel == self.current_channel:
+                self.gui.insert_text_widget(formatted_message)
+                self.gui.highlight_nickname()
 
     async def cowsay_custom_message(self, message):
         """Wrap a custom message using the cowsay format."""
         timestamp = datetime.datetime.now().strftime('[%H:%M:%S] ')
+        selected_channel = self.current_channel
         wrapped_message = self.wrap_text(message)
         cowsay_output = self.cowsay(wrapped_message)
         
@@ -3143,14 +3163,16 @@ class RudeChatClient:
                 formatted_message = f"{timestamp}<{self.nickname}> {line}\n"
             elif self.use_time_stamp == False:
                 formatted_message = f"<{self.nickname}> {line}\n"
-            await self.send_message(f'PRIVMSG {self.current_channel} :{line}')
-            self.gui.insert_text_widget(formatted_message)
-            self.gui.highlight_nickname()
+            await self.send_message(f'PRIVMSG {selected_channel} :{line}')
             await asyncio.sleep(0.4)
-            await self.append_to_channel_history(self.current_channel, line)
+            await self.append_to_channel_history(selected_channel, line)
+            if selected_channel == self.current_channel:
+                self.gui.insert_text_widget(formatted_message)
+                self.gui.highlight_nickname()
 
     async def fortune(self, file_name=None):
         """Choose a random fortune from one of the lists"""
+        selected_channel = self.current_channel
         timestamp = datetime.datetime.now().strftime('[%H:%M:%S] ')
         file_name = self.get_fortune_file(file_name)
 
@@ -3163,11 +3185,12 @@ class RudeChatClient:
                 formatted_message = f"{timestamp}<{self.nickname}> {line}\n"
             elif self.use_time_stamp == False:
                 formatted_message = f"<{self.nickname}> {line}\n"
-            await self.send_message(f'PRIVMSG {self.current_channel} :{line}')
-            self.gui.insert_text_widget(formatted_message)
-            self.gui.highlight_nickname()
+            await self.send_message(f'PRIVMSG {selected_channel} :{line}')
             await asyncio.sleep(0.4)
-            await self.append_to_channel_history(self.current_channel, line)
+            await self.append_to_channel_history(selected_channel, line)
+            if selected_channel == self.current_channel:
+                self.gui.insert_text_widget(formatted_message)
+                self.gui.highlight_nickname()
 
     async def send_ctcp_request(self, target_nick, ctcp_command):
         """Sends a CTCP request to a target."""
