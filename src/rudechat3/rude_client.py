@@ -332,7 +332,7 @@ class RudeChatClient:
         got_topic = 0
         last_366_time = None
         TIMEOUT_SECONDS = 0.16
-        MAX_WAIT_TIME = 80
+        MAX_WAIT_TIME = 60
         PRIVMSGTOKENS = []
 
         start_time = asyncio.get_event_loop().time()
@@ -346,6 +346,7 @@ class RudeChatClient:
             for i, tokens in enumerate(PRIVMSGTOKENS):
                 for j, threshold in enumerate(block_thresholds):
                     if i < threshold:
+                        await asyncio.sleep(0.000001)
                         self.gui.insert_text_widget(f'\x0303{symbol_list[j]}\x0F')
                         break
                 await self.handle_privmsg(tokens, znc_privmsg=True)
@@ -408,12 +409,18 @@ class RudeChatClient:
                         self.handle_sasl_failed()
 
                     case "001":
+                        if self.znc_connection:
+                            reset_timer("!")
                         self.gui.insert_text_widget(f'Connected to the server: {self.server}:{self.port}\n')
                         received_001 = True
                         self.gui.insert_and_scroll()
                     case "002" | "003" | "004":
+                        if self.znc_connection:
+                            reset_timer("!")
                         self.server_message_handler(tokens)
                     case "005":
+                        if self.znc_connection:
+                            reset_timer("!")
                         self.handle_isupport(tokens)
                         self.isupport_flag = True
                         self.gui.insert_and_scroll()
@@ -473,9 +480,13 @@ class RudeChatClient:
                         await self.handle_nickname_conflict(tokens)
 
                     case "372":
+                        if self.znc_connection:
+                            reset_timer("!")
                         self.handle_motd_line(tokens)
 
                     case "375":
+                        if self.znc_connection:
+                            reset_timer("!")
                         self.handle_motd_start(tokens)
 
                     case "376":
@@ -578,6 +589,8 @@ class RudeChatClient:
         try:
             self.writer.write(f'{message}\r\n'.encode('UTF-8'))
             await asyncio.wait_for(self.writer.drain(), timeout=10)
+        except AttributeError as e:
+            pass
         except (BrokenPipeError, TimeoutError) as e:
             print("Connection lost or timeout while sending message.")
             self.loop_running = False
@@ -2695,7 +2708,6 @@ class RudeChatClient:
             case "quit":
                 quit_message = " ".join(args[1:]) if len(args) > 0 else None
                 await self.send_message(f"QUIT :{quit_message}")
-                await asyncio.sleep(2)
                 self.loop_running = False
                 self.master.destroy()
                 return False

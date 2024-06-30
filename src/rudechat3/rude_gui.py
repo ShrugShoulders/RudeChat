@@ -165,6 +165,7 @@ class RudeGui:
         self.init_message_menu()
         self.init_server_menu()
         self.apply_settings()
+        self.master.protocol("WM_DELETE_WINDOW", self.client_shutdown)
 
         # Configure grid weights
         self.master.grid_rowconfigure(0, weight=0)
@@ -186,6 +187,10 @@ class RudeGui:
         self.channel_frame.grid_columnconfigure(0, weight=1)
 
         self.master.after(0, self.bind_return_key)
+
+    def client_shutdown(self):
+        loop = asyncio.get_event_loop()
+        loop.create_task(self.irc_client.command_parser("/quit"))
 
     def hidden_windows(self):
         if not self.show_server_window:
