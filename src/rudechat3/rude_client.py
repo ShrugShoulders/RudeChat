@@ -959,12 +959,8 @@ class RudeChatClient:
     async def notify_user_of_mention(self, server, channel, sender, message):
         notification_msg = f"<{sender}> {message}"
 
-        # Check if the mentioned channel is currently selected
-        selected_channel = self.current_channel
-        is_channel_selected = selected_channel == channel
-
         # Highlight the mentioned channel in the channel_listbox if it's not selected
-        if not is_channel_selected:
+        if channel != self.current_channel or sender != self.current_channel:
             self.highlight_channel(channel)
 
         # Highlight the server in the server_listbox if it's not selected
@@ -1122,6 +1118,7 @@ class RudeChatClient:
                     self.save_message(self.server, target, sender, message, is_sent=False)
                     user_mention = self.is_it_a_mention(message)
                     if not user_mention:
+                        await self.trigger_beep_notification(channel_name=sender, message_content=f"Message From {sender}")
                         self.highlight_channel_if_not_current(target, sender, user_mention)
                     elif user_mention:
                         self.highlight_channel_if_not_current(target, sender, user_mention)
@@ -1129,6 +1126,7 @@ class RudeChatClient:
                     self.save_message(self.server, target, sender, message, is_sent=False)
                     user_mention = self.is_it_a_mention(message)
                     if not user_mention:
+                        await self.trigger_beep_notification(channel_name=sender, message_content=f"Message From {sender}")
                         self.highlight_channel_if_not_current(target, sender, user_mention)
                     elif user_mention:
                         self.highlight_channel_if_not_current(target, sender, user_mention)
@@ -1280,6 +1278,7 @@ class RudeChatClient:
             self._highlight_channel_by_name(highlighted_channel, channel_idx)
         elif highlighted_channel in self.joined_channels and user_mention == True:
             channel_idx = self.joined_channels.index(highlighted_channel)
+            self.highlight_channel(highlighted_channel)
             self.save_highlight(highlighted_channel, channel_idx, is_mention=True)
         else:
             pass
