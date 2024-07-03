@@ -1212,11 +1212,11 @@ class RudeGui:
                     del server_highlighted_channels[clicked_channel]
 
     def trim_text_widget(self):
-        """Trim the text widget to only hold a maximum of 150 lines."""
+        """Trim the text widget to only hold a maximum of 120 lines."""
         lines = self.text_widget.get("1.0", tk.END).split("\n")
-        if len(lines) > 150:
+        if len(lines) > 120:
             self.text_widget.config(state=tk.NORMAL)  # Enable text widget editing
-            self.text_widget.delete("1.0", f"{len(lines) - 150}.0")  # Delete excess lines
+            self.text_widget.delete("1.0", f"{len(lines) - 120}.0")  # Delete excess lines
             self.text_widget.config(state=tk.DISABLED)  # Disable text widget editing
 
     def switch_channel(self, channel_name):

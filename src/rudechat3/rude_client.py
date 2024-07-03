@@ -954,13 +954,13 @@ class RudeChatClient:
         for server, channels in self.channel_messages.items():
             for channel, messages in channels.items():
                 # Trim the message history to the last 150 messages
-                channels[channel] = messages[-150:]
+                channels[channel] = messages[-120:]
 
     async def notify_user_of_mention(self, server, channel, sender, message):
         notification_msg = f"<{sender}> {message}"
 
         # Highlight the mentioned channel in the channel_listbox if it's not selected
-        if channel != self.current_channel or sender != self.current_channel:
+        if (channel != self.current_channel) or (sender != self.current_channel):
             self.highlight_channel(channel)
 
         # Highlight the server in the server_listbox if it's not selected
@@ -1280,8 +1280,6 @@ class RudeChatClient:
             channel_idx = self.joined_channels.index(highlighted_channel)
             self.highlight_channel(highlighted_channel)
             self.save_highlight(highlighted_channel, channel_idx, is_mention=True)
-        else:
-            pass
 
     def _highlight_channel_by_name(self, highlighted_channel, joined_idx):
         # Attempt to find the channel in the GUI listbox and highlight it
@@ -3416,7 +3414,7 @@ class RudeChatClient:
         self.server_name = server_name
         self.gui.update_nick_channel_label()
 
-    def display_last_messages(self, channel, num=150, server_name=None):
+    def display_last_messages(self, channel, num=120, server_name=None):
         if server_name:
             messages = self.channel_messages.get(server_name, {}).get(channel, [])
         for message in messages[-num:]:
