@@ -15,6 +15,7 @@ setup(
         'plyer',
         'aiofiles',
         'colorchooser',
+        'tzlocal',
     ],
     classifiers=[
         "Programming Language :: Python :: 3",

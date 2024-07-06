@@ -24,6 +24,8 @@ import multiprocessing
 import concurrent.futures
 import shutil
 import webbrowser
+import pytz
+from tzlocal import get_localzone
 from typing import List, Tuple, NamedTuple
 from plyer import notification
 from tkinter import ttk

@@ -45,6 +45,7 @@ class RudeChatClient:
         self.message_handling_semaphore = asyncio.Semaphore(50)
         self.delete_lock_files()
         self.loop = asyncio.get_event_loop()
+        self.time_zone = get_localzone()
 
     async def read_config(self, config_file):
         config = configparser.ConfigParser()
@@ -878,7 +879,7 @@ class RudeChatClient:
                     if tokens.command == "PRIVMSG":
                         await self.send_message(f'NOTICE {sender} :\x01MoooOOO! Hi Cow!! RudeChat3.0.4\x01')
                         self.add_server_message(f"CTCP: {sender} {target}: {ctcp_command}\n")
-                case "PING":
+                case "PING" | "ping":
                     if tokens.command == "PRIVMSG":
                         timestamp = str(int(time.time()))  # Get the current Unix timestamp
                         await self.send_message(f'NOTICE {sender} :\x01PING {ctcp_content} {timestamp}\x01')
@@ -893,10 +894,9 @@ class RudeChatClient:
                         self.add_server_message(f"CTCP: {sender} {target}: {ctcp_command}\n")
                 case "TIME" | "time":
                     if tokens.command == "PRIVMSG":
-                        import pytz
-                        dublin_tz = pytz.timezone('Europe/Dublin')
-                        dublin_time = datetime.datetime.now(dublin_tz).strftime("%Y-%m-%d %H:%M:%S")
-                        time_reply = "\x01TIME " + dublin_time + "\x01"
+                        tz = pytz.timezone(str(self.time_zone))
+                        local_time = datetime.datetime.now(tz).strftime("%Y-%m-%d %H:%M:%S")
+                        time_reply = "\x01TIME " + local_time + "\x01"
                         await self.send_message(f'NOTICE {sender} :{time_reply}')
                         self.add_server_message(f"CTCP: {sender} {target}: {ctcp_command}\n")
                 case "ACTION":
@@ -1284,12 +1284,13 @@ class RudeChatClient:
     def _highlight_channel_by_name(self, highlighted_channel, joined_idx):
         # Attempt to find the channel in the GUI listbox and highlight it
         if self.gui.irc_client == self:
-            for idx in range(self.gui.channel_listbox.size()):
-                if self.gui.channel_listbox.get(idx) == highlighted_channel:
-                    current_bg = self.gui.channel_listbox.itemcget(idx, 'bg')
-                    if current_bg != 'red':
-                        self.gui.channel_listbox.itemconfig(idx, {'bg': self.activity_note_color})
-                    break
+            if highlighted_channel != self.current_channel:
+                for idx in range(self.gui.channel_listbox.size()):
+                    if self.gui.channel_listbox.get(idx) == highlighted_channel:
+                        current_bg = self.gui.channel_listbox.itemcget(idx, 'bg')
+                        if current_bg != 'red':
+                            self.gui.channel_listbox.itemconfig(idx, {'bg': self.activity_note_color})
+                        break
 
     def save_highlight(self, channel, joined_index, is_mention):
         # Initialize highlighted_channels for server_name if not already done
