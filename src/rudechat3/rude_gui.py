@@ -61,6 +61,7 @@ class RudeGui:
         self.nickname_colors = self.load_nickname_colors()
         self.clients = {}
         self.channel_topics = {}
+        self.url_cache = {}
         self.entry_history = []
         self.popped_out_channels = []
         self.pop_out_windows = {}
@@ -884,8 +885,12 @@ class RudeGui:
     def tag_urls(self, urls, index=0):
         if index < len(urls):
             url = urls[index]
-            tag_name = f"url_{url}"
-            self.text_widget.tag_configure(tag_name, foreground="blue", underline=1)
+            if url in self.url_cache:
+                tag_name = self.url_cache[url]
+            else:
+                tag_name = f"url_{url}"
+                self.url_cache[url] = tag_name
+                self.text_widget.tag_configure(tag_name, foreground="blue", underline=1)
 
             start_idx = "1.0"
             while True:

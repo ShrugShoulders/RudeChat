@@ -41,6 +41,7 @@ class RudeChatClient:
         self.ping_start_time = None
         self.isupport_flag = False
         self.loop_running = True
+        self.config = ''
         self.message_handling_semaphore = asyncio.Semaphore(50)
         self.delete_lock_files()
         self.loop = asyncio.get_event_loop()
@@ -79,6 +80,7 @@ class RudeChatClient:
         await self.load_channel_messages()
         self.load_ignore_list()
         self.gui.update_nick_channel_label()
+        self.config = config_file
 
     def reload_config(self, config_file):
         config = configparser.ConfigParser()
@@ -601,6 +603,7 @@ class RudeChatClient:
         except (BrokenPipeError, TimeoutError) as e:
             print("Connection lost or timeout while sending message.")
             self.loop_running = False
+            await self.reconnect(self.config)
         except Exception as e:
             print(f"Exception in send_message: {e}")
 
