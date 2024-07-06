@@ -708,10 +708,6 @@ class RudeChatClient:
             self.gui.user_listbox.insert(tk.END, user)
 
     async def reset_state(self):
-        #self.gui.clear_channel_listbox()
-        #self.gui.clear_user_listbox()
-        #self.gui.clear_topic_label()
-        #self.gui.clear_text_widget()
         self.motd_dict.clear()
         self.joined_channels.clear()
         self.motd_lines.clear()
@@ -977,11 +973,12 @@ class RudeChatClient:
         try:
             # Ensure the channel is part of the joined_channels before highlighting
             if channel in self.joined_channels and self.gui.irc_client == self:
-                # Find and highlight the channel in the GUI listbox
-                for idx in range(self.gui.channel_listbox.size()):
-                    if self.gui.channel_listbox.get(idx) == channel:
-                        self.gui.channel_listbox.itemconfig(idx, {'bg': self.mention_note_color})
-                        break
+                if channel != self.current_channel:
+                    # Find and highlight the channel in the GUI listbox
+                    for idx in range(self.gui.channel_listbox.size()):
+                        if self.gui.channel_listbox.get(idx) == channel:
+                            self.gui.channel_listbox.itemconfig(idx, {'bg': self.mention_note_color})
+                            break
             else:
                 pass
         except Exception as e:
