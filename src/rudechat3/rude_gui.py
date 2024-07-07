@@ -68,6 +68,7 @@ class RudeGui:
         self.history_index = 0
         self.last_selected_index = None
         self.previous_server_index = None
+        self.url_pattern = re.compile(r'(\w+://[^\s()<>]*\([^\s()<>]*\)[^\s()<>]*(?<![.,;!?])|www\.[^\s()<>]*\([^\s()<>]*\)[^\s()<>]*(?<![.,;!?])|\w+://[^\s()<>]+(?<![.,;!?])|www\.[^\s()<>]+(?<![.,;!?]))')
 
         # Server and Topic Frame
         self.server_topic_frame = tk.Frame(self.master, bg="black")
@@ -910,9 +911,8 @@ class RudeGui:
             self.insert_and_scroll()
 
     def find_urls(self, text):
-        # A "simple" regex to detect URLs
-        url_pattern = re.compile(r'(\w+://[^\s()<>]*\([^\s()<>]*\)[^\s()<>]*(?<![.,;!?])|www\.[^\s()<>]*\([^\s()<>]*\)[^\s()<>]*(?<![.,;!?])|\w+://[^\s()<>]+(?<![.,;!?])|www\.[^\s()<>]+(?<![.,;!?]))')
-        return url_pattern.findall(text)
+        # Use the precompiled regex pattern to find URLs
+        return self.url_pattern.findall(text)
 
     def open_url(self, event, url):
         webbrowser.open(url)
