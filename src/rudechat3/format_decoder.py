@@ -12,12 +12,9 @@ class Attribute:
     colour: int = 0
     background: int = 1
 
-def decoder(input_text: str) -> List[Tuple[str, List[Attribute]]]:
+def decoder(pattern, input_text: str) -> List[Tuple[str, List[Attribute]]]:
     output = []
     current_attributes = []
-
-    # Define regex pattern for matching control characters and text
-    pattern = re.compile(r'(\x02|\x1D|\x1F|\x1E|\x16|\x03(?:\d{1,2}(?:,\d{1,2})?)?|\x0F|[^\x02\x1D\x1F\x1E\x16\x03\x0F]+)')
 
     for match in pattern.finditer(input_text):
         token = match.group(0)

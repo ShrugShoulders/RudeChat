@@ -69,6 +69,7 @@ class RudeGui:
         self.last_selected_index = None
         self.previous_server_index = None
         self.url_pattern = re.compile(r'(\w+://[^\s()<>]*\([^\s()<>]*\)[^\s()<>]*(?<![.,;!?])|www\.[^\s()<>]*\([^\s()<>]*\)[^\s()<>]*(?<![.,;!?])|\w+://[^\s()<>]+(?<![.,;!?])|www\.[^\s()<>]+(?<![.,;!?]))')
+        self.format_pattern = re.compile(r'(\x02|\x1D|\x1F|\x1E|\x16|\x03(?:\d{1,2}(?:,\d{1,2})?)?|\x0F|[^\x02\x1D\x1F\x1E\x16\x03\x0F]+)')
 
         # Server and Topic Frame
         self.server_topic_frame = tk.Frame(self.master, bg="black")
@@ -836,7 +837,7 @@ class RudeGui:
             # Set the Text widget state to NORMAL before inserting and configuring tags
             self.text_widget.config(state=tk.NORMAL)
 
-            formatted_text = decoder(message)
+            formatted_text = decoder(self.format_pattern, message)
             self.tag_text(formatted_text)
 
             # Start tagging URLs using the non-blocking approach
