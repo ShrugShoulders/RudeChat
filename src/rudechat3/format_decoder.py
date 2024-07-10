@@ -1,5 +1,4 @@
 import dataclasses
-import re
 from typing import List, Tuple
 
 @dataclasses.dataclass(frozen=True)
@@ -48,25 +47,31 @@ def decoder(input_text: str) -> List[Tuple[str, List[Attribute]]]:
                     current_attributes.append(Attribute(colour=1, background=0))
             case '\x03':
                 current_attributes = []
+                colour_code = ''
+                background_code = ''
                 
-                # Extracting color and background codes using regex
-                match = re.match(r'(\d{1,2})(?:,(\d{1,2}))?', input_text[c_index + 1:])
+                # Extracting color code using slicing and list comprehension
+                digits = [input_text[i] for i in range(c_index + 1, min(c_index + 3, len(input_text))) if input_text[i].isdigit()]
+                colour_code = ''.join(digits)
+                c_index += len(colour_code)
                 
-                if match:
-                    colour_code = match.group(1)
-                    background_code = match.group(2) if match.group(2) else ''
-                    c_index += len(match.group(0))
-                    
-                    # Converting codes to integers
-                    try:
-                        colour = int(colour_code)
-                        background = int(background_code) if background_code else 1
-                    except ValueError:
-                        pass
-                    else:
-                        new_attribute = Attribute(colour=colour, background=background)
-                        if new_attribute not in current_attributes:
-                            current_attributes.append(new_attribute)
+                # Extracting background code using slicing and list comprehension
+                if c_index + 1 < len(input_text) and input_text[c_index + 1] == ',':
+                    c_index += 1
+                    digits = [input_text[i] for i in range(c_index + 1, min(c_index + 3, len(input_text))) if input_text[i].isdigit()]
+                    background_code = ''.join(digits)
+                    c_index += len(background_code)
+                
+                # Converting codes to integers
+                try:
+                    colour = int(colour_code) if colour_code else 0
+                    background = int(background_code) if background_code else 1
+                except ValueError:
+                    pass
+                else:
+                    new_attribute = Attribute(colour=colour, background=background)
+                    if new_attribute not in current_attributes:
+                        current_attributes.append(new_attribute)
             case '\x0F':
                 current_attributes = []
             case _:
