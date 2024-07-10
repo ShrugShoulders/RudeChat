@@ -468,6 +468,8 @@ class RudeChatClient:
 
                     case "353":  # NAMES list
                         self.handle_names_list(tokens)
+                        if not self.use_auto_join:
+                            reset_timer("&")
                                 
                     case "366":  # End of NAMES list
                         self.handle_end_of_names_list(tokens)
@@ -953,7 +955,7 @@ class RudeChatClient:
         for server, channels in self.channel_messages.items():
             for channel, messages in channels.items():
                 # Trim the message history to the last 150 messages
-                channels[channel] = messages[-120:]
+                channels[channel] = messages[-125:]
 
     async def notify_user_of_mention(self, server, channel, sender, message):
         notification_msg = f"<{sender}> {message}"
@@ -1133,19 +1135,15 @@ class RudeChatClient:
                 else:
                     self.save_message(self.server, target, sender, message, is_sent=False)
 
-                    main_tasks = []
-                    pop_out_tasks = []
                     if sender not in self.gui.popped_out_channels:
-                        main_tasks.append(self.display_message(timestamp, sender, message, target, is_direct=True))
+                        self.display_message(timestamp, sender, message, target, is_direct=True)
                     else:
-                        pop_out_tasks.append(self.pip_to_pop_out(timestamp, sender, message, target))
-
-                    await self.gather_message_tasks(main_tasks, pop_out_tasks)
+                        self.pip_to_pop_out(timestamp, sender, message, target)
 
         except Exception as e:
             print(f"Exception in prepare_direct_message: {e}")
 
-    async def pip_to_pop_out(self, timestamp, sender, message, target):
+    def pip_to_pop_out(self, timestamp, sender, message, target):
         window = self.gui.pop_out_windows.get(target) or self.gui.pop_out_windows.get(sender)
         if window:
             formatted_message = f"{timestamp}<{sender}> {message}\n" if self.use_time_stamp else f"<{sender}> {message}\n"
@@ -1187,38 +1185,10 @@ class RudeChatClient:
             self.save_message(self.server, target, sender, message, is_sent=False)
             self.log_message(self.server_name, target, sender, message, is_sent=False)
 
-            main_tasks = []
-            pop_out_tasks = []
-            try:
-                if target not in self.gui.popped_out_channels:
-                    main_tasks.append(self.display_message(timestamp, sender, message, target, is_direct=True))
-                else:
-                    pop_out_tasks.append(self.pip_to_pop_out(timestamp, sender, message, target))
-
-                await self.gather_message_tasks(main_tasks, pop_out_tasks)
-            except Exception as e:
-                print(f"Exception on gathering channel messages: {e}")
-
-    async def gather_message_tasks(self, main_tasks, pop_out_tasks):
-        interleaved_tasks = []
-
-        # Interleave tasks efficiently
-        main_len = len(main_tasks)
-        pop_len = len(pop_out_tasks)
-        min_len = min(main_len, pop_len)
-
-        for i in range(0, min_len, 2):
-            interleaved_tasks.extend([pop_out_tasks[i], pop_out_tasks[i + 1]])
-            interleaved_tasks.extend([main_tasks[i], main_tasks[i + 1]])
-
-        # Handle remaining tasks
-        if pop_len > min_len:
-            interleaved_tasks.extend(pop_out_tasks[min_len:])
-        if main_len > min_len:
-            interleaved_tasks.extend(main_tasks[min_len:])
-
-        # Gather tasks
-        await asyncio.gather(*interleaved_tasks)
+            if target not in self.gui.popped_out_channels:
+                self.display_message(timestamp, sender, message, target, is_direct=False)
+            else:
+                self.pip_to_pop_out(timestamp, sender, message, target)
 
     def save_message(self, server, target, sender, message, is_sent):
         timestamp = datetime.datetime.now().strftime('[%H:%M:%S] ')
@@ -1243,7 +1213,7 @@ class RudeChatClient:
         else:
             return False
 
-    async def display_message(self, timestamp, sender, message, target, is_direct=False):
+    def display_message(self, timestamp, sender, message, target, is_direct=False):
         if target == self.current_channel and self.gui.irc_client == self:
             if self.use_time_stamp == True:
                 self.gui.insert_text_widget(f"{timestamp}<{sender}> {message}\n")
@@ -3415,7 +3385,7 @@ class RudeChatClient:
         self.server_name = server_name
         self.gui.update_nick_channel_label()
 
-    def display_last_messages(self, channel, num=120, server_name=None):
+    def display_last_messages(self, channel, num=125, server_name=None):
         if server_name:
             messages = self.channel_messages.get(server_name, {}).get(channel, [])
         for message in messages[-num:]:
