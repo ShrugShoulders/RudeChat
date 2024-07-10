@@ -62,6 +62,7 @@ class RudeGui:
         self.clients = {}
         self.channel_topics = {}
         self.url_cache = {}
+        self.tag_cache = {}
         self.entry_history = []
         self.popped_out_channels = []
         self.pop_out_windows = {}
@@ -845,19 +846,16 @@ class RudeGui:
             print(f"Exception in insert_text {e}")
 
     def tag_text(self, formatted_text):
-        # Initialize a cache for tag configurations to avoid redundant setups
-        tag_cache = {}
-        
         for text, attributes in formatted_text:
             # Create a tag name based on the attributes
             tag_name = "_".join(str(attr) for attr in attributes)
 
             # Check if the tag configuration has changed
-            if tag_name not in tag_cache:
+            if tag_name not in self.tag_cache:
                 # If tag configuration is new, determine and cache it
                 tag_config = self.configure_tag_based_on_attributes(attributes)
                 self.text_widget.tag_configure(tag_name, **tag_config)
-                tag_cache[tag_name] = tag_config
+                self.tag_cache[tag_name] = tag_config
 
             # Insert the formatted text with the current tag
             self.text_widget.insert(tk.END, text, (tag_name,))
