@@ -33,7 +33,7 @@ file name: conf.libera.rude
         ssl_enabled = True # Do you like SSL? Awesome, so do I. 
         sasl_enabled = False # Are you skilled enough to use SASL? Sweet, set that up. 
         sasl_username = splithead # SASL user name. 
-        sasl_password = password # SASL Paassword, if you know you konw. 
+        sasl_password = password # SASL Paassword, if you know you know. 
         use_time_stamp = True # Want time stamps to be shown next to nicks? True for yes, False for no. 
         show_hostmask = True # Want joins, parts, and quits to have full host masks? True for yes, False for no. 
         show_join_part_quit_nick = True # This enabled or disables showing joins parts and nick messages. 
