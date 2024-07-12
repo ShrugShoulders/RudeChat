@@ -211,9 +211,9 @@ class RudeGui:
 
     def apply_settings(self):
         # Create font object
-        user_listbox_font = tkFont.Font(family=self.font_family, size=self.user_font_size)
-        channel_listbox_font = tkFont.Font(family=self.font_family, size=self.channel_font_size)
-        server_listbox_font = tkFont.Font(family=self.font_family, size=self.server_font_size)
+        user_listbox_font = tkFont.Font(family=self.list_boxs_font_family, size=self.user_font_size)
+        channel_listbox_font = tkFont.Font(family=self.list_boxs_font_family, size=self.channel_font_size)
+        server_listbox_font = tkFont.Font(family=self.list_boxs_font_family, size=self.server_font_size)
 
         # Apply font settings to text widgets
         self.master.configure(bg=self.master_bg)
@@ -262,6 +262,7 @@ class RudeGui:
             self.user_font_size = config.getint('GUI', 'user_font_size', fallback=10)
             self.channel_font_size = config.getint('GUI', 'channel_font_size', fallback=10)
             self.server_font_size = config.getint('GUI', 'server_font_size', fallback=10)
+            self.list_boxs_font_family = config.get('GUI', 'list_boxs_font_family', fallback='Hack') 
 
             # Read Widget Settings
             self.user_listbox_fg = config.get('WIDGETS', 'users_fg', fallback='#39ff14')
