@@ -3343,7 +3343,7 @@ class RudeChatClient:
                 "_________",
             ],
             "Key Bindings": [
-                "Alt+num(0,9) - switches to that channels index in the channel list. 0 is first channel",
+                "Alt+num(0,9) - switches to that channels index in the channel list.",
                 "Alt+s - Cycles through the servers",
                 "ctrl+tab - Cycles through the channels",
                 "_________",

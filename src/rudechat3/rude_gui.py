@@ -210,6 +210,11 @@ class RudeGui:
             self.server_text_widget.grid(row=0, column=0, sticky='nsew')
 
     def apply_settings(self):
+        # Create font object
+        user_listbox_font = tkFont.Font(family=self.font_family, size=self.user_font_size)
+        channel_listbox_font = tkFont.Font(family=self.font_family, size=self.channel_font_size)
+        server_listbox_font = tkFont.Font(family=self.font_family, size=self.server_font_size)
+
         # Apply font settings to text widgets
         self.master.configure(bg=self.master_bg)
         self.text_widget.configure(font=(self.font_family, self.font_size))
@@ -222,9 +227,9 @@ class RudeGui:
         self.server_text_widget.configure(fg=self.server_fg_color, bg=self.server_bg_color)
 
         # Apply Widget color settings
-        self.user_listbox.configure(bg=self.user_listbox_bg, fg=self.user_listbox_fg)
-        self.channel_listbox.configure(bg=self.channel_listbox_bg, fg=self.channel_listbox_fg)
-        self.server_listbox.configure(bg=self.server_list_bg, fg=self.server_list_fg)
+        self.user_listbox.configure(bg=self.user_listbox_bg, fg=self.user_listbox_fg, font=user_listbox_font)
+        self.channel_listbox.configure(bg=self.channel_listbox_bg, fg=self.channel_listbox_fg, font=channel_listbox_font)
+        self.server_listbox.configure(bg=self.server_list_bg, fg=self.server_list_fg, font=server_listbox_font)
         self.channel_label.configure(bg=self.channel_label_bg, fg=self.channel_label_fg)
         self.servers_label.configure(bg=self.servers_label_bg, fg=self.servers_label_fg)
         self.user_label.configure(bg=self.user_label_bg, fg=self.user_label_fg)
@@ -254,6 +259,9 @@ class RudeGui:
             self.server_fg_color = config.get('GUI', 'server_fg', fallback='#7882ff')
             self.server_bg_color = config.get('GUI', 'server_bg', fallback='black')
             self.selected_list_server = config.get('GUI', 'selected_list_server', fallback='blue')
+            self.user_font_size = config.getint('GUI', 'user_font_size', fallback=10)
+            self.channel_font_size = config.getint('GUI', 'channel_font_size', fallback=10)
+            self.server_font_size = config.getint('GUI', 'server_font_size', fallback=10)
 
             # Read Widget Settings
             self.user_listbox_fg = config.get('WIDGETS', 'users_fg', fallback='#39ff14')
