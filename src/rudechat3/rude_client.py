@@ -334,7 +334,7 @@ class RudeChatClient:
         count_366 = 0
         got_topic = 0
         last_366_time = None
-        TIMEOUT_SECONDS = 0.16
+        TIMEOUT_SECONDS = 0.17
         MAX_WAIT_TIME = 60
         PRIVMSGTOKENS = []
 
@@ -2837,7 +2837,6 @@ class RudeChatClient:
             self.gui.insert_text_widget(f"No channel selected. Use /join to join a channel.\n")
 
     async def handle_mac_command(self, args):
-        counter = 0
         if len(args) < 2:
             available_macros = ", ".join(self.ASCII_ART_MACROS.keys())
             self.gui.insert_text_widget(f"Available ASCII art macros: {available_macros}\n")
@@ -2850,20 +2849,15 @@ class RudeChatClient:
         if macro_name in self.ASCII_ART_MACROS:
             current_time = datetime.datetime.now().strftime('[%H:%M:%S] ')
             for line in self.ASCII_ART_MACROS[macro_name].splitlines():
-                if counter < 4:
-                    formatted_message = self.format_message(line, current_time)
-                    await self.send_message(f'PRIVMSG {selected_channel} :{formatted_message}')
-                    if selected_channel == self.current_channel:
-                        if self.use_time_stamp:
-                            self.gui.insert_text_widget(f"{current_time}<{self.nickname}> {formatted_message}")
-                        else:
-                            self.gui.insert_text_widget(f"<{self.nickname}> {formatted_message}")
-                        self.gui.highlight_nickname()
-                    counter += 1
-                    await asyncio.sleep(1.9)
-                else:
-                    counter = 0
-                    await asyncio.sleep(random.uniform(2.5, 3.5))
+                formatted_message = self.format_message(line, current_time)
+                await self.send_message(f'PRIVMSG {selected_channel} :{formatted_message}')
+                await asyncio.sleep(0.4)
+                if selected_channel == self.current_channel:
+                    if self.use_time_stamp:
+                        self.gui.insert_text_widget(f"{current_time}<{self.nickname}> {formatted_message}")
+                    else:
+                        self.gui.insert_text_widget(f"<{self.nickname}> {formatted_message}")
+                    self.gui.highlight_nickname()
                 await self.append_to_channel_history(selected_channel, line)
         else:
             self.gui.insert_text_widget(f"Unknown ASCII art macro: {macro_name}. Type '/mac' to see available macros.\n")

@@ -6,6 +6,7 @@ from .format_decoder import Attribute, decoder
 from .gui_config_window import GuiConfigWindow
 from .rude_popout import RudePopOut
 from .shared_imports import *
+from .rude_dragndrop import DragDropListbox
 
 class RudeGui:
     def __init__(self, master):
@@ -129,7 +130,7 @@ class RudeGui:
         self.channel_label = tk.Label(self.channel_frame, text="Channels")
         self.channel_label.grid(row=2, column=0, sticky='ew')  # Make sure label is below the server_listbox
 
-        self.channel_listbox = tk.Listbox(self.channel_frame, height=17, width=16)
+        self.channel_listbox = DragDropListbox(self.channel_frame, height=17, width=16, update_callback=self.update_joined_channels)
         self.channel_scrollbar = tk.Scrollbar(self.channel_frame, orient="vertical", command=self.channel_listbox.yview)
         self.channel_listbox.config(yscrollcommand=self.channel_scrollbar.set)
         self.channel_listbox.grid(row=3, column=0, sticky='nsew')  # Adjust row to display channel_listbox
@@ -380,6 +381,10 @@ class RudeGui:
         self.server_text_widget.config(state=tk.NORMAL)
         self.server_text_widget.delete(1.0, tk.END)
         self.server_text_widget.config(state=tk.DISABLED)
+
+    def update_joined_channels(self):
+        """Update the joined_channels list."""
+        self.irc_client.joined_channels = self.channel_listbox.get(0, tk.END)
 
     def escape_color_codes(self, line):
         # Escape color codes in the string
@@ -1046,8 +1051,6 @@ class RudeGui:
 
             # Update the previous_server_index to the currently selected server index
             self.previous_server_index = selected_server_index
-
-
 
     async def init_client_with_config(self, config_file, fallback_server_name):
         try:
