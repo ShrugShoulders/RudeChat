@@ -214,6 +214,7 @@ class RudeGui:
         user_listbox_font = tkFont.Font(family=self.list_boxs_font_family, size=self.user_font_size)
         channel_listbox_font = tkFont.Font(family=self.list_boxs_font_family, size=self.channel_font_size)
         server_listbox_font = tkFont.Font(family=self.list_boxs_font_family, size=self.server_font_size)
+        topic_label_font = tkFont.Font(family=self.topic_label_font_family, size=self.topic_label_font_size)
 
         # Apply font settings to text widgets
         self.master.configure(bg=self.master_bg)
@@ -233,7 +234,7 @@ class RudeGui:
         self.channel_label.configure(bg=self.channel_label_bg, fg=self.channel_label_fg)
         self.servers_label.configure(bg=self.servers_label_bg, fg=self.servers_label_fg)
         self.user_label.configure(bg=self.user_label_bg, fg=self.user_label_fg)
-        self.topic_label.configure(bg=self.topic_label_bg, fg=self.topic_label_fg)
+        self.topic_label.configure(bg=self.topic_label_bg, fg=self.topic_label_fg, font=topic_label_font)
         self.user_nickname_color = self.user_nickname_color
         self.tab_complete_terminator = self.tab_complete_terminator
         self.generate_nickname_colors = self.generate_nickname_colors
@@ -263,6 +264,8 @@ class RudeGui:
             self.channel_font_size = config.getint('GUI', 'channel_font_size', fallback=10)
             self.server_font_size = config.getint('GUI', 'server_font_size', fallback=10)
             self.list_boxs_font_family = config.get('GUI', 'list_boxs_font_family', fallback='Hack') 
+            self.topic_label_font_size = config.getint('GUI', 'topic_label_font_size', fallback=10)
+            self.topic_label_font_family = config.get('GUI', 'topic_label_font_family', fallback='Hack')
 
             # Read Widget Settings
             self.user_listbox_fg = config.get('WIDGETS', 'users_fg', fallback='#39ff14')
