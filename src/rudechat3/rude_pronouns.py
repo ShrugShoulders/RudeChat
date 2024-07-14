@@ -1,8 +1,17 @@
 import re
+import os
 
 def replace_pronouns(text, channel=None):
     """Replace gender-specific pronouns with gender-neutral pronouns"""
+    script_directory = os.path.dirname(os.path.abspath(__file__))
+    filtered_channels_path = os.path.join(script_directory, 'filtered_channels.txt')
+
     active_channels = []
+    if os.path.exists(filtered_channels_path):
+        with open(filtered_channels_path, 'r') as file:
+            # Read the file and strip any leading/trailing whitespace from each line
+            active_channels = [line.strip() for line in file.readlines()]
+            
     if channel in active_channels:
         phrases = {
             r'\bhis job\b': 'their job',
