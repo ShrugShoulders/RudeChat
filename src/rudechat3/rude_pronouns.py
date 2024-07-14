@@ -248,17 +248,29 @@ def replace_pronouns(text):
         r'\bhe saw him\b': 'they saw them',
         r'\bshe trusted him\b': 'they trusted them',
         r'\bshe trusted her\b': 'they trusted them',
+        r'\bhe trusted him\b': 'they trusted them',
+        r'\bhe trusted her\b': 'they trusted them',
     }
 
-      
     pronouns = {
         r'\bhe\b': 'they',
         r'\bhis\b': 'their',
+        r'\bhim\b': 'them',
+        r'\bhimself\b': 'themselves',
         r'\bshe\b': 'they',
         r'\bher\b': 'their',
+        r'\bhers\b': 'theirs',
+        r'\bherself\b': 'themselves',
         r'\blads\b': 'folks',
         r'\blasses\b': 'folks',
-        r'\bhim\b': 'them',
+        r'\bman\b': 'person',
+        r'\bwoman\b': 'person',
+        r'\bmen\b': 'people',
+        r'\bwomen\b': 'people',
+        r'\bguys\b': 'folks',
+        r'\bgals\b': 'folks',
+        r'\bdude\b': 'person',
+        r'\bdudette\b': 'person',
     }
     
     # Replace specific phrases
