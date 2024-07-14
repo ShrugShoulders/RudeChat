@@ -26,3 +26,4 @@ znc_connection = False
 znc_password = password
 ignore_cert = False
 znc_user = Rude
+replace_pronouns = False

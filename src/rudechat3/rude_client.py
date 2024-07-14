@@ -78,6 +78,7 @@ class RudeChatClient:
         self.auto_whois = config.getboolean('IRC', 'auto_whois', fallback=True)
         self.custom_sounds = config.getboolean('IRC', 'custom_sounds', fallback=False)
         self.use_logging = config.getboolean('IRC', 'use_logging', fallback=True)
+        self.replace_pronouns = config.getboolean('IRC', 'replace_pronouns', fallback=False)
         await self.load_channel_messages()
         self.load_ignore_list()
         self.gui.update_nick_channel_label()
@@ -98,6 +99,7 @@ class RudeChatClient:
         self.custom_sounds = config.getboolean('IRC', 'custom_sounds', fallback=False)
         self.use_logging = config.getboolean('IRC', 'use_logging', fallback=True)
         self.use_colors = config.getboolean('IRC', 'use_irc_colors', fallback=False)
+        self.replace_pronouns = config.getboolean('IRC', 'replace_pronouns', fallback=False)
         self.gui.update_nick_channel_label()
 
     def delete_lock_files(self):
@@ -2818,6 +2820,20 @@ class RudeChatClient:
         # Escape color codes
         escaped_input = self.escape_color_codes(user_input)
         
+        # Replace gender-specific pronouns with gender-neutral pronouns
+        def replace_pronouns(text):
+            pronouns = {
+                r'\bhe\b': 'they',
+                r'\bhim\b': 'them',
+                r'\bshe\b': 'they',
+                r'\bher\b': 'them'
+            }
+            for pattern, replacement in pronouns.items():
+                text = re.sub(pattern, replacement, text, flags=re.IGNORECASE)
+            return text
+        if self.replace_pronouns:
+            escaped_input = replace_pronouns(escaped_input)
+
         if self.current_channel:
             # Split the input into lines
             lines = escaped_input.splitlines()
