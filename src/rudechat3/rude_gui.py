@@ -577,7 +577,6 @@ class RudeGui:
     def open_client_config_window(self):
         def after_config_window_close():
             # Reload configuration after the configuration window is closed
-            print(f"Reloading Config...{config_window.config_file}")
             self.irc_client.reload_config(config_window.config_file)
 
         def close_window():
