@@ -384,7 +384,7 @@ class RudeGui:
 
     def update_joined_channels(self):
         """Update the joined_channels list."""
-        self.irc_client.joined_channels = self.channel_listbox.get(0, tk.END)
+        self.irc_client.joined_channels = list(self.channel_listbox.get(0, tk.END))
 
     def escape_color_codes(self, line):
         # Escape color codes in the string
