@@ -2822,7 +2822,7 @@ class RudeChatClient:
         escaped_input = self.escape_color_codes(user_input)
 
         if self.replace_pronouns:
-            escaped_input = replace_pronouns(escaped_input)
+            escaped_input = replace_pronouns(escaped_input, self.current_channel)
 
         if self.current_channel:
             # Split the input into lines
