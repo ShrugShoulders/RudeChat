@@ -11,7 +11,7 @@ def replace_pronouns(text, channel=None):
         with open(filtered_channels_path, 'r') as file:
             # Read the file and strip any leading/trailing whitespace from each line
             active_channels = [line.strip() for line in file.readlines()]
-            
+
     if channel in active_channels:
         phrases = {
             r'\bhis job\b': 'their job',
@@ -261,6 +261,8 @@ def replace_pronouns(text, channel=None):
             r'\bshe trusted her\b': 'they trusted them',
             r'\bhe trusted him\b': 'they trusted them',
             r'\bhe trusted her\b': 'they trusted them',
+            r'\bI knew she\b': 'I knew they',
+            r'\bI knew he\b': 'I knew they',
         }
 
         pronouns = {
