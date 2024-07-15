@@ -276,6 +276,8 @@ def replace_pronouns(text, channel=None):
             r'\bherself\b': 'themselves',
             r'\blads\b': 'folks',
             r'\blasses\b': 'folks',
+            r'\blad\b': 'mate',
+            r'\blass\b': 'mate',
             r'\bman\b': 'person',
             r'\bwoman\b': 'person',
             r'\bmen\b': 'people',
