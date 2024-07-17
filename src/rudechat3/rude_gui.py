@@ -1470,8 +1470,11 @@ class RudeGui:
             self.tab_complete_index = (self.tab_complete_index + 1) % len(self.tab_complete_completions)
 
         # Set up a timer to append ": " after half a second if no more tab presses
-        if self.entry_widget.get().startswith(completed_nick):
-            self.tab_completion_timer = self.master.after(250, self.append_colon_to_nick)
+        try:
+            if self.entry_widget.get().startswith(completed_nick):
+                self.tab_completion_timer = self.master.after(250, self.append_colon_to_nick)
+        except UnboundLocalError as e:
+            pass
 
         # Prevent default behavior of the Tab key
         return 'break'
