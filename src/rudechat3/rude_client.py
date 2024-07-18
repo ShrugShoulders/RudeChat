@@ -1289,6 +1289,8 @@ class RudeChatClient:
         user_info = tokens.hostmask.nickname
         user_mask = tokens.hostmask
         channel = tokens.params[0]
+        if user_info == self.nickname:
+            return
         if self.show_full_hostmask == True:
             join_message = f"<&> {user_mask} has joined channel {channel}\n"
         elif self.show_full_hostmask == False:
