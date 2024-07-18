@@ -1289,8 +1289,6 @@ class RudeChatClient:
         user_info = tokens.hostmask.nickname
         user_mask = tokens.hostmask
         channel = tokens.params[0]
-        if user_info == self.nickname:
-            return
         if self.show_full_hostmask == True:
             join_message = f"<&> {user_mask} has joined channel {channel}\n"
         elif self.show_full_hostmask == False:
@@ -1634,12 +1632,16 @@ class RudeChatClient:
         current_users = self.channel_users.get(channel, [])
         sorted_users = self.sort_users(current_users, channel)
         
+        # Remove duplicates from the sorted_users list
+        unique_users = list(dict.fromkeys(sorted_users))
+        
         # Only update the user listbox if the channel is the currently selected channel
         if channel == self.current_channel and self.gui.irc_client == self and channel not in self.gui.popped_out_channels:
             # Update the Tkinter Listbox to reflect the current users in the channel
             self.gui.user_listbox.delete(0, tk.END)  # Clear existing items
-            for user in sorted_users:
+            for user in unique_users:
                 self.gui.user_listbox.insert(tk.END, user)
+        
         if channel in self.gui.popped_out_channels:
             window = self.gui.pop_out_windows[channel]
             window.update_gui_user_list(channel)

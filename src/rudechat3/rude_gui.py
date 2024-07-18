@@ -1344,19 +1344,22 @@ class RudeGui:
                 # Extract the nickname with '<' and '>'
                 nickname_with_brackets = self.text_widget.get(start_idx, end_idx)
 
-                # If nickname doesn't have an assigned color, generate one
-                if self.generate_nickname_colors == True:
-                    if nickname_with_brackets not in self.nickname_colors:
-                        self.nickname_colors[nickname_with_brackets] = self.generate_random_color()
+                # Check if the nickname color is already in the cache
+                if nickname_with_brackets in self.nickname_colors:
                     nickname_color = self.nickname_colors[nickname_with_brackets]
-                elif self.generate_nickname_colors == False:
-                    if nickname_with_brackets not in self.nickname_colors:
-                        self.nickname_colors[nickname_with_brackets] = self.main_fg_color
-                    nickname_color = self.nickname_colors[nickname_with_brackets]
+                else:
+                    # If nickname doesn't have an assigned color, generate one
+                    if self.generate_nickname_colors:
+                        nickname_color = self.generate_random_color()
+                    else:
+                        nickname_color = self.main_fg_color
 
-                # If it's the main user's nickname, set color to green
-                if nickname_with_brackets == f"<{self.irc_client.nickname}>":
-                    nickname_color = self.user_nickname_color
+                    # If it's the main user's nickname, set color to user_nickname_color
+                    if nickname_with_brackets == f"<{self.irc_client.nickname}>":
+                        nickname_color = self.user_nickname_color
+
+                    # Cache the color
+                    self.nickname_colors[nickname_with_brackets] = nickname_color
 
                 self.text_widget.tag_configure(f"nickname_{nickname_with_brackets}", foreground=nickname_color)
                 self.text_widget.tag_add(f"nickname_{nickname_with_brackets}", start_idx, end_idx)
