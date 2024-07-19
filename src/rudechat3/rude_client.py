@@ -1457,7 +1457,7 @@ class RudeChatClient:
                     if channel not in self.channel_messages[self.server]:
                         self.channel_messages[self.server][channel] = []
                     if self.show_join_part_quit_nick:
-                        self.channel_messages[self.server][channel].append(f"\x0307(@)\x0F {old_nick} has changed their nickname to {new_nick}\n")
+                        self.channel_messages[self.server][channel].append(f"\x0307(⟳)\x0F {old_nick} has changed their nickname to {new_nick}\n")
                     
                     # Insert message into the text widget only if this is the current channel
                     if channel == self.current_channel and self.gui.irc_client == self and channel not in self.gui.popped_out_channels:
