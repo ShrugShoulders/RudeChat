@@ -24,7 +24,7 @@ class RudePopOut:
 
         # Load configuration from gui_config.ini
         self.load_configuration()
-        self.nickname_colors = self.load_nickname_colors()
+        self.nickname_colors = self.main_app.nickname_colors
 
         # Apply main_bg_color and main_fg_color to root
         self.root.configure(bg=self.main_bg_color)

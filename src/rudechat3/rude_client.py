@@ -2715,10 +2715,10 @@ class RudeChatClient:
                     await self.ping_server()
 
             case "quit":
+                self.gui.save_nickname_colors()
                 quit_message = " ".join(args[1:]) if len(args) > 0 else None
                 await self.send_message(f"QUIT :{quit_message}")
                 self.loop_running = False
-                self.gui.client_shutdown()
                 self.master.destroy()
                 return False
 
