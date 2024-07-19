@@ -1572,17 +1572,17 @@ class RudeChatClient:
 
             else:
                 if stripped_mode in self.chanmodes.get('no_parameter', []) or stripped_mode in self.chanmodes.get('parameter', []):
-                    message = f"\x0312(&)\x0F -{mode} mode for {channel}\n"
+                    message = f"\x0312(Δ)\x0F -{mode} mode for {channel}\n"
                     self._log_channel_message(channel, message)
                     continue
 
                 if stripped_mode in self.chanmodes.get('list', []):
-                    message = f"\x0312(&)\x0F -{mode} mode for {user if user else 'unknown'}\n"
+                    message = f"\x0312(Δ)\x0F -{mode} mode for {user if user else 'unknown'}\n"
                     self._log_channel_message(channel, message)
                     continue
 
                 if stripped_mode in self.chanmodes.get('setting', []):
-                    message = f"\x0312(&)\x0F -{mode} {user} set for {channel}\n"
+                    message = f"\x0312(Δ)\x0F -{mode} {user} set for {channel}\n"
                     self._log_channel_message(channel, message)
                     continue
 
@@ -1664,7 +1664,7 @@ class RudeChatClient:
             window = self.gui.pop_out_windows[channel]
             window.update_gui_user_list(channel)
 
-    def get_modes(self):
+    def get_mode_lists(self):
         self.mode_keys = list(self.mode_to_symbol.keys())
         self.mode_values = list(self.mode_to_symbol.values())
         return
@@ -1706,7 +1706,7 @@ class RudeChatClient:
                     'setting': list(mode_categories[2]),
                     'no_parameter': list(mode_categories[3])
                 }
-        self.get_modes()
+        self.get_mode_lists()
 
     async def handle_who_reply(self, tokens):
         """
@@ -2889,6 +2889,8 @@ class RudeChatClient:
 
         macro_name = args[1]
         selected_channel = self.current_channel  # Store the currently selected channel
+        user_mode = self.get_user_mode(self.nickname, selected_channel)
+        mode_symbol = self.get_mode_symbol(user_mode) if user_mode else ''
 
         if macro_name in self.ASCII_ART_MACROS:
             current_time = datetime.datetime.now().strftime('[%H:%M:%S] ')
@@ -2898,11 +2900,11 @@ class RudeChatClient:
                 await asyncio.sleep(0.4)
                 if selected_channel == self.current_channel:
                     if self.use_time_stamp:
-                        self.gui.insert_text_widget(f"{current_time}<{self.nickname}> {formatted_message}")
+                        self.gui.insert_text_widget(f"{current_time}<{mode_symbol}{self.nickname}> {formatted_message}")
                     else:
-                        self.gui.insert_text_widget(f"<{self.nickname}> {formatted_message}")
+                        self.gui.insert_text_widget(f"<{mode_symbol}{self.nickname}> {formatted_message}")
                     self.gui.highlight_nickname()
-                await self.append_to_channel_history(selected_channel, line)
+                await self.append_to_channel_history(selected_channel, line, mode_symbol)
         else:
             self.gui.insert_text_widget(f"Unknown ASCII art macro: {macro_name}. Type '/mac' to see available macros.\n")
 
@@ -3020,15 +3022,15 @@ class RudeChatClient:
         end_message = f"End of ban list for channel: {channel}\n"
         self.gui.insert_text_widget(end_message) 
 
-    async def append_to_channel_history(self, channel, message, is_action=False):
+    async def append_to_channel_history(self, channel, message, mode_symbol, is_action=False):
         timestamp = datetime.datetime.now().strftime('[%H:%M:%S] ')
         
         # Escape color codes in the message
         escaped_message = self.escape_color_codes(message)
         if self.use_time_stamp == True:
-            formatted_message = f"{timestamp}<{self.nickname}> {escaped_message}\n"
+            formatted_message = f"{timestamp}<{mode_symbol}{self.nickname}> {escaped_message}\n"
         elif self.use_time_stamp == False:
-            formatted_message = f"<{self.nickname}> {escaped_message}\n"
+            formatted_message = f"<{mode_symbol}{self.nickname}> {escaped_message}\n"
 
         # Initialize the server name
         server_name = self.server
@@ -3048,6 +3050,8 @@ class RudeChatClient:
             self.channel_messages[server_name][channel].append(formatted_message)
 
     async def handle_cowsay_command(self, args):
+        user_mode = self.get_user_mode(self.nickname, self.current_channel)
+        mode_symbol = self.get_mode_symbol(user_mode) if user_mode else ''
         script_directory = os.path.dirname(os.path.abspath(__file__))
 
         if len(args) > 1:
@@ -3057,13 +3061,13 @@ class RudeChatClient:
 
             # Check if the provided argument corresponds to a valid fortune file
             if os.path.exists(potential_path):
-                await self.fortune_cowsay(file_name_arg)
+                await self.fortune_cowsay(file_name_arg, mode_symbol)
             else:
                 # If not a valid file name, consider the rest of the arguments as a custom message
                 custom_message = ' '.join(args[1:])
-                await self.cowsay_custom_message(custom_message)
+                await self.cowsay_custom_message(custom_message, mode_symbol)
         else:
-            await self.fortune_cowsay()
+            await self.fortune_cowsay(mode_symbol)
 
     def cowsay(self, message):
         """Formats the given message in a 'cowsay' format."""
@@ -3132,7 +3136,7 @@ class RudeChatClient:
         fortune_files = [os.path.join(fortune_directory, f) for f in os.listdir(fortune_directory) if f.endswith('.txt')]
         return random.choice(fortune_files)
 
-    async def fortune_cowsay(self, file_name=None):
+    async def fortune_cowsay(self, mode_symbol, file_name=None):
         timestamp = datetime.datetime.now().strftime('[%H:%M:%S] ')
         file_name = self.get_fortune_file(file_name)
         selected_channel = self.current_channel
@@ -3146,17 +3150,17 @@ class RudeChatClient:
 
         for line in cowsay_fortune.split('\n'):
             if self.use_time_stamp == True:
-                formatted_message = f"{timestamp}<{self.nickname}> {line}\n"
+                formatted_message = f"{timestamp}<{mode_symbol}{self.nickname}> {line}\n"
             elif self.use_time_stamp == False:
-                formatted_message = f"<{self.nickname}> {line}\n"
+                formatted_message = f"<{mode_symbol}{self.nickname}> {line}\n"
             await self.send_message(f'PRIVMSG {selected_channel} :{line}')
             await asyncio.sleep(0.4)
-            await self.append_to_channel_history(selected_channel, line)
+            await self.append_to_channel_history(selected_channel, line, mode_symbol)
             if selected_channel == self.current_channel:
                 self.gui.insert_text_widget(formatted_message)
                 self.gui.highlight_nickname()
 
-    async def cowsay_custom_message(self, message):
+    async def cowsay_custom_message(self, message, mode_symbol):
         """Wrap a custom message using the cowsay format."""
         timestamp = datetime.datetime.now().strftime('[%H:%M:%S] ')
         selected_channel = self.current_channel
@@ -3165,12 +3169,12 @@ class RudeChatClient:
         
         for line in cowsay_output.split('\n'):
             if self.use_time_stamp == True:
-                formatted_message = f"{timestamp}<{self.nickname}> {line}\n"
+                formatted_message = f"{timestamp}<{mode_symbol}{self.nickname}> {line}\n"
             elif self.use_time_stamp == False:
-                formatted_message = f"<{self.nickname}> {line}\n"
+                formatted_message = f"<{mode_symbol}{self.nickname}> {line}\n"
             await self.send_message(f'PRIVMSG {selected_channel} :{line}')
             await asyncio.sleep(0.4)
-            await self.append_to_channel_history(selected_channel, line)
+            await self.append_to_channel_history(selected_channel, line, mode_symbol)
             if selected_channel == self.current_channel:
                 self.gui.insert_text_widget(formatted_message)
                 self.gui.highlight_nickname()
@@ -3178,6 +3182,8 @@ class RudeChatClient:
     async def fortune(self, file_name=None):
         """Choose a random fortune from one of the lists"""
         selected_channel = self.current_channel
+        user_mode = self.get_user_mode(self.nickname, selected_channel)
+        mode_symbol = self.get_mode_symbol(user_mode) if user_mode else ''
         timestamp = datetime.datetime.now().strftime('[%H:%M:%S] ')
         file_name = self.get_fortune_file(file_name)
 
@@ -3187,12 +3193,12 @@ class RudeChatClient:
 
         for line in chosen_fortune.split('\n'):
             if self.use_time_stamp == True:
-                formatted_message = f"{timestamp}<{self.nickname}> {line}\n"
+                formatted_message = f"{timestamp}<{mode_symbol}{self.nickname}> {line}\n"
             elif self.use_time_stamp == False:
-                formatted_message = f"<{self.nickname}> {line}\n"
+                formatted_message = f"<{mode_symbol}{self.nickname}> {line}\n"
             await self.send_message(f'PRIVMSG {selected_channel} :{line}')
             await asyncio.sleep(0.4)
-            await self.append_to_channel_history(selected_channel, line)
+            await self.append_to_channel_history(selected_channel, line, mode_symbol)
             if selected_channel == self.current_channel:
                 self.gui.insert_text_widget(formatted_message)
                 self.gui.highlight_nickname()
