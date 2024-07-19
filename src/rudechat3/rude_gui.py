@@ -193,6 +193,7 @@ class RudeGui:
         self.master.after(0, self.bind_return_key)
 
     def client_shutdown(self):
+        self.save_nickname_colors()
         # Close all pop-out windows
         if self.pop_out_windows:
             for target, window in self.pop_out_windows.items():
@@ -716,6 +717,7 @@ class RudeGui:
         return menu
 
     def open_pop_out_window(self):
+        self.save_nickname_colors()
         self.clear_text_widget()
         self.clear_user_listbox()
         self.clear_topic_label()
@@ -730,6 +732,7 @@ class RudeGui:
             root.mainloop()
 
     def open_dm_pop_out_from_window(self, user):
+        self.save_nickname_colors()
         if user not in self.pop_out_windows:
             self.popped_out_channels.append(user)
             
