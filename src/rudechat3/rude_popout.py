@@ -207,16 +207,19 @@ class RudePopOut:
 
     def get_mode_symbol(self, mode):
         """Return the symbol corresponding to the IRC mode."""
-        return self.irc_client.mode_to_symbol.get(mode, '')
+        if self.irc_client.display_user_modes:
+            return self.irc_client.mode_to_symbol.get(mode, '')
+        else:
+            return ''
 
     def get_user_mode(self, user, channel):
         """Retrieve the user's mode for the given channel."""
-        try:
+        if self.irc_client.display_user_modes:
             channel_modes = self.irc_client.user_modes.get(channel, {})
             user_modes = channel_modes.get(user, set())
             return next(iter(user_modes), None)  # Get the first mode if available, else None
-        except Exception as e:
-            print(f"Exception in get_user_mode: {e}")
+        else:
+            return None
 
     def send_text(self, event=None):
         try:
