@@ -71,6 +71,7 @@ class RudeChatClient:
         self.ignore_cert = config.get('IRC', 'ignore_cert', fallback=False)
         self.znc_user = config.get('IRC', 'znc_user', fallback=None)
         self.use_colors = config.getboolean('IRC', 'use_irc_colors', fallback=False)
+        self.display_user_modes = config.getboolean('IRC', 'display_user_modes', fallback=True)
 
         self.mention_note_color = config.get('IRC', 'mention_note_color', fallback='red')
         self.activity_note_color = config.get('IRC', 'activity_note_color', fallback='green')
@@ -103,6 +104,7 @@ class RudeChatClient:
         self.use_logging = config.getboolean('IRC', 'use_logging', fallback=True)
         self.use_colors = config.getboolean('IRC', 'use_irc_colors', fallback=False)
         self.replace_pronouns = config.getboolean('IRC', 'replace_pronouns', fallback=False)
+        self.display_user_modes = config.getboolean('IRC', 'display_user_modes', fallback=True)
         self.gui.update_nick_channel_label()
 
     def delete_lock_files(self):
@@ -1222,13 +1224,19 @@ class RudeChatClient:
 
     def get_mode_symbol(self, mode):
         """Return the symbol corresponding to the IRC mode."""
-        return self.mode_to_symbol.get(mode, '')
+        if self.display_user_modes:
+            return self.mode_to_symbol.get(mode, '')
+        else:
+            return ''
 
     def get_user_mode(self, user, channel):
         """Retrieve the user's mode for the given channel."""
-        channel_modes = self.user_modes.get(channel, {})
-        user_modes = channel_modes.get(user, set())
-        return next(iter(user_modes), None)  # Get the first mode if available, else None
+        if self.display_user_modes:
+            channel_modes = self.user_modes.get(channel, {})
+            user_modes = channel_modes.get(user, set())
+            return next(iter(user_modes), None)  # Get the first mode if available, else None
+        else:
+            return None
 
     def display_message(self, timestamp, sender, message, target, mode_symbol, is_direct=False):
         if target == self.current_channel and self.gui.irc_client == self:
