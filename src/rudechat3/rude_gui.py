@@ -1306,6 +1306,7 @@ class RudeGui:
 
     def highlight_nickname(self):
         """Highlight the user's nickname in the text_widget."""
+        modes = ['@', '+', '~', '&', '%', '']
         user_nickname = self.irc_client.nickname
         if not user_nickname:
             return
@@ -1344,9 +1345,15 @@ class RudeGui:
                 # Extract the nickname with '<' and '>'
                 nickname_with_brackets = self.text_widget.get(start_idx, end_idx)
 
-                # Check if the nickname color is already in the cache
-                if nickname_with_brackets in self.nickname_colors:
-                    nickname_color = self.nickname_colors[nickname_with_brackets]
+                # Extract the nickname without modes
+                nickname = nickname_with_brackets.strip('<>')
+                plain_nickname = nickname.lstrip('@+~&%')
+
+                # Check if the plain nickname color is already in the cache
+                if f"<{plain_nickname}>" in self.nickname_colors:
+                    nickname_color = self.nickname_colors[f"<{plain_nickname}>"]
+                    # Cache the color for the nickname with modes
+                    self.nickname_colors[nickname_with_brackets] = nickname_color
                 else:
                     # If nickname doesn't have an assigned color, generate one
                     if self.generate_nickname_colors:
@@ -1355,11 +1362,13 @@ class RudeGui:
                         nickname_color = self.main_fg_color
 
                     # If it's the main user's nickname, set color to user_nickname_color
-                    if nickname_with_brackets == f"<{self.irc_client.nickname}>":
-                        nickname_color = self.user_nickname_color
+                    for mode in modes:
+                        if nickname_with_brackets == f"<{mode}{self.irc_client.nickname}>":
+                            nickname_color = self.user_nickname_color
 
                     # Cache the color
                     self.nickname_colors[nickname_with_brackets] = nickname_color
+                    self.nickname_colors[f"<{plain_nickname}>"] = nickname_color
 
                 self.text_widget.tag_configure(f"nickname_{nickname_with_brackets}", foreground=nickname_color)
                 self.text_widget.tag_add(f"nickname_{nickname_with_brackets}", start_idx, end_idx)

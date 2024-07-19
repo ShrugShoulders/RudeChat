@@ -1045,6 +1045,8 @@ class RudeChatClient:
         message = tokens.params[1]
 
         sender_hostmask = str(tokens.hostmask)
+        user_mode = self.get_user_mode(sender, target)
+        mode_symbol = self.get_mode_symbol(user_mode) if user_mode else ''
         if self.should_ignore_sender(sender_hostmask):
             return
 
@@ -1054,9 +1056,9 @@ class RudeChatClient:
 
         if self.is_direct_message(target):
             target = await self.get_direct_message_target(sender, target)
-            await self.prepare_direct_message(sender, target, message, timestamp, znc_privmsg)
+            await self.prepare_direct_message(sender, target, message, timestamp, mode_symbol, znc_privmsg)
         else:
-            await self.handle_channel_message(sender, target, message, timestamp, znc_privmsg)
+            await self.handle_channel_message(sender, target, message, timestamp, mode_symbol, znc_privmsg)
 
         await self.notify_user_if_mentioned(message, target, sender, timestamp)
 
@@ -1108,7 +1110,7 @@ class RudeChatClient:
         else:
             return target
 
-    async def prepare_direct_message(self, sender, target, message, timestamp, znc_privmsg):
+    async def prepare_direct_message(self, sender, target, message, timestamp, mode_symbol, znc_privmsg):
         self.log_message(self.server_name, target, sender, message, is_sent=False)
         try:
             if sender != self.nickname:
@@ -1120,7 +1122,7 @@ class RudeChatClient:
                     self.update_gui_channel_list()
 
                 if znc_privmsg:
-                    self.save_message(self.server, target, sender, message, is_sent=False)
+                    self.save_message(self.server, target, sender, message, mode_symbol, is_sent=False)
                     user_mention = self.is_it_a_mention(message)
                     if not user_mention:
                         await self.trigger_beep_notification(channel_name=sender, message_content=f"Message From {sender}")
@@ -1128,7 +1130,7 @@ class RudeChatClient:
                     elif user_mention:
                         self.highlight_channel_if_not_current(target, sender, user_mention)
                 elif sender != self.current_channel and sender not in self.gui.popped_out_channels:
-                    self.save_message(self.server, target, sender, message, is_sent=False)
+                    self.save_message(self.server, target, sender, message, mode_symbol, is_sent=False)
                     user_mention = self.is_it_a_mention(message)
                     if not user_mention:
                         await self.trigger_beep_notification(channel_name=sender, message_content=f"Message From {sender}")
@@ -1139,27 +1141,27 @@ class RudeChatClient:
                     self.save_message(self.server, target, sender, message, is_sent=False)
 
                     if sender not in self.gui.popped_out_channels:
-                        self.display_message(timestamp, sender, message, target, is_direct=True)
+                        self.display_message(timestamp, sender, message, target, mode_symbol, is_direct=True)
                     else:
-                        self.pip_to_pop_out(timestamp, sender, message, target)
+                        self.pip_to_pop_out(timestamp, sender, message, target, mode_symbol)
 
         except Exception as e:
             print(f"Exception in prepare_direct_message: {e}")
 
-    def pip_to_pop_out(self, timestamp, sender, message, target):
+    def pip_to_pop_out(self, timestamp, sender, message, target, mode_symbol):
         window = self.gui.pop_out_windows.get(target) or self.gui.pop_out_windows.get(sender)
         if window:
-            formatted_message = f"{timestamp}<{sender}> {message}\n" if self.use_time_stamp else f"<{sender}> {message}\n"
+            formatted_message = f"{timestamp}<{mode_symbol}{sender}> {message}\n" if self.use_time_stamp else f"<{mode_symbol}{sender}> {message}\n"
             window.insert_text(formatted_message)
             window.highlight_nickname()
 
-    async def handle_channel_message(self, sender, target, message, timestamp, znc_privmsg):
+    async def handle_channel_message(self, sender, target, message, timestamp, mode_symbol, znc_privmsg):
         if znc_privmsg:
             if self.server not in self.channel_messages:
                 self.channel_messages[self.server] = {}
             if target not in self.channel_messages[self.server]:
                 self.channel_messages[self.server][target] = []
-            self.save_message(self.server, target, sender, message, is_sent=False)
+            self.save_message(self.server, target, sender, message, mode_symbol, is_sent=False)
             self.log_message(self.server_name, target, sender, message, is_sent=False)
             user_mention = self.is_it_a_mention(message)
             if not user_mention:
@@ -1172,7 +1174,7 @@ class RudeChatClient:
                 self.channel_messages[self.server] = {}
             if target not in self.channel_messages[self.server]:
                 self.channel_messages[self.server][target] = []
-            self.save_message(self.server, target, sender, message, is_sent=False)
+            self.save_message(self.server, target, sender, message, mode_symbol, is_sent=False)
             self.log_message(self.server_name, target, sender, message, is_sent=False)
             user_mention = self.is_it_a_mention(message)
             if not user_mention:
@@ -1183,17 +1185,17 @@ class RudeChatClient:
         else:
             if self.server not in self.channel_messages:
                 self.channel_messages[self.server] = {}
-            if target not in self.channel_messages[self.server]:
+            if target not in self.channel_messages[self.server] and target != self.nickname:
                 self.channel_messages[self.server][target] = []
-            self.save_message(self.server, target, sender, message, is_sent=False)
+            self.save_message(self.server, target, sender, message, mode_symbol, is_sent=False)
             self.log_message(self.server_name, target, sender, message, is_sent=False)
 
             if target not in self.gui.popped_out_channels:
-                self.display_message(timestamp, sender, message, target, is_direct=False)
+                self.display_message(timestamp, sender, message, target, mode_symbol, is_direct=False)
             else:
-                self.pip_to_pop_out(timestamp, sender, message, target)
+                self.pip_to_pop_out(timestamp, sender, message, target, mode_symbol)
 
-    def save_message(self, server, target, sender, message, is_sent):
+    def save_message(self, server, target, sender, message, mode_symbol, is_sent):
         timestamp = datetime.datetime.now().strftime('[%H:%M:%S] ')
         if self.is_direct_message(target):
             # If it's a DM, handle it differently
@@ -1206,9 +1208,9 @@ class RudeChatClient:
             message_list = self.channel_messages[server][target]
         # Append the message to the appropriate list
         if self.use_time_stamp == True:
-            message_list.append(f"{timestamp}<{sender}> {message}\n")
+            message_list.append(f"{timestamp}<{mode_symbol}{sender}> {message}\n")
         elif self.use_time_stamp == False:
-            message_list.append(f"<{sender}> {message}\n")
+            message_list.append(f"<{mode_symbol}{sender}> {message}\n")
 
     def is_it_a_mention(self, message):
         if self.nickname.lower() in message.lower():
@@ -1216,28 +1218,43 @@ class RudeChatClient:
         else:
             return False
 
-    def display_message(self, timestamp, sender, message, target, is_direct=False):
+    def get_mode_symbol(self, mode):
+        """Return the symbol corresponding to the IRC mode."""
+        mode_symbols = {
+            'o': '@',
+            'v': '+',
+            'q': '~',
+            'a': '&',
+            'h': '%',
+        }
+        return mode_symbols.get(mode, '')
+
+    def get_user_mode(self, user, channel):
+        """Retrieve the user's mode for the given channel."""
+        channel_modes = self.user_modes.get(channel, {})
+        user_modes = channel_modes.get(user, set())
+        return next(iter(user_modes), None)  # Get the first mode if available, else None
+
+    def display_message(self, timestamp, sender, message, target, mode_symbol, is_direct=False):
         if target == self.current_channel and self.gui.irc_client == self:
-            if self.use_time_stamp == True:
-                self.gui.insert_text_widget(f"{timestamp}<{sender}> {message}\n")
-            elif self.use_time_stamp == False:
-                self.gui.insert_text_widget(f"<{sender}> {message}\n")
+            if self.use_time_stamp:
+                self.gui.insert_text_widget(f"{timestamp}<{mode_symbol}{sender}> {message}\n")
+            else:
+                self.gui.insert_text_widget(f"<{mode_symbol}{sender}> {message}\n")
             self.gui.highlight_nickname()
         elif sender == self.current_channel and self.gui.irc_client == self:
-            if is_direct == True:
-                if self.use_time_stamp == True:
+            if is_direct:
+                if self.use_time_stamp:
                     self.gui.insert_text_widget(f"{timestamp}<{sender}> {message}\n")
-                elif self.use_time_stamp == False:
+                else:
                     self.gui.insert_text_widget(f"<{sender}> {message}\n")
                 self.gui.highlight_nickname()
         else:
             user_mention = self.is_it_a_mention(message)
             if not user_mention:
                 self.highlight_channel_if_not_current(target, sender, user_mention)
-            elif user_mention:
-                self.highlight_channel_if_not_current(target, sender, user_mention)
             else:
-                pass
+                self.highlight_channel_if_not_current(target, sender, user_mention)
 
     def highlight_channel_if_not_current(self, target, sender, user_mention):
         highlighted_channel = target
@@ -1290,9 +1307,9 @@ class RudeChatClient:
         user_mask = tokens.hostmask
         channel = tokens.params[0]
         if self.show_full_hostmask == True:
-            join_message = f"<&> {user_mask} has joined channel {channel}\n"
+            join_message = f"\x0312(&)\x0F {user_mask} has joined channel {channel}\n"
         elif self.show_full_hostmask == False:
-            join_message = f"<&> {user_info} has joined channel {channel}\n"
+            join_message = f"\x0312(&)\x0F {user_info} has joined channel {channel}\n"
 
         # Update the message history for the channel
         if self.server not in self.channel_messages:
@@ -1336,9 +1353,9 @@ class RudeChatClient:
         user_mask = tokens.hostmask
         channel = tokens.params[0]
         if self.show_full_hostmask == True:
-            part_message = f"<X> {user_mask} has parted from channel {channel}\n"
+            part_message = f"\x0304(X)\x0F {user_mask} has parted from channel {channel}\n"
         elif self.show_full_hostmask == False:
-            part_message = f"<X> {user_info} has parted from channel {channel}\n"
+            part_message = f"\x0304(X)\x0F {user_info} has parted from channel {channel}\n"
 
         # Update the message history for the channel
         if self.server not in self.channel_messages:
@@ -1379,9 +1396,9 @@ class RudeChatClient:
         user_mask = tokens.hostmask
         reason = tokens.params[0] if tokens.params else "No reason"
         if self.show_full_hostmask == True:
-            quit_message = f"<X> {user_mask} has quit: {reason}\n"
+            quit_message = f"\x0304(X)\x0F {user_mask} has quit: {reason}\n"
         elif self.show_full_hostmask == False:
-            quit_message = f"<X> {user_info} has quit: {reason}\n"
+            quit_message = f"\x0304(X)\x0F {user_info} has quit: {reason}\n"
 
         # Remove the user from all channel_users lists
         for channel, users in self.channel_users.items():
@@ -1418,7 +1435,7 @@ class RudeChatClient:
     async def handle_nick(self, tokens):
         old_nick = tokens.hostmask.nickname
         new_nick = tokens.params[0]
-        message = f"<@> {old_nick} has changed their nickname to {new_nick}\n"
+        message = f"\x0307(@)\x0F {old_nick} has changed their nickname to {new_nick}\n"
 
         # Update the user's nick in all channel_users lists they are part of
         for channel, users in self.channel_users.items():
@@ -1440,7 +1457,7 @@ class RudeChatClient:
                     if channel not in self.channel_messages[self.server]:
                         self.channel_messages[self.server][channel] = []
                     if self.show_join_part_quit_nick:
-                        self.channel_messages[self.server][channel].append(f"<@> {old_nick} has changed their nickname to {new_nick}\n")
+                        self.channel_messages[self.server][channel].append(f"\x0307(@)\x0F {old_nick} has changed their nickname to {new_nick}\n")
                     
                     # Insert message into the text widget only if this is the current channel
                     if channel == self.current_channel and self.gui.irc_client == self and channel not in self.gui.popped_out_channels:
@@ -1528,38 +1545,38 @@ class RudeChatClient:
 
             if adding:
                 if stripped_mode in self.chanmodes.get('no_parameter', []) or stripped_mode in self.chanmodes.get('parameter', []):
-                    message = f"<!> +{mode} mode for {channel}\n"
+                    message = f"\x0304(!)\x0F +{mode} mode for {channel}\n"
                     self._log_channel_message(channel, message)
                     continue
 
                 if stripped_mode in self.chanmodes.get('list', []):
-                    message = f"<!> +{mode} mode for {user if user else 'unknown'}\n"
+                    message = f"\x0304(!)\x0F +{mode} mode for {user if user else 'unknown'}\n"
                     self._log_channel_message(channel, message)
                     continue
 
                 if stripped_mode in self.chanmodes.get('setting', []):
-                    message = f"<!> +{mode} {user} set for {channel}\n"
+                    message = f"\x0304(!)\x0F +{mode} {user} set for {channel}\n"
                     self._log_channel_message(channel, message)
                     continue
 
                 current_modes.setdefault(user, set()).add(mode)
-                message = f"<+> {user} has been given mode +{mode}\n"
+                message = f"\x0303(+)\x0F {user} has been given mode +{mode}\n"
                 self._log_channel_message(channel, message)
                 user_index += 1
 
             else:
                 if stripped_mode in self.chanmodes.get('no_parameter', []) or stripped_mode in self.chanmodes.get('parameter', []):
-                    message = f"<&> -{mode} mode for {channel}\n"
+                    message = f"\x0312(&)\x0F -{mode} mode for {channel}\n"
                     self._log_channel_message(channel, message)
                     continue
 
                 if stripped_mode in self.chanmodes.get('list', []):
-                    message = f"<&> -{mode} mode for {user if user else 'unknown'}\n"
+                    message = f"\x0312(&)\x0F -{mode} mode for {user if user else 'unknown'}\n"
                     self._log_channel_message(channel, message)
                     continue
 
                 if stripped_mode in self.chanmodes.get('setting', []):
-                    message = f"<&> -{mode} {user} set for {channel}\n"
+                    message = f"\x0312(&)\x0F -{mode} {user} set for {channel}\n"
                     self._log_channel_message(channel, message)
                     continue
 
@@ -1573,7 +1590,7 @@ class RudeChatClient:
                 user_modes = current_modes.get(user, set())
                 user_modes.discard(mode)
 
-                message = f"<-> {user} has had mode +{mode} removed\n"
+                message = f"\x0304(-)\x0F {user} has had mode +{mode} removed\n"
                 self._log_channel_message(channel, message)
 
                 if not user_modes:
@@ -1616,17 +1633,18 @@ class RudeChatClient:
                 print(f"Exception in pipe_mode_to_pop_out: {e}")
 
     def _log_channel_message(self, channel, message):
-        if channel == self.current_channel and self.gui.irc_client == self:
-            if channel not in self.gui.popped_out_channels:
-                self.gui.insert_text_widget(f"{message}")
-                self.gui.highlight_nickname()
-        if channel in self.gui.popped_out_channels:
-            self.pipe_mode_to_pop_out(message, channel)
-        if self.server not in self.channel_messages:
-            self.channel_messages[self.server] = {}
-        if channel not in self.channel_messages[self.server]:
-            self.channel_messages[self.server][channel] = []
-        self.channel_messages[self.server][channel].append(message)
+        if channel != self.nickname:
+            if channel == self.current_channel and self.gui.irc_client == self:
+                if channel not in self.gui.popped_out_channels:
+                    self.gui.insert_text_widget(f"{message}")
+                    self.gui.highlight_nickname()
+            if channel in self.gui.popped_out_channels:
+                self.pipe_mode_to_pop_out(message, channel)
+            if self.server not in self.channel_messages:
+                self.channel_messages[self.server] = {}
+            if channel not in self.channel_messages[self.server]:
+                self.channel_messages[self.server][channel] = []
+            self.channel_messages[self.server][channel].append(message)
 
     def update_user_listbox(self, channel):
         current_users = self.channel_users.get(channel, [])
@@ -2772,15 +2790,21 @@ class RudeChatClient:
                 if line:  # Skip empty lines
                     # Send the line as a message
                     await self.send_message(f'PRIVMSG {self.current_channel} :{line}')
+                    
+                    # Get the mode symbol for the current user
+                    user_mode = self.get_user_mode(self.nickname, self.current_channel)
+                    mode_symbol = self.get_mode_symbol(user_mode) if user_mode else ''
+                    
+                    # Insert the message into the text widget
                     if self.use_time_stamp:
-                        self.gui.insert_text_widget(f"{timestamp}<{self.nickname}> {line}\n")
+                        self.gui.insert_text_widget(f"{timestamp}<{mode_symbol}{self.nickname}> {line}\n")
                     else:
-                        self.gui.insert_text_widget(f"<{self.nickname}> {line}\n")
+                        self.gui.insert_text_widget(f"<{mode_symbol}{self.nickname}> {line}\n")
                     self.gui.highlight_nickname()
 
                     # Check if it's a DM or channel
                     if self.current_channel.startswith(self.chantypes):  # It's a channel
-                        self.user_input_channel_message(line, timestamp)
+                        self.user_input_channel_message(line, timestamp, mode_symbol)
                     else:  # It's a DM
                         self.user_input_dm_message(line, timestamp)
 
@@ -2790,16 +2814,16 @@ class RudeChatClient:
                     else:
                         await asyncio.sleep(0.7)
 
-    def user_input_channel_message(self, chunk, timestamp):
+    def user_input_channel_message(self, chunk, timestamp, mode_symbol):
         if self.server not in self.channel_messages:
             self.channel_messages[self.server] = {}
         if self.current_channel not in self.channel_messages[self.server]:
             self.channel_messages[self.server][self.current_channel] = []
 
         if self.use_time_stamp == True:
-            self.channel_messages[self.server][self.current_channel].append(f"{timestamp}<{self.nickname}> {chunk}\n")
+            self.channel_messages[self.server][self.current_channel].append(f"{timestamp}<{mode_symbol}{self.nickname}> {chunk}\n")
         elif self.use_time_stamp == False:
-            self.channel_messages[self.server][self.current_channel].append(f"<{self.nickname}> {chunk}\n")
+            self.channel_messages[self.server][self.current_channel].append(f"<{mode_symbol}{self.nickname}> {chunk}\n")
 
         # Log the sent message using the new logging method
         self.log_message(self.server_name, self.current_channel, self.nickname, chunk, is_sent=True)

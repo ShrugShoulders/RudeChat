@@ -204,6 +204,26 @@ class RudePopOut:
     def copy_text_message(self):
         self.text_widget.event_generate("<<Copy>>")
 
+    def get_mode_symbol(self, mode):
+        """Return the symbol corresponding to the IRC mode."""
+        mode_symbols = {
+            'o': '@',
+            'v': '+',
+            'q': '~',
+            'a': '&',
+            'h': '%',
+        }
+        return mode_symbols.get(mode, '')
+
+    def get_user_mode(self, user, channel):
+        """Retrieve the user's mode for the given channel."""
+        try:
+            channel_modes = self.irc_client.user_modes.get(channel, {})
+            user_modes = channel_modes.get(user, set())
+            return next(iter(user_modes), None)  # Get the first mode if available, else None
+        except Exception as e:
+            print(f"Exception in get_user_mode: {e}")
+
     def send_text(self, event=None):
         try:
             user_text = self.entry.get()
@@ -216,6 +236,8 @@ class RudePopOut:
 
             # Determine the server and current channel
             server = self.irc_client.server
+            user_mode = self.get_user_mode(self.nick_name, self.selected_channel)
+            mode_symbol = self.get_mode_symbol(user_mode) if user_mode else ''
 
             # Check if the text is a command
             if user_text.startswith('/'):
@@ -231,7 +253,7 @@ class RudePopOut:
                 # Reset history_index to the end of entry_history
                 self.history_index = len(self.entry_history)
                 # Insert text in the main text widget
-                self.insert_text(f"{timestamp} <{self.nick_name}> {escaped_text}\n")
+                self.insert_text(f"{timestamp} <{mode_symbol}{self.nick_name}> {escaped_text}\n")
                 self.entry.delete(0, tk.END)
 
                 # Update channel_messages dictionary
@@ -240,7 +262,7 @@ class RudePopOut:
                 if current_channel not in self.irc_client.channel_messages[server]:
                     self.irc_client.channel_messages[server][current_channel] = []
 
-                self.irc_client.channel_messages[server][current_channel].append(f"{timestamp} <{self.nick_name}> {escaped_text}\n")
+                self.irc_client.channel_messages[server][current_channel].append(f"{timestamp} <{mode_symbol}{self.nick_name}> {escaped_text}\n")
 
                 self.log_message(self.irc_client.server_name, current_channel, self.nick_name, escaped_text, is_sent=True)
 

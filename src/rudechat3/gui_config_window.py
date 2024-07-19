@@ -10,25 +10,25 @@ class GuiConfigWindow:
 
         # Create main container frame
         main_frame = tk.Frame(self.root)
-        main_frame.pack(padx=10, pady=10, fill="both", expand=True)
+        main_frame.pack(padx=1, pady=1, fill="both", expand=True)
         
         # Create frames for GUI and WIDGETS sections
-        self.gui_frame = tk.LabelFrame(main_frame, text="GUI", padx=10, pady=10)
-        self.gui_frame.pack(side="left", padx=10, pady=10, fill="both", expand=True)
+        self.gui_frame = tk.LabelFrame(main_frame, text="GUI", padx=1, pady=1)
+        self.gui_frame.pack(side="left", padx=1, pady=1, fill="both", expand=True)
         
-        self.widgets_frame = tk.LabelFrame(main_frame, text="WIDGETS", padx=10, pady=10)
-        self.widgets_frame.pack(side="left", padx=10, pady=10, fill="both", expand=True)
+        self.widgets_frame = tk.LabelFrame(main_frame, text="WIDGETS", padx=1, pady=1)
+        self.widgets_frame.pack(side="left", padx=1, pady=1, fill="both", expand=True)
         
         # Create labels and entry fields for each configuration variable
         self.create_widgets()
 
         # Frame for save button and explanatory label
         bottom_frame = tk.Frame(self.root)
-        bottom_frame.pack(padx=10, pady=10, fill="both", expand=True)
+        bottom_frame.pack(padx=1, pady=1, fill="both", expand=True)
         
         # Button to save changes
         ttk.Button(bottom_frame, text="Save", command=self.save_changes).pack(pady=10)
-        tk.Label(bottom_frame, text="Once you click the Save button the GUI will automatically apply the settings.", wraplength=400).pack(pady=10)
+        tk.Label(bottom_frame, text="Once you click the Save button the GUI will automatically apply the settings.", wraplength=400).pack(pady=1)
 
     def create_widgets(self):
         config = configparser.ConfigParser()
@@ -47,7 +47,7 @@ class GuiConfigWindow:
 
     def create_setting_entry(self, frame, section, option, default_value):
         entry_frame = tk.Frame(frame)
-        entry_frame.pack(fill="x", pady=5)
+        entry_frame.pack(fill="x", pady=1)
 
         label = tk.Label(entry_frame, text=option.replace("_", " ").title(), anchor="w")
         label.pack(side="left")
