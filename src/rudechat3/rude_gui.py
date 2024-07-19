@@ -671,10 +671,11 @@ class RudeGui:
             self.server_menu.grab_release()
 
     def open_popout_query_from_menu(self):
+        modes_to_strip = ''.join(self.irc_client.mode_values)
         selected_user_index = self.user_listbox.curselection()
         if selected_user_index:
             selected_user = self.user_listbox.get(selected_user_index)
-            cleaned_nickname = selected_user.lstrip("~&@%+")
+            cleaned_nickname = selected_user.lstrip(modes_to_strip)
             user_input = f"/query {cleaned_nickname}"
             asyncio.run_coroutine_threadsafe(
                 self.irc_client.command_parser(user_input),
@@ -802,10 +803,11 @@ class RudeGui:
                 loop.create_task(self.irc_client.leave_channel(selected_channel))
 
     def whois_from_menu(self):
+        modes_to_strip = ''.join(self.irc_client.mode_values)
         selected_user_index = self.user_listbox.curselection()
         if selected_user_index:
             selected_user = self.user_listbox.get(selected_user_index)
-            cleaned_nickname = selected_user.lstrip('~&@%+')
+            cleaned_nickname = selected_user.lstrip(modes_to_strip)
             loop = asyncio.get_event_loop()
             loop.create_task(self.irc_client.whois(cleaned_nickname))
 
@@ -1306,7 +1308,7 @@ class RudeGui:
 
     def highlight_nickname(self):
         """Highlight the user's nickname in the text_widget."""
-        modes = ['@', '+', '~', '&', '%', '']
+        modes = self.irc_client.mode_values + ['']
         user_nickname = self.irc_client.nickname
         if not user_nickname:
             return
@@ -1346,8 +1348,9 @@ class RudeGui:
                 nickname_with_brackets = self.text_widget.get(start_idx, end_idx)
 
                 # Extract the nickname without modes
+                modes_to_strip = ''.join(self.irc_client.mode_values)
                 nickname = nickname_with_brackets.strip('<>')
-                plain_nickname = nickname.lstrip('@+~&%')
+                plain_nickname = nickname.lstrip(modes_to_strip)
 
                 # Check if the plain nickname color is already in the cache
                 if f"<{plain_nickname}>" in self.nickname_colors:
@@ -1437,6 +1440,7 @@ class RudeGui:
         """
         Tab complete with cycling through possible matches.
         """
+        modes_to_strip = ''.join(self.irc_client.mode_values)
         # Get the current input in the input entry field
         user_input = self.entry_widget.get()
         cursor_pos = self.entry_widget.index(tk.INSERT)
@@ -1461,7 +1465,7 @@ class RudeGui:
             user_list = self.user_listbox.get(0, tk.END)
 
         # Remove @ and + symbols from nicknames
-        user_list_cleaned = [nick.lstrip('~&@%+') for nick in user_list]
+        user_list_cleaned = [nick.lstrip(modes_to_strip) for nick in user_list]
 
         # Initialize or update completions list
         if not hasattr(self, 'tab_complete_completions') or not hasattr(self, 'last_tab_time') or (time.time() - self.last_tab_time) > 1.0:

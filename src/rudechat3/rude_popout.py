@@ -20,6 +20,7 @@ class RudePopOut:
         self.nick_name = nick_name
         self.main_app = main_app
         self.script_directory = os.path.dirname(os.path.abspath(__file__))
+        self.modes_to_strip = ''.join(self.irc_client.mode_values)
 
         # Load configuration from gui_config.ini
         self.load_configuration()
@@ -139,7 +140,7 @@ class RudePopOut:
         selected_user_index = self.user_listbox.curselection()
         if selected_user_index:
             selected_user = self.user_listbox.get(selected_user_index)
-            cleaned_nickname = selected_user.lstrip('~&@%+')
+            cleaned_nickname = selected_user.lstrip(self.modes_to_strip)
             user_input = f"/whois {cleaned_nickname}"
             asyncio.run_coroutine_threadsafe(
                 self.irc_client.command_parser(user_input),
@@ -163,7 +164,7 @@ class RudePopOut:
         selected_user_index = self.user_listbox.curselection()
         if selected_user_index:
             selected_user = self.user_listbox.get(selected_user_index)
-            cleaned_nickname = selected_user.lstrip("~&@%+")
+            cleaned_nickname = selected_user.lstrip(self.modes_to_strip)
             user_input = f"/query {cleaned_nickname}"
             asyncio.run_coroutine_threadsafe(
                 self.irc_client.command_parser(user_input),
@@ -206,14 +207,7 @@ class RudePopOut:
 
     def get_mode_symbol(self, mode):
         """Return the symbol corresponding to the IRC mode."""
-        mode_symbols = {
-            'o': '@',
-            'v': '+',
-            'q': '~',
-            'a': '&',
-            'h': '%',
-        }
-        return mode_symbols.get(mode, '')
+        return self.irc_client.mode_to_symbol.get(mode, '')
 
     def get_user_mode(self, user, channel):
         """Retrieve the user's mode for the given channel."""
@@ -326,7 +320,7 @@ class RudePopOut:
                 if len(args) < 3:
                     self.insert_text("Usage: /kick <user> <channel> [reason]\n")
                     return
-                user = args[1].lstrip('~&@%+')
+                user = args[1].lstrip(self.modes_to_strip)
                 channel = args[2]
                 reason = ' '.join(args[3:]) if len(args) > 3 else None
                 kick_message = f"Kicked {user} from {channel} for {reason}\n"
@@ -547,7 +541,7 @@ class RudePopOut:
             user_list = self.user_listbox.get(0, tk.END)
 
         # Remove @ and + symbols from nicknames
-        user_list_cleaned = [nick.lstrip('~&@%+') for nick in user_list]
+        user_list_cleaned = [nick.lstrip(self.modes_to_strip) for nick in user_list]
 
         # Initialize or update completions list
         if not self.tab_complete_completions or (time.time() - self.last_tab_time) > 1.0:

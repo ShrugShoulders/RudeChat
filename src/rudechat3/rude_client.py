@@ -21,6 +21,8 @@ class RudeChatClient:
         self.motd_lines = []
         self.ignore_list = []
         self.detached_channels = []
+        self.mode_keys = []
+        self.mode_values = []
         self.motd_dict = {}
         self.channel_messages = {}
         self.channel_users = {}
@@ -1220,14 +1222,7 @@ class RudeChatClient:
 
     def get_mode_symbol(self, mode):
         """Return the symbol corresponding to the IRC mode."""
-        mode_symbols = {
-            'o': '@',
-            'v': '+',
-            'q': '~',
-            'a': '&',
-            'h': '%',
-        }
-        return mode_symbols.get(mode, '')
+        return self.mode_to_symbol.get(mode, '')
 
     def get_user_mode(self, user, channel):
         """Retrieve the user's mode for the given channel."""
@@ -1349,6 +1344,7 @@ class RudeChatClient:
         self.update_user_listbox(channel)
 
     def handle_part(self, tokens):
+        modes_to_strip = ''.join(self.mode_values)
         user_info = tokens.hostmask.nickname
         user_mask = tokens.hostmask
         channel = tokens.params[0]
@@ -1379,7 +1375,7 @@ class RudeChatClient:
         user_found = False
         for user_with_symbol in self.channel_users.get(channel, []):
             # Check if the stripped user matches user_info
-            if user_with_symbol.lstrip('~&@%+') == user_info:
+            if user_with_symbol.lstrip(modes_to_strip) == user_info:
                 user_found = True
                 self.channel_users[channel].remove(user_with_symbol)
                 break
@@ -1392,6 +1388,7 @@ class RudeChatClient:
             pass
 
     def handle_quit(self, tokens):
+        modes_to_strip = ''.join(self.mode_values)
         user_info = tokens.hostmask.nickname
         user_mask = tokens.hostmask
         reason = tokens.params[0] if tokens.params else "No reason"
@@ -1405,7 +1402,7 @@ class RudeChatClient:
             user_found = False
             for idx, user_with_symbol in enumerate(users):
                 # Check if the stripped user matches user_info
-                if user_with_symbol.lstrip('~&@%+') == user_info:
+                if user_with_symbol.lstrip(modes_to_strip) == user_info:
                     user_found = True
                     del self.channel_users[channel][idx]
                     
@@ -1433,6 +1430,7 @@ class RudeChatClient:
                 self.update_user_listbox(channel)
 
     async def handle_nick(self, tokens):
+        modes_to_strip = ''.join(self.mode_values)
         old_nick = tokens.hostmask.nickname
         new_nick = tokens.params[0]
         message = f"\x0307(⟳)\x0F {old_nick} has changed their nickname to {new_nick}\n"
@@ -1441,9 +1439,9 @@ class RudeChatClient:
         for channel, users in self.channel_users.items():
             for idx, user_with_symbol in enumerate(users):
                 # Check if the stripped user matches old_nick
-                if user_with_symbol.lstrip('~&@%+') == old_nick:
+                if user_with_symbol.lstrip(modes_to_strip) == old_nick:
                     # Extract the mode symbols from the old nickname
-                    mode_symbols = ''.join([c for c in user_with_symbol if c in '~&@%+'])
+                    mode_symbols = ''.join([c for c in user_with_symbol if c in modes_to_strip])
                     
                     # Replace old_nick with new_nick, retaining the mode symbols
                     users[idx] = mode_symbols + new_nick
@@ -1599,16 +1597,10 @@ class RudeChatClient:
                     else:
                         print(f"User {user} not found in current modes. Adding with no modes.")
                         user_modes = set()
-                        if '@' in user:
-                            user_modes.add('o')
-                        if '+' in user:
-                            user_modes.add('v')
-                        if '~' in user:
-                            user_modes.add('q')
-                        if '&' in user:
-                            user_modes.add('a')
-                        if '%' in user:
-                            user_modes.add('h')
+                        for symbol, mode in self.symbol_to_mode.items():
+                            if symbol in user:
+                                user_modes.add(mode)
+                        # Update the current_modes dictionary
                         current_modes[user] = user_modes
                 else:
                     current_modes[user] = user_modes
@@ -1663,6 +1655,11 @@ class RudeChatClient:
         if channel in self.gui.popped_out_channels:
             window = self.gui.pop_out_windows[channel]
             window.update_gui_user_list(channel)
+
+    def get_modes(self):
+        self.mode_keys = list(self.mode_to_symbol.keys())
+        self.mode_values = list(self.mode_to_symbol.values())
+        return
                        
     def handle_isupport(self, tokens):
         params = tokens.params[:-1]  # Exclude the trailing "are supported by this server" message
@@ -1701,6 +1698,7 @@ class RudeChatClient:
                     'setting': list(mode_categories[2]),
                     'no_parameter': list(mode_categories[3])
                 }
+        self.get_modes()
 
     async def handle_who_reply(self, tokens):
         """
@@ -1850,6 +1848,7 @@ class RudeChatClient:
         """
         Handle the KICK event from the server.
         """
+        modes_to_strip = ''.join(self.mode_values)
         channel = tokens.params[0]
         kicked_nickname = tokens.params[1]
         reason = tokens.params[2] if len(tokens.params) > 2 else 'No reason provided'
@@ -1874,7 +1873,7 @@ class RudeChatClient:
         user_found = False
         for user_with_symbol in self.channel_users.get(channel, []):
             # Check if the stripped user matches kicked_nickname
-            if user_with_symbol.lstrip('~&@%+') == kicked_nickname:
+            if user_with_symbol.lstrip(modes_to_strip) == kicked_nickname:
                 user_found = True
                 self.channel_users[channel].remove(user_with_symbol)
                 break
@@ -2426,6 +2425,7 @@ class RudeChatClient:
             print(f"Error logging message: {e}")
 
     def handle_query_command(self, args, timestamp):
+        modes_to_strip = ''.join(self.mode_values)
         if len(args) < 2:
             self.gui.insert_text_widget(f"Error: Please provide a nickname for the query command.\n")
             return
@@ -2433,7 +2433,7 @@ class RudeChatClient:
         nickname = args[1]
         
         # Remove @ and + symbols from the nickname
-        nickname = nickname.lstrip("~&@%+")
+        nickname = nickname.lstrip(modes_to_strip)
 
         if nickname not in self.joined_channels:
             self.open_dm(nickname, timestamp)
@@ -2491,10 +2491,11 @@ class RudeChatClient:
             self.channel_messages[self.server][channel] = []
 
     async def handle_kick_command(self, args):
+        modes_to_strip = ''.join(self.mode_values)
         if len(args) < 3:
             self.gui.insert_text_widget("Usage: /kick <user> <channel> [reason]\n")
             return
-        user = args[1].lstrip('~&@%+')
+        user = args[1].lstrip(modes_to_strip)
         channel = args[2]
         reason = ' '.join(args[3:]) if len(args) > 3 else None
         kick_message = f'KICK {channel} {user}' + (f' :{reason}' if reason else '')
