@@ -1142,7 +1142,7 @@ class RudeChatClient:
                     elif user_mention:
                         self.highlight_channel_if_not_current(target, sender, user_mention)
                 else:
-                    self.save_message(self.server, target, sender, message, is_sent=False)
+                    self.save_message(self.server, target, sender, message, mode_symbol, is_sent=False)
 
                     if sender not in self.gui.popped_out_channels:
                         self.display_message(timestamp, sender, message, target, mode_symbol, is_direct=True)
