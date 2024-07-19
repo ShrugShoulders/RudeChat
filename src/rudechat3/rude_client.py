@@ -1307,9 +1307,9 @@ class RudeChatClient:
         user_mask = tokens.hostmask
         channel = tokens.params[0]
         if self.show_full_hostmask == True:
-            join_message = f"\x0312(&)\x0F {user_mask} has joined channel {channel}\n"
+            join_message = f"\x0312(→)\x0F {user_mask} has joined channel {channel}\n"
         elif self.show_full_hostmask == False:
-            join_message = f"\x0312(&)\x0F {user_info} has joined channel {channel}\n"
+            join_message = f"\x0312(→)\x0F {user_info} has joined channel {channel}\n"
 
         # Update the message history for the channel
         if self.server not in self.channel_messages:
@@ -1353,9 +1353,9 @@ class RudeChatClient:
         user_mask = tokens.hostmask
         channel = tokens.params[0]
         if self.show_full_hostmask == True:
-            part_message = f"\x0304(X)\x0F {user_mask} has parted from channel {channel}\n"
+            part_message = f"\x0304(←)\x0F {user_mask} has parted from channel {channel}\n"
         elif self.show_full_hostmask == False:
-            part_message = f"\x0304(X)\x0F {user_info} has parted from channel {channel}\n"
+            part_message = f"\x0304(←)\x0F {user_info} has parted from channel {channel}\n"
 
         # Update the message history for the channel
         if self.server not in self.channel_messages:
@@ -1396,9 +1396,9 @@ class RudeChatClient:
         user_mask = tokens.hostmask
         reason = tokens.params[0] if tokens.params else "No reason"
         if self.show_full_hostmask == True:
-            quit_message = f"\x0304(X)\x0F {user_mask} has quit: {reason}\n"
+            quit_message = f"\x0304(←)\x0F {user_mask} has quit: {reason}\n"
         elif self.show_full_hostmask == False:
-            quit_message = f"\x0304(X)\x0F {user_info} has quit: {reason}\n"
+            quit_message = f"\x0304(←)\x0F {user_info} has quit: {reason}\n"
 
         # Remove the user from all channel_users lists
         for channel, users in self.channel_users.items():
@@ -1435,7 +1435,7 @@ class RudeChatClient:
     async def handle_nick(self, tokens):
         old_nick = tokens.hostmask.nickname
         new_nick = tokens.params[0]
-        message = f"\x0307(@)\x0F {old_nick} has changed their nickname to {new_nick}\n"
+        message = f"\x0307(⟳)\x0F {old_nick} has changed their nickname to {new_nick}\n"
 
         # Update the user's nick in all channel_users lists they are part of
         for channel, users in self.channel_users.items():
@@ -1861,7 +1861,7 @@ class RudeChatClient:
             self.channel_messages[self.server][channel] = []
 
         # Display the kick message in the chat window only if the channel is the current channel
-        kick_message_content = f"<X> {kicked_nickname} has been kicked from {channel} by {tokens.hostmask.nickname} ({reason})\n"
+        kick_message_content = f"\x0304(←)\x0F {kicked_nickname} has been kicked from {channel} by {tokens.hostmask.nickname} ({reason})\n"
         self.channel_messages[self.server][channel].append(kick_message_content)
 
         if channel == self.current_channel and self.gui.irc_client == self and channel not in self.gui.popped_out_channels:
