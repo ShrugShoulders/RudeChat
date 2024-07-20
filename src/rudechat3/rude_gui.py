@@ -628,7 +628,7 @@ class RudeGui:
         save_button = ttk.Button(root, text="Apply", command=config_window.save_config)
         save_button.pack(pady=10)
 
-        instruction_label = tk.Label(root, text="To create a new config file simply change the data in the fields above then edit the file name bellow the entry fields, configuration files must follow conf.exampleserver.rude format.", wraplength=400)
+        instruction_label = tk.Label(root, text="To create a new config file simply change the data in the fields above then edit the file name bellow the entry fields, configuration files must follow conf.exampleserver.rude format.", wraplength=180)
         instruction_label.pack()
 
         root.mainloop()

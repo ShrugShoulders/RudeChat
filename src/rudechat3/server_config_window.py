@@ -38,33 +38,47 @@ class ServerConfigWindow:
         self.create_widgets()
 
     def create_widgets(self):
-        if hasattr(self, 'main_frame') and self.main_frame.winfo_exists():
-            # Update existing widgets
-            for (section, option), entry in self.entries.items():
-                value = self.config.get(section, option)
-                entry.delete(0, tk.END)
-                entry.insert(0, value)
-        else:
-            # Create new widgets
-            self.main_frame = ttk.Frame(self.parent)
-            self.main_frame.pack(fill='both', expand=True)
+        # Create the canvas and scrollbar
+        self.canvas = tk.Canvas(self.parent)
+        self.scrollbar = ttk.Scrollbar(self.parent, orient="vertical", command=self.canvas.yview)
+        self.scrollable_frame = ttk.Frame(self.canvas)
 
-            self.entries = {}
+        # Configure the canvas and scrollbar
+        self.scrollable_frame.bind(
+            "<Configure>",
+            lambda e: self.canvas.configure(scrollregion=self.canvas.bbox("all"))
+        )
 
-            for section in self.config.sections():
-                section_frame = ttk.LabelFrame(self.main_frame, text=section)
-                section_frame.pack(padx=10, pady=5, fill='both', expand=True)
+        # Create a window on the canvas for the scrollable frame
+        self.canvas.create_window((0, 0), window=self.scrollable_frame, anchor="nw")
+        self.canvas.configure(yscrollcommand=self.scrollbar.set)
 
-                for option in self.config.options(section):
-                    label_text = self.label_map.get(option, option)
-                    label = ttk.Label(section_frame, text=label_text)
-                    label.grid(row=len(self.entries), column=0, padx=5, pady=2, sticky='e')
+        # Pack the canvas and scrollbar
+        self.canvas.pack(side="left", fill="both", expand=True)
+        self.scrollbar.pack(side="right", fill="y")
 
-                    entry = ttk.Entry(section_frame)
-                    entry.insert(0, self.config.get(section, option))
-                    entry.grid(row=len(self.entries), column=1, padx=5, pady=2, sticky='w')
+        # Add widgets to the scrollable frame
+        self.entries = {}
+        self.create_config_widgets()
 
-                    self.entries[(section, option)] = entry
+        # Set the window size
+        self.parent.geometry("600x400")  # Set the window size to 600x400
+
+    def create_config_widgets(self):
+        for section in self.config.sections():
+            section_frame = ttk.LabelFrame(self.scrollable_frame, text=section)
+            section_frame.pack(padx=10, pady=5, fill='both', expand=True)
+
+            for option in self.config.options(section):
+                label_text = self.label_map.get(option, option)
+                label = ttk.Label(section_frame, text=label_text)
+                label.grid(row=len(self.entries), column=0, padx=5, pady=2, sticky='e')
+
+                entry = ttk.Entry(section_frame)
+                entry.insert(0, self.config.get(section, option))
+                entry.grid(row=len(self.entries), column=1, padx=5, pady=2, sticky='w')
+
+                self.entries[(section, option)] = entry
 
     def save_config(self):
         try:
