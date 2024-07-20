@@ -32,7 +32,13 @@ class ServerConfigWindow:
             'custom_sounds': 'Custom Sounds',
             'mention_note_color': 'Mention Channel Highlight',
             'activity_note_color': 'Activity Channel Highlight',
-            'use_logging': 'Turn Logging On/Off'
+            'use_logging': 'Turn Logging On/Off',
+            'znc_connection': 'Use ZNC Connection',
+            'znc_password': 'ZNC Password',
+            'ignore_cert': 'Ignore SSL Cert',
+            'znc_user': 'ZNC Username',
+            'replace_pronouns': 'Replace Pronouns',
+            'display_user_modes': 'Display user Modes',
         }
 
         self.create_widgets()
