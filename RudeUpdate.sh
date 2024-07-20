@@ -36,30 +36,14 @@ fi
 
 pip install . || { echo "Failed to install package"; exit 1; }
 
-# Restore specific files from backup
-echo "Comparing and updating files from backup..."
+# Restore specific files
+echo "Restoring specific files from backup..."
 
-# Find all files in the backup directory
-for backup_file in "$BACKUP_DIR"/*; do
-    if [ -f "$backup_file" ]; then
-        basefile=$(basename "$backup_file")
-        destfile="$PYTHON_LIB_DIR/$basefile"
+# Remove existing files
+find "$PYTHON_LIB_DIR" \( -name "*.json" -o -name "gui_config.ini" -o -name "*.rude" -o -name "filtered_channels.txt" -o -name "ignore_list.txt" \) -exec rm -f {} \;
 
-        if [ -f "$destfile" ]; then
-            # Compare files
-            if ! diff "$backup_file" "$destfile" > /dev/null; then
-                echo "Differences found in $basefile. Updating..."
-                cp "$backup_file" "$destfile"
-            else
-                echo "$basefile is up to date."
-            fi
-        else
-            # If the file doesn't exist in the destination, just copy it
-            echo "$basefile not found in destination. Copying..."
-            cp "$backup_file" "$destfile"
-        fi
-    fi
-done
+# Copy backup files
+find "$BACKUP_DIR" \( -name "*.json" -o -name "gui_config.ini" -o -name "*.rude" -o -name "filtered_channels.txt" -o -name "ignore_list.txt" \) -exec cp {} "$PYTHON_LIB_DIR" \;
 
 # Remove the destination directory
 echo "Removing directories..."
