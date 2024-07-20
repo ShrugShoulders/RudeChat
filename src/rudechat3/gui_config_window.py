@@ -27,8 +27,7 @@ class GuiConfigWindow:
         bottom_frame.pack(padx=1, pady=1, fill="both", expand=True)
         
         # Button to save changes
-        ttk.Button(bottom_frame, text="Save", command=self.save_changes).pack(pady=10)
-        tk.Label(bottom_frame, text="Once you click the Save button the GUI will automatically apply the settings.", wraplength=400).pack(pady=1)
+        ttk.Button(bottom_frame, text="Apply", command=self.save_changes).pack(pady=10)
 
     def create_widgets(self):
         config = configparser.ConfigParser()
