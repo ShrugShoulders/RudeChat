@@ -12,12 +12,6 @@ if ! command -v git &> /dev/null; then
     exit 1
 fi
 
-# Check if diff is installed
-if ! command -v diff &> /dev/null; then
-    echo "diff is not installed. Please install diff and try again."
-    exit 1
-fi
-
 # Create directories if they do not exist
 mkdir -p "$DEST_DIR"
 mkdir -p "$BACKUP_DIR"
@@ -42,33 +36,28 @@ fi
 
 pip install . || { echo "Failed to install package"; exit 1; }
 
-# Restore specific files
-echo "Restoring specific files from backup..."
+# Restore specific files from backup
+echo "Comparing and updating files from backup..."
 
-# Compare and merge files
-for file in $(find "$BACKUP_DIR" \( -name "*.json" -o -name "gui_config.ini" -o -name "*.rude" -o -name "filtered_channels.txt" -o -name "ignore_list.txt" \)); do
-    # Get the base name of the file
-    base_file=$(basename "$file")
+# Find all files in the backup directory
+for backup_file in "$BACKUP_DIR"/*; do
+    if [ -f "$backup_file" ]; then
+        basefile=$(basename "$backup_file")
+        destfile="$PYTHON_LIB_DIR/$basefile"
 
-    # Generate corresponding file path in destination directory
-    dest_file="$PYTHON_LIB_DIR/$base_file"
-
-    # Check if the destination file exists
-    if [ -f "$dest_file" ]; then
-        # Use diff to get missing lines
-        missing_lines=$(diff "$dest_file" "$file" | grep "^< " | sed 's/^< //')
-
-        # If there are missing lines, append them
-        if [ -n "$missing_lines" ]; then
-            echo "$missing_lines" >> "$dest_file"
-            echo "Updated $dest_file with missing lines from backup."
+        if [ -f "$destfile" ]; then
+            # Compare files
+            if ! diff "$backup_file" "$destfile" > /dev/null; then
+                echo "Differences found in $basefile. Updating..."
+                cp "$backup_file" "$destfile"
+            else
+                echo "$basefile is up to date."
+            fi
         else
-            echo "$dest_file is up-to-date."
+            # If the file doesn't exist in the destination, just copy it
+            echo "$basefile not found in destination. Copying..."
+            cp "$backup_file" "$destfile"
         fi
-    else
-        # If the destination file does not exist, copy the backup file
-        echo "$dest_file does not exist. Copying from backup..."
-        cp "$file" "$dest_file"
     fi
 done
 
