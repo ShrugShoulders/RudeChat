@@ -191,9 +191,6 @@ class RudeGui:
 
         self.master.after(0, self.bind_return_key)
 
-        # Bind the Ctrl key press to deselect the current widget
-        self.master.bind('<Control_L>', self.deselect_current_widget)
-        self.master.bind('<Control_R>', self.deselect_current_widget)
         self.master.bind('<Control-a>', self.select_short_all_text)
         self.master.bind('<Control-Prior>', self.switch_to_previous_channel)
         self.master.bind('<Control-Next>', self.switch_to_next_channel)
@@ -205,9 +202,6 @@ class RudeGui:
             self.entry_widget.select_range(0, tk.END)
         except tk.TclError:
             pass
-
-    def deselect_current_widget(self, event):
-        self.master.focus_set()
 
     def client_shutdown(self):
         self.save_nickname_colors()
