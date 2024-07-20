@@ -12,6 +12,12 @@ if ! command -v git &> /dev/null; then
     exit 1
 fi
 
+# Check if diff is installed
+if ! command -v diff &> /dev/null; then
+    echo "diff is not installed. Please install diff and try again."
+    exit 1
+fi
+
 # Create directories if they do not exist
 mkdir -p "$DEST_DIR"
 mkdir -p "$BACKUP_DIR"
@@ -39,7 +45,7 @@ pip install . || { echo "Failed to install package"; exit 1; }
 # Restore specific files
 echo "Restoring specific files from backup..."
 
-# Create diff files and apply patches
+# Compare and merge files
 for file in $(find "$BACKUP_DIR" \( -name "*.json" -o -name "gui_config.ini" -o -name "*.rude" -o -name "filtered_channels.txt" -o -name "ignore_list.txt" \)); do
     # Get the base name of the file
     base_file=$(basename "$file")
@@ -49,16 +55,15 @@ for file in $(find "$BACKUP_DIR" \( -name "*.json" -o -name "gui_config.ini" -o 
 
     # Check if the destination file exists
     if [ -f "$dest_file" ]; then
-        # Generate diff file
-        diff -u "$dest_file" "$file" > "$BACKUP_DIR/${base_file}.diff"
+        # Use diff to get missing lines
+        missing_lines=$(diff "$dest_file" "$file" | grep "^< " | sed 's/^< //')
 
-        # Apply diff file if it contains differences
-        if [ -s "$BACKUP_DIR/${base_file}.diff" ]; then
-            echo "Updating $dest_file from backup..."
-            patch "$dest_file" < "$BACKUP_DIR/${base_file}.diff"
+        # If there are missing lines, append them
+        if [ -n "$missing_lines" ]; then
+            echo "$missing_lines" >> "$dest_file"
+            echo "Updated $dest_file with missing lines from backup."
         else
             echo "$dest_file is up-to-date."
-            rm "$BACKUP_DIR/${base_file}.diff"  # Remove empty diff files
         fi
     else
         # If the destination file does not exist, copy the backup file
