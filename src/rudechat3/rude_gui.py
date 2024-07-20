@@ -599,7 +599,7 @@ class RudeGui:
             root.after(200, close_window)
 
         root = tk.Tk()
-        root.title("Server Configuration Window")
+        root.title("Rude Server configuration")
 
         files = os.listdir(self.script_directory)
         config_files = [f for f in files if f.startswith("conf.") and f.endswith(".rude")]
