@@ -39,11 +39,33 @@ pip install . || { echo "Failed to install package"; exit 1; }
 # Restore specific files
 echo "Restoring specific files from backup..."
 
-# Remove existing files
-find "$PYTHON_LIB_DIR" \( -name "*.json" -o -name "gui_config.ini" -o -name "*.rude" -o -name "filtered_channels.txt" -o -name "ignore_list.txt" \) -exec rm -f {} \;
+# Create diff files and apply patches
+for file in $(find "$BACKUP_DIR" \( -name "*.json" -o -name "gui_config.ini" -o -name "*.rude" -o -name "filtered_channels.txt" -o -name "ignore_list.txt" \)); do
+    # Get the base name of the file
+    base_file=$(basename "$file")
 
-# Copy backup files
-find "$BACKUP_DIR" \( -name "*.json" -o -name "gui_config.ini" -o -name "*.rude" -o -name "filtered_channels.txt" -o -name "ignore_list.txt" \) -exec cp {} "$PYTHON_LIB_DIR" \;
+    # Generate corresponding file path in destination directory
+    dest_file="$PYTHON_LIB_DIR/$base_file"
+
+    # Check if the destination file exists
+    if [ -f "$dest_file" ]; then
+        # Generate diff file
+        diff -u "$dest_file" "$file" > "$BACKUP_DIR/${base_file}.diff"
+
+        # Apply diff file if it contains differences
+        if [ -s "$BACKUP_DIR/${base_file}.diff" ]; then
+            echo "Updating $dest_file from backup..."
+            patch "$dest_file" < "$BACKUP_DIR/${base_file}.diff"
+        else
+            echo "$dest_file is up-to-date."
+            rm "$BACKUP_DIR/${base_file}.diff"  # Remove empty diff files
+        fi
+    else
+        # If the destination file does not exist, copy the backup file
+        echo "$dest_file does not exist. Copying from backup..."
+        cp "$file" "$dest_file"
+    fi
+done
 
 # Remove the destination directory
 echo "Removing directories..."
