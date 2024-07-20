@@ -457,6 +457,7 @@ class RudeChatClient:
                     case "PRIVMSG":
                         if self.znc_connection:
                             PRIVMSGTOKENS.append(tokens)
+                            reset_timer("*")
                         else:
                             await self.handle_privmsg(tokens)
 
@@ -3414,7 +3415,8 @@ class RudeChatClient:
             "Key Bindings": [
                 "Alt+num(0,9) - switches to that channels index in the channel list.",
                 "Alt+s - Cycles through the servers",
-                "ctrl+tab - Cycles through the channels",
+                "ctrl+pgup - Cycles through the channels up",
+                "ctrl+pgdwn - Cycles through the channels down",
                 "_________",
             ],
             "Fun": [
