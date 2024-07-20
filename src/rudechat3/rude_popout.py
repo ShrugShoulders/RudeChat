@@ -51,7 +51,7 @@ class RudePopOut:
         self.frame.columnconfigure(1, weight=0)
 
         # Main text widget (scrolled text)
-        self.text_widget = scrolledtext.ScrolledText(self.frame, wrap=tk.WORD)
+        self.text_widget = scrolledtext.ScrolledText(self.frame, wrap=tk.WORD, cursor="arrow")
         self.text_widget.grid(row=0, column=0, sticky="nsew")
         self.text_widget.configure(bg=self.widgets_bg_color, fg=self.widgets_fg_color, font=(self.font_family, self.font_size))
 

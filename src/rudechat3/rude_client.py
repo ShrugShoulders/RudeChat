@@ -949,12 +949,13 @@ class RudeChatClient:
                 window.highlight_nickname()
             else:
                 # If it's not the currently viewed channel, highlight the channel in green in the Listbox
-                for idx in range(self.gui.channel_listbox.size()):
-                    if self.gui.channel_listbox.get(idx) == target:
-                        current_bg = self.gui.channel_listbox.itemcget(idx, 'bg')
-                        if current_bg != 'red':
-                            self.gui.channel_listbox.itemconfig(idx, {'bg':self.activity_note_color})
-                        break
+                if target != self.current_channel:
+                    for idx in range(self.gui.channel_listbox.size()):
+                        if self.gui.channel_listbox.get(idx) == target:
+                            current_bg = self.gui.channel_listbox.itemcget(idx, 'bg')
+                            if current_bg != 'red':
+                                self.gui.channel_listbox.itemconfig(idx, {'bg':self.activity_note_color})
+                            break
         except Exception as e:
             print(f"Exception in handle_action_ctcp: {e}")
 
