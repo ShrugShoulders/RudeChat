@@ -192,6 +192,14 @@ class RudeGui:
 
         self.master.after(0, self.bind_return_key)
 
+        # Bind the Ctrl key press to deselect the current widget
+        self.master.bind('<Control_L>', self.deselect_current_widget)
+        self.master.bind('<Control_R>', self.deselect_current_widget)
+
+    def deselect_current_widget(self, event):
+        # Set the focus to the root window, effectively deselecting the current widget
+        self.master.focus_set()
+        
     def client_shutdown(self):
         self.save_nickname_colors()
         # Close all pop-out windows

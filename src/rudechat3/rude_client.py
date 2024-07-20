@@ -961,8 +961,15 @@ class RudeChatClient:
 
     def trim_messages(self):
         for server, channels in self.channel_messages.items():
+            # Identify keys to be deleted
+            keys_to_delete = [channel for channel in channels.keys() if channel.startswith('&')]
+            
+            # Delete identified keys
+            for key in keys_to_delete:
+                del channels[key]
+            
+            # Trim the message history for remaining channels to the last 125 messages
             for channel, messages in channels.items():
-                # Trim the message history to the last 150 messages
                 channels[channel] = messages[-125:]
 
     async def notify_user_of_mention(self, server, channel, sender, message):
@@ -2560,6 +2567,28 @@ class RudeChatClient:
 
         self.gui.insert_text_widget("Disconnected\n")
 
+    def handle_mentions_command(self):
+        mentions_channel = "&MENTIONS&"
+        if mentions_channel not in self.joined_channels:
+            self.joined_channels.append(mentions_channel)
+            self.gui.channel_lists[self.server] = self.joined_channels
+            self.update_gui_channel_list()
+
+        if mentions_channel not in self.channel_messages[self.server]:
+            self.channel_messages[self.server][mentions_channel] = []
+
+        for target, messages in self.mentions.items():
+            mention_header = f"Mentions for {target}:\n"
+            self.channel_messages[self.server][mentions_channel].append(mention_header)
+            for message in messages:
+                mention_message = f" - {message}\n"
+                self.channel_messages[self.server][mentions_channel].append(mention_message)
+
+        self.gui.highlight_nickname()
+                
+        # Update the GUI to show the new mentions in the mentions channel
+        self.gui.insert_and_scroll()
+
     async def command_parser(self, user_input):
         args = user_input[1:].split() if user_input.startswith('/') else []
         primary_command = args[0] if args else None
@@ -2588,17 +2617,12 @@ class RudeChatClient:
 
             case "mentions":
                 if len(args) > 1 and args[1] == "clear":
-                    self.mentions.clear()  
+                    self.mentions.clear()
                     self.gui.insert_text_widget(f"All mentions have been cleared.\n")
                 elif not self.mentions:
                     self.gui.insert_text_widget(f"No mentions found.\n")
                 else:
-                    for target, messages in self.mentions.items():
-                        self.gui.insert_text_widget(f"Mentions for {target}:\n")
-                        for message in messages:
-                            self.gui.insert_text_widget(f" - {message}\n")
-
-                    self.gui.highlight_nickname()
+                    self.handle_mentions_command()
 
             case "away":  # set the user as away
                 away_message = " ".join(args[1:]) if len(args) > 1 else None
