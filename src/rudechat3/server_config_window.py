@@ -38,30 +38,35 @@ class ServerConfigWindow:
             'ignore_cert': 'Ignore SSL Cert',
             'znc_user': 'ZNC Username',
             'replace_pronouns': 'Replace Pronouns',
-            'display_user_modes': 'Display user Modes',
+            'display_user_modes': 'Display User Modes',
         }
 
         self.create_widgets()
 
     def create_widgets(self):
-        # Create the canvas and scrollbar
-        self.canvas = tk.Canvas(self.parent)
-        self.scrollbar = ttk.Scrollbar(self.parent, orient="vertical", command=self.canvas.yview)
-        self.scrollable_frame = ttk.Frame(self.canvas)
+        # Clear existing widgets if they exist
+        if hasattr(self, 'scrollable_frame') and self.scrollable_frame.winfo_exists():
+            for widget in self.scrollable_frame.winfo_children():
+                widget.destroy()
+        else:
+            # Create the canvas and scrollbar
+            self.canvas = tk.Canvas(self.parent)
+            self.scrollbar = ttk.Scrollbar(self.parent, orient="vertical", command=self.canvas.yview)
+            self.scrollable_frame = ttk.Frame(self.canvas)
 
-        # Configure the canvas and scrollbar
-        self.scrollable_frame.bind(
-            "<Configure>",
-            lambda e: self.canvas.configure(scrollregion=self.canvas.bbox("all"))
-        )
+            # Configure the canvas and scrollbar
+            self.scrollable_frame.bind(
+                "<Configure>",
+                lambda e: self.canvas.configure(scrollregion=self.canvas.bbox("all"))
+            )
 
-        # Create a window on the canvas for the scrollable frame
-        self.canvas.create_window((0, 0), window=self.scrollable_frame, anchor="nw")
-        self.canvas.configure(yscrollcommand=self.scrollbar.set)
+            # Create a window on the canvas for the scrollable frame
+            self.canvas.create_window((0, 0), window=self.scrollable_frame, anchor="nw")
+            self.canvas.configure(yscrollcommand=self.scrollbar.set)
 
-        # Pack the canvas and scrollbar
-        self.canvas.pack(side="left", fill="both", expand=True)
-        self.scrollbar.pack(side="right", fill="y")
+            # Pack the canvas and scrollbar
+            self.canvas.pack(side="left", fill="both", expand=True)
+            self.scrollbar.pack(side="right", fill="y")
 
         # Add widgets to the scrollable frame
         self.entries = {}
