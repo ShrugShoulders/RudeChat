@@ -137,7 +137,6 @@ class RudeGui:
         self.channel_scrollbar.grid(row=3, column=1, sticky='ns')
         self.channel_listbox.bind('<ButtonRelease-1>', self.on_channel_click)
         self.channel_listbox.bind("<Button-3>", self.show_channel_list_menu)
-        self.master.bind("<Control-Tab>", self.switch_to_next_channel)
         self.master.bind("<Alt-KeyPress>", self._switch_to_index)
         self.master.bind("<Alt-s>", self.cycle_servers)
 
@@ -195,11 +194,21 @@ class RudeGui:
         # Bind the Ctrl key press to deselect the current widget
         self.master.bind('<Control_L>', self.deselect_current_widget)
         self.master.bind('<Control_R>', self.deselect_current_widget)
+        self.master.bind('<Control-a>', self.select_short_all_text)
+        self.master.bind('<Control-Prior>', self.switch_to_previous_channel)
+        self.master.bind('<Control-Next>', self.switch_to_next_channel)
+
+    def select_short_all_text(self, event):
+        try:
+            # Select all text in the entry widget
+            self.entry_widget.focus_set()
+            self.entry_widget.select_range(0, tk.END)
+        except tk.TclError:
+            pass
 
     def deselect_current_widget(self, event):
-        # Set the focus to the root window, effectively deselecting the current widget
         self.master.focus_set()
-        
+
     def client_shutdown(self):
         self.save_nickname_colors()
         # Close all pop-out windows
@@ -1212,6 +1221,46 @@ class RudeGui:
         self.channel_listbox.see(next_index)
 
         # Prevent further event processing
+        return "break"
+
+    def switch_to_previous_channel(self, event):
+        # Set background of currently selected channel back to default
+        current_selected_channel = self.irc_client.current_channel
+        if current_selected_channel:
+            for i in range(self.channel_listbox.size()):
+                if self.channel_listbox.get(i) == current_selected_channel:
+                    self.channel_listbox.itemconfig(i, {'bg': self.channel_listbox_bg})
+                    break
+
+        # Get index of currently selected item
+        selected_index = self.channel_listbox.curselection()
+
+        # Calculate index of the previous item up
+        if self.last_selected_index is None:
+            previous_index = self.channel_listbox.size() - 1
+        else:
+            previous_index = (self.last_selected_index - 1) % self.channel_listbox.size()
+
+        # Get the channel name of the previous item up
+        previous_channel = self.channel_listbox.get(previous_index)
+
+        # Switch to the previous channel
+        self.switch_channel(previous_channel)
+
+        # Turn background blue for the previous channel
+        self.channel_listbox.itemconfig(previous_index, {'bg': self.channel_select_color})
+        self.highlight_nickname()
+
+        # Remove the previous channel from highlighted_channels dictionary if present
+        if self.irc_client.server_name in self.irc_client.highlighted_channels:
+            server_highlighted_channels = self.irc_client.highlighted_channels[self.irc_client.server_name]
+            if previous_channel in server_highlighted_channels:
+                del server_highlighted_channels[previous_channel]
+
+        # Update last selected index
+        self.last_selected_index = previous_index
+        self.channel_listbox.see(previous_index)
+
         return "break"
 
     def on_channel_click(self, event):
