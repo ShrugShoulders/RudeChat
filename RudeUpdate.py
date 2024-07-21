@@ -19,7 +19,6 @@ def merge_ini_files(updated_file, backup_file):
 
     print(f"Called merge_ini_files with: updated_file={updated_file}, backup_file={backup_file}")
 
-    # Print existing options in backup file
     print(f"Existing options in backup file before merge:")
     for section in backup_config.sections():
         for key, value in backup_config.items(section):
@@ -40,13 +39,11 @@ def merge_ini_files(updated_file, backup_file):
             else:
                 print(f"Existing option: [{section}] {key} = {value} (not updated)")
 
-    # Print options in backup file after merge
     print(f"Options in backup file after merge:")
     for section in backup_config.sections():
         for key, value in backup_config.items(section):
             print(f"[{section}] {key} = {value}")
 
-    # Write the merged configuration back to the backup file
     write_ini_file(backup_config, backup_file)
     print(f"Completed merge for {backup_file}")
 
@@ -98,6 +95,7 @@ def main():
     # Backup .rude and .ini files
     backup_files(PYTHON_LIB_DIR, BACKUP_DIR, '.rude')
     backup_files(PYTHON_LIB_DIR, BACKUP_DIR, '.ini')
+    backup_files(PYTHON_LIB_DIR, BACKUP_DIR, '.json')
     
     # Clone and install the repository
     clone_and_install_repo(REPO_URL, DEST_DIR)
@@ -113,6 +111,7 @@ def main():
     
     # Restore .rude files to the Python lib directory
     restore_files(PYTHON_LIB_DIR, BACKUP_DIR, '.rude')
+    restore_files(PYTHON_LIB_DIR, BACKUP_DIR, '.json')
 
 if __name__ == "__main__":
     main()
