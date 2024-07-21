@@ -85,12 +85,21 @@ def restore_files(src_dir, backup_dir, file_ext):
             os.remove(src_file)
         shutil.copy(backup_file, src_dir)
 
+def remove_directory(dir_path):
+    if os.path.exists(dir_path):
+        print(f"Removing directory: {dir_path}")
+        shutil.rmtree(dir_path)
+    else:
+        print(f"Directory not found: {dir_path}")
+
 def main():
     HOME = os.path.expanduser("~")
     REPO_URL = "https://github.com/ShrugShoulders/RudeChat"
     DEST_DIR = os.path.join(HOME, "Documents", "RudeChatUpdate")
     BACKUP_DIR = os.path.join(HOME, "Documents", "backup_rudechat_files")
     PYTHON_LIB_DIR = os.path.join(HOME, ".local", "lib", "python3.12", "site-packages", "rudechat3")
+
+    remove_directory(DEST_DIR)
     
     # Backup .rude and .ini files
     backup_files(PYTHON_LIB_DIR, BACKUP_DIR, '.rude')
@@ -112,6 +121,8 @@ def main():
     # Restore .rude files to the Python lib directory
     restore_files(PYTHON_LIB_DIR, BACKUP_DIR, '.rude')
     restore_files(PYTHON_LIB_DIR, BACKUP_DIR, '.json')
+
+    remove_directory(DEST_DIR)
 
 if __name__ == "__main__":
     main()
