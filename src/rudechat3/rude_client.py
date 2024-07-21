@@ -1398,7 +1398,10 @@ class RudeChatClient:
                 break
 
         if user_found:
-            # Update the user listbox for the channel
+            # Update the user listbox for the channel & Modes
+            current_modes = self.user_modes.get(channel, {})
+            user_modes = current_modes.get(user_info, set())
+            current_modes.pop(user_info, None)
             self.update_user_listbox(channel)
         else:
             print(f"{user_info} User not found.")
@@ -1443,7 +1446,10 @@ class RudeChatClient:
                     break
 
             if user_found:
-                # Update the user listbox for the channel
+                # Update the user listbox for the channel & Modes
+                current_modes = self.user_modes.get(channel, {})
+                user_modes = current_modes.get(user_info, set())
+                current_modes.pop(user_info, None)
                 self.update_user_listbox(channel)
 
     async def handle_nick(self, tokens):
@@ -1897,6 +1903,9 @@ class RudeChatClient:
 
         if user_found:
             # Update the user listbox for the channel
+            current_modes = self.user_modes.get(channel, {})
+            user_modes = current_modes.get(user_info, set())
+            current_modes.pop(user_info, None)
             self.update_user_listbox(channel)
 
         if kicked_nickname == self.nickname:

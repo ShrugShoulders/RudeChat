@@ -308,6 +308,12 @@ def replace_pronouns(text, channel=None):
         }
 
         pronouns = {
+            r'\bhe\'s\b': 'they\'re',
+            r'\bshe\'s\b': 'they\'re',
+            r'\bhe\'ll\b': 'they\'ll',
+            r'\bshe\'ll\b': 'they\'ll',
+            r'\bhe\'d\b': 'they\'d',
+            r'\bshe\'d\b': 'they\'d',
             r'\bhe\b': 'they',
             r'\bhis\b': 'their',
             r'\bhim\b': 'them',
@@ -330,12 +336,6 @@ def replace_pronouns(text, channel=None):
             r'\bdudette\b': 'person',
             r'\bboy\b': 'kid',
             r'\bgirl\b': 'kid',
-            r'\bhe\'s\b': 'they\'re',
-            r'\bshe\'s\b': 'they\'re',
-            r'\bhe\'ll\b': 'they\'ll',
-            r'\bshe\'ll\b': 'they\'ll',
-            r'\bhe\'d\b': 'they\'d',
-            r'\bshe\'d\b': 'they\'d',
         }
         
         # Replace specific phrases
