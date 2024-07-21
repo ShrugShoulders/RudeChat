@@ -47,10 +47,22 @@ def merge_ini_files(updated_file, backup_file):
     write_ini_file(backup_config, backup_file)
     print(f"Completed merge for {backup_file}")
 
-def backup_files(src_dir, dest_dir, file_ext):
+def backup_files(src_dir, dest_dir, file_ext=None, specific_files=None):
     os.makedirs(dest_dir, exist_ok=True)
-    for file_path in glob.glob(os.path.join(src_dir, f'*{file_ext}')):
-        shutil.copy(file_path, dest_dir)
+    
+    # Back up files with the specified extension
+    if file_ext:
+        for file_path in glob.glob(os.path.join(src_dir, f'*{file_ext}')):
+            shutil.copy(file_path, dest_dir)
+    
+    # Back up specific files
+    if specific_files:
+        for file_name in specific_files:
+            src_file = os.path.join(src_dir, file_name)
+            if os.path.exists(src_file):
+                shutil.copy(src_file, dest_dir)
+            else:
+                print(f"Specific file not found: {src_file}")
 
 def clone_and_install_repo(repo_url, dest_dir):
     if os.path.exists(dest_dir):
@@ -76,7 +88,8 @@ def update_files(src_dir, backup_dir, file_ext, merge_function):
         else:
             print(f"No backup file found for: {file_name}")
 
-def restore_files(src_dir, backup_dir, file_ext):
+def restore_files(src_dir, backup_dir, file_ext, specific_files=None):
+    # Restore files with the specified extension
     backup_files = glob.glob(os.path.join(backup_dir, f'*{file_ext}'))
     for backup_file in backup_files:
         file_name = os.path.basename(backup_file)
@@ -84,7 +97,18 @@ def restore_files(src_dir, backup_dir, file_ext):
         if os.path.exists(src_file):
             os.remove(src_file)
         shutil.copy(backup_file, src_dir)
-
+    
+    # Restore specific files
+    if specific_files:
+        for file_name in specific_files:
+            backup_file = os.path.join(backup_dir, file_name)
+            src_file = os.path.join(src_dir, file_name)
+            if os.path.exists(backup_file):
+                if os.path.exists(src_file):
+                    os.remove(src_file)
+                shutil.copy(backup_file, src_dir)
+            else:
+                print(f"Specific file not found in backup: {backup_file}")
 def remove_directory(dir_path):
     if os.path.exists(dir_path):
         print(f"Removing directory: {dir_path}")
@@ -98,6 +122,7 @@ def main():
     DEST_DIR = os.path.join(HOME, "Documents", "RudeChatUpdate")
     BACKUP_DIR = os.path.join(HOME, "Documents", "backup_rudechat_files")
     PYTHON_LIB_DIR = os.path.join(HOME, ".local", "lib", "python3.12", "site-packages", "rudechat3")
+    specific_files = ['filtered_channels.txt', 'ignore_list.txt', 'token_error_log.txt']
 
     remove_directory(DEST_DIR)
     
@@ -105,6 +130,7 @@ def main():
     backup_files(PYTHON_LIB_DIR, BACKUP_DIR, '.rude')
     backup_files(PYTHON_LIB_DIR, BACKUP_DIR, '.ini')
     backup_files(PYTHON_LIB_DIR, BACKUP_DIR, '.json')
+    backup_files(PYTHON_LIB_DIR, BACKUP_DIR, None, specific_files)
     
     # Clone and install the repository
     clone_and_install_repo(REPO_URL, DEST_DIR)
@@ -120,7 +146,7 @@ def main():
     
     # Restore .rude files to the Python lib directory
     restore_files(PYTHON_LIB_DIR, BACKUP_DIR, '.rude')
-    restore_files(PYTHON_LIB_DIR, BACKUP_DIR, '.json')
+    restore_files(PYTHON_LIB_DIR, BACKUP_DIR, '.json', specific_files)
 
     remove_directory(DEST_DIR)
 
