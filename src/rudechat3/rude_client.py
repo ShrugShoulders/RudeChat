@@ -341,9 +341,11 @@ class RudeChatClient:
         count_366 = 0
         got_topic = 0
         last_366_time = None
-        TIMEOUT_SECONDS = 0.17
+        TIMEOUT_SECONDS = 0.2
         MAX_WAIT_TIME = 60
         PRIVMSGTOKENS = []
+        NAMESTOKENS = []
+        TOPICTOKENS = []
 
         start_time = asyncio.get_event_loop().time()
 
@@ -352,7 +354,7 @@ class RudeChatClient:
             num_tokens = len(PRIVMSGTOKENS)
             block_thresholds = [num_tokens // len(symbol_list) * (i + 1) for i in range(len(symbol_list))]
 
-            self.gui.insert_text_widget(f'\n\x0307\x02Processing Messages: \x0F')
+            self.gui.insert_text_widget(f'\n\x0307\x02Processing Tokens: \x0F')
             for i, tokens in enumerate(PRIVMSGTOKENS):
                 for j, threshold in enumerate(block_thresholds):
                     if i < threshold:
@@ -393,6 +395,10 @@ class RudeChatClient:
                 if check_timeout():
                     # Timeout occurred
                     if self.znc_connection:
+                        for token in TOPICTOKENS:
+                            self.handle_topic(token)
+                        for tokens in NAMESTOKENS:
+                            self.handle_names_list(tokens)
                         await insert_processing_symbols(PRIVMSGTOKENS)
                         await asyncio.sleep(0.000001)
                         return
@@ -469,23 +475,27 @@ class RudeChatClient:
                         self.handle_328(tokens)
 
                     case "332" | "333" | "TOPIC":
-                        self.handle_topic(tokens)
                         got_topic += 1
                         if not self.use_auto_join:
+                            TOPICTOKENS.append(tokens)
                             reset_timer("%")
+                        else:
+                            self.handle_topic(tokens)
 
                     case "353":  # NAMES list
-                        self.handle_names_list(tokens)
                         if not self.use_auto_join:
+                            NAMESTOKENS.append(tokens)
                             reset_timer("&")
+                        else:
+                            self.handle_names_list(tokens)
                                 
                     case "366":  # End of NAMES list
-                        self.handle_end_of_names_list(tokens)
                         count_366 += 1
                         if not self.use_auto_join:
+                            NAMESTOKENS.append(tokens)
                             reset_timer("@")
-
                         elif self.use_auto_join:
+                            self.handle_names_list(tokens)
                             if count_366 >= len(self.joined_channels) and got_topic >= len(self.joined_channels) and znc_connected:
                                 return
 
@@ -558,6 +568,10 @@ class RudeChatClient:
                 if check_timeout():
                     # Timeout occurred
                     if self.znc_connection:
+                        for token in TOPICTOKENS:
+                            self.handle_topic(token)
+                        for tokens in NAMESTOKENS:
+                            self.handle_names_list(tokens)
                         await insert_processing_symbols(PRIVMSGTOKENS)
                         await asyncio.sleep(0.000001)
                         return
@@ -567,6 +581,10 @@ class RudeChatClient:
             if elapsed_time > MAX_WAIT_TIME:
                 if self.znc_connection:
                     self.gui.insert_text_widget("\nMaximum sync time exceeded\n")
+                    for token in TOPICTOKENS:
+                        self.handle_topic(token)
+                    for token in NAMESTOKENS:
+                        self.handle_names_list(token)
                     await insert_processing_symbols(PRIVMSGTOKENS)
                     await asyncio.sleep(0.000001)
                     return
@@ -609,13 +627,23 @@ class RudeChatClient:
         try:
             self.writer.write(f'{message}\r\n'.encode('UTF-8'))
             await asyncio.wait_for(self.writer.drain(), timeout=10)
-        except AttributeError as e:
-            pass
-        except (BrokenPipeError, TimeoutError) as e:
-            print("Connection lost or timeout while sending message.")
+        except ConnectionError as e:
+            # Handle any kind of connection error
+            print(f"ConnectionError occurred: {e}")
             self.loop_running = False
             await self.reconnect(self.config)
+        except AttributeError as e:
+            # Handle the case where `self.writer` is not set
+            print(f"AttributeError occurred: {e}")
+        except (BrokenPipeError, TimeoutError) as e:
+            # Handle specific errors related to the writer
+            print(f"BrokenPipeError or TimeoutError occurred: {e}")
+        except asyncio.CancelledError as e:
+            # Handle coroutine cancellation
+            print(f"Coroutine was cancelled: {e}")
+            self.loop_running = False
         except Exception as e:
+            # Catch all other exceptions
             print(f"Exception in send_message: {e}")
 
     def is_valid_channel(self, channel):
@@ -1167,6 +1195,7 @@ class RudeChatClient:
             formatted_message = f"{timestamp}<{mode_symbol}{sender}> {message}\n" if self.use_time_stamp else f"<{mode_symbol}{sender}> {message}\n"
             window.insert_text(formatted_message)
             window.highlight_nickname()
+            window.check_focus_and_notify(message)
 
     async def handle_channel_message(self, sender, target, message, timestamp, mode_symbol, znc_privmsg):
         if znc_privmsg:
@@ -1955,29 +1984,30 @@ class RudeChatClient:
                 f.write(f"{channel} - Users: {info['user_count']} - Topic: {info['topic']}\n")
 
     def handle_names_list(self, tokens):
-        current_channel = tokens.params[2]
-        users = tokens.params[3].split(" ")
+        command = tokens.command
 
-        # If this channel isn't in channel_users, initialize it with an empty list
-        if current_channel not in self.channel_users:
-            self.channel_users[current_channel] = []
+        if command == "353":
+            current_channel = tokens.params[2]
+            users = tokens.params[3].split(" ")
+            # If this channel isn't in channel_users, initialize it with an empty list
+            if current_channel not in self.channel_users:
+                self.channel_users[current_channel] = []
 
-        # Append the users to the channel's list only if they are not already in it
-        for user in users:
-            if user not in self.channel_users[current_channel]:
-                self.channel_users[current_channel].append(user)
-
-    def handle_end_of_names_list(self, tokens):
-        current_channel = tokens.params[1]
-        if current_channel:
-            # Get the list of users for the current channel or an empty list if the key doesn't exist
-            channel_users = self.channel_users.get(current_channel, [])
-            # Sort the list of users
-            sorted_users = self.sort_users(channel_users, current_channel)
-            # Update the channel users with the sorted list
-            self.channel_users[current_channel] = sorted_users
-            # Update the user listbox
-            self.update_user_listbox(current_channel)
+            # Append the users to the channel's list only if they are not already in it
+            for user in users:
+                if user not in self.channel_users[current_channel]:
+                    self.channel_users[current_channel].append(user)
+        if command == "366":
+            current_channel = tokens.params[1]
+            if current_channel:
+                # Get the list of users for the current channel or an empty list if the key doesn't exist
+                channel_users = self.channel_users.get(current_channel, [])
+                # Sort the list of users
+                sorted_users = self.sort_users(channel_users, current_channel)
+                # Update the channel users with the sorted list
+                self.channel_users[current_channel] = sorted_users
+                # Update the user listbox
+                self.update_user_listbox(current_channel)
 
     def handle_pong(self, tokens):
         pong_server = tokens.params[-1]  # Assumes the server name is the last parameter
@@ -2113,7 +2143,7 @@ class RudeChatClient:
                         self.handle_names_list(tokens)
                                 
                     case "366":  # End of NAMES list
-                        self.handle_end_of_names_list(tokens)
+                        self.handle_names_list(tokens)
 
                     case "305":
                         message = "You are no longer marked as being away"

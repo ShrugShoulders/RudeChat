@@ -8,6 +8,7 @@ import json
 import re
 import random
 import webbrowser
+from plyer import notification
 from threading import Thread
 from tkinter import scrolledtext, Listbox, Scrollbar, Tk, Frame, Label, Entry, Listbox, Menu, Scrollbar, StringVar, PhotoImage 
 from .format_decoder import Attribute, decoder
@@ -929,3 +930,42 @@ class RudePopOut:
         except Exception as e:
             print(f"Exception in set_topic: {e}")
 
+    def is_app_focused(self):
+        return bool(self.root.focus_displayof())
+
+    def check_focus_and_notify(self, message):
+        if not self.is_app_focused():
+            try:
+                self.trigger_desktop_notification(self.selected_channel, message)
+            except Exception as e:
+                print(f"Exception in check_focus_and_notify: {e}")
+
+    def trigger_desktop_notification(self, channel_name=None, message_content=None, title="RudePopOut"):
+        """
+        Show a system desktop notification.
+        """
+        script_directory = os.path.dirname(os.path.abspath(__file__))
+        if channel_name.startswith(self.irc_client.chantypes):
+            return
+
+        if channel_name:
+            # Ensure channel_name is a string and replace problematic characters
+            channel_name = str(channel_name).replace(f"{self.irc_client.chantypes}", "")
+            title = f"{title}"
+            if message_content:
+                message = f"{channel_name}: {message_content}"
+            else:
+                message = f"You've been pinged in {channel_name}!"
+
+        icon_path = os.path.join(script_directory, "rude.ico")
+
+        try:
+            # Desktop Notification
+            notification.notify(
+                title=title,
+                message=message,
+                app_icon=icon_path,  
+                timeout=3,  
+            )
+        except Exception as e:
+            print(f"Desktop notification error: {e}")

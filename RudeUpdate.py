@@ -109,6 +109,7 @@ def restore_files(src_dir, backup_dir, file_ext, specific_files=None):
                 shutil.copy(backup_file, src_dir)
             else:
                 print(f"Specific file not found in backup: {backup_file}")
+                
 def remove_directory(dir_path):
     if os.path.exists(dir_path):
         print(f"Removing directory: {dir_path}")

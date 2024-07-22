@@ -1442,7 +1442,7 @@ class RudeGui:
             if max(r, g, b) - min(r, g, b) > 50:  # 50 is the threshold, you can adjust this value as needed
                 return "#{:02x}{:02x}{:02x}".format(r, g, b)
 
-    def trigger_desktop_notification(self, channel_name=None, title="Ping", message_content=None):
+    def trigger_desktop_notification(self, channel_name=None, title="RudeChat", message_content=None):
         """
         Show a system desktop notification.
         """
@@ -1453,7 +1453,7 @@ class RudeGui:
 
         if channel_name:
             # Ensure channel_name is a string and replace problematic characters
-            channel_name = str(channel_name).replace("#", "")
+            channel_name = str(channel_name).replace(f"{self.irc_client.chantypes}", "")
             title = f"{title}"
             if message_content:
                 message = f"{channel_name}: {message_content}"
