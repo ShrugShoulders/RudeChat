@@ -431,17 +431,17 @@ class RudeChatClient:
 
                     case "001":
                         if self.znc_connection:
-                            reset_timer("!")
+                            reset_timer("")
                         self.gui.insert_text_widget(f'Connected to the server: {self.server}:{self.port}\n')
                         received_001 = True
                         self.gui.insert_and_scroll()
                     case "002" | "003" | "004":
                         if self.znc_connection:
-                            reset_timer("!")
+                            reset_timer("")
                         self.server_message_handler(tokens)
                     case "005":
                         if self.znc_connection:
-                            reset_timer("!")
+                            reset_timer("")
                         self.handle_isupport(tokens)
                         self.isupport_flag = True
                         self.gui.insert_and_scroll()
@@ -463,7 +463,7 @@ class RudeChatClient:
                     case "PRIVMSG":
                         if self.znc_connection:
                             PRIVMSGTOKENS.append(tokens)
-                            reset_timer("*")
+                            reset_timer("")
                         else:
                             await self.handle_privmsg(tokens)
 
@@ -478,14 +478,14 @@ class RudeChatClient:
                         got_topic += 1
                         if not self.use_auto_join:
                             TOPICTOKENS.append(tokens)
-                            reset_timer("%")
+                            reset_timer("")
                         else:
                             self.handle_topic(tokens)
 
                     case "353":  # NAMES list
                         if not self.use_auto_join:
                             NAMESTOKENS.append(tokens)
-                            reset_timer("&")
+                            reset_timer("")
                         else:
                             self.handle_names_list(tokens)
                                 
@@ -493,7 +493,7 @@ class RudeChatClient:
                         count_366 += 1
                         if not self.use_auto_join:
                             NAMESTOKENS.append(tokens)
-                            reset_timer("@")
+                            reset_timer("")
                         elif self.use_auto_join:
                             self.handle_names_list(tokens)
                             if count_366 >= len(self.joined_channels) and got_topic >= len(self.joined_channels) and znc_connected:
@@ -510,12 +510,12 @@ class RudeChatClient:
 
                     case "372":
                         if self.znc_connection:
-                            reset_timer("!")
+                            reset_timer("")
                         self.handle_motd_line(tokens)
 
                     case "375":
                         if self.znc_connection:
-                            reset_timer("!")
+                            reset_timer("")
                         self.handle_motd_start(tokens)
 
                     case "376":
@@ -531,10 +531,10 @@ class RudeChatClient:
                             if self.use_auto_join:
                                 await self.automatic_join()
                                 znc_connected = True
-                                reset_timer("!")
+                                reset_timer("")
                             elif not self.use_auto_join:
                                 znc_connected = True
-                                reset_timer("!")
+                                reset_timer("")
                         elif sasl_authenticated and self.isupport_flag and not self.znc_connection:
                             if self.use_auto_join:
                                 await self.automatic_join()
@@ -2139,10 +2139,7 @@ class RudeChatClient:
                         self.handle_error(tokens)
                     case "412":
                         pass
-                    case "353":  # NAMES list
-                        self.handle_names_list(tokens)
-                                
-                    case "366":  # End of NAMES list
+                    case "353" | "366":  # NAMES list
                         self.handle_names_list(tokens)
 
                     case "305":
