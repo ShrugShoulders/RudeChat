@@ -341,7 +341,7 @@ class RudeChatClient:
         count_366 = 0
         got_topic = 0
         last_366_time = None
-        TIMEOUT_SECONDS = 0.22
+        TIMEOUT_SECONDS = 0.15
         MAX_WAIT_TIME = 60
         PRIVMSGTOKENS = []
         NAMESTOKENS = []
@@ -367,7 +367,7 @@ class RudeChatClient:
             nonlocal last_366_time
             nonlocal sync
             if not self.use_auto_join:
-                last_366_time = asyncio.get_event_loop().time()
+                last_366_time = time.time()
                 if motd_received:
                     if sync:
                         self.gui.insert_text_widget(f'\x0307\x02Syncing with ZNC:\x0F ')
@@ -380,7 +380,7 @@ class RudeChatClient:
             if not self.use_auto_join:
                 if last_366_time is None:
                     return False
-                return asyncio.get_event_loop().time() - last_366_time > TIMEOUT_SECONDS
+                return time.time() - last_366_time > TIMEOUT_SECONDS
 
         while True:
             data = await self.reader.read(4096)
