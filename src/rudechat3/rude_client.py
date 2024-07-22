@@ -626,11 +626,6 @@ class RudeChatClient:
         try:
             self.writer.write(f'{message}\r\n'.encode('UTF-8'))
             await asyncio.wait_for(self.writer.drain(), timeout=10)
-        except ConnectionError as e:
-            # Handle any kind of connection error
-            print(f"ConnectionError occurred: {e}")
-            self.loop_running = False
-            await self.reconnect(self.config)
         except AttributeError as e:
             # Handle the case where `self.writer` is not set
             print(f"AttributeError occurred: {e}")
@@ -641,9 +636,6 @@ class RudeChatClient:
             # Handle coroutine cancellation
             print(f"Coroutine was cancelled: {e}")
             self.loop_running = False
-        except Exception as e:
-            # Catch all other exceptions
-            print(f"Exception in send_message: {e}")
 
     def is_valid_channel(self, channel):
         return any(channel.startswith(prefix) for prefix in self.chantypes)
