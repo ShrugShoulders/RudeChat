@@ -1024,6 +1024,7 @@ class RudeChatClient:
                     for idx in range(self.gui.channel_listbox.size()):
                         if self.gui.channel_listbox.get(idx) == channel:
                             self.gui.channel_listbox.itemconfig(idx, {'bg': self.mention_note_color})
+                            self.gui.channel_listbox.see(idx)
                             break
             else:
                 pass
