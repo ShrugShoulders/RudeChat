@@ -341,7 +341,7 @@ class RudeChatClient:
         count_366 = 0
         got_topic = 0
         last_366_time = None
-        TIMEOUT_SECONDS = 0.2
+        TIMEOUT_SECONDS = 0.17
         MAX_WAIT_TIME = 60
         PRIVMSGTOKENS = []
         NAMESTOKENS = []
@@ -400,7 +400,6 @@ class RudeChatClient:
                         for tokens in NAMESTOKENS:
                             self.handle_names_list(tokens)
                         await insert_processing_symbols(PRIVMSGTOKENS)
-                        await asyncio.sleep(0.000001)
                         return
 
                 match tokens.command:
@@ -573,7 +572,6 @@ class RudeChatClient:
                         for tokens in NAMESTOKENS:
                             self.handle_names_list(tokens)
                         await insert_processing_symbols(PRIVMSGTOKENS)
-                        await asyncio.sleep(0.000001)
                         return
 
             # Check for overall timeout
@@ -586,7 +584,6 @@ class RudeChatClient:
                     for token in NAMESTOKENS:
                         self.handle_names_list(token)
                     await insert_processing_symbols(PRIVMSGTOKENS)
-                    await asyncio.sleep(0.000001)
                     return
                 else:
                     gui.insert_text_widget("\nMaximum sync time exceeded\n")
