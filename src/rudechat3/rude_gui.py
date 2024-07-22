@@ -194,6 +194,11 @@ class RudeGui:
         self.master.bind('<Control-a>', self.select_short_all_text)
         self.master.bind('<Control-Prior>', self.switch_to_previous_channel)
         self.master.bind('<Control-Next>', self.switch_to_next_channel)
+        self.entry_widget.bind("<Control-i>", lambda event: self.insert_text_format("\x1D"))  # Italic
+        self.entry_widget.bind("<Control-b>", lambda event: self.insert_text_format("\x02"))  # Bold
+        self.entry_widget.bind("<Control-u>", lambda event: self.insert_text_format("\x1F"))  # Underline
+        self.entry_widget.bind("<Control-s>", lambda event: self.insert_text_format("\x1E"))  # Strike through
+        self.entry_widget.bind("<Control-slash>", lambda event: self.insert_text_format("\x16"))  # Inverse
 
     def select_short_all_text(self, event):
         try:

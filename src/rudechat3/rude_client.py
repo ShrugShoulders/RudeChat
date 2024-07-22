@@ -341,7 +341,7 @@ class RudeChatClient:
         count_366 = 0
         got_topic = 0
         last_366_time = None
-        TIMEOUT_SECONDS = 0.17
+        TIMEOUT_SECONDS = 0.22
         MAX_WAIT_TIME = 60
         PRIVMSGTOKENS = []
         NAMESTOKENS = []
@@ -447,8 +447,10 @@ class RudeChatClient:
 
                     case "251" | "252" | "253" | "254" | "255" | "265":
                         self.server_message_handler(tokens)
+                        reset_timer("")
                     case "311" | "312" | "313" | "317" | "319" | "301" | "671" | "338" | "318" | "330":
                         await self.handle_whois_replies(tokens.command, tokens)
+                        reset_timer("")
                     case "PART":
                         self.handle_part(tokens)
                     case "QUIT":
@@ -3451,6 +3453,11 @@ class RudeChatClient:
                 "Alt+s - Cycles through the servers",
                 "ctrl+pgup - Cycles through the channels up",
                 "ctrl+pgdwn - Cycles through the channels down",
+                "ctrl+i - Insert Italic formatting to selected text",
+                "ctrl+b - Insert Bold formatting to selected text",
+                "ctrl+u - Insert Underline formatting to selected text",
+                "ctrl+s - Insert Strike-Through formatting to selected text",
+                "ctrl+/ - Insert Inverse formatting to selected text",
                 "_________",
             ],
             "Fun": [
