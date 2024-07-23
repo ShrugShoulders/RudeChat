@@ -636,6 +636,9 @@ class RudeChatClient:
             # Handle coroutine cancellation
             print(f"Coroutine was cancelled: {e}")
             self.loop_running = False
+        except Exception as e:
+            # Catch all other exceptions
+            print(f"Exception in send_message: {e}")
 
     def is_valid_channel(self, channel):
         return any(channel.startswith(prefix) for prefix in self.chantypes)
@@ -821,7 +824,6 @@ class RudeChatClient:
 
             except (ConnectionResetError, OSError) as e:
                 print(f"Connection Exception caught in keep_alive: {e}")
-                self.loop_running = False
                 await self.reconnect(config_file)
 
             except AttributeError as e:
@@ -840,10 +842,6 @@ class RudeChatClient:
                 self.loop_running = False
                 print("Exiting auto_save loop.")
 
-            except (ConnectionResetError, OSError) as e:
-                print(f"Exception caught in auto_save: {e}")
-                self.loop_running = False
-
             except AttributeError as e:  # Catch AttributeError
                 print(f"AttributeError caught in auto_save: {e}")
 
@@ -859,10 +857,6 @@ class RudeChatClient:
             except asyncio.CancelledError:
                 self.loop_running = False
                 print("Exiting auto_trim loop.")
-
-            except (ConnectionResetError, OSError) as e:
-                print(f"Exception caught in auto_trim: {e}")
-                self.loop_running = False
 
             except AttributeError as e:  # Catch AttributeError
                 print(f"AttributeError caught in auto_trim: {e}")
@@ -2076,15 +2070,11 @@ class RudeChatClient:
                     data = await asyncio.wait_for(self.reader.read(4096), timeout_seconds)
             except OSError as e:
                 print(f"OS ERROR Caught In handle_incoming_message: {e}")
-                self.loop_running = False
                 await self.reconnect(config_file)
             except Exception as e:  # General exception catch
                 print(f"An Unexpected Error Occurred In handle_incoming_message: {e}\n")
-                self.loop_running = False
-                await self.reconnect(config_file)
             except (BrokenPipeError, asyncio.streams.StreamWriterError) as e:
                 print("Connection lost while sending message.")
-                self.loop_running = False
                 await self.reconnect(config_file)
             except asyncio.CancelledError:
                 self.loop_running = False
