@@ -790,8 +790,10 @@ class RudeChatClient:
     async def keep_alive(self, config_file):
         while self.loop_running:
             try:
+                # Break loop if self.loop_running is False.
                 if not self.loop_running:
                     break
+                    
                 # Measure ping time before sending PING
                 self.ping_start_time = time.time()
 
