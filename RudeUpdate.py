@@ -72,6 +72,16 @@ def clone_and_install_repo(repo_url, dest_dir):
     # Change to the destination directory and run pip install
     subprocess.run(['pip', 'install', '.'], cwd=dest_dir, check=True)
 
+def update_files_with_rude(src_dir, backup_dir, file_ext, merge_function, special_merge_file):
+    backup_files = glob.glob(os.path.join(backup_dir, f'*{file_ext}'))
+    print(f"Updating backup files in {backup_dir} with extensions {file_ext}")
+    if not backup_files:
+        print(f"No backup files found with extension {file_ext} in {backup_dir}")
+
+    for backup_file in backup_files:
+        print(f"Processing backup file: {backup_file} with special merge file: {special_merge_file}")
+        merge_function(special_merge_file, backup_file)
+
 def update_files(src_dir, backup_dir, file_ext, merge_function):
     updated_files = glob.glob(os.path.join(src_dir, f'*{file_ext}'))
     print(f"Updating files from {src_dir} with extensions {file_ext}")
@@ -124,8 +134,10 @@ def main():
     BACKUP_DIR = os.path.join(HOME, "Documents", "backup_rudechat_files")
     PYTHON_LIB_DIR = os.path.join(HOME, ".local", "lib", "python3.12", "site-packages", "rudechat3")
     specific_files = ['filtered_channels.txt', 'ignore_list.txt', 'token_error_log.txt']
+    special_merge_file = os.path.join(PYTHON_LIB_DIR, 'conf.libera.rude')
 
     remove_directory(DEST_DIR)
+    remove_directory(BACKUP_DIR)
     
     # Backup .rude and .ini files
     backup_files(PYTHON_LIB_DIR, BACKUP_DIR, '.rude')
@@ -142,8 +154,8 @@ def main():
     # Restore .ini files to the Python lib directory
     restore_files(PYTHON_LIB_DIR, BACKUP_DIR, '.ini')
     
-    # Update .rude files (if needed, add similar logic for .rude files)
-    update_files(PYTHON_LIB_DIR, BACKUP_DIR, '.rude', merge_ini_files)
+    # Update .rude files
+    update_files_with_rude(PYTHON_LIB_DIR, BACKUP_DIR, '.rude', merge_ini_files, special_merge_file)
     
     # Restore .rude files to the Python lib directory
     restore_files(PYTHON_LIB_DIR, BACKUP_DIR, '.rude')
