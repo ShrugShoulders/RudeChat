@@ -739,24 +739,20 @@ class RudeChatClient:
 
     async def stop_async_loop(self):
         loop = self.loop  # Access the loop from the client object
-        print(f"Client loop: {loop}")
         
         if loop is None:
             print(f"No existing loop found")
             return
 
         # Get all tasks in the loop, excluding the task with the name "on_enter_key"
-        tasks = [task for task in asyncio.all_tasks(loop) if not task.done() and task.get_name() != "on_enter_key"]
-        print(f"Initial tasks to cancel: {[task.get_name() for task in tasks]}")
+        tasks = [task for task in asyncio.all_tasks(loop) if not task.done() and task.get_name() not in ["on_enter_key", "quit_client_task"]]
 
         # Cancel all tasks except "on_enter_key"
         for task in tasks:
-            print(f"Cancelling task: {task.get_name()}")
             task.cancel()
 
         # Gather tasks to ensure they are properly cancelled
         await asyncio.gather(*tasks, return_exceptions=True)
-        print("All tasks gathered and cancelled.")
 
     async def reset_state(self):
         self.motd_dict.clear()
@@ -2626,10 +2622,11 @@ class RudeChatClient:
     async def command_parser(self, user_input):
         args = user_input[1:].split() if user_input.startswith('/') else []
         primary_command = args[0] if args else None
+        lcommand = primary_command.lower()
 
         timestamp = datetime.datetime.now().strftime('[%H:%M:%S] ')
 
-        match primary_command:
+        match lcommand:
             case "join":
                 channel_name = args[1]
                 await self.join_channel(channel_name)
@@ -2682,7 +2679,7 @@ class RudeChatClient:
                     await self.send_message(f"PRIVMSG {nickname} :{message}")
                     self.gui.insert_text_widget(f'<{self.nickname} -> {nickname}> {message}\n')
 
-            case "CTCP":
+            case "ctcp":
                 if len(args) < 3:
                     self.gui.insert_text_widget(f"Error: Please provide a nickname and CTCP command.\n")
                     return

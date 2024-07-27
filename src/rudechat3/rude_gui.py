@@ -217,7 +217,7 @@ class RudeGui:
 
         # Shutdown the client
         loop = asyncio.get_event_loop()
-        loop.create_task(self.irc_client.command_parser("/quit"))
+        loop.create_task(self.irc_client.command_parser("/quit"), name="quit_client_task")
 
     def hidden_windows(self):
         if not self.show_server_window:
