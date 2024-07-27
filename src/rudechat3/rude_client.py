@@ -744,10 +744,10 @@ class RudeChatClient:
             print(f"No existing loop found")
             return
 
-        # Get all tasks in the loop, excluding the task with the name "on_enter_key"
+        # Get all tasks in the loop, excluding some specific tasks.
         tasks = [task for task in asyncio.all_tasks(loop) if not task.done() and task.get_name() not in ["on_enter_key", "quit_client_task"]]
 
-        # Cancel all tasks except "on_enter_key"
+        # Cancel all tasks selected tasks.
         for task in tasks:
             task.cancel()
 
@@ -2622,11 +2622,10 @@ class RudeChatClient:
     async def command_parser(self, user_input):
         args = user_input[1:].split() if user_input.startswith('/') else []
         primary_command = args[0] if args else None
-        lcommand = primary_command.lower()
 
         timestamp = datetime.datetime.now().strftime('[%H:%M:%S] ')
 
-        match lcommand:
+        match primary_command:
             case "join":
                 channel_name = args[1]
                 await self.join_channel(channel_name)
