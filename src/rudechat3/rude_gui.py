@@ -997,16 +997,19 @@ class RudeGui:
         self.channel_lists[server_name] = irc_client.joined_channels
 
     def server_checker(self, existing_server):
+        # Convert the existing server to lowercase
+        existing_server_lower = existing_server.lower()
+
         # Get the number of items in the Listbox
         num_items = self.server_listbox.size()
 
         # Iterate through each item in the Listbox
         for i in range(num_items):
-            # Get the text of the current item
-            item_text = self.server_listbox.get(i)
+            # Get the text of the current item and convert it to lowercase
+            item_text_lower = self.server_listbox.get(i).lower()
 
-            # Check if the current item matches the server
-            if item_text == existing_server:
+            # Check if the current item matches the server (case insensitive)
+            if item_text_lower == existing_server_lower:
                 # Server found, return True
                 return True
 

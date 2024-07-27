@@ -793,7 +793,7 @@ class RudeChatClient:
                 # Break loop if self.loop_running is False.
                 if not self.loop_running:
                     break
-                    
+
                 # Measure ping time before sending PING
                 self.ping_start_time = time.time()
 
@@ -835,10 +835,6 @@ class RudeChatClient:
                 self.loop_running = False
                 print("Exiting auto_save loop.")
 
-            except (ConnectionResetError, OSError) as e:
-                print(f"Exception caught in auto_save: {e}")
-                self.loop_running = False
-
             except AttributeError as e:  # Catch AttributeError
                 print(f"AttributeError caught in auto_save: {e}")
 
@@ -856,10 +852,6 @@ class RudeChatClient:
             except asyncio.CancelledError:
                 self.loop_running = False
                 print("Exiting auto_trim loop.")
-
-            except (ConnectionResetError, OSError) as e:
-                print(f"Exception caught in auto_trim: {e}")
-                self.loop_running = False
 
             except AttributeError as e:  # Catch AttributeError
                 print(f"AttributeError caught in auto_trim: {e}")
@@ -2565,8 +2557,7 @@ class RudeChatClient:
 
         # If config_file is found, pass its path to init_client_with_config
         if check_server:
-            if os.path.exists(config_path):
-                await self.connect(config_file)
+            return
         elif not check_server:
             if os.path.exists(config_path):
                 await self.gui.init_client_with_config(config_path, server_name)
@@ -2803,11 +2794,14 @@ class RudeChatClient:
                 server_name = args[1] if len(args) > 1 else None
                 lserver_name = server_name.lower()
                 if server_name:
-                    await self.connect_to_specific_server(lserver_name)
+                    if not self.gui.server_checker(lserver_name):
+                        await self.connect_to_specific_server(lserver_name)
+                    else:
+                        self.gui.insert_text_widget(f"You are already connected to that server.")
                 else:
                     data = "Please Enter A Server Name"
                     self.add_server_message(data)
-                    self.gui.insert_text_widget("Please Enter A Server Name")
+                    self.gui.insert_text_widget(f"{data}")
 
             case "disconnect":
                 server = args[1] if len(args) > 1 else None
@@ -2815,10 +2809,7 @@ class RudeChatClient:
                     await self.disconnect(server)
                     self.gui.remove_server_from_listbox(server)
                 else:
-                    self.gui.insert_text_widget("Client Disconnected.")
-                    self.gui.insert_server_widget("Client Disconnected.")
-                    await self.disconnect()
-                    await self.reset_state()
+                    self.gui.insert_text_widget("Please Enter a Server Name")
 
             case "detach":
                 channel = args[1] if len(args) > 1 else None
