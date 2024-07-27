@@ -737,6 +737,27 @@ class RudeChatClient:
         for user in self.channel_users.get(channel, []):
             self.gui.user_listbox.insert(tk.END, user)
 
+    async def stop_async_loop(self):
+        loop = self.loop  # Access the loop from the client object
+        print(f"Client loop: {loop}")
+        
+        if loop is None:
+            print(f"No existing loop found")
+            return
+
+        # Get all tasks in the loop, excluding the task with the name "on_enter_key"
+        tasks = [task for task in asyncio.all_tasks(loop) if not task.done() and task.get_name() != "on_enter_key"]
+        print(f"Initial tasks to cancel: {[task.get_name() for task in tasks]}")
+
+        # Cancel all tasks except "on_enter_key"
+        for task in tasks:
+            print(f"Cancelling task: {task.get_name()}")
+            task.cancel()
+
+        # Gather tasks to ensure they are properly cancelled
+        await asyncio.gather(*tasks, return_exceptions=True)
+        print("All tasks gathered and cancelled.")
+
     async def reset_state(self):
         self.motd_dict.clear()
         self.joined_channels.clear()
@@ -2757,6 +2778,7 @@ class RudeChatClient:
                 quit_message = " ".join(args[1:]) if len(args) > 0 else None
                 await self.send_message(f"QUIT :{quit_message}")
                 self.loop_running = False
+                await self.stop_async_loop()
                 self.master.destroy()
                 return False
 
