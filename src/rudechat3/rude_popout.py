@@ -428,23 +428,6 @@ class RudePopOut:
             self.user_listbox.insert(tk.END, self.nick_name)
             self.user_listbox.insert(tk.END, self.selected_channel)
 
-    def load_nickname_colors(self):
-        nickname_colors_path = os.path.join(self.script_directory, 'nickname_colours.json')
-
-        try:
-            with open(nickname_colors_path, 'r') as file:
-                nickname_colors = json.load(file)
-            return nickname_colors
-        except FileNotFoundError:
-            print(f"Nickname colors file not found at {nickname_colors_path}. Returning an empty dictionary.")
-            return {}
-        except json.JSONDecodeError as e:
-            print(f"Error decoding JSON in nickname colors file: {e}. Returning an empty dictionary.")
-            return {}
-        except Exception as e:
-            print(f"An unexpected error occurred while loading nickname colors: {e}. Returning an empty dictionary.")
-            return {}
-
     def highlight_nickname(self):
         """Highlight the user's nickname in the text_widget."""
         user_nickname = self.irc_client.nickname
@@ -567,7 +550,11 @@ class RudePopOut:
             self.tab_complete_index = (self.tab_complete_index + 1) % len(self.tab_complete_completions)
 
         # Set up a timer to append ": " after half a second if no more tab presses
-        self.tab_completion_timer = self.root.after(250, self.append_colon_to_nick)
+        try:
+            if self.entry.get().startswith(completed_nick):
+                self.tab_completion_timer = self.root.after(250, self.append_colon_to_nick)
+        except UnboundLocalError as e:
+            pass
 
         # Prevent default behavior of the Tab key
         return 'break'
