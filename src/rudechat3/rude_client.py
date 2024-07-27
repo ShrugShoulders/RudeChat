@@ -83,6 +83,7 @@ class RudeChatClient:
         self.custom_sounds = config.getboolean('IRC', 'custom_sounds', fallback=False)
         self.use_logging = config.getboolean('IRC', 'use_logging', fallback=True)
         self.replace_pronouns = config.getboolean('IRC', 'replace_pronouns', fallback=False)
+        self.send_ctcp_response = config.getboolean('IRC', 'send_ctcp_response', fallback=True)
         await self.load_channel_messages()
         self.load_ignore_list()
         self.gui.update_nick_channel_label()
@@ -105,6 +106,7 @@ class RudeChatClient:
         self.use_colors = config.getboolean('IRC', 'use_irc_colors', fallback=False)
         self.replace_pronouns = config.getboolean('IRC', 'replace_pronouns', fallback=False)
         self.display_user_modes = config.getboolean('IRC', 'display_user_modes', fallback=True)
+        self.send_ctcp_response = config.getboolean('IRC', 'send_ctcp_response', fallback=True)
         self.gui.update_nick_channel_label()
 
     def delete_lock_files(self):
@@ -904,43 +906,46 @@ class RudeChatClient:
         message = tokens.params[1]
 
         # Detect if this is a CTCP message
-        if message.startswith('\x01') and message.endswith('\x01'):
-            ctcp_command = message[1:-1].split(' ', 1)[0]  # Extract the CTCP command
-            ctcp_content = message[1:-1].split(' ', 1)[1] if ' ' in message else None  # Extract the content if present
+        if self.send_ctcp_response:
+            if message.startswith('\x01') and message.endswith('\x01'):
+                ctcp_command = message[1:-1].split(' ', 1)[0]  # Extract the CTCP command
+                ctcp_content = message[1:-1].split(' ', 1)[1] if ' ' in message else None  # Extract the content if present
 
-            match ctcp_command:
-                case "VERSION" | "version":
-                    if tokens.command == "PRIVMSG":
-                        await self.send_message(f'NOTICE {sender} :\x01VERSION RudeChat3.0.4\x01')
-                        self.add_server_message(f"CTCP: {sender} {target}: {ctcp_command}\n")
-                case "MOO" | "moo":
-                    if tokens.command == "PRIVMSG":
-                        await self.send_message(f'NOTICE {sender} :\x01MoooOOO! Hi Cow!! RudeChat3.0.4\x01')
-                        self.add_server_message(f"CTCP: {sender} {target}: {ctcp_command}\n")
-                case "PING" | "ping":
-                    if tokens.command == "PRIVMSG":
-                        timestamp = str(int(time.time()))  # Get the current Unix timestamp
-                        await self.send_message(f'NOTICE {sender} :\x01PING {ctcp_content} {timestamp}\x01')
-                        self.add_server_message(f"CTCP: {sender} {target}: {ctcp_command}\n")
-                case "FINGER" | "finger":
-                    if tokens.command == "PRIVMSG":
-                        await self.send_message(f'NOTICE {sender} :\x01FINGER: {self.nickname} {self.server_name} RudeChat3.0.4\x01')
-                        self.add_server_message(f"CTCP: {sender} {target}: {ctcp_command}\n")
-                case "CLIENTINFO" | "clientinfo":
-                    if tokens.command == "PRIVMSG":
-                        await self.send_message(f'NOTICE {sender} :\x01CLIENTINFO VERSION TIME PING FINGER\x01')
-                        self.add_server_message(f"CTCP: {sender} {target}: {ctcp_command}\n")
-                case "TIME" | "time":
-                    if tokens.command == "PRIVMSG":
-                        tz = pytz.timezone(str(self.time_zone))
-                        local_time = datetime.datetime.now(tz).strftime("%Y-%m-%d %H:%M:%S")
-                        time_reply = "\x01TIME " + local_time + "\x01"
-                        await self.send_message(f'NOTICE {sender} :{time_reply}')
-                        self.add_server_message(f"CTCP: {sender} {target}: {ctcp_command}\n")
-                case "ACTION":
-                    await self.handle_action_ctcp(timestamp, sender, target, ctcp_content)
-                case _:
-                    print(f"Unhandled CTCP command: {ctcp_command}")
+                match ctcp_command:
+                    case "VERSION" | "version":
+                        if tokens.command == "PRIVMSG":
+                            await self.send_message(f'NOTICE {sender} :\x01VERSION RudeChat3.0.4\x01')
+                            self.add_server_message(f"CTCP: {sender} {target}: {ctcp_command}\n")
+                    case "MOO" | "moo":
+                        if tokens.command == "PRIVMSG":
+                            await self.send_message(f'NOTICE {sender} :\x01MoooOOO! Hi Cow!! RudeChat3.0.4\x01')
+                            self.add_server_message(f"CTCP: {sender} {target}: {ctcp_command}\n")
+                    case "PING" | "ping":
+                        if tokens.command == "PRIVMSG":
+                            timestamp = str(int(time.time()))  # Get the current Unix timestamp
+                            await self.send_message(f'NOTICE {sender} :\x01PING {ctcp_content} {timestamp}\x01')
+                            self.add_server_message(f"CTCP: {sender} {target}: {ctcp_command}\n")
+                    case "FINGER" | "finger":
+                        if tokens.command == "PRIVMSG":
+                            await self.send_message(f'NOTICE {sender} :\x01FINGER: {self.nickname} {self.server_name} RudeChat3.0.4\x01')
+                            self.add_server_message(f"CTCP: {sender} {target}: {ctcp_command}\n")
+                    case "CLIENTINFO" | "clientinfo":
+                        if tokens.command == "PRIVMSG":
+                            await self.send_message(f'NOTICE {sender} :\x01CLIENTINFO VERSION TIME PING FINGER\x01')
+                            self.add_server_message(f"CTCP: {sender} {target}: {ctcp_command}\n")
+                    case "TIME" | "time":
+                        if tokens.command == "PRIVMSG":
+                            tz = pytz.timezone(str(self.time_zone))
+                            local_time = datetime.datetime.now(tz).strftime("%Y-%m-%d %H:%M:%S")
+                            time_reply = "\x01TIME " + local_time + "\x01"
+                            await self.send_message(f'NOTICE {sender} :{time_reply}')
+                            self.add_server_message(f"CTCP: {sender} {target}: {ctcp_command}\n")
+                    case "ACTION":
+                        await self.handle_action_ctcp(timestamp, sender, target, ctcp_content)
+                    case _:
+                        print(f"Unhandled CTCP command: {ctcp_command}")
+        else:
+            return
 
     def add_server_message(self, data):
         if not self.gui.show_server_window:
