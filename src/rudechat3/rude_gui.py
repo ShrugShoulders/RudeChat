@@ -409,15 +409,20 @@ class RudeGui:
         
         return escaped_line
 
-    async def remove_server_from_listbox(self, server_name=None, reconnect=False):
+    def remove_server_from_listbox(self, server_name=None, reconnect=False):
         if server_name is None and reconnect is False:
             server_name = self.server_var.get()
 
-        # Check if the server_name is in the Listbox
-        if server_name and server_name in self.server_listbox.get(0, tk.END):
-            # Remove the server_name from the Listbox
-            index = self.server_listbox.get(0, tk.END).index(server_name)
-            self.server_listbox.delete(index)
+        # Check if the server_name is in the Listbox (case-insensitive)
+        if server_name:
+            # Get the list of items in the Listbox and convert to lowercase for comparison
+            listbox_items = [item.lower() for item in self.server_listbox.get(0, tk.END)]
+            server_name_lower = server_name.lower()
+
+            if server_name_lower in listbox_items:
+                # Get the index of the server_name (case-insensitive) and remove it
+                index = listbox_items.index(server_name_lower)
+                self.server_listbox.delete(index)
 
         # Set the first available server as the current one
         if self.server_listbox.size() > 0:
@@ -1100,7 +1105,7 @@ class RudeGui:
 
     def bind_return_key(self):
         loop = asyncio.get_event_loop()
-        self.entry_widget.bind('<Return>', lambda event: loop.create_task(self.on_enter_key(event)))
+        self.entry_widget.bind('<Return>', lambda event: loop.create_task(self.on_enter_key(event), name="on_enter_key"))
 
     async def on_enter_key(self, event):
         try:

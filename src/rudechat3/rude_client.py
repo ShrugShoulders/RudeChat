@@ -636,9 +636,6 @@ class RudeChatClient:
             # Handle coroutine cancellation
             print(f"Coroutine was cancelled: {e}")
             self.loop_running = False
-        except Exception as e:
-            # Catch all other exceptions
-            print(f"Exception in send_message: {e}")
 
     def is_valid_channel(self, channel):
         return any(channel.startswith(prefix) for prefix in self.chantypes)
@@ -751,22 +748,6 @@ class RudeChatClient:
         self.download_channel_list.clear()
         self.whois_executed.clear()
 
-    async def stop_tasks(self, tasks_dict=None):
-        if tasks_dict is None:
-            tasks_dict = self.tasks
-
-        # Create a list to store tasks that are not done
-        not_done_tasks = []
-
-        # Check if each task is done or not, and cancel only if it's not done
-        for task_name, task in tasks_dict.items():
-            if not task.done():
-                not_done_tasks.append(task)
-                task.cancel()
-
-        # Wait for only the not done tasks to be canceled
-        await asyncio.gather(*not_done_tasks, return_exceptions=True)
-
     def grab_server_name(self, config_file):
         if sys.platform.startswith('win'):
             split_config = config_file.split("\\")
@@ -780,37 +761,37 @@ class RudeChatClient:
     async def reconnect(self, config_file):
         disconnected_server = self.grab_server_name(config_file)
         MAX_RETRIES = 5
-        if self.znc_connection:
-            RETRY_DELAY = 1
-        else:
-            RETRY_DELAY = 245
+        RETRY_DELAY = 245 if not self.znc_connection else 5
         retries = 0
         self.add_server_message(f"****Resetting State\n")
         await self.reset_state()
-        self.gui.insert_text_widget(f"You have been \x0304DISCONNECTED\x0F Auto Reconnecting In Progress\x0303... in 245seconds\x0F \n")
-        self.add_server_message(f"You have been \x0304DISCONNECTED\x0F Auto Reconnecting In Progress\x0303... in 245seconds\x0F \n")
+        self.gui.insert_text_widget(f"You have been \x0304DISCONNECTED\x0F Auto Reconnecting In Progress\x0303... in {RETRY_DELAY} seconds\x0F \n")
+        self.add_server_message(f"You have been \x0304DISCONNECTED\x0F Auto Reconnecting In Progress\x0303... in {RETRY_DELAY} seconds\x0F \n")
+
         while retries < MAX_RETRIES:
             retries += 1
             try:
                 self.add_server_message(f"****Server {disconnected_server} Disconnected\n")
-                self.add_server_message(f"****Giving Time For Ping TimeOut: {RETRY_DELAY}seconds\n")
+                self.add_server_message(f"****Giving Time For Ping TimeOut: {RETRY_DELAY} seconds\n")
                 await asyncio.sleep(RETRY_DELAY)
 
                 self.add_server_message("****Attempt Connection\n")
                 await self.connect(config_file)
                 self.loop_running = True
                 self.add_server_message(f"****Connected: {self.loop_running}\n")
-                return 
-                    
+                return
+
             except Exception as e:
                 print(f"Failed to reconnect ({retries}/{MAX_RETRIES}): {e}. Retrying in {RETRY_DELAY} seconds.")
                 await asyncio.sleep(RETRY_DELAY)
 
-        print(f"Failed to reconnect ({retries}/{MAX_RETRIES}): {e}. Retrying in {RETRY_DELAY} seconds.")
+        print(f"Failed to reconnect ({retries}/{MAX_RETRIES}): Retrying in {RETRY_DELAY} seconds.")
 
     async def keep_alive(self, config_file):
         while self.loop_running:
             try:
+                if not self.loop_running:
+                    break
                 # Measure ping time before sending PING
                 self.ping_start_time = time.time()
 
@@ -824,7 +805,15 @@ class RudeChatClient:
 
             except (ConnectionResetError, OSError) as e:
                 print(f"Connection Exception caught in keep_alive: {e}")
-                await self.reconnect(config_file)
+                if not self.loop_running:
+                    print("loop not running. breaking keep_alive")
+                    break
+                else:
+                    disconnected_server = self.grab_server_name(config_file)
+                    await self.disconnect(disconnected_server)
+                    self.gui.remove_server_from_listbox(disconnected_server)
+                    await self.connect_to_specific_server(disconnected_server)
+                    break
 
             except AttributeError as e:
                 print(f"AttributeError caught in keep_alive: {e}")
@@ -837,10 +826,16 @@ class RudeChatClient:
             try:
                 await asyncio.sleep(30)
                 await self.save_channel_messages()
+                if not self.loop_running:
+                    break
 
             except asyncio.CancelledError:
                 self.loop_running = False
                 print("Exiting auto_save loop.")
+
+            except (ConnectionResetError, OSError) as e:
+                print(f"Exception caught in auto_save: {e}")
+                self.loop_running = False
 
             except AttributeError as e:  # Catch AttributeError
                 print(f"AttributeError caught in auto_save: {e}")
@@ -853,10 +848,16 @@ class RudeChatClient:
             try:
                 await asyncio.sleep(125)
                 self.trim_messages()
+                if not self.loop_running:
+                    break
 
             except asyncio.CancelledError:
                 self.loop_running = False
                 print("Exiting auto_trim loop.")
+
+            except (ConnectionResetError, OSError) as e:
+                print(f"Exception caught in auto_trim: {e}")
+                self.loop_running = False
 
             except AttributeError as e:  # Catch AttributeError
                 print(f"AttributeError caught in auto_trim: {e}")
@@ -1919,8 +1920,8 @@ class RudeChatClient:
         if user_found:
             # Update the user listbox for the channel
             current_modes = self.user_modes.get(channel, {})
-            user_modes = current_modes.get(user_info, set())
-            current_modes.pop(user_info, None)
+            user_modes = current_modes.get(kicked_nickname, set())
+            current_modes.pop(kicked_nickname, None)
             self.update_user_listbox(channel)
 
         if kicked_nickname == self.nickname:
@@ -2062,34 +2063,32 @@ class RudeChatClient:
         buffer = ""
         current_users_list = []
         current_channel = ""
-        timeout_seconds = 256  # seconds
 
         while self.loop_running:
             try:
                 async with self.message_handling_semaphore:
-                    data = await asyncio.wait_for(self.reader.read(4096), timeout_seconds)
+                    data = await self.reader.read(4096)
             except OSError as e:
                 print(f"OS ERROR Caught In handle_incoming_message: {e}")
+                self.loop_running = False
                 await self.reconnect(config_file)
             except Exception as e:  # General exception catch
                 print(f"An Unexpected Error Occurred In handle_incoming_message: {e}\n")
-            except (BrokenPipeError, asyncio.streams.StreamWriterError) as e:
-                print("Connection lost while sending message.")
-                await self.reconnect(config_file)
             except asyncio.CancelledError:
                 self.loop_running = False
                 print("Exiting handle_incoming_message loop.")
 
             if not data:
+                print("No data received, breaking the loop.")
                 break
 
             decoded_data = data.decode('UTF-8', errors='ignore')
             cleaned_data = decoded_data.replace("\x06", "")  # Remove the character with ASCII value 6
-            
+
             if not self.use_colors:
                 # Remove IRC colors and formatting using regular expressions
                 cleaned_data = re.sub(r'\x03(?:\d{1,2}(?:,\d{1,2})?)?', '', cleaned_data)
-            
+
             buffer += cleaned_data
 
             while '\n' in buffer:
@@ -2574,17 +2573,19 @@ class RudeChatClient:
 
     async def disconnect(self, server_name=None):
         if server_name:
-            client = self.gui.clients.get(server_name)
-            if client:
-                await client.send_message("QUIT")
-        else:
-            if self.reader and not self.reader.at_eof():
-                self.writer.close()
-                await self.writer.wait_closed()
-            else:
-                pass
+            # Perform a case-insensitive search for the server_name
+            matching_key = next((key for key in self.gui.clients if key.lower() == server_name.lower()), None)
 
-        self.gui.insert_text_widget("Disconnected\n")
+            if matching_key:
+                client = self.gui.clients.get(matching_key)
+                if client:
+                    await client.send_message("QUIT")
+                    client.loop_running = False
+                    del self.gui.clients[matching_key]
+                    print(self.gui.clients)
+                    self.gui.insert_text_widget("Disconnected\n")
+            else:
+                self.gui.insert_text_widget(f"No client found for server {server_name}\n")
 
     def handle_mentions_command(self):
         mentions_channel = "&MENTIONS&"
@@ -2798,17 +2799,19 @@ class RudeChatClient:
 
             case "connect":
                 server_name = args[1] if len(args) > 1 else None
+                lserver_name = server_name.lower()
                 if server_name:
-                    await self.connect_to_specific_server(server_name)
+                    await self.connect_to_specific_server(lserver_name)
                 else:
                     data = "Please Enter A Server Name"
                     self.add_server_message(data)
+                    self.gui.insert_text_widget("Please Enter A Server Name")
 
             case "disconnect":
                 server = args[1] if len(args) > 1 else None
                 if server:
                     await self.disconnect(server)
-                    await self.reset_state()
+                    self.gui.remove_server_from_listbox(server)
                 else:
                     self.gui.insert_text_widget("Client Disconnected.")
                     self.gui.insert_server_widget("Client Disconnected.")
