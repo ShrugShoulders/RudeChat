@@ -821,6 +821,7 @@ class RudeChatClient:
                 # If the event loop is stopped, break out of the loop
                 self.loop_running = False
                 print("Exiting keep_alive loop.")
+                break
 
             except (ConnectionResetError, OSError) as e:
                 print(f"Connection Exception caught in keep_alive: {e}")
@@ -851,6 +852,7 @@ class RudeChatClient:
             except asyncio.CancelledError:
                 self.loop_running = False
                 print("Exiting auto_save loop.")
+                break
 
             except AttributeError as e:  # Catch AttributeError
                 print(f"AttributeError caught in auto_save: {e}")
@@ -869,6 +871,7 @@ class RudeChatClient:
             except asyncio.CancelledError:
                 self.loop_running = False
                 print("Exiting auto_trim loop.")
+                break
 
             except AttributeError as e:  # Catch AttributeError
                 print(f"AttributeError caught in auto_trim: {e}")
