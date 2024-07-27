@@ -242,7 +242,8 @@ class RudePopOut:
                 self.entry.delete(0, tk.END)
                 self.pop_command_parser(user_text)
             else:
-                self.entry_history.append(user_text)
+                shortened_text = escaped_text[:420]
+                self.entry_history.append(shortened_text)
 
                 # Limit the entry_history to the last 10 messages
                 if len(self.entry_history) > 10:
@@ -251,7 +252,7 @@ class RudePopOut:
                 # Reset history_index to the end of entry_history
                 self.history_index = len(self.entry_history)
                 # Insert text in the main text widget
-                self.insert_text(f"{timestamp} <{mode_symbol}{self.nick_name}> {escaped_text}\n")
+                self.insert_text(f"{timestamp} <{mode_symbol}{self.nick_name}> {shortened_text}\n")
                 self.entry.delete(0, tk.END)
 
                 # Update channel_messages dictionary
@@ -260,13 +261,13 @@ class RudePopOut:
                 if current_channel not in self.irc_client.channel_messages[server]:
                     self.irc_client.channel_messages[server][current_channel] = []
 
-                self.irc_client.channel_messages[server][current_channel].append(f"{timestamp} <{mode_symbol}{self.nick_name}> {escaped_text}\n")
+                self.irc_client.channel_messages[server][current_channel].append(f"{timestamp} <{mode_symbol}{self.nick_name}> {shortened_text}\n")
 
-                self.log_message(self.irc_client.server_name, current_channel, self.nick_name, escaped_text, is_sent=True)
+                self.log_message(self.irc_client.server_name, current_channel, self.nick_name, shortened_text, is_sent=True)
 
                 # Send the message through the IRC client
                 asyncio.run_coroutine_threadsafe(
-                    self.irc_client.send_message(f"PRIVMSG {current_channel} :{escaped_text}"), 
+                    self.irc_client.send_message(f"PRIVMSG {current_channel} :{shortened_text}"), 
                     self.irc_client.loop
                 )
 
