@@ -1365,11 +1365,23 @@ class RudeGui:
             self.text_widget.config(state=tk.DISABLED)
             self.irc_client.channel_messages[self.irc_client.server][current_channel] = []
 
+    def get_mode_symbol(self, mode):
+        """Return the symbol corresponding to the IRC mode."""
+        return self.irc_client.mode_to_symbol.get(mode, '')
+
+    def get_user_mode(self, user, channel):
+        """Retrieve the user's mode for the given channel."""
+        channel_modes = self.irc_client.user_modes.get(channel, {})
+        user_modes = channel_modes.get(user, set())
+        return next(iter(user_modes), None)  # Get the first mode if available, else None
+
     def update_nick_channel_label(self):
         """Update the label with the current nickname and channel."""
         nickname = self.irc_client.nickname if self.irc_client.nickname else "Nickname"
         channel = self.irc_client.current_channel if self.irc_client.current_channel else "#Channel"
-        self.current_nick_channel.set(f"{nickname} | {channel}" + " $>")
+        user_mode = self.get_user_mode(nickname, channel)
+        mode_symbol = self.get_mode_symbol(user_mode) if user_mode else ''
+        self.current_nick_channel.set(f"{mode_symbol}{nickname} | {channel}" + " $>")
 
     def highlight_nickname(self):
         """Highlight the user's nickname in the text_widget."""
