@@ -158,7 +158,7 @@ class RudeGui:
         self.entry_widget.bind('<Down>', self.handle_arrow_keys)
 
         # Label for nickname and channel
-        self.current_nick_channel = tk.StringVar(value="Nickname | #Channel" + " &>")
+        self.current_nick_channel = tk.StringVar(value="Nickname | #Channel" + " ▶")
         self.nick_channel_label = tk.Label(self.master, textvariable=self.current_nick_channel, padx=5, pady=1)
         self.nick_channel_label.grid(row=3, column=0, sticky='w')
 
@@ -1381,7 +1381,7 @@ class RudeGui:
         channel = self.irc_client.current_channel if self.irc_client.current_channel else "#Channel"
         user_mode = self.get_user_mode(nickname, channel)
         mode_symbol = self.get_mode_symbol(user_mode) if user_mode else ''
-        self.current_nick_channel.set(f"{mode_symbol}{nickname} | {channel}" + " $>")
+        self.current_nick_channel.set(f"{mode_symbol}{nickname} | {channel}" + " ▷")
 
     def highlight_nickname(self):
         """Highlight the user's nickname in the text_widget."""
