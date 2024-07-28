@@ -7,6 +7,7 @@ from .gui_config_window import GuiConfigWindow
 from .rude_popout import RudePopOut
 from .shared_imports import *
 from .rude_dragndrop import DragDropListbox
+from .nick_cleaner import clean_nicknames
 
 class RudeGui:
     def __init__(self, master):
@@ -454,11 +455,12 @@ class RudeGui:
             return {}
 
     def save_nickname_colors(self):
+        clean_nicks = clean_nicknames(self.nickname_colors)
         nickname_colors_path = os.path.join(self.script_directory, 'nickname_colours.json')
 
         try:
             with open(nickname_colors_path, 'w') as file:
-                json.dump(self.nickname_colors, file, indent=2)
+                json.dump(clean_nicks, file, indent=2)
         except Exception as e:
             print(f"An unexpected error occurred while saving nickname colors: {e}. Unable to save nickname colors.")
 

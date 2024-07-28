@@ -1669,7 +1669,8 @@ class RudeChatClient:
             sorted_users = self.sort_users(self.channel_users.get(channel, []), channel)
             self.channel_users[channel] = sorted_users
             self.update_user_listbox(channel)
-            self.gui.update_nick_channel_label()
+            if channel == self.current_channel:
+                self.gui.update_nick_channel_label()
         return 
 
     def pipe_mode_to_pop_out(self, message, target):
