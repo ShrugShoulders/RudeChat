@@ -12,7 +12,7 @@ def replace_pronouns(text, channel=None):
             # Read the file and strip any leading/trailing whitespace from each line
             active_channels = [line.strip() for line in file.readlines()]
 
-    if channel in active_channels:
+    if channel and channel.lower() in active_channels:
         phrases = {
             r'\bhis job\b': 'their job',
             r'\bher job\b': 'their job',

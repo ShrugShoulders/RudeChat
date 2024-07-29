@@ -12,6 +12,7 @@ from plyer import notification
 from threading import Thread
 from tkinter import scrolledtext, Listbox, Scrollbar, Tk, Frame, Label, Entry, Listbox, Menu, Scrollbar, StringVar, PhotoImage 
 from .format_decoder import Attribute, decoder
+from .rude_pronouns import replace_pronouns
 
 class RudePopOut:
     def __init__(self, root, selected_channel, irc_client, nick_name, main_app):
@@ -244,6 +245,8 @@ class RudePopOut:
             else:
                 shortened_text = escaped_text[:420]
                 self.entry_history.append(shortened_text)
+                if self.irc_client.replace_pronouns:
+                    shortened_text = replace_pronouns(shortened_text, self.selected_channel)
 
                 # Limit the entry_history to the last 10 messages
                 if len(self.entry_history) > 10:
