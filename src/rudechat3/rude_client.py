@@ -630,14 +630,10 @@ class RudeChatClient:
             await asyncio.wait_for(self.writer.drain(), timeout=10)
         except AttributeError as e:
             # Handle the case where `self.writer` is not set
-            print(f"AttributeError occurred: {e}")
+            print(f"AttributeError occurred in send_message: {e}")
         except (BrokenPipeError, TimeoutError) as e:
             # Handle specific errors related to the writer
-            print(f"BrokenPipeError or TimeoutError occurred: {e}")
-        except asyncio.CancelledError as e:
-            # Handle coroutine cancellation
-            print(f"Coroutine was cancelled: {e}")
-            self.loop_running = False
+            print(f"BrokenPipeError or TimeoutError occurred in send_message: {e}")
 
     def is_valid_channel(self, channel):
         return any(channel.startswith(prefix) for prefix in self.chantypes)
