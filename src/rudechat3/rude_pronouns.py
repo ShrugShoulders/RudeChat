@@ -338,6 +338,7 @@ def replace_pronouns(text, channel=None):
             r'\bgirl\b': 'kid',
             r'\bgrandma\b': 'grandparent',
             r'\bgrandpa\b': 'grandparent',
+            r'\bguy\b': 'friend',
         }
         
         # Replace specific phrases

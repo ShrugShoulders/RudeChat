@@ -668,18 +668,6 @@ class RudeChatClient:
         self.gui.channel_lists[self.server] = self.joined_channels  # Update the GUI channel list
         self.update_gui_channel_list()  # Update the channel list in GUI
 
-    async def leave_channel(self, channel):
-        await self.send_message(f'PART {channel}')
-        if channel in self.joined_channels:
-            self.joined_channels.remove(channel)
-            
-            # Remove the channel entry from the highlighted_channels dictionary
-            if self.server_name in self.highlighted_channels:
-                self.highlighted_channels[self.server_name].pop(channel, None)
-
-            self.gui.channel_lists[self.server] = self.joined_channels
-            self.update_gui_channel_list()
-
     async def detach_channel(self, channel):
         if channel in self.joined_channels:
             self.detached_channels.append(channel)
@@ -2080,11 +2068,12 @@ class RudeChatClient:
         buffer = ""
         current_users_list = []
         current_channel = ""
+        timeout_seconds = 120  # Seconds
 
         while self.loop_running:
             try:
                 async with self.message_handling_semaphore:
-                    data = await self.reader.read(4096)
+                    data = await asyncio.wait_for(self.reader.read(4096), timeout_seconds)
             except OSError as e:
                 print(f"OS ERROR Caught In handle_incoming_message: {e}")
                 self.loop_running = False
@@ -2527,7 +2516,13 @@ class RudeChatClient:
         self.gui.insert_text_widget(f"Private message with {nickname} closed.\n")
 
     async def leave_channel(self, channel):
+        # Send PART message to the server to leave the channel
         await self.send_message(f'PART {channel}')
+
+        # Remove the channel entry from user_modes if it exists
+        self.user_modes.pop(channel, None)
+
+        # Remove the channel from joined_channels if it exists
         if channel in self.joined_channels:
             self.joined_channels.remove(channel)
 
@@ -2535,11 +2530,13 @@ class RudeChatClient:
             if self.server_name in self.highlighted_channels:
                 self.highlighted_channels[self.server_name].pop(channel, None)
 
+            # Update the GUI's channel list
             self.gui.channel_lists[self.server] = self.joined_channels
             self.update_gui_channel_list()
 
             # Remove the channel's history
-            self.channel_messages[self.server][channel] = []
+            if self.server in self.channel_messages:
+                self.channel_messages[self.server].pop(channel, None)
 
     async def handle_kick_command(self, args):
         modes_to_strip = ''.join(self.mode_values)
