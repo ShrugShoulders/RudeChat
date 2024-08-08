@@ -212,8 +212,6 @@ class RudeChatClient:
 
         except asyncio.TimeoutError:
             self.gui.insert_text_widget(f"Connection timeout. Please try again later.\n")
-        except OSError as e:
-            print("OSError Caught In connect_to_server")
 
     async def send_initial_commands(self):
         self.gui.insert_text_widget(f'Sent client registration commands.\n')
