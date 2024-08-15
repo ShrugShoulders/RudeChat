@@ -305,27 +305,26 @@ class RudeChatClient:
             data = tokens.params[1]
             self.add_server_message(data + "\n")
 
-    async def join_znc_channel(self, tokens):
+    def join_znc_channel(self, tokens):
         channel = tokens.params[0]
         user_info = tokens.hostmask.nickname
         if user_info != self.nickname:
             self.handle_join(tokens)
             return
 
-        if self.znc_connection:
-            # Check if the server entry exists
-            if self.server not in self.channel_messages:
-                self.channel_messages[self.server] = {}
+        # Check if the server entry exists
+        if self.server not in self.channel_messages:
+            self.channel_messages[self.server] = {}
 
-            # Add the channel entry if it doesn't exist
-            if channel not in self.channel_messages[self.server]:
-                self.channel_messages[self.server][channel] = []
+        # Add the channel entry if it doesn't exist
+        if channel not in self.channel_messages[self.server]:
+            self.channel_messages[self.server][channel] = []
             
-            # Check if the channel is already in the list of joined channels
-            if channel not in self.joined_channels:
-                self.joined_channels.append(channel)
-                self.gui.channel_lists[self.server] = self.joined_channels
-                self.update_gui_channel_list()
+        # Check if the channel is already in the list of joined channels
+        if channel not in self.joined_channels:
+            self.joined_channels.append(channel)
+            self.gui.channel_lists[self.server] = self.joined_channels
+            self.update_gui_channel_list()
 
     async def _await_welcome_message(self):
         self.gui.insert_text_widget(f'Waiting for welcome message from the server.\n')
@@ -459,7 +458,7 @@ class RudeChatClient:
                         await self.handle_nick(tokens)
                     case "JOIN":
                         if self.znc_connection:
-                            await self.join_znc_channel(tokens)
+                            self.join_znc_channel(tokens)
                             reset_timer("#")
                     case "PRIVMSG":
                         if self.znc_connection:
@@ -1359,8 +1358,8 @@ class RudeChatClient:
                 self.pipe_mode_to_pop_out(join_message, channel)
 
         # If the user joining is the client's user, just return
-        if user_info == self.nickname:
-            return
+        if user_info == self.nickname and channel not in self.joined_channels:
+            self.join_znc_channel(tokens)
 
         # Check if the user is not already in the channel_users list for the channel
         if user_info not in self.channel_users.get(channel, []):
@@ -2081,10 +2080,11 @@ class RudeChatClient:
             except asyncio.CancelledError:
                 self.loop_running = False
                 print("Exiting handle_incoming_message loop.")
+                break
 
             if not data:
-                print("No data received, breaking the loop.")
-                break
+                print("No data received, attempting reconnection")
+                await self.reconnect(config_file)
 
             decoded_data = data.decode('UTF-8', errors='ignore')
             cleaned_data = decoded_data.replace("\x06", "")  # Remove the character with ASCII value 6
