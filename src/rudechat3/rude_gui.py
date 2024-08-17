@@ -1,13 +1,13 @@
 #!/usr/bin/env python
-from .rude_client import RudeChatClient
-from .server_config_window import ServerConfigWindow
-from .rude_colours import RudeColours
-from .format_decoder import Attribute, decoder
-from .gui_config_window import GuiConfigWindow
-from .rude_popout import RudePopOut
-from .shared_imports import *
-from .rude_dragndrop import DragDropListbox
-from .nick_cleaner import clean_nicknames
+from rudechat3.rude_client import RudeChatClient
+from rudechat3.server_config_window import ServerConfigWindow
+from rudechat3.rude_colours import RudeColours
+from rudechat3.format_decoder import Attribute, decoder
+from rudechat3.gui_config_window import GuiConfigWindow
+from rudechat3.rude_popout import RudePopOut
+from rudechat3.shared_imports import *
+from rudechat3.rude_dragndrop import DragDropListbox
+from rudechat3.nick_cleaner import clean_nicknames
 
 class RudeGui:
     def __init__(self, master):

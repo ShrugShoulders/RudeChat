@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-from .shared_imports import *
+from rudechat3.shared_imports import *
 
 class ChannelListWindow(tk.Toplevel):
     def __init__(self, client, *args, **kwargs):

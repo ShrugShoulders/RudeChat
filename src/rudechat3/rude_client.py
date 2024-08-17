@@ -1,7 +1,7 @@
 #!/usr/bin/env python
-from .list_window import ChannelListWindow
-from .rude_pronouns import replace_pronouns
-from .shared_imports import *
+from rudechat3.list_window import ChannelListWindow
+from rudechat3.rude_pronouns import replace_pronouns
+from rudechat3.shared_imports import *
 
 class RudeChatClient:
     def __init__(self, text_widget, server_text_widget, entry_widget, master, gui):
