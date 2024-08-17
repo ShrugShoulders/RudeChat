@@ -5,3 +5,5 @@ plyer
 aiofiles
 colorchooser
 tzlocal
+tkcolorpicker
+pillow
