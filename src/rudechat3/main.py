@@ -17,13 +17,13 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
 # Import GUI
-from rudechat3.rude_gui import RudeGui
+from .rude_gui import RudeGui
 # Import Client
-from rudechat3.rude_client import RudeChatClient
+from .rude_client import RudeChatClient
 # Import Initializer
-from rudechat3.init_clients import initialize_clients
+from .init_clients import initialize_clients
 # Everything else.
-from rudechat3.shared_imports import *
+from .shared_imports import *
 
 def main():
     root = tk.Tk()

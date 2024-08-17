@@ -1,4 +1,4 @@
-from rudechat3.shared_imports import *
+from .shared_imports import *
 
 async def initialize_clients(app):
     script_directory = os.path.dirname(os.path.abspath(__file__))
