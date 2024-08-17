@@ -1,0 +1,7 @@
+pytz
+asyncio
+irctokens
+plyer
+aiofiles
+colorchooser
+tzlocal
