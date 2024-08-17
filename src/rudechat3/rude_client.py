@@ -45,7 +45,6 @@ class RudeChatClient:
         self.isupport_flag = False
         self.loop_running = True
         self.config = ''
-        self.message_handling_semaphore = asyncio.Semaphore(50)
         self.delete_lock_files()
         self.loop = asyncio.get_event_loop()
         self.time_zone = get_localzone()
@@ -628,9 +627,10 @@ class RudeChatClient:
         except AttributeError as e:
             # Handle the case where `self.writer` is not set
             print(f"AttributeError occurred in send_message: {e}")
-        except (BrokenPipeError, TimeoutError) as e:
+        except (BrokenPipeError, TimeoutError, ConnectionResetError, ConnectionRefusedError, OSError) as e:
             # Handle specific errors related to the writer
             print(f"BrokenPipeError or TimeoutError occurred in send_message: {e}")
+            return
 
     def is_valid_channel(self, channel):
         return any(channel.startswith(prefix) for prefix in self.chantypes)
@@ -2065,26 +2065,27 @@ class RudeChatClient:
         buffer = ""
         current_users_list = []
         current_channel = ""
-        timeout_seconds = 120  # Seconds
+        timeout_seconds = 256  
 
         while self.loop_running:
             try:
-                async with self.message_handling_semaphore:
-                    data = await asyncio.wait_for(self.reader.read(4096), timeout_seconds)
+                data = await asyncio.wait_for(self.reader.read(4096), timeout_seconds)
+            except asyncio.TimeoutError as e:
+                print(f"TimeoutError Caught In handle_incoming_message: {e}")
+                continue
             except OSError as e:
-                print(f"OS ERROR Caught In handle_incoming_message: {e}")
-                self.loop_running = False
+                print(f"OS ERROR Caught In handle_incoming_message: {e.errno} - {e.strerror}")
+                await self.send_message(f'QUIT :{e.strerror}')
                 await self.reconnect(config_file)
-            except Exception as e:  # General exception catch
-                print(f"An Unexpected Error Occurred In handle_incoming_message: {e}\n")
+                continue
             except asyncio.CancelledError:
                 self.loop_running = False
                 print("Exiting handle_incoming_message loop.")
                 break
 
             if not data:
-                print("No data received, attempting reconnection")
-                await self.reconnect(config_file)
+                print("No data received")
+                continue
 
             decoded_data = data.decode('UTF-8', errors='ignore')
             cleaned_data = decoded_data.replace("\x06", "")  # Remove the character with ASCII value 6
