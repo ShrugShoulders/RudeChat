@@ -35,6 +35,7 @@ setup(
             "rude.png",
             "ignore_list.txt",
             "filtered_channels.txt",
+            "first_run.txt",
         ],
     },
     entry_points={

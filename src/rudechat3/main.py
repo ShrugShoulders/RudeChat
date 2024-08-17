@@ -16,6 +16,8 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
+# Import First Run Configs
+from .rude_first_run import FirstRun
 # Import GUI
 from .rude_gui import RudeGui
 # Import Client
@@ -26,14 +28,27 @@ from .init_clients import initialize_clients
 from .shared_imports import *
 
 def main():
-    root = tk.Tk()
-    app = RudeGui(root)
+    first_run = FirstRun()
+    if first_run.first_run_detect == 0:
+        first_run.open_client_config_window()
 
-    new_loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(new_loop)
+        root = tk.Tk()
+        app = RudeGui(root)
 
-    loop = asyncio.get_event_loop()
-    loop.create_task(initialize_clients(app))
+        new_loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(new_loop)
+
+        loop = asyncio.get_event_loop()
+        loop.create_task(initialize_clients(app))
+    else:
+        root = tk.Tk()
+        app = RudeGui(root)
+
+        new_loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(new_loop)
+
+        loop = asyncio.get_event_loop()
+        loop.create_task(initialize_clients(app))
 
     def tk_update():
         try:
