@@ -48,6 +48,7 @@ class RudeChatClient:
         self.delete_lock_files()
         self.loop = asyncio.get_event_loop()
         self.time_zone = get_localzone()
+        self.configure_logging()
 
     async def read_config(self, config_file):
         config = configparser.ConfigParser()
@@ -107,6 +108,11 @@ class RudeChatClient:
         self.display_user_modes = config.getboolean('IRC', 'display_user_modes', fallback=True)
         self.send_ctcp_response = config.getboolean('IRC', 'send_ctcp_response', fallback=True)
         self.gui.update_nick_channel_label()
+
+    def configure_logging(self):
+        # Configure logging only if not already configured
+        if not logging.getLogger().hasHandlers():
+            logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
 
     def delete_lock_files(self):
         script_directory = os.path.dirname(os.path.abspath(__file__))
@@ -797,7 +803,7 @@ class RudeChatClient:
                 # Measure ping time before sending PING
                 self.ping_start_time = time.time()
 
-                await asyncio.sleep(194)
+                await asyncio.sleep(60)
                 await self.send_message(f'PING {self.server}')
 
             except asyncio.CancelledError:
@@ -812,17 +818,20 @@ class RudeChatClient:
                     print("loop not running. breaking keep_alive")
                     break
                 else:
-                    disconnected_server = self.grab_server_name(config_file)
-                    await self.disconnect(disconnected_server)
-                    self.gui.remove_server_from_listbox(disconnected_server)
-                    await self.connect_to_specific_server(disconnected_server)
-                    break
+                    #disconnected_server = self.grab_server_name(config_file)
+                    #await self.disconnect(disconnected_server)
+                    #self.gui.remove_server_from_listbox(disconnected_server)
+                    #await self.connect_to_specific_server(disconnected_server)
+                    #break
+                    continue
 
             except AttributeError as e:
                 print(f"AttributeError caught in keep_alive: {e}")
+                continue
 
             except Exception as e:
                 print(f"Unhandled exception in keep_alive: {e}")
+                continue
 
     async def auto_save(self):
         while self.loop_running:
@@ -839,9 +848,11 @@ class RudeChatClient:
 
             except AttributeError as e:  # Catch AttributeError
                 print(f"AttributeError caught in auto_save: {e}")
+                continue
 
             except Exception as e:  # Catch other exceptions
                 print(f"Unhandled exception in auto_save: {e}")
+                continue
 
     async def auto_trim(self):
         while self.loop_running:
@@ -858,9 +869,11 @@ class RudeChatClient:
 
             except AttributeError as e:  # Catch AttributeError
                 print(f"AttributeError caught in auto_trim: {e}")
+                continue
 
             except Exception as e:  # Catch other exceptions
                 print(f"Unhandled exception in auto_trim: {e}")
+                continue
 
     def handle_server_message(self, line):
         data = line + "\n"
@@ -2065,36 +2078,50 @@ class RudeChatClient:
         buffer = ""
         current_users_list = []
         current_channel = ""
-        timeout_seconds = 256  
+        timeout_seconds = 256
 
         while self.loop_running:
             try:
+                logging.debug("Waiting for data...")
                 data = await asyncio.wait_for(self.reader.read(4096), timeout_seconds)
+                logging.debug(f"Data received: {data[:50]}...")  # Log the first 50 bytes for brevity
+
             except asyncio.TimeoutError as e:
-                print(f"TimeoutError Caught In handle_incoming_message: {e}")
+                logging.warning(f"TimeoutError Caught In handle_incoming_message: {e}")
                 continue
+
             except OSError as e:
-                print(f"OS ERROR Caught In handle_incoming_message: {e.errno} - {e.strerror}")
+                logging.error(f"OS ERROR Caught In handle_incoming_message: {e.errno} - {e.strerror}")
                 await self.send_message(f'QUIT :{e.strerror}')
                 await self.reconnect(config_file)
                 continue
+
             except asyncio.CancelledError:
                 self.loop_running = False
-                print("Exiting handle_incoming_message loop.")
+                logging.info("Exiting handle_incoming_message loop.")
                 break
 
             if not data:
-                print("No data received")
+                logging.info("No data received")
                 continue
 
-            decoded_data = data.decode('UTF-8', errors='ignore')
-            cleaned_data = decoded_data.replace("\x06", "")  # Remove the character with ASCII value 6
+            try:
+                decoded_data = data.decode('UTF-8', errors='ignore')
+                logging.debug(f"Decoded data: {decoded_data[:50]}...")  # Log the first 50 characters for brevity
+                cleaned_data = decoded_data.replace("\x06", "")  # Remove the character with ASCII value 6
+                logging.debug(f"Cleaned data (post ASCII-6 removal): {cleaned_data[:50]}...")
 
-            if not self.use_colors:
-                # Remove IRC colors and formatting using regular expressions
-                cleaned_data = re.sub(r'\x03(?:\d{1,2}(?:,\d{1,2})?)?', '', cleaned_data)
+                if not self.use_colors:
+                    # Remove IRC colors and formatting using regular expressions
+                    cleaned_data = re.sub(r'\x03(?:\d{1,2}(?:,\d{1,2})?)?', '', cleaned_data)
+                    logging.debug(f"Cleaned data (post color removal): {cleaned_data[:50]}...")
 
-            buffer += cleaned_data
+                buffer += cleaned_data
+                logging.debug(f"Buffer updated: {buffer[:50]}...")
+
+            except Exception as e:
+                logging.exception(f"Exception occurred during data processing: {e}")
+                continue
 
             while '\n' in buffer:
                 line, buffer = buffer.split('\n', 1)
