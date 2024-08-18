@@ -5,6 +5,8 @@ from .server_config_window import ServerConfigWindow
 class FirstRun:
     def __init__(self):
         self.first_run_detect = self.load_first_run()
+        self.script_directory = os.path.dirname(os.path.abspath(__file__))
+        self.read_config()
 
     def load_first_run(self):
         script_directory = os.path.dirname(os.path.abspath(__file__))
@@ -23,6 +25,16 @@ class FirstRun:
             # Handle other exceptions if needed
             print(f"An error occurred while reading the first run file: {str(e)}")
             return 0
+
+    def read_config(self):
+        config_file = os.path.join(self.script_directory, 'gui_config.ini')
+
+        if os.path.exists(config_file):
+            color_config = configparser.ConfigParser()
+            color_config.read(config_file)
+
+            self.bg_color = color_config.get('GUI', 'master_color', fallback='black')
+            self.fg_color = color_config.get('GUI', 'main_fg_color', fallback='#C0FFEE')
 
     def update_first_run(self):
         script_directory = os.path.dirname(os.path.abspath(__file__))
@@ -76,10 +88,10 @@ class FirstRun:
         config_menu.pack(pady=10)
         config_menu.bind("<<ComboboxSelected>>", on_config_change)
 
-        save_button = ttk.Button(root, text="Start Client", command=config_window.save_config)
+        save_button = tk.Button(root, text="Start Client", command=config_window.save_config, bg=self.bg_color, fg=self.fg_color)
         save_button.pack(pady=10)
 
-        instruction_label = tk.Label(root, text="Welcome to RudeChat First Run Config: To create a new config file simply change the data in the fields, then edit the file name in the file selection above, configuration files must follow conf.exampleserver.rude format.", bg='black', fg='white', wraplength=180)
+        instruction_label = tk.Label(root, text="Welcome to RudeChat First Run Config: To create a new config file simply change the data in the fields, then edit the file name in the file selection above, configuration files must follow conf.exampleserver.rude format.", bg=self.bg_color, fg=self.fg_color, wraplength=180)
         instruction_label.pack()
 
         root.mainloop()
