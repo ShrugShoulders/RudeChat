@@ -51,7 +51,7 @@ class FirstRun:
             return
 
         root = tk.Tk()
-        root.title("Rude Server configuration")
+        root.title("Rude Server configuration: FIRST RUN")
 
         files = os.listdir(script_directory)
         config_files = [f for f in files if f.startswith("conf.") and f.endswith(".rude")]
@@ -76,10 +76,10 @@ class FirstRun:
         config_menu.pack(pady=10)
         config_menu.bind("<<ComboboxSelected>>", on_config_change)
 
-        save_button = ttk.Button(root, text="Apply", command=config_window.save_config)
+        save_button = ttk.Button(root, text="Start Client", command=config_window.save_config)
         save_button.pack(pady=10)
 
-        instruction_label = tk.Label(root, text="To create a new config file simply change the data in the fields, then edit the file name in the file selection above Apply, configuration files must follow conf.exampleserver.rude format.", wraplength=180)
+        instruction_label = tk.Label(root, text="Welcome to RudeChat First Run Config: To create a new config file simply change the data in the fields, then edit the file name in the file selection above, configuration files must follow conf.exampleserver.rude format.", bg='black', fg='white', wraplength=180)
         instruction_label.pack()
 
         root.mainloop()

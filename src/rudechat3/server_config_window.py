@@ -8,6 +8,7 @@ class ServerConfigWindow:
         self.parent = parent
         self.config_file = config_file
         self.close_callback = close_callback
+        self.script_directory = os.path.dirname(os.path.abspath(__file__))
 
         self.config = configparser.ConfigParser()
         self.config.read(config_file)
@@ -45,7 +46,22 @@ class ServerConfigWindow:
             'send_ctcp_response': 'Respond to CTCP Requests?',
         }
 
+        self.read_config()
         self.create_widgets()
+
+    def read_config(self):
+        config_file = os.path.join(self.script_directory, 'gui_config.ini')
+
+        if os.path.exists(config_file):
+            color_config = configparser.ConfigParser()
+            color_config.read(config_file)
+
+            self.bg_color = color_config.get('GUI', 'master_color', fallback='black')
+            self.fg_color = color_config.get('GUI', 'main_fg_color', fallback='#C0FFEE')
+            self.entry_bg_color = color_config.get('GUI', 'master_color', fallback='black')
+            self.entry_fg_color = color_config.get('GUI', 'main_fg_color', fallback='#C0FFEE')
+            self.frame_bg_color = color_config.get('GUI', 'master_color', fallback='black')
+            self.parent.configure(bg=self.bg_color)
 
     def create_widgets(self):
         # Clear existing widgets if they exist
@@ -54,9 +70,9 @@ class ServerConfigWindow:
                 widget.destroy()
         else:
             # Create the canvas and scrollbar
-            self.canvas = tk.Canvas(self.parent)
+            self.canvas = tk.Canvas(self.parent, bg=self.bg_color)
             self.scrollbar = ttk.Scrollbar(self.parent, orient="vertical", command=self.canvas.yview)
-            self.scrollable_frame = ttk.Frame(self.canvas)
+            self.scrollable_frame = tk.Frame(self.canvas, bg=self.frame_bg_color)
 
             # Configure the canvas and scrollbar
             self.scrollable_frame.bind(
@@ -81,15 +97,15 @@ class ServerConfigWindow:
 
     def create_config_widgets(self):
         for section in self.config.sections():
-            section_frame = ttk.LabelFrame(self.scrollable_frame, text=section)
+            section_frame = tk.LabelFrame(self.scrollable_frame, text=section, bg=self.frame_bg_color, fg=self.fg_color)
             section_frame.pack(padx=10, pady=5, fill='both', expand=True)
 
             for option in self.config.options(section):
                 label_text = self.label_map.get(option, option)
-                label = ttk.Label(section_frame, text=label_text)
+                label = tk.Label(section_frame, text=label_text, bg=self.frame_bg_color, fg=self.fg_color)
                 label.grid(row=len(self.entries), column=0, padx=5, pady=2, sticky='e')
 
-                entry = ttk.Entry(section_frame)
+                entry = tk.Entry(section_frame, bg=self.entry_bg_color, fg=self.entry_fg_color)
                 entry.insert(0, self.config.get(section, option))
                 entry.grid(row=len(self.entries), column=1, padx=5, pady=2, sticky='w')
 
