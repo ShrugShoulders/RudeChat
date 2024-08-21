@@ -1,6 +1,7 @@
 # RudeChat IRC Client: For Fun & Reasons.
 ## Installation    
 To install on Linux:
+
         Download the Stand Alone and extract. 
         or
         Clone the repo, cd into its cloned directory, and pip install -r requirements.txt .
