@@ -29,3 +29,4 @@ znc_user = Rude
 replace_pronouns = False
 display_user_modes = True
 send_ctcp_response = True
+green_text = True

@@ -44,6 +44,7 @@ class ServerConfigWindow:
             'auto_rejoin': 'Auto Rejoin on Kick?',
             'use_irc_colors': 'Enable/Disable IRC Colors',
             'send_ctcp_response': 'Respond to CTCP Requests?',
+            'green_text': 'Green Text Styling',
         }
 
         self.read_config()

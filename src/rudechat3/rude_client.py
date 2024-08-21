@@ -84,6 +84,7 @@ class RudeChatClient:
         self.use_logging = config.getboolean('IRC', 'use_logging', fallback=True)
         self.replace_pronouns = config.getboolean('IRC', 'replace_pronouns', fallback=False)
         self.send_ctcp_response = config.getboolean('IRC', 'send_ctcp_response', fallback=True)
+        self.green_text = config.getboolean('IRC', 'green_text', fallback=True)
         await self.load_channel_messages()
         self.load_ignore_list()
         self.gui.update_nick_channel_label()
@@ -107,6 +108,7 @@ class RudeChatClient:
         self.replace_pronouns = config.getboolean('IRC', 'replace_pronouns', fallback=False)
         self.display_user_modes = config.getboolean('IRC', 'display_user_modes', fallback=True)
         self.send_ctcp_response = config.getboolean('IRC', 'send_ctcp_response', fallback=True)
+        self.green_text = config.getboolean('IRC', 'green_text', fallback=True)
         self.gui.update_nick_channel_label()
 
     def configure_logging(self):
@@ -833,27 +835,6 @@ class RudeChatClient:
                 print(f"Unhandled exception in keep_alive: {e}")
                 continue
 
-    async def auto_save(self):
-        while self.loop_running:
-            try:
-                await asyncio.sleep(30)
-                await self.save_channel_messages()
-                if not self.loop_running:
-                    break
-
-            except asyncio.CancelledError:
-                self.loop_running = False
-                print("Exiting auto_save loop.")
-                break
-
-            except AttributeError as e:  # Catch AttributeError
-                print(f"AttributeError caught in auto_save: {e}")
-                continue
-
-            except Exception as e:  # Catch other exceptions
-                print(f"Unhandled exception in auto_save: {e}")
-                continue
-
     async def auto_trim(self):
         while self.loop_running:
             try:
@@ -989,16 +970,18 @@ class RudeChatClient:
 
     def trim_messages(self):
         for server, channels in self.channel_messages.items():
+            # Trim the message history for remaining channels to the last 125 messages
+            for channel, messages in channels.items():
+                channels[channel] = messages[-125:]
+
+    def remove_ampersand_channels(self):
+        for server, channels in self.channel_messages.items():
             # Identify keys to be deleted
             keys_to_delete = [channel for channel in channels.keys() if channel.startswith('&')]
             
             # Delete identified keys
             for key in keys_to_delete:
                 del channels[key]
-            
-            # Trim the message history for remaining channels to the last 125 messages
-            for channel, messages in channels.items():
-                channels[channel] = messages[-125:]
 
     async def notify_user_of_mention(self, server, channel, sender, message):
         notification_msg = f"<{sender}> {message}"
@@ -1079,6 +1062,15 @@ class RudeChatClient:
         except Exception as e:
             print(f"Error triggering desktop notification: {e}")
 
+    def green_texter(self, message):
+        if self.green_text:
+            if message.startswith('>'):
+                return f'\x0303{message}\x0F'
+            else:
+                return message
+        else:
+            return message
+
     async def handle_privmsg(self, tokens, znc_privmsg=False):
         timestamp = datetime.datetime.now().strftime('[%H:%M:%S] ')
         sender = tokens.hostmask.nickname
@@ -1088,6 +1080,7 @@ class RudeChatClient:
         sender_hostmask = str(tokens.hostmask)
         user_mode = self.get_user_mode(sender, target)
         mode_symbol = self.get_mode_symbol(user_mode) if user_mode else ''
+        gmessage = self.green_texter(message)
         if self.should_ignore_sender(sender_hostmask):
             return
 
@@ -1097,11 +1090,11 @@ class RudeChatClient:
 
         if self.is_direct_message(target):
             target = await self.get_direct_message_target(sender, target)
-            await self.prepare_direct_message(sender, target, message, timestamp, mode_symbol, znc_privmsg)
+            await self.prepare_direct_message(sender, target, gmessage, timestamp, mode_symbol, znc_privmsg)
         else:
-            await self.handle_channel_message(sender, target, message, timestamp, mode_symbol, znc_privmsg)
+            await self.handle_channel_message(sender, target, gmessage, timestamp, mode_symbol, znc_privmsg)
 
-        await self.notify_user_if_mentioned(message, target, sender, timestamp)
+        await self.notify_user_if_mentioned(gmessage, target, sender, timestamp)
 
     def should_ignore_sender(self, sender_hostmask):
         return any(fnmatch.fnmatch(sender_hostmask, ignored) for ignored in self.ignore_list)
@@ -2082,9 +2075,9 @@ class RudeChatClient:
 
         while self.loop_running:
             try:
-                logging.debug("Waiting for data...")
+                #logging.debug("Waiting for data...")
                 data = await asyncio.wait_for(self.reader.read(4096), timeout_seconds)
-                logging.debug(f"Data received: {data[:50]}...")  # Log the first 50 bytes for brevity
+                #logging.debug(f"Data received: {data[:50]}...")  # Log the first 50 bytes for brevity
 
             except asyncio.TimeoutError as e:
                 logging.warning(f"TimeoutError Caught In handle_incoming_message: {e}")
@@ -2107,17 +2100,17 @@ class RudeChatClient:
 
             try:
                 decoded_data = data.decode('UTF-8', errors='ignore')
-                logging.debug(f"Decoded data: {decoded_data[:50]}...")  # Log the first 50 characters for brevity
+                #logging.debug(f"Decoded data: {decoded_data[:50]}...")  # Log the first 50 characters for brevity
                 cleaned_data = decoded_data.replace("\x06", "")  # Remove the character with ASCII value 6
-                logging.debug(f"Cleaned data (post ASCII-6 removal): {cleaned_data[:50]}...")
+                #logging.debug(f"Cleaned data (post ASCII-6 removal): {cleaned_data[:50]}...")
 
                 if not self.use_colors:
                     # Remove IRC colors and formatting using regular expressions
                     cleaned_data = re.sub(r'\x03(?:\d{1,2}(?:,\d{1,2})?)?', '', cleaned_data)
-                    logging.debug(f"Cleaned data (post color removal): {cleaned_data[:50]}...")
+                    #logging.debug(f"Cleaned data (post color removal): {cleaned_data[:50]}...")
 
                 buffer += cleaned_data
-                logging.debug(f"Buffer updated: {buffer[:50]}...")
+                #logging.debug(f"Buffer updated: {buffer[:50]}...")
 
             except Exception as e:
                 logging.exception(f"Exception occurred during data processing: {e}")
@@ -2800,6 +2793,8 @@ class RudeChatClient:
 
             case "quit":
                 self.gui.save_nickname_colors()
+                self.remove_ampersand_channels()
+                await self.save_channel_messages()
                 quit_message = " ".join(args[1:]) if len(args) > 0 else None
                 await self.send_message(f"QUIT :{quit_message}")
                 self.loop_running = False
@@ -2945,6 +2940,7 @@ class RudeChatClient:
         
         # Escape color codes
         escaped_input = self.escape_color_codes(user_input)
+        escaped_input = self.green_texter(escaped_input)
 
         if self.replace_pronouns:
             escaped_input = replace_pronouns(escaped_input, self.current_channel)

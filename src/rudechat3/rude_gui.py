@@ -210,7 +210,6 @@ class RudeGui:
             pass
 
     def client_shutdown(self):
-        self.save_nickname_colors()
         # Close all pop-out windows
         if self.pop_out_windows:
             for target, window in self.pop_out_windows.items():
@@ -1100,7 +1099,6 @@ class RudeGui:
 
             # Create and store references to tasks
             irc_client.tasks["keep_alive"] = asyncio.create_task(irc_client.keep_alive(config_file), name="keep_alive_task")
-            irc_client.tasks["auto_save"] = asyncio.create_task(irc_client.auto_save(), name="auto_save_task")
             irc_client.tasks["auto_trim"] = asyncio.create_task(irc_client.auto_trim(), name="auto_trim_task")
             irc_client.tasks["handle_incoming_message"] = asyncio.create_task(irc_client.handle_incoming_message(config_file), name="handle_incoming_message_task")
 
