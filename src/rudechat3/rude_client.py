@@ -835,6 +835,27 @@ class RudeChatClient:
                 print(f"Unhandled exception in keep_alive: {e}")
                 continue
 
+    async def auto_save(self):
+        while self.loop_running:
+            try:
+                await asyncio.sleep(30)
+                await self.save_channel_messages()
+                if not self.loop_running:
+                    break
+
+            except asyncio.CancelledError:
+                self.loop_running = False
+                print("Exiting auto_save loop.")
+                break
+
+            except AttributeError as e:  # Catch AttributeError
+                print(f"AttributeError caught in auto_save: {e}")
+                continue
+
+            except Exception as e:  # Catch other exceptions
+                print(f"Unhandled exception in auto_save: {e}")
+                continue
+
     async def auto_trim(self):
         while self.loop_running:
             try:
@@ -2794,7 +2815,6 @@ class RudeChatClient:
             case "quit":
                 self.gui.save_nickname_colors()
                 self.remove_ampersand_channels()
-                await self.save_channel_messages()
                 quit_message = " ".join(args[1:]) if len(args) > 0 else None
                 await self.send_message(f"QUIT :{quit_message}")
                 self.loop_running = False
