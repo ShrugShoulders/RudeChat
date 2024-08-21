@@ -4,7 +4,10 @@ To install on Linux:
 
         Download the Stand Alone and extract. 
         or
-        Clone the repo, cd into its cloned directory, and pip install -r requirements.txt .
+        Clone the repo, cd into its cloned directory, and use pip to install. 
+        Command: pip install -r requirements.txt .
+        Once pip has completed you can then run rudechat in your terminal. 
+        Command: rudechat
 
 Main Stan Alone files found in: \_internal\/rudechat3\/
 Pip Install Directory: \/home\/username\/.local\/lib\/python3.12\/site-packages\/rudechat3\/
