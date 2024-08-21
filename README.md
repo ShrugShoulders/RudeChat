@@ -1,8 +1,12 @@
 # RudeChat IRC Client: For Fun & Reasons.
 ## Installation    
-To install on Linux Download the Stand Alone and extract. 
+To install on Linux:
+        Download the Stand Alone and extract. 
+        or
+        Clone the repo, cd into its cloned directory, and pip install -r requirements.txt .
 
-Main files found in: \_internal\/rudechat3\/
+Main Stan Alone files found in: \_internal\/rudechat3\/
+Pip Install Directory: \/home\/username\/.local\/lib\/python3.12\/site-packages\/rudechat3\/
 
 To install on Windows Download the installer.
 
