@@ -1663,7 +1663,7 @@ class RudeChatClient:
                     else:
                         print(f"User {user} not found in current modes. Adding with no modes.")
                         user_modes = set()
-                        for symbol, mode in self.symbol_to_mode.items():
+                        for mode, symbol in self.mode_to_symbol.items():
                             if symbol in user:
                                 user_modes.add(mode)
                         # Update the current_modes dictionary
