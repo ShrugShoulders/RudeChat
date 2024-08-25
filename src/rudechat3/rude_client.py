@@ -1,7 +1,7 @@
 #!/usr/bin/env python
-from .list_window import ChannelListWindow
-from .rude_pronouns import replace_pronouns
-from .shared_imports import *
+from rudechat3.list_window import ChannelListWindow
+from rudechat3.rude_pronouns import replace_pronouns
+from rudechat3.shared_imports import *
 
 class RudeChatClient:
     def __init__(self, text_widget, server_text_widget, entry_widget, master, gui):
@@ -630,15 +630,42 @@ class RudeChatClient:
 
     async def send_message(self, message):
         try:
+            #logging.debug(f"Attempting to send message: {message[:10]}")
+            if self.writer is None:
+                logging.warning("send_message called, but self.writer is not set.")
+                raise AttributeError("Writer is not initialized.")
+            
+            #logging.debug("Writing to writer...")
             self.writer.write(f'{message}\r\n'.encode('UTF-8'))
+            
+            #logging.debug("Draining writer...")
             await asyncio.wait_for(self.writer.drain(), timeout=10)
+            
+            #logging.info(f"Message sent successfully: {message[:10]}")
+            
         except AttributeError as e:
-            # Handle the case where `self.writer` is not set
+            logging.error(f"AttributeError in send_message: {e}")
             print(f"AttributeError occurred in send_message: {e}")
-        except (BrokenPipeError, TimeoutError, ConnectionResetError, ConnectionRefusedError, OSError) as e:
-            # Handle specific errors related to the writer
-            print(f"BrokenPipeError or TimeoutError occurred in send_message: {e}")
-            return
+            
+        except BrokenPipeError as e:
+            logging.error(f"BrokenPipeError in send_message: {e}. The connection might have been lost.")
+            self.gui.insert_text_widget(f"Connection Error: {e}: Cannot send message.")
+            
+        except TimeoutError as e:
+            logging.error(f"TimeoutError in send_message: {e}. The operation took too long.")
+            self.gui.insert_text_widget(f"Connection Error: {e}: Cannot send message.")
+            
+        except ConnectionResetError as e:
+            logging.error(f"ConnectionResetError in send_message: {e}. The connection was reset by the peer.")
+            self.gui.insert_text_widget(f"Connection Error: {e}: Cannot send message.")
+            
+        except ConnectionRefusedError as e:
+            logging.error(f"ConnectionRefusedError in send_message: {e}. The connection attempt was refused.")
+            self.gui.insert_text_widget(f"Connection Error: {e}: Cannot send message.")
+            
+        except OSError as e:
+            logging.error(f"OSError in send_message: {e}. A general OS-related error occurred.")
+            self.gui.insert_text_widget(f"Connection Error: {e}: Cannot send message.")
 
     def is_valid_channel(self, channel):
         return any(channel.startswith(prefix) for prefix in self.chantypes)
@@ -1408,10 +1435,15 @@ class RudeChatClient:
         user_info = tokens.hostmask.nickname
         user_mask = tokens.hostmask
         channel = tokens.params[0]
-        if self.show_full_hostmask == True:
+        reason = tokens.params[1] if len(tokens.params) > 1 else None
+        
+        if reason:
+            part_message = f"\x0304(←)\x0F {user_mask} has parted from channel {channel}: {reason}\n"
+        else:
             part_message = f"\x0304(←)\x0F {user_mask} has parted from channel {channel}\n"
-        elif self.show_full_hostmask == False:
-            part_message = f"\x0304(←)\x0F {user_info} has parted from channel {channel}\n"
+        
+        if not self.show_full_hostmask:
+            part_message = part_message.replace(user_mask, user_info)
 
         # Update the message history for the channel
         if self.server not in self.channel_messages:
@@ -2101,11 +2133,13 @@ class RudeChatClient:
                 #logging.debug(f"Data received: {data[:50]}...")  # Log the first 50 bytes for brevity
 
             except asyncio.TimeoutError as e:
+                self.gui.insert_text_widget(f"Time Out: {e}")
                 logging.warning(f"TimeoutError Caught In handle_incoming_message: {e}")
                 continue
 
             except OSError as e:
                 logging.error(f"OS ERROR Caught In handle_incoming_message: {e.errno} - {e.strerror}")
+                self.gui.insert_text_widget(f"Disconnected: {e}")
                 await self.send_message(f'QUIT :{e.strerror}')
                 await self.reconnect(config_file)
                 continue
@@ -2555,9 +2589,12 @@ class RudeChatClient:
         # Display a message indicating the DM was closed
         self.gui.insert_text_widget(f"Private message with {nickname} closed.\n")
 
-    async def leave_channel(self, channel):
+    async def leave_channel(self, channel, reason):
         # Send PART message to the server to leave the channel
-        await self.send_message(f'PART {channel}')
+        if reason is not None:
+            await self.send_message(f'PART {channel} :{reason}')
+        else:
+            await self.send_message(f'PART {channel}')
 
         # Remove the channel entry from user_modes if it exists
         self.user_modes.pop(channel, None)
@@ -2758,7 +2795,8 @@ class RudeChatClient:
 
             case "part":
                 channel_name = args[1]
-                await self.leave_channel(channel_name)
+                reason = " ".join(args[2:]) if len(args) > 2 else None
+                await self.leave_channel(channel_name, reason)
 
             case "time":
                 await self.send_message(f"TIME")

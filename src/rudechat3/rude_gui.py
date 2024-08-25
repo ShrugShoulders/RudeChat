@@ -1,13 +1,13 @@
 #!/usr/bin/env python
-from .rude_client import RudeChatClient
-from .server_config_window import ServerConfigWindow
-from .rude_colours import RudeColours
-from .format_decoder import Attribute, decoder
-from .gui_config_window import GuiConfigWindow
-from .rude_popout import RudePopOut
-from .shared_imports import *
-from .rude_dragndrop import DragDropListbox
-from .nick_cleaner import clean_nicknames
+from rudechat3.rude_client import RudeChatClient
+from rudechat3.server_config_window import ServerConfigWindow
+from rudechat3.rude_colours import RudeColours
+from rudechat3.format_decoder import Attribute, decoder
+from rudechat3.gui_config_window import GuiConfigWindow
+from rudechat3.rude_popout import RudePopOut
+from rudechat3.shared_imports import *
+from rudechat3.rude_dragndrop import DragDropListbox
+from rudechat3.nick_cleaner import clean_nicknames
 
 class RudeGui:
     def __init__(self, master):
@@ -817,13 +817,13 @@ class RudeGui:
             selected_channel = self.channel_listbox.get(selected_channel_index)
             self.irc_client.handle_cq_command(["/cq", selected_channel], "</3 ")
 
-    def leave_channel_from_menu(self):
+    def leave_channel_from_menu(self, reason=None):
         selected_channel_index = self.channel_listbox.curselection()
         if selected_channel_index:
             selected_channel = self.channel_listbox.get(selected_channel_index)
             if '#' in selected_channel:
                 loop = asyncio.get_event_loop()
-                loop.create_task(self.irc_client.leave_channel(selected_channel))
+                loop.create_task(self.irc_client.leave_channel(selected_channel, reason))
 
     def whois_from_menu(self):
         modes_to_strip = ''.join(self.irc_client.mode_values)

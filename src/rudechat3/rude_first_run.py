@@ -1,5 +1,5 @@
-from .shared_imports import *
-from .server_config_window import ServerConfigWindow
+from rudechat3.shared_imports import *
+from rudechat3.server_config_window import ServerConfigWindow
 
 
 class FirstRun:

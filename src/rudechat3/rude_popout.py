@@ -11,8 +11,8 @@ import webbrowser
 from plyer import notification
 from threading import Thread
 from tkinter import scrolledtext, Listbox, Scrollbar, Tk, Frame, Label, Entry, Listbox, Menu, Scrollbar, StringVar, PhotoImage 
-from .format_decoder import Attribute, decoder
-from .rude_pronouns import replace_pronouns
+from rudechat3.format_decoder import Attribute, decoder
+from rudechat3.rude_pronouns import replace_pronouns
 
 class RudePopOut:
     def __init__(self, root, selected_channel, irc_client, nick_name, main_app):

@@ -1,5 +1,5 @@
 import tkinter as tk
-from .shared_imports import *
+from rudechat3.shared_imports import *
 
 class DragDropListbox(tk.Listbox):
     def __init__(self, master, update_callback, **kwargs):
