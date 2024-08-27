@@ -462,7 +462,13 @@ class RudeChatClient:
                     case "QUIT":
                         self.handle_quit(tokens)
                     case "NICK":
-                        await self.handle_nick(tokens)
+                        zncnick = 0
+                        if self.znc_connection and self.nickname != tokens.hostmask.nickname and zncnick == 0:
+                            new_nick = tokens.params[0]
+                            await self.change_nickname(new_nick, is_from_token=True)
+                            zncnick += 1
+                        else:
+                            await self.handle_nick(tokens)
                     case "JOIN":
                         if self.znc_connection:
                             self.join_znc_channel(tokens)
