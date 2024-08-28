@@ -16,7 +16,7 @@ class RudeChatClient:
         self.topiclen = 0
         self.current_channel = ''
         self.nickname = ''
-        self.chantypes = ''
+        self.chantypes = []
         self.joined_channels = []
         self.motd_lines = []
         self.ignore_list = []
@@ -724,9 +724,15 @@ class RudeChatClient:
         # Clear existing items
         self.gui.channel_listbox.delete(0, tk.END)
 
-        for chan in self.joined_channels:
-            if chan not in self.gui.popped_out_channels:
-                self.gui.channel_listbox.insert(tk.END, chan)
+        # Sort channels by the number of prefix characters at the beginning
+        sorted_channels = sorted(
+            (chan for chan in self.joined_channels if chan not in self.gui.popped_out_channels),
+            key=lambda chan: len(chan) - len(chan.lstrip(''.join(self.chantypes)))
+        )
+
+        # Insert sorted channels into the listbox
+        for chan in sorted_channels:
+            self.gui.channel_listbox.insert(tk.END, chan)
 
         # Update and restore the highlighted background color for all previously highlighted channels
         updated_highlighted_channels = {}
@@ -1782,7 +1788,7 @@ class RudeChatClient:
                 self.mode_to_symbol = dict(zip(modes, symbols))
             elif param.startswith("CHANTYPES="):
                 _, channel_types = param.split("=")
-                self.chantypes = channel_types
+                self.chantypes = list(channel_types)
             elif param.startswith("NICKLEN="):
                 _, nick_len = param.split("=")
                 self.nicknamelen = int(nick_len)

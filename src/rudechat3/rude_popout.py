@@ -931,17 +931,27 @@ class RudePopOut:
             except Exception as e:
                 print(f"Exception in check_focus_and_notify: {e}")
 
-    def trigger_desktop_notification(self, channel_name=None, message_content=None, title="RudePopOut"):
+    def trigger_desktop_notification(self, channel_name=None, title="RudeChat", message_content=None):
         """
         Show a system desktop notification.
         """
         script_directory = os.path.dirname(os.path.abspath(__file__))
-        if channel_name.startswith(self.irc_client.chantypes):
+
+        # Check if the application window is the active window
+        if self.is_app_focused():  # If the app is focused, return early
             return
 
         if channel_name:
-            # Ensure channel_name is a string and replace problematic characters
-            channel_name = str(channel_name).replace(f"{self.irc_client.chantypes}", "")
+            # Ensure channel_name is a string
+            channel_name = str(channel_name)
+
+            # Remove any prefix from self.irc_client.chantypes
+            for prefix in self.irc_client.chantypes:
+                if channel_name.startswith(prefix):
+                    channel_name = channel_name[len(prefix):]
+                    break  # Break after the first matching prefix is removed
+
+            # Construct the notification title and message
             title = f"{title}"
             if message_content:
                 message = f"{channel_name}: {message_content}"
@@ -956,7 +966,7 @@ class RudePopOut:
                 title=title,
                 message=message,
                 app_icon=icon_path,  
-                timeout=3,  
+                timeout=5,  
             )
         except Exception as e:
             print(f"Desktop notification error: {e}")

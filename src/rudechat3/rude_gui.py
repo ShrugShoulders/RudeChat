@@ -1473,13 +1473,22 @@ class RudeGui:
         Show a system desktop notification.
         """
         script_directory = os.path.dirname(os.path.abspath(__file__))
+
         # Check if the application window is the active window
         if self.is_app_focused():  # If the app is focused, return early
             return
 
         if channel_name:
-            # Ensure channel_name is a string and replace problematic characters
-            channel_name = str(channel_name).replace(f"{self.irc_client.chantypes}", "")
+            # Ensure channel_name is a string
+            channel_name = str(channel_name)
+
+            # Remove any prefix from self.irc_client.chantypes
+            for prefix in self.irc_client.chantypes:
+                if channel_name.startswith(prefix):
+                    channel_name = channel_name[len(prefix):]
+                    break  # Break after the first matching prefix is removed
+
+            # Construct the notification title and message
             title = f"{title}"
             if message_content:
                 message = f"{channel_name}: {message_content}"
