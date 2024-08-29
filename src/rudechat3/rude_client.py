@@ -2968,7 +2968,7 @@ class RudeChatClient:
                     self.gui.highlight_nickname()
 
                     # Check if it's a DM or channel
-                    if self.current_channel.startswith(self.chantypes):  # It's a channel
+                    if any(self.current_channel.startswith(prefix) for prefix in self.chantypes):  # It's a channel
                         self.user_input_channel_message(line, timestamp, mode_symbol)
                     else:  # It's a DM
                         self.user_input_dm_message(line, timestamp)
@@ -3183,19 +3183,20 @@ class RudeChatClient:
         
         # Escape color codes in the message
         escaped_message = self.escape_color_codes(message)
-        if self.use_time_stamp == True:
+        if self.use_time_stamp:
             formatted_message = f"{timestamp}<{mode_symbol}{self.nickname}> {escaped_message}\n"
-        elif self.use_time_stamp == False:
+        else:
             formatted_message = f"<{mode_symbol}{self.nickname}> {escaped_message}\n"
 
         # Initialize the server name
         server_name = self.server
 
         # Determine if it's a channel or DM
-        if channel.startswith(self.chantypes):  # It's a channel
-            if self.server not in self.channel_messages:
+        is_channel = any(channel.startswith(prefix) for prefix in self.chantypes)
+        if is_channel:  # It's a channel
+            if server_name not in self.channel_messages:
                 self.channel_messages[server_name] = {}
-            if channel not in self.channel_messages[self.server]:
+            if channel not in self.channel_messages[server_name]:
                 self.channel_messages[server_name][channel] = []
             self.channel_messages[server_name][channel].append(formatted_message)
         else:  # It's a DM
@@ -3436,7 +3437,7 @@ class RudeChatClient:
         if not args:
             # General WHO
             await self.send_message('WHO')
-        elif args[0].startswith(self.chantypes):
+        elif any(args[0].startswith(prefix) for prefix in self.chantypes):
             # WHO on a specific channel
             channel = args[0]
             await self.send_message(f'WHO {channel}')
