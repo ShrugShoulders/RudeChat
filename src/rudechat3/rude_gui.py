@@ -380,8 +380,7 @@ class RudeGui:
         self.channel_listbox.delete(0, tk.END)
 
     def scroll_channel_list(self):
-        # This method scrolls the Listbox to the bottom
-        self.channel_listbox.see(tk.END)
+        self.channel_listbox.see(0)
 
     def clear_user_listbox(self):
         self.user_listbox.delete(0, tk.END)
