@@ -1126,8 +1126,9 @@ class RudeChatClient:
             print(f"Error triggering desktop notification: {e}")
 
     def green_texter(self, message):
+        arrow_symbols = ['>', '»', '→', '⇒', '↣', '➜', '➤', '➡', '➝', '➞', '➟', '➠', '->', '=>']
         if self.green_text:
-            if message.startswith('>'):
+            if any(message.startswith(symbol) for symbol in arrow_symbols):
                 return f'\x0303{message}\x0F'
             else:
                 return message
