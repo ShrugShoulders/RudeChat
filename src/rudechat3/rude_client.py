@@ -730,9 +730,6 @@ class RudeChatClient:
             key=lambda chan: len(chan) - len(chan.lstrip(''.join(self.chantypes)))
         )
 
-        # Update the self.joined_channels list.
-        self.joined_channels = sorted_channels
-
         # Insert sorted channels into the listbox
         for chan in sorted_channels:
             self.gui.channel_listbox.insert(tk.END, chan)

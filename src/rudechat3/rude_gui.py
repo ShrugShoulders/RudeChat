@@ -695,14 +695,26 @@ class RudeGui:
     def open_popout_query_from_menu(self):
         modes_to_strip = ''.join(self.irc_client.mode_values)
         selected_user_index = self.user_listbox.curselection()
+        
         if selected_user_index:
             selected_user = self.user_listbox.get(selected_user_index)
             cleaned_nickname = selected_user.lstrip(modes_to_strip)
-            user_input = f"/query {cleaned_nickname}"
-            asyncio.run_coroutine_threadsafe(
-                self.irc_client.command_parser(user_input),
-                self.irc_client.loop
-            )
+
+            # Check if the cleaned nickname is in the channel listbox and remove it
+            listbox_items = self.channel_listbox.get(0, tk.END)
+            if cleaned_nickname in listbox_items:
+                index_to_remove = listbox_items.index(cleaned_nickname)
+                self.channel_listbox.delete(index_to_remove)
+
+            # Append to joined_channels if it's not already there
+            if cleaned_nickname not in self.irc_client.joined_channels:
+                self.irc_client.joined_channels.append(cleaned_nickname)
+            
+            # Update the channel list for the current server
+            self.channel_lists[self.irc_client.server] = self.irc_client.joined_channels
+            self.irc_client.update_gui_channel_list()
+
+            # Open the direct message pop-out window
             self.open_dm_pop_out_from_window(cleaned_nickname)
 
     def create_user_list_menu(self):
