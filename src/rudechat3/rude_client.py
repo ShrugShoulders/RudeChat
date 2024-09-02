@@ -23,6 +23,7 @@ class RudeChatClient:
         self.detached_channels = []
         self.mode_keys = []
         self.mode_values = []
+        self.away_users = []
         self.motd_dict = {}
         self.channel_messages = {}
         self.channel_users = {}
@@ -42,6 +43,7 @@ class RudeChatClient:
         self.reader = None
         self.writer = None
         self.ping_start_time = None
+        self.who_user_request = False
         self.isupport_flag = False
         self.loop_running = True
         self.config = ''
@@ -224,11 +226,7 @@ class RudeChatClient:
         self.gui.insert_text_widget(f'Sent client registration commands.\n')
 
         # Start capability negotiation
-        if self.sasl_enabled:
-            self.gui.insert_text_widget("Beginning SASL Authentication\n")
-            await self.send_message('CAP LS 302')
-        else:
-            self.gui.insert_text_widget("SASL is not enabled.\n")
+        await self.send_message('CAP LS 302')
 
         if self.znc_connection:
             await self.send_message(f'NICK {self.znc_user}')
@@ -288,8 +286,13 @@ class RudeChatClient:
             for channel in self.auto_join_channels:
                 await self.join_channel(channel)
                 await asyncio.sleep(0.1)
+            await self.request_who_for_all_channels()
         else:
             pass
+
+    async def request_who_for_all_channels(self):
+        for channel in self.joined_channels:
+            await self.send_message(f"WHO {channel}")
 
     async def auto_topic_nicklist(self):
         for channel in self.auto_join_channels:
@@ -368,6 +371,8 @@ class RudeChatClient:
                         break
                 await self.handle_privmsg(tokens, znc_privmsg=True)
             self.gui.insert_text_widget(f'\n\x0303\x02DONE!\x0F\n')
+            await self.send_message('CAP REQ :away-notify')
+            await self.request_who_for_all_channels()
 
         def reset_timer(symbol):
             nonlocal last_366_time
@@ -390,6 +395,7 @@ class RudeChatClient:
 
         while True:
             data = await self.reader.read(4096)
+            #print(data)
             if not data:
                 raise ConnectionError("Connection lost while waiting for the welcome message.")
 
@@ -412,7 +418,6 @@ class RudeChatClient:
                     case "NOTICE":
                         self.handle_notice_message(tokens)
                     case "CAP":
-                        self.gui.insert_text_widget("Handling CAP message\n")
                         await self.handle_cap(tokens)
 
                     case "AUTHENTICATE":
@@ -578,6 +583,7 @@ class RudeChatClient:
                         input_line = f"_await_welcome_message: {line}"
                         self.save_error(tokens, input_line)
                         self.gui.insert_and_scroll()
+
                 if check_timeout():
                     # Timeout occurred
                     if self.znc_connection:
@@ -604,13 +610,36 @@ class RudeChatClient:
                     return
 
     async def handle_cap(self, tokens):
-        if not self.sasl_enabled:
-            self.gui.insert_text_widget(f"SASL is not enabled.\n")
-            return  # Skip SASL if it's not enabled
+        # Check if the server is listing capabilities
         if "LS" in tokens.params:
-            await self.send_message("CAP REQ :sasl")
+            await self.send_message('CAP REQ :away-notify')
+            if self.sasl_enabled:
+                await self.send_message("CAP REQ :sasl")
+
+        # Check if the server has acknowledged a capability request
         elif "ACK" in tokens.params:
-            await self.send_message("AUTHENTICATE PLAIN")
+            acknowledged_capabilities = tokens.params[2].split()
+
+            # Handle away-notify ACK
+            if "away-notify" in acknowledged_capabilities:
+                self.gui.insert_text_widget("Server acknowledged away-notify capability.\n")
+
+            # Handle SASL ACK
+            if "sasl" in acknowledged_capabilities and self.sasl_enabled:
+                self.gui.insert_text_widget("Server acknowledged SASL capability.\n")
+                await self.send_message("AUTHENTICATE PLAIN")
+
+        # Handle capability rejection (NAK) if needed...
+        elif "NAK" in tokens.params:
+            rejected_capabilities = tokens.params[2].split()
+
+            if "away-notify" in rejected_capabilities:
+                self.gui.insert_text_widget("Server denied away-notify capability.\n")
+                await self.send_message("CAP END")
+
+            if "sasl" in rejected_capabilities:
+                self.gui.insert_text_widget("Server denied SASL capability.\n")
+                await self.send_message("CAP END")
 
     async def handle_sasl_auth(self, tokens):
         if not self.sasl_enabled:
@@ -1827,22 +1856,34 @@ class RudeChatClient:
             host = tokens.params[3]
             server = tokens.params[4]
             nickname = tokens.params[5]
+            status = tokens.params[6] 
+
+            # Determine if the user is away
+            away_status = "Away" if status.startswith('G') else "Active"
+            if away_status == "Away":
+                self.away_users.append(nickname)
+
             user_details = {
                 "nickname": nickname,
                 "username": username,
                 "host": host,
                 "server": server,
-                "channel": channel
+                "channel": channel,
+                "status": away_status
             }
             self.who_details.append(user_details)
 
         elif tokens.command == "315":  # End of WHO list
             messages = []
             for details in self.who_details:
-                message = f"User {details['nickname']} ({details['username']}@{details['host']}) on {details['server']} in {details['channel']}\n"
+                message = f"User {details['nickname']} ({details['username']}@{details['host']}) on {details['server']} in {details['channel']} - Status: {details['status']}\n"
                 messages.append(message)
+            
             final_message = "\n".join(messages)
-            self.gui.insert_text_widget(final_message)
+            if self.who_user_request:
+                self.gui.insert_text_widget(final_message)
+                self.who_user_request = False
+
             # Reset the who_details for future use
             self.who_details = []
 
@@ -2133,6 +2174,16 @@ class RudeChatClient:
         else:
             print("Invalid response format for '401'.")
 
+    def handle_away(self, tokens):
+        nickname = tokens.hostmask.nickname
+        if nickname not in self.away_users:
+            self.away_users.append(nickname)
+            self.gui.highlight_away_users()
+        else:
+            if nickname in self.away_users:
+                self.away_users.remove(nickname)
+                self.gui.highlight_away_users()
+
     async def handle_incoming_message(self, config_file):
         buffer = ""
         current_users_list = []
@@ -2209,6 +2260,10 @@ class RudeChatClient:
                     continue
 
                 match tokens.command:
+                    case "AWAY":
+                        self.handle_away(tokens)
+                    case "CAP":
+                       await self.handle_cap(tokens)
                     case "ERROR":
                         self.handle_error(tokens)
                     case "412":
@@ -2748,7 +2803,7 @@ class RudeChatClient:
                     self.handle_mentions_command()
 
             case "away":  # set the user as away
-                away_message = " ".join(args[1:]) if len(args) > 1 else None
+                away_message = " ".join(args[1:])
                 if away_message:
                     await self.send_message(f"AWAY :{away_message}")
                     self.gui.insert_text_widget(f"{away_message}\n")
@@ -2800,6 +2855,7 @@ class RudeChatClient:
                 await self.set_mode(channel, mode, target)
 
             case "who":
+                self.who_user_request = True
                 await self.handle_who_command(args[1:])
 
             case "whois": #who is that?

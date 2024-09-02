@@ -376,6 +376,23 @@ class RudeGui:
         except FileNotFoundError as e:
             print(f"Error displaying startup art: {e}")
 
+    def highlight_away_users(self):
+        # Loop through the items in the user_listbox
+        for index in range(self.user_listbox.size()):
+            # Get the username from the listbox
+            username = self.user_listbox.get(index)
+            
+            # Strip any mode symbols from the username
+            stripped_username = username.lstrip(''.join(self.irc_client.mode_values))
+            
+            # Check if the stripped username is in the away_users list
+            if stripped_username in self.irc_client.away_users:
+                # Change the foreground color of the user to red
+                self.user_listbox.itemconfig(index, {'fg': 'red'})
+            else:
+                # Reset the foreground color if the user is not away
+                self.user_listbox.itemconfig(index, {'fg': self.user_listbox_fg})
+
     def clear_channel_listbox(self):
         self.channel_listbox.delete(0, tk.END)
 
@@ -1300,6 +1317,7 @@ class RudeGui:
             # Turn background blue
             self.channel_listbox.itemconfig(clicked_index, {'bg': self.channel_select_color})
             self.highlight_nickname()
+            self.highlight_away_users()
 
             # Remove the clicked channel from highlighted_channels dictionary
             if self.irc_client.server_name in self.irc_client.highlighted_channels:
