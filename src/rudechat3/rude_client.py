@@ -293,6 +293,7 @@ class RudeChatClient:
         while True:
             for channel in self.joined_channels:
                 await self.send_message(f"WHO {channel}")
+                self.gui.highlight_away_users()
                 await asyncio.sleep(15)
             break
 
@@ -636,11 +637,10 @@ class RudeChatClient:
 
             if "away-notify" in rejected_capabilities:
                 self.gui.insert_text_widget("Server denied away-notify capability.\n")
-                await self.send_message("CAP END")
 
             if "sasl" in rejected_capabilities:
                 self.gui.insert_text_widget("Server denied SASL capability.\n")
-                await self.send_message("CAP END")
+            await self.send_message("CAP END")
 
     async def handle_sasl_auth(self, tokens):
         if not self.sasl_enabled:
@@ -2817,13 +2817,16 @@ class RudeChatClient:
                     await self.send_message(f"AWAY :{away_message}")
                     self.gui.insert_text_widget(f"{away_message}\n")
                     self.gui.update_users_label(away=True)
+                    self.away_users.append(self.nickname)
                 else:
                     await self.send_message("AWAY :Away")
                     self.gui.update_users_label(away=True)
+                    self.away_users.append(self.nickname)
 
             case "back":  # remove the "away" status
                 await self.send_message("AWAY")
                 self.gui.update_users_label(away=False)
+                self.away_users.remove(self.nickname)
 
             case "msg":  # send a private message to a user
                 if len(args) < 3:
