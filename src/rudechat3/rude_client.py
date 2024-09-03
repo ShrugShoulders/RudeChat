@@ -1736,7 +1736,6 @@ class RudeChatClient:
                     if user in current_modes:
                         del current_modes[user]
                     else:
-                        print(f"User {user} not found in current modes. Adding with no modes.")
                         user_modes = set()
                         for mode, symbol in self.mode_to_symbol.items():
                             if symbol in user:
@@ -2748,7 +2747,6 @@ class RudeChatClient:
                     await client.send_message("QUIT")
                     client.loop_running = False
                     del self.gui.clients[matching_key]
-                    print(self.gui.clients)
                     self.gui.insert_text_widget("Disconnected\n")
             else:
                 self.gui.insert_text_widget(f"No client found for server {server_name}\n")
