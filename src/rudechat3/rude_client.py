@@ -2818,15 +2818,18 @@ class RudeChatClient:
                     self.gui.insert_text_widget(f"{away_message}\n")
                     self.gui.update_users_label(away=True)
                     self.away_users.append(self.nickname)
+                    self.gui.highlight_away_users()
                 else:
                     await self.send_message("AWAY :Away")
                     self.gui.update_users_label(away=True)
                     self.away_users.append(self.nickname)
+                    self.gui.highlight_away_users()
 
             case "back":  # remove the "away" status
                 await self.send_message("AWAY")
                 self.gui.update_users_label(away=False)
                 self.away_users.remove(self.nickname)
+                self.gui.highlight_away_users()
 
             case "msg":  # send a private message to a user
                 if len(args) < 3:
