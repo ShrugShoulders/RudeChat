@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="RudeChat",
-    version="3.0.4",
+    version="3.1.4",
     description="RudeChat is a Python IRC client designed to be fast, portable, and fun.",
     author="Irish",
     packages=find_packages(where="src"),
