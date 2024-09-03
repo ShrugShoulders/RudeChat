@@ -259,6 +259,7 @@ class RudeGui:
         self.channel_select_color = self.channel_select_color
         self.hidden_windows()
         self.highlight_nickname()
+        self.highlight_away_users()
 
     def read_config(self):
         config_file = os.path.join(self.script_directory, 'gui_config.ini')

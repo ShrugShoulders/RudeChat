@@ -2217,6 +2217,7 @@ class RudeChatClient:
 
             if not data:
                 logging.info("No data received")
+                await self.reconnect(config_file)
                 continue
 
             try:
