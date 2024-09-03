@@ -1106,15 +1106,18 @@ class RudeChatClient:
     def highlight_server(self, server_activity=False):
         try:
             for idx in range(self.gui.server_listbox.size()):
-                if self.gui.server_listbox.get(idx) == self.server_name and self.gui.irc_client != self:
-                    self.gui.server_listbox.itemconfig(idx, {'bg': self.mention_note_color})
-                    # Store the highlighted server information with red background
-                    self.highlighted_servers[self.server_name] = {'index': idx, 'bg': self.mention_note_color}
-                    break
-                elif self.gui.server_listbox.get(idx) == self.server_name and server_activity == True:
-                    self.gui.server_listbox.itemconfig(idx, {'bg': self.activity_note_color})
-                    # Store the highlighted server information with green background
-                    self.highlighted_servers[self.server_name] = {'index': idx, 'bg': self.activity_note_color}
+                if self.gui.server_listbox.get(idx) == self.server_name:
+                    # Check if the item is selected
+                    if idx in self.gui.server_listbox.curselection():
+                        return  # If selected, do not highlight
+
+                    # If not selected, proceed with highlighting based on conditions
+                    if self.gui.irc_client != self:
+                        self.gui.server_listbox.itemconfig(idx, {'bg': self.mention_note_color})
+                        self.highlighted_servers[self.server_name] = {'index': idx, 'bg': self.mention_note_color}
+                    elif server_activity:
+                        self.gui.server_listbox.itemconfig(idx, {'bg': self.activity_note_color})
+                        self.highlighted_servers[self.server_name] = {'index': idx, 'bg': self.activity_note_color}
                     break
         except Exception as e:
             print(f"Exception in highlight_server: {e}")
