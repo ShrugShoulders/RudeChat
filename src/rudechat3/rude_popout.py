@@ -426,10 +426,28 @@ class RudePopOut:
             # Populate with users for the given channel
             for user in users:
                 self.user_listbox.insert(tk.END, user)
+            self.highlight_away_users()
         else:
             # Handle the case when there are no users in the channel
             self.user_listbox.insert(tk.END, self.nick_name)
             self.user_listbox.insert(tk.END, self.selected_channel)
+
+    def highlight_away_users(self):
+        # Loop through the items in the user_listbox
+        for index in range(self.user_listbox.size()):
+            # Get the username from the listbox
+            username = self.user_listbox.get(index)
+            
+            # Strip any mode symbols from the username
+            stripped_username = username.lstrip(''.join(self.irc_client.mode_values))
+            
+            # Check if the stripped username is in the away_users list
+            if stripped_username in self.irc_client.away_users:
+                # Change the foreground color of the user to red
+                self.user_listbox.itemconfig(index, {'fg': self.main_app.away_user_fg})
+            else:
+                # Reset the foreground color if the user is not away
+                self.user_listbox.itemconfig(index, {'fg': self.main_app.user_listbox_fg})
 
     def highlight_nickname(self):
         """Highlight the user's nickname in the text_widget."""

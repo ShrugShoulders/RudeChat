@@ -290,6 +290,7 @@ class RudeGui:
             self.user_listbox_bg = config.get('WIDGETS', 'users_bg', fallback='black')
             self.user_label_bg = config.get('WIDGETS', 'user_label_bg', fallback='black')
             self.user_label_fg = config.get('WIDGETS', 'user_label_fg', fallback='white')
+            self.away_user_fg = config.get('WIDGETS', 'away_user_fg', fallback='red')
             self.channel_listbox_fg = config.get('WIDGETS', 'channels_fg', fallback='white')
             self.channel_listbox_bg = config.get('WIDGETS', 'channels_bg', fallback='black')
             self.input_fg = config.get('WIDGETS', 'entry_fg', fallback='#C0FFEE')
@@ -388,7 +389,7 @@ class RudeGui:
             # Check if the stripped username is in the away_users list
             if stripped_username in self.irc_client.away_users:
                 # Change the foreground color of the user to red
-                self.user_listbox.itemconfig(index, {'fg': 'red'})
+                self.user_listbox.itemconfig(index, {'fg': self.away_user_fg})
             else:
                 # Reset the foreground color if the user is not away
                 self.user_listbox.itemconfig(index, {'fg': self.user_listbox_fg})
@@ -1130,6 +1131,7 @@ class RudeGui:
             irc_client.tasks["auto_save"] = asyncio.create_task(irc_client.auto_save(), name="auto_save_task")
             irc_client.tasks["auto_trim"] = asyncio.create_task(irc_client.auto_trim(), name="auto_trim_task")
             irc_client.tasks["handle_incoming_message"] = asyncio.create_task(irc_client.handle_incoming_message(config_file), name="handle_incoming_message_task")
+            irc_client.tasks["auto_who"] = asyncio.create_task(irc_client.request_who_for_all_channels(), name="auto_who_task")
 
             self.bind_return_key()
         except Exception as e:

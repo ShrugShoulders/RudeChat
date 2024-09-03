@@ -286,13 +286,15 @@ class RudeChatClient:
             for channel in self.auto_join_channels:
                 await self.join_channel(channel)
                 await asyncio.sleep(0.1)
-            await self.request_who_for_all_channels()
         else:
             pass
 
     async def request_who_for_all_channels(self):
-        for channel in self.joined_channels:
-            await self.send_message(f"WHO {channel}")
+        while True:
+            for channel in self.joined_channels:
+                await self.send_message(f"WHO {channel}")
+                await asyncio.sleep(15)
+            break
 
     async def auto_topic_nicklist(self):
         for channel in self.auto_join_channels:
@@ -372,7 +374,6 @@ class RudeChatClient:
                 await self.handle_privmsg(tokens, znc_privmsg=True)
             self.gui.insert_text_widget(f'\n\x0303\x02DONE!\x0F\n')
             await self.send_message('CAP REQ :away-notify')
-            await self.request_who_for_all_channels()
 
         def reset_timer(symbol):
             nonlocal last_366_time
@@ -1793,6 +1794,7 @@ class RudeChatClient:
             self.gui.user_listbox.delete(0, tk.END)  # Clear existing items
             for user in unique_users:
                 self.gui.user_listbox.insert(tk.END, user)
+            self.gui.highlight_away_users()
         
         if channel in self.gui.popped_out_channels:
             window = self.gui.pop_out_windows[channel]
@@ -2266,6 +2268,8 @@ class RudeChatClient:
                        await self.handle_cap(tokens)
                     case "ERROR":
                         self.handle_error(tokens)
+                    case "263":
+                        self.handle_263(tokens)
                     case "412":
                         pass
                     case "353" | "366":  # NAMES list
@@ -2401,7 +2405,7 @@ class RudeChatClient:
     def save_error(self, tokens, line):
         script_directory = os.path.dirname(os.path.abspath(__file__))
         error_log_path = os.path.join(script_directory, "token_error_log.txt")
-        error = f"Debug: Unhandled command {tokens.command}. Full line: {line}\n"
+        error = f"Debug: Unhandled command {tokens.command}. Full line: {line} & Full token: {tokens}\n"
 
         try:
             with open(error_log_path, "a") as error_log_file:
@@ -2409,6 +2413,14 @@ class RudeChatClient:
         except FileNotFoundError:
             with open(error_log_path, "w") as error_log_file:
                 error_log_file.write(error)
+
+    def handle_263(self, tokens):
+        source = tokens.source
+        issued_command = tokens.params[1]
+        message = tokens.params[2]
+        data = f"{source}: {issued_command} - {message}\n"
+        print(data)
+        self.add_server_message(data)
 
     def command_404(self, tokens):
         channel = tokens.params[1]
@@ -2679,10 +2691,6 @@ class RudeChatClient:
             self.gui.channel_lists[self.server] = self.joined_channels
             self.update_gui_channel_list()
 
-            # Remove the channel's history
-            if self.server in self.channel_messages:
-                self.channel_messages[self.server].pop(channel, None)
-
     async def handle_kick_command(self, args):
         modes_to_strip = ''.join(self.mode_values)
         if len(args) < 3:
@@ -2777,6 +2785,7 @@ class RudeChatClient:
             case "join":
                 channel_name = args[1]
                 await self.join_channel(channel_name)
+                await self.send_message(f'WHO {channel_name}')
 
             case "query":  # open a DM with a user
                 self.handle_query_command(args, timestamp)
@@ -2809,7 +2818,7 @@ class RudeChatClient:
                     self.gui.insert_text_widget(f"{away_message}\n")
                     self.gui.update_users_label(away=True)
                 else:
-                    await self.send_message("AWAY")
+                    await self.send_message("AWAY :Away")
                     self.gui.update_users_label(away=True)
 
             case "back":  # remove the "away" status
