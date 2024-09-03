@@ -1862,7 +1862,7 @@ class RudeChatClient:
 
             # Determine if the user is away
             away_status = "Away" if status.startswith('G') else "Active"
-            if away_status == "Away":
+            if away_status == "Away" and nickname not in self.away_users:
                 self.away_users.append(nickname)
 
             user_details = {
@@ -2814,22 +2814,25 @@ class RudeChatClient:
             case "away":  # set the user as away
                 away_message = " ".join(args[1:])
                 if away_message:
+                    if self.nickname not in self.away_users:
+                        self.away_users.append(self.nickname)
+                        self.gui.highlight_away_users()
                     await self.send_message(f"AWAY :{away_message}")
                     self.gui.insert_text_widget(f"{away_message}\n")
                     self.gui.update_users_label(away=True)
-                    self.away_users.append(self.nickname)
-                    self.gui.highlight_away_users()
                 else:
+                    if self.nickname not in self.away_users:
+                        self.away_users.append(self.nickname)
+                        self.gui.highlight_away_users()
                     await self.send_message("AWAY :Away")
                     self.gui.update_users_label(away=True)
-                    self.away_users.append(self.nickname)
-                    self.gui.highlight_away_users()
 
             case "back":  # remove the "away" status
+                if self.nickname in self.away_users:
+                    self.away_users.remove(self.nickname)
+                    self.gui.highlight_away_users()
                 await self.send_message("AWAY")
                 self.gui.update_users_label(away=False)
-                self.away_users.remove(self.nickname)
-                self.gui.highlight_away_users()
 
             case "msg":  # send a private message to a user
                 if len(args) < 3:
