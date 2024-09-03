@@ -625,6 +625,8 @@ class RudeChatClient:
             # Handle away-notify ACK
             if "away-notify" in acknowledged_capabilities:
                 self.gui.insert_text_widget("Server acknowledged away-notify capability.\n")
+                if not self.sasl_enabled:
+                    await self.send_message("CAP END")
 
             # Handle SASL ACK
             if "sasl" in acknowledged_capabilities and self.sasl_enabled:
