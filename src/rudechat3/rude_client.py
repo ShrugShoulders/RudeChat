@@ -2419,7 +2419,6 @@ class RudeChatClient:
         issued_command = tokens.params[1]
         message = tokens.params[2]
         data = f"{source}: {issued_command} - {message}\n"
-        print(data)
         self.add_server_message(data)
 
     def command_404(self, tokens):
