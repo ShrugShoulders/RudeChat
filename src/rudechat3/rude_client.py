@@ -1107,11 +1107,9 @@ class RudeChatClient:
         try:
             for idx in range(self.gui.server_listbox.size()):
                 if self.gui.server_listbox.get(idx) == self.server_name:
-                    # Check if the item is selected
                     if idx in self.gui.server_listbox.curselection():
-                        return  # If selected, do not highlight
+                        return 
 
-                    # If not selected, proceed with highlighting based on conditions
                     if self.gui.irc_client != self:
                         self.gui.server_listbox.itemconfig(idx, {'bg': self.mention_note_color})
                         self.highlighted_servers[self.server_name] = {'index': idx, 'bg': self.mention_note_color}
