@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 from rudechat3.list_window import ChannelListWindow
 from rudechat3.rude_pronouns import replace_pronouns
+from rudechat3.rude_auto_away import AutoAway
 from rudechat3.shared_imports import *
 
 class RudeChatClient:
@@ -74,6 +75,7 @@ class RudeChatClient:
         self.znc_user = config.get('IRC', 'znc_user', fallback=None)
         self.use_colors = config.getboolean('IRC', 'use_irc_colors', fallback=False)
         self.display_user_modes = config.getboolean('IRC', 'display_user_modes', fallback=True)
+        self.use_auto_away = config.getboolean('IRC', 'use_auto_away', fallback=True)
 
         self.mention_note_color = config.get('IRC', 'mention_note_color', fallback='red')
         self.activity_note_color = config.get('IRC', 'activity_note_color', fallback='green')
@@ -88,9 +90,11 @@ class RudeChatClient:
         self.send_ctcp_response = config.getboolean('IRC', 'send_ctcp_response', fallback=True)
         self.green_text = config.getboolean('IRC', 'green_text', fallback=True)
         await self.load_channel_messages()
+        self.load_away_users_from_file()
         self.load_ignore_list()
         self.gui.update_nick_channel_label()
         self.config = config_file
+        self.watcher = AutoAway(self.config)
 
     def reload_config(self, config_file):
         config = configparser.ConfigParser()
@@ -111,12 +115,32 @@ class RudeChatClient:
         self.display_user_modes = config.getboolean('IRC', 'display_user_modes', fallback=True)
         self.send_ctcp_response = config.getboolean('IRC', 'send_ctcp_response', fallback=True)
         self.green_text = config.getboolean('IRC', 'green_text', fallback=True)
+        self.use_auto_away = config.getboolean('IRC', 'use_auto_away', fallback=True)
+        self.watcher.reload_config()
         self.gui.update_nick_channel_label()
 
     def configure_logging(self):
         # Configure logging only if not already configured
         if not logging.getLogger().hasHandlers():
             logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
+
+    def save_away_users_to_file(self):
+        script_directory = os.path.dirname(os.path.abspath(__file__))
+        file_path = os.path.join(script_directory, f'{self.server_name}_away_users.txt')
+        
+        with open(file_path, 'w') as file:
+            for user in self.away_users:
+                file.write(f"{user}\n")
+
+    def load_away_users_from_file(self):
+        script_directory = os.path.dirname(os.path.abspath(__file__))
+        file_path = os.path.join(script_directory, f'{self.server_name}_away_users.txt')
+        
+        try:
+            with open(file_path, 'r') as file:
+                self.away_users = [line.strip() for line in file.readlines()]
+        except FileNotFoundError:
+            self.away_users = []
 
     def delete_lock_files(self):
         script_directory = os.path.dirname(os.path.abspath(__file__))
@@ -865,6 +889,28 @@ class RudeChatClient:
                 await asyncio.sleep(RETRY_DELAY)
 
         print(f"Failed to reconnect ({retries}/{MAX_RETRIES}): Retrying in {RETRY_DELAY} seconds.")
+
+    async def away_watcher(self):
+        while self.loop_running:
+            try:
+                if not self.use_auto_away:
+                    await asyncio.sleep(120)
+                    continue
+                await asyncio.sleep(120)
+                date_time_now = datetime.datetime.now().strftime('[%Y-%m-%d %H:%M:%S]')
+                user_away = self.watcher.check_auto_away()
+
+                if user_away and self.nickname not in self.away_users:
+                    self.away_users.append(self.nickname)
+                    self.gui.highlight_away_users()
+                    await self.send_message(f"AWAY :Auto Away @ {date_time_now}")
+                    self.gui.update_users_label(away=True)
+                    self.save_away_users_to_file()
+                else:
+                    self.save_away_users_to_file()
+
+            except Exception as e:
+                logging.exception(f"Exception occurred during auto away: {e}")
 
     async def keep_alive(self, config_file):
         while self.loop_running:
@@ -1866,6 +1912,8 @@ class RudeChatClient:
             away_status = "Away" if status.startswith('G') else "Active"
             if away_status == "Away" and nickname not in self.away_users:
                 self.away_users.append(nickname)
+            if away_status == "Active" and nickname in self.away_users:
+                self.away_users.remove(nickname)
 
             user_details = {
                 "nickname": nickname,
@@ -1880,7 +1928,7 @@ class RudeChatClient:
         elif tokens.command == "315":  # End of WHO list
             messages = []
             for details in self.who_details:
-                message = f"User {details['nickname']} ({details['username']}@{details['host']}) on {details['server']} in {details['channel']} - Status: {details['status']}\n"
+                message = f"User {details['nickname']} ({details['username']}@{details['host']}) on {details['server']} in {details['channel']} - Status: {details['status']}"
                 messages.append(message)
             
             final_message = "\n".join(messages)
@@ -2776,6 +2824,14 @@ class RudeChatClient:
         # Update the GUI to show the new mentions in the mentions channel
         self.gui.insert_and_scroll()
 
+    async def remove_away_status(self):
+        """Removes the 'away' status and updates the necessary UI elements."""
+        if self.nickname in self.away_users:
+            self.away_users.remove(self.nickname)
+            self.gui.highlight_away_users()
+            await self.send_message("AWAY")
+            self.gui.update_users_label(away=False)
+
     async def command_parser(self, user_input):
         args = user_input[1:].split() if user_input.startswith('/') else []
         primary_command = args[0] if args else None
@@ -2829,11 +2885,7 @@ class RudeChatClient:
                     self.gui.update_users_label(away=True)
 
             case "back":  # remove the "away" status
-                if self.nickname in self.away_users:
-                    self.away_users.remove(self.nickname)
-                    self.gui.highlight_away_users()
-                await self.send_message("AWAY")
-                self.gui.update_users_label(away=False)
+                await self.remove_away_status()
 
             case "msg":  # send a private message to a user
                 if len(args) < 3:
@@ -3083,7 +3135,10 @@ class RudeChatClient:
     async def handle_user_input(self, user_input, timestamp):
         if not user_input:
             return
-        
+        if self.use_auto_away:
+            self.watcher.update_last_message_time()
+        await self.remove_away_status()
+
         # Escape color codes
         escaped_input = self.escape_color_codes(user_input)
         escaped_input = self.green_texter(escaped_input)

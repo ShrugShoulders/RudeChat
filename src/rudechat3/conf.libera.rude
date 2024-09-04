@@ -30,3 +30,5 @@ replace_pronouns = False
 display_user_modes = True
 send_ctcp_response = True
 green_text = False
+auto_away_minutes = 30
+use_auto_away = True
