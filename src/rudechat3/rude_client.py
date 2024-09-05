@@ -25,6 +25,7 @@ class RudeChatClient:
         self.mode_keys = []
         self.mode_values = []
         self.away_users = []
+        self.cap_who_for_chan = []
         self.motd_dict = {}
         self.channel_messages = {}
         self.channel_users = {}
@@ -135,12 +136,20 @@ class RudeChatClient:
     def load_away_users_from_file(self):
         script_directory = os.path.dirname(os.path.abspath(__file__))
         file_path = os.path.join(script_directory, f'{self.server_name}_away_users.txt')
-        
+
         try:
             with open(file_path, 'r') as file:
                 self.away_users = [line.strip() for line in file.readlines()]
         except FileNotFoundError:
             self.away_users = []
+        
+        # Check if self.nickname is in the list and remove it
+        if self.nickname in self.away_users:
+            self.away_users.remove(self.nickname)
+
+    def away_clean(self):
+        if self.nickname in self.away_users:
+            self.away_users.remove(self.nickname)
 
     def delete_lock_files(self):
         script_directory = os.path.dirname(os.path.abspath(__file__))
@@ -318,7 +327,9 @@ class RudeChatClient:
             for channel in self.joined_channels:
                 await self.send_message(f"WHO {channel}")
                 self.gui.highlight_away_users()
-                await asyncio.sleep(15)
+                self.cap_who_for_chan.append(channel)
+                await asyncio.sleep(8.5)
+                self.gui.highlight_who_channels()
             break
 
     async def auto_topic_nicklist(self):
@@ -399,6 +410,7 @@ class RudeChatClient:
                 await self.handle_privmsg(tokens, znc_privmsg=True)
             self.gui.insert_text_widget(f'\n\x0303\x02DONE!\x0F\n')
             await self.send_message('CAP REQ :away-notify')
+            await self.send_message("AWAY")
 
         def reset_timer(symbol):
             nonlocal last_366_time
@@ -441,6 +453,8 @@ class RudeChatClient:
                         return
 
                 match tokens.command:
+                    case "AWAY":
+                        pass
                     case "NOTICE":
                         self.handle_notice_message(tokens)
                     case "CAP":
@@ -457,8 +471,10 @@ class RudeChatClient:
                         if logged_in and sasl_authenticated and self.isupport_flag and motd_received:
                             if self.use_auto_join:
                                 await self.automatic_join()
+                                await self.send_message("AWAY")
                                 return
                             elif not self.use_auto_join:
+                                await self.send_message("AWAY")
                                 return
 
                     case "904":
@@ -497,6 +513,7 @@ class RudeChatClient:
                         if self.znc_connection and self.nickname != tokens.hostmask.nickname and zncnick == 0:
                             new_nick = tokens.params[0]
                             await self.change_nickname(new_nick, is_from_token=True)
+                            self.away_clean()
                             zncnick += 1
                         else:
                             await self.handle_nick(tokens)
@@ -541,6 +558,7 @@ class RudeChatClient:
                         elif self.use_auto_join:
                             self.handle_names_list(tokens)
                             if count_366 >= len(self.joined_channels) and got_topic >= len(self.joined_channels) and znc_connected:
+                                await self.send_message("AWAY")
                                 return
 
                     case "250":
@@ -568,6 +586,7 @@ class RudeChatClient:
                         if not self.use_nickserv_auth and not self.sasl_enabled and not self.znc_connection:
                             if self.use_auto_join:
                                 await self.automatic_join()
+                                await self.send_message("AWAY")
                                 return
                             elif not self.use_auto_join:
                                 return
@@ -582,8 +601,10 @@ class RudeChatClient:
                         elif sasl_authenticated and self.isupport_flag and not self.znc_connection:
                             if self.use_auto_join:
                                 await self.automatic_join()
+                                await self.send_message("AWAY")
                                 return
                             elif not self.use_auto_join:
+                                await self.send_message("AWAY")
                                 return
                         elif self.use_nickserv_auth and not self.sasl_enabled and not self.znc_connection:
                             await self.send_message(f'PRIVMSG NickServ :IDENTIFY {self.nickname} {self.nickserv_password}\r\n')
@@ -598,8 +619,10 @@ class RudeChatClient:
                         if self.use_nickserv_auth and logged_in and nickserv_sent and not self.sasl_enabled:
                             if self.use_auto_join:
                                 await self.automatic_join()
+                                await self.send_message("AWAY")
                                 return
                             elif not self.use_auto_join:
+                                await self.send_message("AWAY")
                                 return
 
                     case "396":
@@ -901,6 +924,7 @@ class RudeChatClient:
                 user_away = self.watcher.check_auto_away()
 
                 if user_away and self.nickname not in self.away_users:
+                    print(self.away_users)
                     self.away_users.append(self.nickname)
                     self.gui.highlight_away_users()
                     await self.send_message(f"AWAY :Auto Away @ {date_time_now}")
@@ -1155,15 +1179,12 @@ class RudeChatClient:
         try:
             for idx in range(self.gui.server_listbox.size()):
                 if self.gui.server_listbox.get(idx) == self.server_name:
-                    if idx in self.gui.server_listbox.curselection():
-                        return 
-
-                    if self.gui.irc_client != self:
-                        self.gui.server_listbox.itemconfig(idx, {'bg': self.mention_note_color})
-                        self.highlighted_servers[self.server_name] = {'index': idx, 'bg': self.mention_note_color}
-                    elif server_activity:
+                    if server_activity:
                         self.gui.server_listbox.itemconfig(idx, {'bg': self.activity_note_color})
                         self.highlighted_servers[self.server_name] = {'index': idx, 'bg': self.activity_note_color}
+                    if self.gui.irc_client != self and idx not in self.gui.server_listbox.curselection():
+                        self.gui.server_listbox.itemconfig(idx, {'bg': self.mention_note_color})
+                        self.highlighted_servers[self.server_name] = {'index': idx, 'bg': self.mention_note_color}
                     break
         except Exception as e:
             print(f"Exception in highlight_server: {e}")
@@ -1896,6 +1917,7 @@ class RudeChatClient:
         """
         Handle the WHO reply from the server.
         """
+        #print(tokens)
         if not hasattr(self, 'who_details'):
             self.who_details = []
 
@@ -1906,7 +1928,9 @@ class RudeChatClient:
             host = tokens.params[3]
             server = tokens.params[4]
             nickname = tokens.params[5]
-            status = tokens.params[6] 
+            status = tokens.params[6]
+            mode_state = status[1:] if len(status) > 1 else ""
+            who_message = tokens.params[7]
 
             # Determine if the user is away
             away_status = "Away" if status.startswith('G') else "Active"
@@ -1921,14 +1945,16 @@ class RudeChatClient:
                 "host": host,
                 "server": server,
                 "channel": channel,
-                "status": away_status
+                "status": away_status,
+                "mode": mode_state,
+                "who_message": who_message
             }
             self.who_details.append(user_details)
 
         elif tokens.command == "315":  # End of WHO list
             messages = []
             for details in self.who_details:
-                message = f"User {details['nickname']} ({details['username']}@{details['host']}) on {details['server']} in {details['channel']} - Status: {details['status']}"
+                message = f"User {details['nickname']} ({details['username']}@{details['host']}) on {details['server']} in {details['channel']} - Status: {details['status']} ({details['mode']}) {details['who_message']}"
                 messages.append(message)
             
             final_message = "\n".join(messages)
@@ -2228,9 +2254,12 @@ class RudeChatClient:
 
     def handle_away(self, tokens):
         nickname = tokens.hostmask.nickname
-        if nickname not in self.away_users:
-            self.away_users.append(nickname)
-            self.gui.highlight_away_users()
+        params = tokens.params
+        
+        if params:
+            if nickname not in self.away_users:
+                self.away_users.append(nickname)
+                self.gui.highlight_away_users()
         else:
             if nickname in self.away_users:
                 self.away_users.remove(nickname)
@@ -2314,6 +2343,7 @@ class RudeChatClient:
 
                 match tokens.command:
                     case "AWAY":
+                        print(tokens)
                         self.handle_away(tokens)
                     case "CAP":
                        await self.handle_cap(tokens)
