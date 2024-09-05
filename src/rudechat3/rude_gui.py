@@ -414,6 +414,17 @@ class RudeGui:
                     # Reset the foreground color 
                     self.channel_listbox.itemconfig(index, {'fg': self.need_who_chan_fg})
 
+    def return_channel_to_listbox(self, entry):
+        if entry in self.pop_out_windows:
+            self.popped_out_channels.remove(entry)
+        # Get all items in the listbox
+        listbox_items = self.channel_listbox.get(0, tk.END)
+        
+        # Check if the entry is already in the listbox
+        if entry not in listbox_items:
+            # Insert the entry into the listbox if not found
+            self.channel_listbox.insert(tk.END, entry)
+
     def clear_channel_listbox(self):
         self.channel_listbox.delete(0, tk.END)
 
@@ -1119,6 +1130,7 @@ class RudeGui:
                 # Display the MOTD if available
                 self.show_startup_art()
                 self.irc_client.display_server_motd(selected_server)
+                self.update_users_label()
                 self.highlight_nickname()
                 self.highlight_who_channels()
                 self.text_widget.see(tk.END)
@@ -1610,13 +1622,15 @@ class RudeGui:
         ping_text = f'Servers: PT{ping_time}'
         self.servers_label.config(text=ping_text)
 
-    def update_users_label(self, away=False):
-        if away == True:
+    def update_users_label(self):
+        if self.irc_client.server_name in self.irc_client.away_servers:
             away_text = f"You're Away"
             self.user_label.config(text=away_text, fg="red")
-        elif away == False:
+        else:
             back_text = f"Users"
             self.user_label.config(text=back_text, fg="white")
+            if self.irc_client.server_name in self.irc_client.away_servers:
+                self.irc_client.away_servers.remove(self.irc_client.server_name)
 
     def handle_tab_complete(self, event):
         """

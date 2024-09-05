@@ -26,6 +26,7 @@ class RudeChatClient:
         self.mode_values = []
         self.away_users = []
         self.cap_who_for_chan = []
+        self.away_servers = []
         self.motd_dict = {}
         self.channel_messages = {}
         self.channel_users = {}
@@ -411,6 +412,7 @@ class RudeChatClient:
             self.gui.insert_text_widget(f'\n\x0303\x02DONE!\x0F\n')
             await self.send_message('CAP REQ :away-notify')
             await self.send_message("AWAY")
+            self.gui.clear_text_widget()
 
         def reset_timer(symbol):
             nonlocal last_366_time
@@ -472,9 +474,11 @@ class RudeChatClient:
                             if self.use_auto_join:
                                 await self.automatic_join()
                                 await self.send_message("AWAY")
+                                self.gui.clear_text_widget()
                                 return
                             elif not self.use_auto_join:
                                 await self.send_message("AWAY")
+                                self.gui.clear_text_widget()
                                 return
 
                     case "904":
@@ -559,6 +563,7 @@ class RudeChatClient:
                             self.handle_names_list(tokens)
                             if count_366 >= len(self.joined_channels) and got_topic >= len(self.joined_channels) and znc_connected:
                                 await self.send_message("AWAY")
+                                self.gui.clear_text_widget()
                                 return
 
                     case "250":
@@ -587,6 +592,7 @@ class RudeChatClient:
                             if self.use_auto_join:
                                 await self.automatic_join()
                                 await self.send_message("AWAY")
+                                self.gui.clear_text_widget()
                                 return
                             elif not self.use_auto_join:
                                 return
@@ -602,9 +608,11 @@ class RudeChatClient:
                             if self.use_auto_join:
                                 await self.automatic_join()
                                 await self.send_message("AWAY")
+                                self.gui.clear_text_widget()
                                 return
                             elif not self.use_auto_join:
                                 await self.send_message("AWAY")
+                                self.gui.clear_text_widget()
                                 return
                         elif self.use_nickserv_auth and not self.sasl_enabled and not self.znc_connection:
                             await self.send_message(f'PRIVMSG NickServ :IDENTIFY {self.nickname} {self.nickserv_password}\r\n')
@@ -620,9 +628,11 @@ class RudeChatClient:
                             if self.use_auto_join:
                                 await self.automatic_join()
                                 await self.send_message("AWAY")
+                                self.gui.clear_text_widget()
                                 return
                             elif not self.use_auto_join:
                                 await self.send_message("AWAY")
+                                self.gui.clear_text_widget()
                                 return
 
                     case "396":
@@ -840,6 +850,7 @@ class RudeChatClient:
         # Update the highlighted_channels dictionary with the new indexes
         self.highlighted_channels[self.server_name] = updated_highlighted_channels
         self.gui.scroll_channel_list()
+        self.gui.highlight_who_channels()
 
     def update_gui_user_list(self, channel):
         self.gui.user_listbox.delete(0, tk.END)
@@ -924,12 +935,22 @@ class RudeChatClient:
                 user_away = self.watcher.check_auto_away()
 
                 if user_away and self.nickname not in self.away_users:
+                    #print("user is away")
                     self.away_users.append(self.nickname)
+                    #print(f"adding username to list {self.nickname}")
+                    if self.server_name not in self.away_servers:
+                        self.away_servers.append(self.server_name)
+                        #print("adding server to list")
                     self.gui.highlight_away_users()
+                    #print("calling user highlight")
                     await self.send_message(f"AWAY :Auto Away @ {date_time_now}")
-                    self.gui.update_users_label(away=True)
+                    #print("sending AWAY message")
+                    self.gui.update_users_label()
+                    #print("Updating user GUI list")
                     self.save_away_users_to_file()
+                    #print("Saving away list")
                 else:
+                    #print(f"Else block hit, only saved away users")
                     self.save_away_users_to_file()
 
             except Exception as e:
@@ -2031,6 +2052,7 @@ class RudeChatClient:
             whois_channel = "&WHOIS&"
             if whois_channel not in self.joined_channels:
                 self.joined_channels.append(whois_channel)
+                self.cap_who_for_chan.append(whois_channel)
                 self.gui.channel_lists[self.server] = self.joined_channels
                 self.update_gui_channel_list()
 
@@ -2355,11 +2377,13 @@ class RudeChatClient:
                         self.handle_names_list(tokens)
 
                     case "305":
-                        message = "You are no longer marked as being away"
+                        message = f"{self.server_name}: You are no longer marked as being away"
+                        self.add_server_message(message)
                         self.gui.insert_text_widget(f"{message}\n")
 
                     case "306":
-                        message = "You have been marked as being away"
+                        message = f"{self.server_name}: You have been marked as being away"
+                        self.add_server_message(message)
                         self.gui.insert_text_widget(f"{message}\n")
 
                     case "307":
@@ -2835,6 +2859,7 @@ class RudeChatClient:
         if mentions_channel not in self.joined_channels:
             self.joined_channels.append(mentions_channel)
             self.gui.channel_lists[self.server] = self.joined_channels
+            self.cap_who_for_chan.append(mentions_channel)
             self.update_gui_channel_list()
 
         if mentions_channel not in self.channel_messages[self.server]:
@@ -2854,11 +2879,21 @@ class RudeChatClient:
 
     async def remove_away_status(self):
         """Removes the 'away' status and updates the necessary UI elements."""
+        #print("Removing AWAY status")
         if self.nickname in self.away_users:
+            #print("User Found")
             self.away_users.remove(self.nickname)
+            #print("Removed User")
+            if self.server_name in self.away_servers:
+                #print("removing server from list")
+                self.away_servers.remove(self.server_name)
             self.gui.highlight_away_users()
             await self.send_message("AWAY")
-            self.gui.update_users_label(away=False)
+            #print("Send AWAY")
+            self.gui.update_users_label()
+            #print("Updated users label")
+        #else:
+            #print("User is not currently away")
 
     async def command_parser(self, user_input):
         args = user_input[1:].split() if user_input.startswith('/') else []
@@ -2902,15 +2937,19 @@ class RudeChatClient:
                     if self.nickname not in self.away_users:
                         self.away_users.append(self.nickname)
                         self.gui.highlight_away_users()
+                        if self.server_name not in self.away_servers:
+                            self.away_servers.append(self.server_name)
                     await self.send_message(f"AWAY :{away_message}")
                     self.gui.insert_text_widget(f"{away_message}\n")
-                    self.gui.update_users_label(away=True)
+                    self.gui.update_users_label()
                 else:
                     if self.nickname not in self.away_users:
                         self.away_users.append(self.nickname)
                         self.gui.highlight_away_users()
+                        if self.server_name not in self.away_servers:
+                            self.away_servers.append(self.server_name)
                     await self.send_message("AWAY :Away")
-                    self.gui.update_users_label(away=True)
+                    self.gui.update_users_label()
 
             case "back":  # remove the "away" status
                 await self.remove_away_status()
@@ -3161,6 +3200,7 @@ class RudeChatClient:
         self.log_message(self.server_name, self.current_channel, self.nickname, chunk, is_sent=True)
 
     async def handle_user_input(self, user_input, timestamp):
+        print(self.use_auto_away)
         if not user_input:
             return
         if self.use_auto_away:
@@ -3726,6 +3766,7 @@ class RudeChatClient:
             if help_channel not in self.joined_channels:
                 self.joined_channels.append(help_channel)
                 self.gui.channel_lists[self.server] = self.joined_channels
+                self.cap_who_for_chan.append(help_channel)
                 self.update_gui_channel_list()
 
                 # Add help data to the channel history

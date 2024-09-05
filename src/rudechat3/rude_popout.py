@@ -404,6 +404,7 @@ class RudePopOut:
         # Close the window if it exists
         if self.root:
             self.irc_client.update_gui_channel_list()
+            self.main_app.return_channel_to_listbox(self.selected_channel)
             asyncio.run_coroutine_threadsafe(
                 self.irc_client.pop_out_return(self.selected_channel),
                 self.irc_client.loop
