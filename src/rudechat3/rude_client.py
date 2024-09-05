@@ -924,7 +924,6 @@ class RudeChatClient:
                 user_away = self.watcher.check_auto_away()
 
                 if user_away and self.nickname not in self.away_users:
-                    print(self.away_users)
                     self.away_users.append(self.nickname)
                     self.gui.highlight_away_users()
                     await self.send_message(f"AWAY :Auto Away @ {date_time_now}")
