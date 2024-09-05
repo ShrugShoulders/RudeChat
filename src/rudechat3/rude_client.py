@@ -2343,7 +2343,6 @@ class RudeChatClient:
 
                 match tokens.command:
                     case "AWAY":
-                        print(tokens)
                         self.handle_away(tokens)
                     case "CAP":
                        await self.handle_cap(tokens)
