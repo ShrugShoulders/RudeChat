@@ -3316,7 +3316,9 @@ class RudeChatClient:
             with open(file_path, "r", encoding='utf-8') as f:
                 self.ignore_list = [line.strip() for line in f.readlines()]
         else:
-            self.ignore_list = []
+            # If the file doesn't exist, create it
+            with open(file_path, "w", encoding='utf-8') as f:
+                pass
 
     def reload_ignore_list(self):
         self.ignore_list = []
