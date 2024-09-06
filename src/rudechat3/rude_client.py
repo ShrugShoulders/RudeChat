@@ -320,8 +320,6 @@ class RudeChatClient:
             for channel in self.auto_join_channels:
                 await self.join_channel(channel)
                 await asyncio.sleep(0.1)
-        else:
-            pass
 
     async def request_who_for_all_channels(self):
         while True:
@@ -435,7 +433,6 @@ class RudeChatClient:
 
         while True:
             data = await self.reader.read(4096)
-            #print(data)
             if not data:
                 raise ConnectionError("Connection lost while waiting for the welcome message.")
 
@@ -930,27 +927,22 @@ class RudeChatClient:
                 if not self.use_auto_away:
                     await asyncio.sleep(120)
                     continue
+
                 await asyncio.sleep(120)
                 date_time_now = datetime.datetime.now().strftime('[%Y-%m-%d %H:%M:%S]')
                 user_away = self.watcher.check_auto_away()
 
                 if user_away and self.nickname not in self.away_users:
-                    #print("user is away")
                     self.away_users.append(self.nickname)
-                    #print(f"adding username to list {self.nickname}")
+
                     if self.server_name not in self.away_servers:
                         self.away_servers.append(self.server_name)
-                        #print("adding server to list")
+
                     self.gui.highlight_away_users()
-                    #print("calling user highlight")
                     await self.send_message(f"AWAY :Auto Away @ {date_time_now}")
-                    #print("sending AWAY message")
                     self.gui.update_users_label()
-                    #print("Updating user GUI list")
                     self.save_away_users_to_file()
-                    #print("Saving away list")
                 else:
-                    #print(f"Else block hit, only saved away users")
                     self.save_away_users_to_file()
 
             except Exception as e:
@@ -1190,8 +1182,6 @@ class RudeChatClient:
                             self.gui.channel_listbox.itemconfig(idx, {'bg': self.mention_note_color})
                             self.gui.channel_listbox.see(idx)
                             break
-            else:
-                pass
         except Exception as e:
             print(f"Exception in highlighted_channel: {e}")
 
@@ -1611,9 +1601,6 @@ class RudeChatClient:
             user_modes = current_modes.get(user_info, set())
             current_modes.pop(user_info, None)
             self.update_user_listbox(channel)
-        else:
-            print(f"{user_info} User not found.")
-            pass
 
     def handle_quit(self, tokens):
         modes_to_strip = ''.join(self.mode_values)
@@ -1937,7 +1924,6 @@ class RudeChatClient:
         """
         Handle the WHO reply from the server.
         """
-        #print(tokens)
         if not hasattr(self, 'who_details'):
             self.who_details = []
 
@@ -2378,12 +2364,10 @@ class RudeChatClient:
 
                     case "305":
                         message = f"{self.server_name}: You are no longer marked as being away"
-                        self.add_server_message(message)
                         self.gui.insert_text_widget(f"{message}\n")
 
                     case "306":
                         message = f"{self.server_name}: You have been marked as being away"
-                        self.add_server_message(message)
                         self.gui.insert_text_widget(f"{message}\n")
 
                     case "307":
@@ -2879,21 +2863,15 @@ class RudeChatClient:
 
     async def remove_away_status(self):
         """Removes the 'away' status and updates the necessary UI elements."""
-        #print("Removing AWAY status")
         if self.nickname in self.away_users:
-            #print("User Found")
             self.away_users.remove(self.nickname)
-            #print("Removed User")
+
             if self.server_name in self.away_servers:
-                #print("removing server from list")
                 self.away_servers.remove(self.server_name)
+
             self.gui.highlight_away_users()
             await self.send_message("AWAY")
-            #print("Send AWAY")
             self.gui.update_users_label()
-            #print("Updated users label")
-        #else:
-            #print("User is not currently away")
 
     async def command_parser(self, user_input):
         args = user_input[1:].split() if user_input.startswith('/') else []
@@ -3200,7 +3178,6 @@ class RudeChatClient:
         self.log_message(self.server_name, self.current_channel, self.nickname, chunk, is_sent=True)
 
     async def handle_user_input(self, user_input, timestamp):
-        print(self.use_auto_away)
         if not user_input:
             return
         if self.use_auto_away:
@@ -3339,10 +3316,7 @@ class RudeChatClient:
             with open(file_path, "r", encoding='utf-8') as f:
                 self.ignore_list = [line.strip() for line in f.readlines()]
         else:
-            # If the file doesn't exist, create it
-            with open(file_path, "w", encoding='utf-8') as f:
-                # You can add default content to the file if needed
-                pass
+            self.ignore_list = []
 
     def reload_ignore_list(self):
         self.ignore_list = []
