@@ -2038,7 +2038,8 @@ class RudeChatClient:
             whois_channel = "&WHOIS&"
             if whois_channel not in self.joined_channels:
                 self.joined_channels.append(whois_channel)
-                self.cap_who_for_chan.append(whois_channel)
+                if whois_channel not in self.cap_who_for_chan:
+                    self.cap_who_for_chan.append(whois_channel)
                 self.gui.channel_lists[self.server] = self.joined_channels
                 self.update_gui_channel_list()
 
@@ -2843,7 +2844,8 @@ class RudeChatClient:
         if mentions_channel not in self.joined_channels:
             self.joined_channels.append(mentions_channel)
             self.gui.channel_lists[self.server] = self.joined_channels
-            self.cap_who_for_chan.append(mentions_channel)
+            if mentions_channel not in self.cap_who_for_chan:
+                self.cap_who_for_chan.append(mentions_channel)
             self.update_gui_channel_list()
 
         if mentions_channel not in self.channel_messages[self.server]:
@@ -3742,7 +3744,8 @@ class RudeChatClient:
             if help_channel not in self.joined_channels:
                 self.joined_channels.append(help_channel)
                 self.gui.channel_lists[self.server] = self.joined_channels
-                self.cap_who_for_chan.append(help_channel)
+                if help_channel not in self.cap_who_for_chan:
+                    self.cap_who_for_chan.append(help_channel)
                 self.update_gui_channel_list()
 
                 # Add help data to the channel history

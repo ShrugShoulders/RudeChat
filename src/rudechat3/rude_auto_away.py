@@ -25,7 +25,6 @@ class AutoAway:
     def update_last_message_time(self):
         # Update the last message time to the current time
         self.last_message_time = datetime.now()
-        print("Updated last message time")
 
     def time_since_last_message(self):
         # Calculate the time passed since the last message
