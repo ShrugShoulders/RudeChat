@@ -2734,6 +2734,8 @@ class RudeChatClient:
     def open_dm(self, nickname, timestamp):
         # Add the DM to the channel list
         self.joined_channels.append(nickname)
+        if nickname not in self.cap_who_for_chan:
+            self.cap_who_for_chan.append(nickname)
         self.gui.channel_lists[self.server] = self.joined_channels
         self.update_gui_channel_list()
         self.gui.insert_text_widget(f"Opened DM with {nickname}.\n")
