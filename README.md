@@ -2,7 +2,7 @@
 ## Installation    
 To install on Linux:
 
-        Download the Stand Alone and extract. 
+        Download the Stand Alone and extract.(recommended for Debain/Ubuntu users.)
         or
         Clone the repo, cd into its cloned directory, and use pip to install. 
         Command: pip install -r requirements.txt .
@@ -17,16 +17,16 @@ To install on Windows Download the installer.
 It will install to %LOCALAPPDATA%\Programs\RudeChat3
 
 It is suggested that you use: https://github.com/source-foundry/Hack as your font.
-        
+
 Right click anywhere to open and edit the config.
-        
-RudeIRC assumes conf.server.rude is available and configed properly:
+
+RudeChat assumes conf.server_name.rude is available and configed properly:
 
 For assistance find me on irc.libera.chat/##rudechat
 
 ### Server Config Example:
 
-file name: conf.libera.rude
+file name: conf.libera.rude(config files should follow conf.server_name.rude naming)
 
         [IRC]
         server_name = Libera # This is the server name. 
