@@ -3769,6 +3769,9 @@ class RudeChatClient:
                 "Add your own fortune lists to the Fortune List folder in site-packages for python."
                 "_________",
             ],
+            "Extra Info": [
+                "Please see https://github.com/ShrugShoulders/RudeChat for more information on RudeChat configuration.",
+            ],
         }
 
         try:
