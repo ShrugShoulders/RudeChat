@@ -1582,10 +1582,6 @@ class RudeChatClient:
         if user_info not in self.channel_users.get(channel, []):
             # Add the user to the channel_users list
             self.channel_users.setdefault(channel, []).append(user_info)
-        else:
-            already_in_message = f"{user_info} is already in the user list for channel {channel}\n"
-            if channel == self.current_channel and self.gui.irc_client == self:
-                self.gui.insert_text_widget(already_in_message)
 
         # Sort the user list for the channel
         sorted_users = self.sort_users(self.channel_users[channel], channel)
