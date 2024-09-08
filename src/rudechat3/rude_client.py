@@ -412,6 +412,7 @@ class RudeChatClient:
             self.gui.insert_text_widget(f'\n\x0303\x02DONE!\x0F\n')
             await self.send_message('CAP REQ :away-notify')
             await self.send_message("AWAY")
+            await asyncio.sleep(0.8)
             self.gui.clear_text_widget()
             self.gui.show_startup_art()
 
