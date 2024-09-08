@@ -1185,13 +1185,16 @@ class RudeChatClient:
                 channels[channel] = messages[-125:]
 
     def remove_ampersand_channels(self):
-        for server, channels in self.channel_messages.items():
-            # Identify keys to be deleted
-            keys_to_delete = [channel for channel in channels.keys() if channel.startswith('&')]
-            
-            # Delete identified keys
-            for key in keys_to_delete:
-                del channels[key]
+        try:
+            for server, channels in self.channel_messages.items():
+                # Identify keys to be deleted
+                keys_to_delete = [channel for channel in channels.keys() if channel.startswith('&')]
+                
+                # Delete identified keys
+                for key in keys_to_delete:
+                    del channels[key]
+        except (AttributeError, Exception) as e:
+            print(f'AttributeError or Exception in remove_ampersand_channels: {e}')
 
     async def notify_user_of_mention(self, server, channel, sender, message):
         notification_msg = f"<{sender}> {message}"
@@ -2742,19 +2745,23 @@ class RudeChatClient:
         except Exception as e:
             print(f"Error logging message: {e}")
 
-    def handle_query_command(self, args, timestamp):
+    async def handle_query_command(self, args, timestamp):
         modes_to_strip = ''.join(self.mode_values)
         if len(args) < 2:
             self.gui.insert_text_widget(f"Error: Please provide a nickname for the query command.\n")
             return
 
         nickname = args[1]
+        message = " ".join(args[2:])
         
         # Remove @ and + symbols from the nickname
         nickname = nickname.lstrip(modes_to_strip)
 
         if nickname not in self.joined_channels:
             self.open_dm(nickname, timestamp)
+            if message:
+                await self.send_message(f"PRIVMSG {nickname} :{message}")
+                self.query_msg_handler(nickname, message, timestamp)
         else:
             self.gui.insert_text_widget(f"You already have a DM open with {nickname}.\n")
 
@@ -2927,7 +2934,7 @@ class RudeChatClient:
                 await self.send_message(f'WHO {channel_name}')
 
             case "query":  # open a DM with a user
-                self.handle_query_command(args, timestamp)
+                await self.handle_query_command(args, timestamp)
 
             case "cq":  # close a private message (query) with a user
                 self.handle_cq_command(args, timestamp)
@@ -2981,7 +2988,10 @@ class RudeChatClient:
                     nickname = args[1]
                     message = " ".join(args[2:])
                     await self.send_message(f"PRIVMSG {nickname} :{message}")
-                    self.gui.insert_text_widget(f'<{self.nickname} -> {nickname}> {message}\n')
+                    self.query_msg_handler(nickname, message, timestamp)
+                    if nickname not in self.joined_channels:
+                        self.open_dm(nickname, timestamp)
+                    self.gui.insert_text_widget(f'{self.nickname} \x0312(→)\x0F {nickname}: {message}\n')
 
             case "ctcp":
                 if len(args) < 3:
@@ -3225,7 +3235,7 @@ class RudeChatClient:
         self.log_message(self.server_name, self.current_channel, self.nickname, chunk, is_sent=True)
 
     def user_input_dm_message(self, chunk, timestamp):
-        server_name = self.server  # Replace this with the actual server name if needed
+        server_name = self.server
         if server_name not in self.channel_messages:
             self.channel_messages[server_name] = {}
         if self.current_channel not in self.channel_messages[server_name]:
@@ -3237,6 +3247,20 @@ class RudeChatClient:
 
         # Log the sent message using the new logging method
         self.log_message(self.server_name, self.current_channel, self.nickname, chunk, is_sent=True)
+
+    def query_msg_handler(self, user, chunk, timestamp):
+        server_name = self.server
+        if server_name not in self.channel_messages:
+            self.channel_messages[server_name] = {}
+        if user not in self.channel_messages[server_name]:
+            self.channel_messages[server_name][user] = []
+        if self.use_time_stamp == True:
+            self.channel_messages[server_name][user].append(f"{timestamp}<{self.nickname}> {chunk}\n")
+        elif self.use_time_stamp == False:
+            self.channel_messages[server_name][user].append(f"<{self.nickname}> {chunk}\n")
+
+        # Log the sent message using the new logging method
+        self.log_message(self.server_name, user, self.nickname, chunk, is_sent=True)
 
     async def handle_user_input(self, user_input, timestamp):
         if not user_input:
