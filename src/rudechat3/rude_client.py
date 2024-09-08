@@ -413,6 +413,7 @@ class RudeChatClient:
             await self.send_message('CAP REQ :away-notify')
             await self.send_message("AWAY")
             self.gui.clear_text_widget()
+            self.gui.show_startup_art()
 
         def reset_timer(symbol):
             nonlocal last_366_time
@@ -457,7 +458,18 @@ class RudeChatClient:
                     case "AWAY":
                         pass
                     case "NOTICE":
-                        self.handle_notice_message(tokens)
+                        if self.handle_notice_message(tokens):
+                            if self.use_auto_join:
+                                await self.automatic_join()
+                                await self.send_message("AWAY")
+                                self.gui.clear_text_widget()
+                                self.gui.show_startup_art()
+                                return
+                            elif not self.use_auto_join:
+                                await self.send_message("AWAY")
+                                self.gui.clear_text_widget()
+                                self.gui.show_startup_art()
+                                return
                     case "CAP":
                         await self.handle_cap(tokens)
 
@@ -474,10 +486,12 @@ class RudeChatClient:
                                 await self.automatic_join()
                                 await self.send_message("AWAY")
                                 self.gui.clear_text_widget()
+                                self.gui.show_startup_art()
                                 return
                             elif not self.use_auto_join:
                                 await self.send_message("AWAY")
                                 self.gui.clear_text_widget()
+                                self.gui.show_startup_art()
                                 return
 
                     case "904":
@@ -563,6 +577,7 @@ class RudeChatClient:
                             if count_366 >= len(self.joined_channels) and got_topic >= len(self.joined_channels) and znc_connected:
                                 await self.send_message("AWAY")
                                 self.gui.clear_text_widget()
+                                self.gui.show_startup_art()
                                 return
 
                     case "250":
@@ -592,6 +607,7 @@ class RudeChatClient:
                                 await self.automatic_join()
                                 await self.send_message("AWAY")
                                 self.gui.clear_text_widget()
+                                self.gui.show_startup_art()
                                 return
                             elif not self.use_auto_join:
                                 return
@@ -608,10 +624,12 @@ class RudeChatClient:
                                 await self.automatic_join()
                                 await self.send_message("AWAY")
                                 self.gui.clear_text_widget()
+                                self.gui.show_startup_art()
                                 return
                             elif not self.use_auto_join:
                                 await self.send_message("AWAY")
                                 self.gui.clear_text_widget()
+                                self.gui.show_startup_art()
                                 return
                         elif self.use_nickserv_auth and not self.sasl_enabled and not self.znc_connection:
                             await self.send_message(f'PRIVMSG NickServ :IDENTIFY {self.nickname} {self.nickserv_password}\r\n')
@@ -628,10 +646,12 @@ class RudeChatClient:
                                 await self.automatic_join()
                                 await self.send_message("AWAY")
                                 self.gui.clear_text_widget()
+                                self.gui.show_startup_art()
                                 return
                             elif not self.use_auto_join:
                                 await self.send_message("AWAY")
                                 self.gui.clear_text_widget()
+                                self.gui.show_startup_art()
                                 return
 
                     case "396":
@@ -680,13 +700,13 @@ class RudeChatClient:
 
             # Handle away-notify ACK
             if "away-notify" in acknowledged_capabilities:
-                self.gui.insert_text_widget("Server acknowledged away-notify capability.\n")
+                self.gui.insert_text_widget("\nServer acknowledged away-notify capability.\n")
                 if not self.sasl_enabled:
                     await self.send_message("CAP END")
 
             # Handle SASL ACK
             if "sasl" in acknowledged_capabilities and self.sasl_enabled:
-                self.gui.insert_text_widget("Server acknowledged SASL capability.\n")
+                self.gui.insert_text_widget("\nServer acknowledged SASL capability.\n")
                 await self.send_message("AUTHENTICATE PLAIN")
 
         # Handle capability rejection (NAK) if needed...
@@ -694,10 +714,10 @@ class RudeChatClient:
             rejected_capabilities = tokens.params[2].split()
 
             if "away-notify" in rejected_capabilities:
-                self.gui.insert_text_widget("Server denied away-notify capability.\n")
+                self.gui.insert_text_widget("\nServer denied away-notify capability.\n")
 
             if "sasl" in rejected_capabilities:
-                self.gui.insert_text_widget("Server denied SASL capability.\n")
+                self.gui.insert_text_widget("\nServer denied SASL capability.\n")
             await self.send_message("CAP END")
 
     async def handle_sasl_auth(self, tokens):
@@ -1041,14 +1061,27 @@ class RudeChatClient:
         target = tokens.params[0]
         message = tokens.params[1]
         data = f"NOTICE {sender} {target}: {message}\n"
+        sdata = f"\nNOTICE {sender} {target}: {message}"
+        ssender = str(sender).lower()
+        smessage = str(message).lower()
+
+        if ssender.startswith("nickserv") and "invalid password" in smessage:
+            self.gui.insert_text_widget(f"{sdata}")
+            self.add_server_message(data)
+            print("Invalid password detected in NOTICE message.")
+            return True  # Return True to indicate an "Invalid password" was detected
+        
         if self.znc_connection and target not in self.gui.popped_out_channels:
-            self.gui.insert_text_widget(f"{data}")
+            self.gui.insert_text_widget(f"{sdata}")
             self.add_server_message(data)
         elif self.znc_connection and target in self.gui.popped_out_channels:
             self.pipe_mode_to_pop_out(message, target)
             self.add_server_message(data)
         else:
+            self.gui.insert_text_widget(f"{sdata}")
             self.add_server_message(data)
+        
+        return False  # Return False to indicate no special case was detected
 
     async def handle_ctcp(self, tokens):
         timestamp = datetime.datetime.now().strftime('[%H:%M:%S] ')
