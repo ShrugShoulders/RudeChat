@@ -2,6 +2,7 @@
 from rudechat3.list_window import ChannelListWindow
 from rudechat3.rude_pronouns import replace_pronouns
 from rudechat3.rude_auto_away import AutoAway
+from rudechat3.rude_friends import RudeFriends
 from rudechat3.shared_imports import *
 
 class RudeChatClient:
@@ -54,6 +55,7 @@ class RudeChatClient:
         self.loop = asyncio.get_event_loop()
         self.time_zone = get_localzone()
         self.configure_logging()
+        self.friends = RudeFriends()
 
     async def read_config(self, config_file):
         config = configparser.ConfigParser()
@@ -1511,6 +1513,11 @@ class RudeChatClient:
         user_info = tokens.hostmask.nickname
         user_mask = tokens.hostmask
         channel = tokens.params[0]
+
+        friends_here = self.friends.friend_online(channel, user_info)
+        if friends_here is not None:
+            self.gui.insert_text_widget(f"{friends_here}\n")
+
         if self.show_full_hostmask == True:
             join_message = f"\x0312(→)\x0F {user_mask} has joined channel {channel}\n"
         elif self.show_full_hostmask == False:
@@ -3114,6 +3121,26 @@ class RudeChatClient:
                     await self.auto_topic_nicklist()
                 else:
                     self.gui.insert_text_widget("You're Not Using A ZNC")
+
+            case "friend":
+                if len(args) > 1:
+                    friend = args[1]
+                    added_friend = self.friends.add_friend(friend)
+                    self.friends.save_friend_list()
+                    self.gui.insert_text_widget(f"{added_friend}\n")
+                else:
+                    friends_list = self.friends.show_friend_list()
+                    self.gui.insert_text_widget(f"{friends_list}\n")
+                    self.gui.insert_text_widget("Give a Nickname to add to friends list\n")
+
+            case "unfriend":
+                if len(args) > 1:
+                    enemy = args[1]
+                    removed_friend = self.friends.remove_friend()
+                    self.gui.insert_text_widget(f"{remove_friend}\n")
+                else:
+                    self.gui.insert_text_widget("You must give a nickname\n")
+
             case None:
                 await self.handle_user_input(user_input, timestamp)
 
@@ -3665,6 +3692,9 @@ class RudeChatClient:
                 "/invite <user> <channel> - invites a user to a channel",
                 "/kick <user> <channel> [message]",
                 "/mentions to show all mentions of your nickname. /mentions clear to clear these messages",
+                "/friend <nickname> - adds a nickname to your friends list, run without a nickname to display friend list",
+                "/mentions to show your nicknames mentions. /mentions clear to clear them.",
+                "/unfriend <nickname> - removes a friend from your friends list",
                 "_________",
             ],
             "String Formatting": [
