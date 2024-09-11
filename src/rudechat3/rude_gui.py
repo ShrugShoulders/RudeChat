@@ -869,7 +869,8 @@ class RudeGui:
         selected_user_index = self.user_listbox.curselection()
         if selected_user_index:
             selected_user = self.user_listbox.get(selected_user_index)
-            self.irc_client.handle_query_command(["/query", selected_user], "<3 ")
+            loop = asyncio.get_event_loop()
+            loop.create_task(self.irc_client.handle_query_command(["/query", selected_user], "<3 "))
 
     def close_query_from_menu(self):
         selected_channel_index = self.channel_listbox.curselection()

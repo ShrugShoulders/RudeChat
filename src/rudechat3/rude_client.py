@@ -1089,12 +1089,13 @@ class RudeChatClient:
         sender = tokens.hostmask.nickname
         target = tokens.params[0]
         message = tokens.params[1]
+        smessage = message.strip() # Strip any whitespaces - swee
 
         # Detect if this is a CTCP message
         if self.send_ctcp_response:
-            if message.startswith('\x01') and message.endswith('\x01'):
-                ctcp_command = message[1:-1].split(' ', 1)[0]  # Extract the CTCP command
-                ctcp_content = message[1:-1].split(' ', 1)[1] if ' ' in message else None  # Extract the content if present
+            if smessage.startswith('\x01') and smessage.endswith('\x01'):
+                ctcp_command = smessage[1:-1].split(' ', 1)[0]  # Extract the CTCP command
+                ctcp_content = smessage[1:-1].split(' ', 1)[1] if ' ' in smessage else None  # Extract the content if present
 
                 match ctcp_command:
                     case "VERSION" | "version":
@@ -1340,7 +1341,15 @@ class RudeChatClient:
             print(f"Exception in auto_attach: {e}")
 
     def is_ctcp_command(self, message):
-        return message.startswith('\x01') and message.endswith('\x01')
+        message = message.strip()
+        
+        # Check if the message starts and ends with \x01
+        if message.startswith('\x01') and message.endswith('\x01'):
+            inner_message = message[1:-1].rstrip()  # Strip spaces inside the CTCP markers
+            cleaned_message = f'\x01{inner_message}\x01'
+            return True
+        
+        return False
 
     def is_direct_message(self, target):
         return target == self.nickname
@@ -2328,6 +2337,8 @@ class RudeChatClient:
             except asyncio.TimeoutError as e:
                 self.gui.insert_text_widget(f"Time Out: {e}")
                 logging.warning(f"TimeoutError Caught In handle_incoming_message: {e}")
+                await self.send_message(f'QUIT :{e.strerror}')
+                await self.reconnect(config_file)
                 continue
 
             except OSError as e:
@@ -2344,6 +2355,7 @@ class RudeChatClient:
 
             if not data:
                 logging.info("No data received")
+                await self.send_message(f'QUIT :No Data')
                 await self.reconnect(config_file)
                 continue
 
