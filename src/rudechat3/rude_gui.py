@@ -98,7 +98,7 @@ class RudeGui:
         self.user_frame = tk.Frame(self.list_frame, bg="black")
         self.user_frame.grid(row=0, column=0, sticky="nsew")
 
-        self.user_label = tk.Label(self.user_frame, text="Users")
+        self.user_label = tk.Label(self.user_frame, text="Users(0)")
         self.user_label.grid(row=0, column=0, sticky='ew')
 
         self.user_listbox = tk.Listbox(self.user_frame, height=25, width=16)
@@ -113,7 +113,7 @@ class RudeGui:
         self.channel_frame.grid(row=1, column=0, sticky="nsew")
 
         # Label for Servers
-        self.servers_label = tk.Label(self.channel_frame, text="Servers: --s")
+        self.servers_label = tk.Label(self.channel_frame, text="Servers")
         self.servers_label.grid(row=0, column=0, sticky='ew')  # Make sure label is above the server_listbox
 
         # Server selection
@@ -128,7 +128,7 @@ class RudeGui:
 
         self.server_listbox.bind('<<ListboxSelect>>', self.on_server_change)
 
-        self.channel_label = tk.Label(self.channel_frame, text="Channels")
+        self.channel_label = tk.Label(self.channel_frame, text="Channels (0)")
         self.channel_label.grid(row=2, column=0, sticky='ew')  # Make sure label is below the server_listbox
 
         self.channel_listbox = DragDropListbox(self.channel_frame, height=17, width=16, update_callback=self.update_joined_channels)
@@ -467,10 +467,16 @@ class RudeGui:
             listbox_items = [item.lower() for item in self.server_listbox.get(0, tk.END)]
             server_name_lower = server_name.lower()
 
-            if server_name_lower in listbox_items:
-                # Get the index of the server_name (case-insensitive) and remove it
-                index = listbox_items.index(server_name_lower)
-                self.server_listbox.delete(index)
+            # Find the first item that starts with server_name_lower
+            index_to_delete = None
+            for index, item in enumerate(listbox_items):
+                if item.startswith(server_name_lower):
+                    index_to_delete = index
+                    break
+
+            # If a match is found, remove the item from the Listbox
+            if index_to_delete is not None:
+                self.server_listbox.delete(index_to_delete)
 
         # Set the first available server as the current one
         if self.server_listbox.size() > 0:
@@ -479,7 +485,8 @@ class RudeGui:
         else:
             self.server_var.set("")  # No servers left, clear the current selection
 
-        if reconnect == True and server_name == None:
+        # If reconnect is True and server_name is None, clear the entire listbox
+        if reconnect and server_name is None:
             self.server_listbox.delete(0, tk.END)
 
         self.update_nick_channel_label()
@@ -903,10 +910,11 @@ class RudeGui:
         # Get the current list of servers from the Listbox
         current_servers = list(self.server_listbox.get(0, tk.END))
         
-        # Add the new server_name to the list if it's not already there
-        if server_name not in current_servers:
+        # Check if any server in the list starts with server_name
+        if not any(server.startswith(server_name) for server in current_servers):
+            # Add the new server_name to the list if it's not already there
             current_servers.append(server_name)
-            
+        
         # Update the Listbox with the new list of servers
         self.server_listbox.delete(0, tk.END)  # Clear the existing items
         for server in current_servers:
@@ -1046,7 +1054,7 @@ class RudeGui:
         current_servers = list(self.server_listbox.get(0, tk.END))
 
         # Add the new server_name to the list if it's not already there
-        if server_name not in current_servers:
+        if not any(server.startswith(server_name) for server in current_servers):
             current_servers.append(server_name)
 
         # Update the Listbox with the new list of servers
@@ -1070,8 +1078,8 @@ class RudeGui:
             # Get the text of the current item and convert it to lowercase
             item_text_lower = self.server_listbox.get(i).lower()
 
-            # Check if the current item matches the server (case insensitive)
-            if item_text_lower == existing_server_lower:
+            # Check if the current item starts with the server (case insensitive)
+            if item_text_lower.startswith(existing_server_lower):
                 # Server found, return True
                 return True
 
@@ -1106,15 +1114,17 @@ class RudeGui:
 
             # Get the selected server from the listbox
             selected_server = self.server_listbox.get(selected_server_index)
+            clean_name = selected_server.split(" ")
+            actual_server = clean_name[0]
 
             # Update the current server in the IRC client
-            self.irc_client.current_server = selected_server
-            self.irc_client = self.clients.get(selected_server, None)
+            self.irc_client.current_server = actual_server
+            self.irc_client = self.clients.get(actual_server, None)
 
             # If the IRC client exists
             if self.irc_client:
                 # Set the server name in the RudeChatClient instance
-                self.irc_client.set_server_name(selected_server)
+                self.irc_client.set_server_name(actual_server)
 
                 # Set the currently selected channel to None
                 self.irc_client.current_channel = None
@@ -1130,10 +1140,11 @@ class RudeGui:
 
                 # Display the MOTD if available
                 self.show_startup_art()
-                self.irc_client.display_server_motd(selected_server)
+                self.irc_client.display_server_motd(actual_server)
                 self.update_users_label()
                 self.highlight_nickname()
                 self.highlight_who_channels()
+                self.update_channel_label()
                 self.text_widget.see(tk.END)
 
                 # Set the background color of the selected server to blue
@@ -1393,6 +1404,7 @@ class RudeGui:
             self.channel_listbox.itemconfig(clicked_index, {'bg': self.channel_select_color})
             self.highlight_nickname()
             self.highlight_away_users()
+            self.update_users_label()
 
             # Remove the clicked channel from highlighted_channels dictionary
             if self.irc_client.server_name in self.irc_client.highlighted_channels:
@@ -1619,19 +1631,39 @@ class RudeGui:
     def is_app_focused(self):
         return bool(self.master.focus_displayof())
 
-    def update_ping_label(self, ping_time):
-        ping_text = f'Servers: PT{ping_time}'
-        self.servers_label.config(text=ping_text)
+    def update_ping_label(self, server_name, ping_time):
+        # Retrieve all items from the listbox
+        servers = self.server_listbox.get(0, tk.END)
+        
+        # Iterate through the servers and update the one with the matching server_name
+        updated_servers = []
+        for server in servers:
+            if server.startswith(server_name):
+                updated_server = f'{server_name} PT{ping_time}'
+            else:
+                updated_server = server
+            updated_servers.append(updated_server)
+        
+        # Clear the current listbox and insert updated items
+        self.server_listbox.delete(0, tk.END)  # Clear listbox
+        for server in updated_servers:
+            self.server_listbox.insert(tk.END, server)  # Add updated items back into the listbox
 
     def update_users_label(self):
         if self.irc_client.server_name in self.irc_client.away_servers:
             away_text = f"You're Away"
             self.user_label.config(text=away_text, fg="red")
         else:
-            back_text = f"Users"
-            self.user_label.config(text=back_text, fg="white")
+            user_num = len(self.irc_client.channel_users.get(self.irc_client.current_channel, []))
+            back_text = f"Users ({user_num})"
+            self.user_label.config(text=back_text, fg=self.user_label_fg)
             if self.irc_client.server_name in self.irc_client.away_servers:
                 self.irc_client.away_servers.remove(self.irc_client.server_name)
+
+    def update_channel_label(self):
+        channel_num = len(self.irc_client.joined_channels)
+        label_text = f"Channels ({channel_num})"
+        self.channel_label.config(text=label_text)
 
     def handle_tab_complete(self, event):
         """
@@ -1685,14 +1717,21 @@ class RudeGui:
         # Set up a timer to append ": " after half a second if no more tab presses
         try:
             if self.entry_widget.get().startswith(completed_nick):
-                self.tab_completion_timer = self.master.after(250, self.append_colon_to_nick)
+                self.tab_completion_timer = self.master.after(250, self.append_terminator_to_nick)
+            else:
+                self.tab_completion_timer = self.master.after(250, self.append_space_to_nick)
         except UnboundLocalError as e:
             pass
 
         # Prevent default behavior of the Tab key
         return 'break'
 
-    def append_colon_to_nick(self):
+    def append_terminator_to_nick(self):
         current_text = self.entry_widget.get()
         self.entry_widget.delete(0, tk.END)
         self.entry_widget.insert(0, current_text + self.tab_complete_terminator + " ")
+
+    def append_space_to_nick(self):
+        current_text = self.entry_widget.get()
+        self.entry_widget.delete(0, tk.END)
+        self.entry_widget.insert(0, current_text + " ")

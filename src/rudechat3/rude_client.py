@@ -764,23 +764,23 @@ class RudeChatClient:
             
         except BrokenPipeError as e:
             logging.error(f"BrokenPipeError in send_message: {e}. The connection might have been lost.")
-            self.gui.insert_text_widget(f"Connection Error: {e}: Cannot send message.")
+            self.gui.insert_text_widget(f"Connection Error: {e}: Cannot send message.\n")
             
         except TimeoutError as e:
             logging.error(f"TimeoutError in send_message: {e}. The operation took too long.")
-            self.gui.insert_text_widget(f"Connection Error: {e}: Cannot send message.")
+            self.gui.insert_text_widget(f"Connection Error: {e}: Cannot send message.\n")
             
         except ConnectionResetError as e:
             logging.error(f"ConnectionResetError in send_message: {e}. The connection was reset by the peer.")
-            self.gui.insert_text_widget(f"Connection Error: {e}: Cannot send message.")
+            self.gui.insert_text_widget(f"Connection Error: {e}: Cannot send message.\n")
             
         except ConnectionRefusedError as e:
             logging.error(f"ConnectionRefusedError in send_message: {e}. The connection attempt was refused.")
-            self.gui.insert_text_widget(f"Connection Error: {e}: Cannot send message.")
+            self.gui.insert_text_widget(f"Connection Error: {e}: Cannot send message.\n")
             
         except OSError as e:
             logging.error(f"OSError in send_message: {e}. A general OS-related error occurred.")
-            self.gui.insert_text_widget(f"Connection Error: {e}: Cannot send message.")
+            self.gui.insert_text_widget(f"Connection Error: {e}: Cannot send message.\n")
 
     def is_valid_channel(self, channel):
         return any(channel.startswith(prefix) for prefix in self.chantypes)
@@ -1555,7 +1555,7 @@ class RudeChatClient:
         except Exception as e:
             print(f"Exception in save_highlight: {e}")
 
-    def handle_join(self, tokens): #add options to show or hide these messages. 
+    def handle_join(self, tokens):
         user_info = tokens.hostmask.nickname
         user_mask = tokens.hostmask
         channel = tokens.params[0]
@@ -1587,9 +1587,11 @@ class RudeChatClient:
             if self.show_join_part_quit_nick:
                 self.pipe_mode_to_pop_out(join_message, channel)
 
-        # If the user joining is the client's user, just return
-        if user_info == self.nickname and channel not in self.joined_channels:
-            self.join_znc_channel(tokens)
+        # If the user joining is the client's user, return
+        if user_info == self.nickname:
+            if self.znc_connection:
+                self.join_znc_channel(tokens)
+            return
 
         # Check if the user is not already in the channel_users list for the channel
         if user_info not in self.channel_users.get(channel, []):
@@ -1740,6 +1742,7 @@ class RudeChatClient:
             await self.change_nickname(new_nick, is_from_token=True)
 
     def sort_users(self, users, channel):
+        self.channel_users[channel] = []
         sorted_users = []
         current_modes = self.user_modes.get(channel, {})
 
@@ -2259,8 +2262,8 @@ class RudeChatClient:
 
         if self.ping_start_time is not None:
             ping_time = current_time - self.ping_start_time
-            ping_time_formatted = "{:.3f}".format(ping_time).lstrip('0') + " s"
-            self.gui.update_ping_label(ping_time_formatted)
+            ping_time_formatted = "{:.3f}".format(ping_time).lstrip('0') + "ms"
+            self.gui.update_ping_label(self.server_name, ping_time_formatted)
 
         self.ping_start_time = None
 
@@ -2280,7 +2283,8 @@ class RudeChatClient:
                 self.gui.channel_topics[self.server] = {}
             # Set the topic for the channel under the server entry
             self.gui.channel_topics[self.server][channel_name] = topic
-            self.gui.current_topic.set(f"{topic}")
+            if channel_name == self.current_channel:
+                self.gui.current_topic.set(f"{topic}")
 
         elif command == "333":
             # RPL_TOPICWHOTIME (numeric 333) - Who set the topic and when
@@ -2295,7 +2299,8 @@ class RudeChatClient:
                 self.gui.channel_topics[self.server] = {}
             # Set the topic for the channel under the server entry
             self.gui.channel_topics[self.server][channel_name] = topic
-            self.gui.current_topic.set(f"{topic}")
+            if channel_name == self.current_channel:
+                self.gui.current_topic.set(f"{topic}")
 
     def handle_nickname_doesnt_exist(self, tokens):
         """
@@ -2335,7 +2340,7 @@ class RudeChatClient:
                 #logging.debug(f"Data received: {data[:50]}...")  # Log the first 50 bytes for brevity
 
             except asyncio.TimeoutError as e:
-                self.gui.insert_text_widget(f"Time Out: {e}")
+                self.gui.insert_text_widget(f"Time Out: {e}\n")
                 logging.warning(f"TimeoutError Caught In handle_incoming_message: {e}")
                 await self.send_message(f'QUIT :{e.strerror}')
                 await self.reconnect(config_file)
@@ -2343,7 +2348,7 @@ class RudeChatClient:
 
             except OSError as e:
                 logging.error(f"OS ERROR Caught In handle_incoming_message: {e.errno} - {e.strerror}")
-                self.gui.insert_text_widget(f"Disconnected: {e}")
+                self.gui.insert_text_widget(f"Disconnected: {e}\n")
                 await self.send_message(f'QUIT :{e.strerror}')
                 await self.reconnect(config_file)
                 continue
@@ -2944,6 +2949,9 @@ class RudeChatClient:
                 channel_name = args[1]
                 await self.join_channel(channel_name)
                 await self.send_message(f'WHO {channel_name}')
+                if channel_name not in self.cap_who_for_chan:
+                    self.cap_who_for_chan.append(channel_name)
+                    self.gui.highlight_who_channels()
 
             case "query":  # open a DM with a user
                 await self.handle_query_command(args, timestamp)
