@@ -2294,13 +2294,25 @@ class RudeChatClient:
             # TOPIC command is received indicating a change in topic
             channel_name = tokens.params[0]
             topic = tokens.params[1]
+            message = f"Topic has been changed to: {topic}\n"
+
             # Check if the server entry exists in the dictionary
             if self.server not in self.gui.channel_topics:
                 self.gui.channel_topics[self.server] = {}
-            # Set the topic for the channel under the server entry
             self.gui.channel_topics[self.server][channel_name] = topic
+
+            # Add TOPIC CHANGED message to channel history & Display message 
+            if self.server not in self.channel_messages:
+                self.channel_messages[self.server] = {}
+            if channel_name not in self.channel_messages[self.server]:
+                self.channel_messages[self.server][channel_name] = []
+
+            self.channel_messages[self.server][channel_name].append(message)
+
+            # Set the topic for the channel under the server entry
             if channel_name == self.current_channel:
                 self.gui.current_topic.set(f"{topic}")
+                self.gui.insert_text_widget(f"{message}")
 
     def handle_nickname_doesnt_exist(self, tokens):
         """
