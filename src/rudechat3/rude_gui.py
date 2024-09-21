@@ -68,6 +68,7 @@ class RudeGui:
         self.entry_history = []
         self.popped_out_channels = []
         self.pop_out_windows = {}
+        self.server_colors = {}
         self.history_index = 0
         self.last_selected_index = None
         self.previous_server_index = None
@@ -1104,10 +1105,12 @@ class RudeGui:
 
     def on_server_change(self, event):
         # Get the index of the currently selected server
-        selected_server_index = self.server_listbox.curselection()
+        selected_server_index_tuple = self.server_listbox.curselection()
 
         # If there's a selected server
-        if selected_server_index:
+        if selected_server_index_tuple:
+            selected_server_index = selected_server_index_tuple[0]  # Extract the integer index
+
             # If there's a previous server, reset its background color to black
             if self.previous_server_index is not None:
                 self.server_listbox.itemconfig(self.previous_server_index, {'bg': self.server_list_bg, 'fg': self.server_list_fg})
@@ -1132,10 +1135,10 @@ class RudeGui:
                 # Set the GUI reference and update the GUI components
                 self.irc_client.set_gui(self)
                 self.irc_client.update_gui_channel_list()
+
+                # Clear Widgets
                 self.clear_topic_label()
                 self.clear_user_listbox()
-
-                # Clear the text widget
                 self.clear_text_widget()
 
                 # Display the MOTD if available
@@ -1150,8 +1153,22 @@ class RudeGui:
                 # Set the background color of the selected server to blue
                 self.server_listbox.itemconfig(selected_server_index, {'bg': self.selected_list_server, 'fg': self.server_list_fg})
 
+                # Store the foreground and background colors for the selected server
+                if selected_server_index not in self.server_colors:
+                    self.server_colors[selected_server_index] = {'fg': self.server_list_fg, 'bg': self.selected_list_server}
+                    if self.previous_server_index is not None:
+                        self.server_colors[self.previous_server_index] = {'bg': self.server_list_bg, 'fg': self.server_list_fg}
+                else:
+                    self.server_colors[selected_server_index] = {'fg': self.server_list_fg, 'bg': self.selected_list_server}
+                    if self.previous_server_index is not None:
+                        self.server_colors[self.previous_server_index] = {'bg': self.server_list_bg, 'fg': self.server_list_fg}
+
             # Update the previous_server_index to the currently selected server index
             self.previous_server_index = selected_server_index
+
+    def get_server_color(self, index):
+        # Get the colors from the dictionary
+        return self.server_colors.get(index, {'fg': None, 'bg': None})
 
     async def init_client_with_config(self, config_file, fallback_server_name):
         irc_client = None
@@ -1637,7 +1654,7 @@ class RudeGui:
         
         # Iterate through the servers and update the one with the matching server_name
         updated_servers = []
-        for server in servers:
+        for index, server in enumerate(servers):
             if server.startswith(server_name):
                 updated_server = f'{server_name} PT{ping_time}'
             else:
@@ -1646,8 +1663,15 @@ class RudeGui:
         
         # Clear the current listbox and insert updated items
         self.server_listbox.delete(0, tk.END)  # Clear listbox
-        for server in updated_servers:
+        for index, server in enumerate(updated_servers):
             self.server_listbox.insert(tk.END, server)  # Add updated items back into the listbox
+            
+            # Get the color configuration for the current index
+            server_colors = self.get_server_color(index)
+            
+            # Apply the foreground and background colors if available
+            if server_colors['fg'] or server_colors['bg']:
+                self.server_listbox.itemconfig(index, foreground=server_colors['fg'], background=server_colors['bg'])
 
     def update_users_label(self):
         if self.irc_client.server_name in self.irc_client.away_servers:
