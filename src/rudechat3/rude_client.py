@@ -36,7 +36,6 @@ class RudeChatClient:
         self.whois_data = {}
         self.download_channel_list = {}
         self.highlighted_channels = {}
-        self.highlighted_servers = {}
         self.mentions = {}
         self.ASCII_ART_MACROS = {}
         self.client_event_loops = {}
@@ -1228,14 +1227,18 @@ class RudeChatClient:
     def highlight_server(self, server_activity=False):
         try:
             for idx in range(self.gui.server_listbox.size()):
-                if self.gui.server_listbox.get(idx) == self.server_name:
+                listbox_server_name = self.gui.server_listbox.get(idx)
+                if listbox_server_name.startswith(self.server_name):
+
                     if server_activity:
                         self.gui.server_listbox.itemconfig(idx, {'bg': self.activity_note_color})
-                        self.highlighted_servers[self.server_name] = {'index': idx, 'bg': self.activity_note_color}
+                        self.gui.server_colors[idx] = {'fg': self.gui.server_list_fg, 'bg': self.activity_note_color}
+
                     if self.gui.irc_client != self and idx not in self.gui.server_listbox.curselection():
                         self.gui.server_listbox.itemconfig(idx, {'bg': self.mention_note_color})
-                        self.highlighted_servers[self.server_name] = {'index': idx, 'bg': self.mention_note_color}
+                        self.gui.server_colors[idx] = {'fg': self.gui.server_list_fg, 'bg': self.mention_note_color}
                     break
+
         except Exception as e:
             print(f"Exception in highlight_server: {e}")
 
