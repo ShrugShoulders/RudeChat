@@ -451,6 +451,7 @@ class RudeGui:
     def update_joined_channels(self):
         """Update the joined_channels list."""
         self.irc_client.joined_channels = list(self.channel_listbox.get(0, tk.END))
+        self.highlight_who_channels()
 
     def escape_color_codes(self, line):
         # Escape color codes in the string
