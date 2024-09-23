@@ -1155,14 +1155,22 @@ class RudeGui:
                 self.server_listbox.itemconfig(selected_server_index, {'bg': self.selected_list_server, 'fg': self.server_list_fg})
 
                 # Store the foreground and background colors for the selected server
-                if selected_server_index not in self.server_colors:
-                    self.server_colors[selected_server_index] = {'fg': self.server_list_fg, 'bg': self.selected_list_server}
-                    if self.previous_server_index is not None:
-                        self.server_colors[self.previous_server_index] = {'bg': self.server_list_bg, 'fg': self.server_list_fg}
-                else:
-                    self.server_colors[selected_server_index] = {'fg': self.server_list_fg, 'bg': self.selected_list_server}
-                    if self.previous_server_index is not None:
-                        self.server_colors[self.previous_server_index] = {'bg': self.server_list_bg, 'fg': self.server_list_fg}
+                self.server_colors[selected_server_index] = {'fg': self.server_list_fg, 'bg': self.selected_list_server}
+                
+                if self.previous_server_index is not None:
+                    if self.previous_server_index != selected_server_index:
+                        # Check if the previous server color is not a mention or activity highlight before updating
+                        prev_bg = self.server_colors[self.previous_server_index].get('bg', '')
+                        if prev_bg not in [self.irc_client.activity_note_color, self.irc_client.mention_note_color]:
+                            self.server_colors[self.previous_server_index] = {'bg': self.server_list_bg, 'fg': self.server_list_fg}
+
+            for server_index, colors in self.server_colors.items():
+                # Get the stored foreground and background colors
+                fg_color = colors.get('fg', self.server_list_fg)
+                bg_color = colors.get('bg', self.server_list_bg)
+
+                # Apply the stored colors to each server in the listbox
+                self.server_listbox.itemconfig(server_index, foreground=fg_color, background=bg_color)
 
             # Update the previous_server_index to the currently selected server index
             self.previous_server_index = selected_server_index
