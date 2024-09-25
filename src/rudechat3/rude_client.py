@@ -3749,6 +3749,11 @@ class RudeChatClient:
         escaped_input = self.escape_color_codes(action_message)
         formatted_message = f"* {self.nickname} {escaped_input}"
         await self.send_message(f'PRIVMSG {self.current_channel} :\x01ACTION {escaped_input}\x01')
+        
+        if self.use_auto_away:
+            self.watcher.update_last_message_time()
+        await self.remove_away_status()
+
         timestamp = datetime.datetime.now().strftime('[%H:%M:%S] ')
         if self.use_time_stamp == True:
             self.gui.insert_text_widget(f"{timestamp}{formatted_message}\n")
