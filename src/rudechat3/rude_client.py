@@ -1061,7 +1061,7 @@ class RudeChatClient:
         target = tokens.params[0]
         message = tokens.params[1]
         data = f"NOTICE {sender} {target}: {message}\n"
-        sdata = f"\nNOTICE {sender} {target}: {message}"
+        sdata = f"\nNOTICE {sender} {target}: {message}\n"
         ssender = str(sender).lower()
         smessage = str(message).lower()
 
@@ -2967,6 +2967,7 @@ class RudeChatClient:
                 if channel_name not in self.cap_who_for_chan:
                     self.cap_who_for_chan.append(channel_name)
                     self.gui.highlight_who_channels()
+                    self.gui.update_channel_label()
 
             case "query":  # open a DM with a user
                 await self.handle_query_command(args, timestamp)
@@ -3749,7 +3750,7 @@ class RudeChatClient:
         escaped_input = self.escape_color_codes(action_message)
         formatted_message = f"* {self.nickname} {escaped_input}"
         await self.send_message(f'PRIVMSG {self.current_channel} :\x01ACTION {escaped_input}\x01')
-        
+
         if self.use_auto_away:
             self.watcher.update_last_message_time()
         await self.remove_away_status()
