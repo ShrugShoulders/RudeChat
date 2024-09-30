@@ -66,7 +66,7 @@ class RudePopOut:
         self.user_frame.columnconfigure(0, weight=1)
 
         # Label for Users
-        self.user_label = tk.Label(self.user_frame, text="Users", bg=self.widgets_bg_color, fg='white')
+        self.user_label = tk.Label(self.user_frame, text="Users (0)", bg=self.widgets_bg_color, fg=self.irc_client.user_label_fg)
         self.user_label.grid(row=0, column=0, sticky='ew')
 
         # User listbox
@@ -107,6 +107,7 @@ class RudePopOut:
         self.set_topic(selected_channel)
         self.display_last_messages(selected_channel)
         self.update_gui_user_list(selected_channel)
+        self.update_users_label()
 
         # Bind the window close event & act on it
         self.root.protocol("WM_DELETE_WINDOW", self.close_window)
@@ -989,3 +990,14 @@ class RudePopOut:
             )
         except Exception as e:
             print(f"Desktop notification error: {e}")
+
+    def update_users_label(self):
+        if self.irc_client.server_name in self.irc_client.away_servers:
+            away_text = f"You're Away"
+            self.user_label.config(text=away_text, fg="red")
+        else:
+            user_num = len(self.irc_client.channel_users.get(self.irc_client.current_channel, []))
+            back_text = f"Users ({user_num})"
+            self.user_label.config(text=back_text, fg=self.irc_client.user_label_fg)
+            if self.irc_client.server_name in self.irc_client.away_servers:
+                self.irc_client.away_servers.remove(self.irc_client.server_name)

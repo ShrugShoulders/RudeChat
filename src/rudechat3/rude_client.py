@@ -1372,6 +1372,9 @@ class RudeChatClient:
             if sender != self.nickname:
                 self.channel_messages.setdefault(self.server, {}).setdefault(sender, [])
 
+                if sender not in self.cap_who_for_chan:
+                    self.cap_who_for_chan.append(sender)
+
                 if self.is_direct_message(target) and sender not in self.joined_channels:
                     self.joined_channels.append(sender)
                     self.gui.channel_lists[self.server] = self.joined_channels
@@ -1926,10 +1929,12 @@ class RudeChatClient:
             for user in unique_users:
                 self.gui.user_listbox.insert(tk.END, user)
             self.gui.highlight_away_users()
+            self.gui.update_users_label()
         
         if channel in self.gui.popped_out_channels:
             window = self.gui.pop_out_windows[channel]
             window.update_gui_user_list(channel)
+            window.update_users_label()
 
     def get_mode_lists(self):
         self.mode_keys = list(self.mode_to_symbol.keys())
@@ -2422,6 +2427,8 @@ class RudeChatClient:
                     continue
 
                 match tokens.command:
+                    case "PRIVMSG":
+                        await self.handle_privmsg(tokens)
                     case "AWAY":
                         self.handle_away(tokens)
                     case "CAP":
@@ -2537,8 +2544,6 @@ class RudeChatClient:
                         await self.handle_kick_event(tokens)
                     case "NOTICE":
                         self.handle_notice_message(tokens)
-                    case "PRIVMSG":
-                        await self.handle_privmsg(tokens)
                     case "JOIN":
                         self.handle_join(tokens)
                     case "PART":
@@ -2818,7 +2823,11 @@ class RudeChatClient:
 
     def close_dm(self, nickname, timestamp):
         # Remove the DM from the list of joined channels
-        self.joined_channels.remove(nickname)
+        if nickname in self.joined_channels:
+            self.joined_channels.remove(nickname)
+
+        if nickname in self.cap_who_for_chan:
+            self.cap_who_for_chan.remove(nickname)
 
         # Remove the DM's messages from the channel_messages dictionary
         if self.server in self.channel_messages and nickname in self.channel_messages[self.server]:
@@ -3069,6 +3078,7 @@ class RudeChatClient:
                 channel_name = args[1]
                 reason = " ".join(args[2:]) if len(args) > 2 else None
                 await self.leave_channel(channel_name, reason)
+                self.gui.update_channel_label()
 
             case "time":
                 await self.send_message(f"TIME")
