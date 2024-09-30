@@ -123,9 +123,30 @@ class RudeChatClient:
         self.gui.update_nick_channel_label()
 
     def configure_logging(self):
+        # Get the script directory
+        script_directory = os.path.dirname(os.path.abspath(__file__))
+        
+        # Log file path within the script directory
+        log_file = os.path.join(script_directory, 'RudeChat3.log')
+        
         # Configure logging only if not already configured
         if not logging.getLogger().hasHandlers():
-            logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
+            # Create handlers
+            console_handler = logging.StreamHandler()
+            file_handler = logging.FileHandler(log_file)
+            
+            # Set levels and formatters
+            console_handler.setLevel(logging.DEBUG)
+            file_handler.setLevel(logging.DEBUG)
+            formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+            console_handler.setFormatter(formatter)
+            file_handler.setFormatter(formatter)
+            
+            # Add handlers to the logger
+            logger = logging.getLogger()
+            logger.setLevel(logging.DEBUG)
+            logger.addHandler(console_handler)
+            logger.addHandler(file_handler)
 
     def save_away_users_to_file(self):
         script_directory = os.path.dirname(os.path.abspath(__file__))
@@ -162,7 +183,7 @@ class RudeChatClient:
             try:
                 os.remove(lock_file)
             except OSError as e:
-                print(f"Error deleting {lock_file}: {e}")
+                logging.error(f"Error deleting {lock_file}: {e}")
 
     async def load_channel_messages(self):
         script_directory = os.path.dirname(os.path.abspath(__file__))
@@ -197,7 +218,7 @@ class RudeChatClient:
                     async with aiofiles.open(file_path, 'r') as file:
                         existing_messages = json.loads(await file.read())
                 except json.JSONDecodeError:
-                    print("JSON decode error occurred, initializing with an empty dictionary.")
+                    logging.error("JSON decode error occurred, initializing with an empty dictionary.")
                     existing_messages = {}
 
             # Update existing data with new channel messages
@@ -208,14 +229,14 @@ class RudeChatClient:
                 await file.write(json.dumps(existing_messages, indent=2))
 
         except Exception as e:
-            print(f"Error occurred while saving channel messages: {e}")
+            logging.error(f"Error occurred while saving channel messages: {e}")
 
         finally:
             # Release the lock
             try:
                 os.remove(lock_file_path)
             except Exception as e:
-                print(f"Error occurred while removing lock file: {e}")
+                logging.error(f"Error occurred while removing lock file: {e}")
 
     async def connect(self, config_file):
         await self.connect_to_server(config_file)
@@ -256,6 +277,7 @@ class RudeChatClient:
 
         except asyncio.TimeoutError:
             self.gui.insert_text_widget(f"Connection timeout. Please try again later.\n")
+            logging.error(f"Connection timeout. Please try again later.")
 
     async def send_initial_commands(self):
         self.gui.insert_text_widget(f'Sent client registration commands.\n')
@@ -295,7 +317,7 @@ class RudeChatClient:
             await self._await_welcome_message()
             return  # Successfully connected and received 001
         except (OSError, ConnectionError) as e:
-            print(f"Error occurred in wait_for_welcome: {e}.\n")
+            logging.error(f"Error occurred in wait_for_welcome: {e}.\n")
             return
 
     def handle_connection_info(self, tokens):
@@ -759,7 +781,6 @@ class RudeChatClient:
             
         except AttributeError as e:
             logging.error(f"AttributeError in send_message: {e}")
-            print(f"AttributeError occurred in send_message: {e}")
             
         except BrokenPipeError as e:
             logging.error(f"BrokenPipeError in send_message: {e}. The connection might have been lost.")
@@ -880,7 +901,7 @@ class RudeChatClient:
         loop = self.loop  # Access the loop from the client object
         
         if loop is None:
-            print(f"No existing loop found")
+            logging.error(f"No existing loop found")
             return
 
         # Get all tasks in the loop, excluding some specific tasks.
@@ -938,10 +959,10 @@ class RudeChatClient:
                 return
 
             except Exception as e:
-                print(f"Failed to reconnect ({retries}/{MAX_RETRIES}): {e}. Retrying in {RETRY_DELAY} seconds.")
+                logging.error(f"Failed to reconnect ({retries}/{MAX_RETRIES}): {e}. Retrying in {RETRY_DELAY} seconds.")
                 await asyncio.sleep(RETRY_DELAY)
 
-        print(f"Failed to reconnect ({retries}/{MAX_RETRIES}): Retrying in {RETRY_DELAY} seconds.")
+        logging.info(f"Failed to reconnect ({retries}/{MAX_RETRIES}): Retrying in {RETRY_DELAY} seconds.")
 
     async def away_watcher(self):
         while self.loop_running:
@@ -986,13 +1007,13 @@ class RudeChatClient:
             except asyncio.CancelledError:
                 # If the event loop is stopped, break out of the loop
                 self.loop_running = False
-                print("Exiting keep_alive loop.")
+                logging.info("Exiting keep_alive loop.")
                 break
 
             except (ConnectionResetError, OSError) as e:
-                print(f"Connection Exception caught in keep_alive: {e}")
+                logging.error(f"Connection Exception caught in keep_alive: {e}")
                 if not self.loop_running:
-                    print("loop not running. breaking keep_alive")
+                    logging.error("loop not running. breaking keep_alive")
                     break
                 else:
                     #disconnected_server = self.grab_server_name(config_file)
@@ -1003,11 +1024,11 @@ class RudeChatClient:
                     continue
 
             except AttributeError as e:
-                print(f"AttributeError caught in keep_alive: {e}")
+                logging.error(f"AttributeError caught in keep_alive: {e}")
                 continue
 
             except Exception as e:
-                print(f"Unhandled exception in keep_alive: {e}")
+                logging.error(f"Unhandled exception in keep_alive: {e}")
                 continue
 
     async def auto_save(self):
@@ -1020,15 +1041,15 @@ class RudeChatClient:
 
             except asyncio.CancelledError:
                 self.loop_running = False
-                print("Exiting auto_save loop.")
+                logging.info("Exiting auto_save loop.")
                 break
 
             except AttributeError as e:  # Catch AttributeError
-                print(f"AttributeError caught in auto_save: {e}")
+                logging.error(f"AttributeError caught in auto_save: {e}")
                 continue
 
             except Exception as e:  # Catch other exceptions
-                print(f"Unhandled exception in auto_save: {e}")
+                logging.error(f"Unhandled exception in auto_save: {e}")
                 continue
 
     async def auto_trim(self):
@@ -1041,15 +1062,15 @@ class RudeChatClient:
 
             except asyncio.CancelledError:
                 self.loop_running = False
-                print("Exiting auto_trim loop.")
+                logging.info("Exiting auto_trim loop.")
                 break
 
             except AttributeError as e:  # Catch AttributeError
-                print(f"AttributeError caught in auto_trim: {e}")
+                logging.error(f"AttributeError caught in auto_trim: {e}")
                 continue
 
             except Exception as e:  # Catch other exceptions
-                print(f"Unhandled exception in auto_trim: {e}")
+                logging.error(f"Unhandled exception in auto_trim: {e}")
                 continue
 
     def handle_server_message(self, line):
@@ -1068,7 +1089,7 @@ class RudeChatClient:
         if ssender.startswith("nickserv") and "invalid password" in smessage:
             self.gui.insert_text_widget(f"{sdata}")
             self.add_server_message(data)
-            print("Invalid password detected in NOTICE message.")
+            logging.info("Invalid password detected in NOTICE message.")
             return True  # Return True to indicate an "Invalid password" was detected
         
         if self.znc_connection and target not in self.gui.popped_out_channels:
@@ -1128,7 +1149,7 @@ class RudeChatClient:
                     case "ACTION":
                         await self.handle_action_ctcp(timestamp, sender, target, ctcp_content)
                     case _:
-                        print(f"Unhandled CTCP command: {ctcp_command}")
+                        logging.info(f"Unhandled CTCP command: {ctcp_command}")
         else:
             return
 
@@ -1179,7 +1200,7 @@ class RudeChatClient:
                                 self.gui.channel_listbox.itemconfig(idx, {'bg':self.activity_note_color})
                             break
         except Exception as e:
-            print(f"Exception in handle_action_ctcp: {e}")
+            logging.error(f"Exception in handle_action_ctcp: {e}")
 
     def trim_messages(self):
         for server, channels in self.channel_messages.items():
@@ -1197,7 +1218,7 @@ class RudeChatClient:
                 for key in keys_to_delete:
                     del channels[key]
         except (AttributeError, Exception) as e:
-            print(f'AttributeError or Exception in remove_ampersand_channels: {e}')
+            logging.error(f'AttributeError or Exception in remove_ampersand_channels: {e}')
 
     async def notify_user_of_mention(self, server, channel, sender, message):
         notification_msg = f"<{sender}> {message}"
@@ -1225,7 +1246,7 @@ class RudeChatClient:
                             self.gui.channel_listbox.see(idx)
                             break
         except Exception as e:
-            print(f"Exception in highlighted_channel: {e}")
+            logging.error(f"Exception in highlighted_channel: {e}")
 
     def highlight_server(self, server_activity=False):
         try:
@@ -1243,7 +1264,7 @@ class RudeChatClient:
                     break
 
         except Exception as e:
-            print(f"Exception in highlight_server: {e}")
+            logging.error(f"Exception in highlight_server: {e}")
 
     async def trigger_beep_notification(self, channel_name=None, message_content=None):
         """
@@ -1272,11 +1293,11 @@ class RudeChatClient:
                 winsound.Beep(frequency, duration)
             else:
                 # For other platforms, print a message
-                print("Beep notification not supported on this platform.")
+                logging.info("Beep notification not supported on this platform.")
 
             self.gui.trigger_desktop_notification(channel_name, message_content=message_content)
         except Exception as e:
-            print(f"Error triggering desktop notification: {e}")
+            logging.error(f"Error triggering desktop notification: {e}")
 
     def green_texter(self, message):
         arrow_symbols = ['>', '»', '→', '⇒', '↣', '➜', '➤', '➡', '➝', '➞', '➟', '➠', '->', '=>']
@@ -1344,7 +1365,7 @@ class RudeChatClient:
             await self.send_message(f"NAMES {channel}")
             await self.send_message(f"TOPIC {channel}")
         except Exception as e:
-            print(f"Exception in auto_attach: {e}")
+            logging.error(f"Exception in auto_attach: {e}")
 
     def is_ctcp_command(self, message):
         message = message.strip()
@@ -1408,7 +1429,7 @@ class RudeChatClient:
                         self.pip_to_pop_out(timestamp, sender, message, target, mode_symbol)
 
         except Exception as e:
-            print(f"Exception in prepare_direct_message: {e}")
+            logging.error(f"Exception in prepare_direct_message: {e}")
 
     def pip_to_pop_out(self, timestamp, sender, message, target, mode_symbol):
         window = self.gui.pop_out_windows.get(target) or self.gui.pop_out_windows.get(sender)
@@ -1562,7 +1583,7 @@ class RudeChatClient:
                 elif current_highlight['bg'] != 'red':
                     self.highlighted_channels[self.server_name][channel] = {'index': joined_index, 'bg': self.activity_note_color}
         except Exception as e:
-            print(f"Exception in save_highlight: {e}")
+            logging.error(f"Exception in save_highlight: {e}")
 
     def handle_join(self, tokens):
         user_info = tokens.hostmask.nickname
@@ -1902,7 +1923,7 @@ class RudeChatClient:
                 window.highlight_nickname()
                 return
             except Exception as e:
-                print(f"Exception in pipe_mode_to_pop_out: {e}")
+                logging.error(f"Exception in pipe_mode_to_pop_out: {e}")
 
     def _log_channel_message(self, channel, message):
         if channel != self.nickname:
@@ -2117,7 +2138,7 @@ class RudeChatClient:
             # Update the GUI
             self.gui.insert_and_scroll()
         except Exception as e:
-            print(f"Exception in help: {e}")
+            logging.error(f"Exception in help: {e}")
 
     async def save_whois_to_file(self, nickname):
         """Save WHOIS data for a given nickname to a file."""
@@ -2198,7 +2219,7 @@ class RudeChatClient:
                 else:
                     await self.remove_kicked_channel(channel)
             except Exception as e:
-                print(f"Exception upon attempting to remove kicked channel or auto_rejoin: {e}")
+                logging.error(f"Exception upon attempting to remove kicked channel or auto_rejoin: {e}")
 
     async def remove_kicked_channel(self, channel):
         if channel in self.joined_channels:
@@ -2338,7 +2359,7 @@ class RudeChatClient:
             
             self.gui.insert_text_widget(f"The nickname '{nickname}' doesn't exist on the server.\n")
         else:
-            print("Invalid response format for '401'.")
+            logging.info("Invalid response format for '401'.")
 
     def handle_away(self, tokens):
         nickname = tokens.hostmask.nickname
@@ -2413,23 +2434,25 @@ class RudeChatClient:
                 try:
                     # Check for an empty line or line with only whitespace before attempting to tokenize
                     if len(line.strip()) == 0:
-                        #print(f"Debug: Received an empty or whitespace-only line: '{line}'\n")
+                        #logging.info(f"Debug: Received an empty or whitespace-only line: '{line}'\n")
                         continue
 
                     # Additional check: Ensure that the line has at least one character
                     if len(line) < 1:
-                        #print(f"Debug: Received a too-short line: '{line}'\n")
+                        #logging.info(f"Debug: Received a too-short line: '{line}'\n")
                         continue
 
-                    # Debug statement to print the line before tokenizing
-                    #print(f"Debug: About to tokenize the line - '{line}'")
+                    # Debug statement before tokenizing line
+                    #logging.info(f"Debug: About to tokenize the line - '{line}'")
 
                     tokens = irctokens.tokenise(line)
                 except ValueError as e:
-                    self.gui.insert_text_widget(f"Error: {e}\n")
+                    self.gui.insert_text_widget(f"ValueError in handle_incoming_message: {e}\n")
+                    logging.error(f"ValueError in handle_incoming_message: {e}")
                     continue
                 except IndexError as ie:
-                    self.gui.insert_text_widget(f"IndexError: {ie}. Line: '{line}'\n")
+                    self.gui.insert_text_widget(f"IndexError in handle_incoming_message: {ie}. Line: '{line}'\n")
+                    logging.error(f"IndexError in handle_incoming_message: {ie}. Line: '{line}'")
                     continue
 
                 match tokens.command:
@@ -2786,7 +2809,7 @@ class RudeChatClient:
             with open(filename, 'a', encoding='utf-8') as file:
                 file.write(log_line)
         except Exception as e:
-            print(f"Error logging message: {e}")
+            logging.error(f"Error logging message: {e}")
 
     async def handle_query_command(self, args, timestamp):
         modes_to_strip = ''.join(self.mode_values)
@@ -3905,7 +3928,7 @@ class RudeChatClient:
             # Update the GUI
             self.gui.insert_and_scroll()
         except Exception as e:
-            print(f"Exception in help: {e}")
+            logging.error(f"Exception in help: {e}")
 
     def set_gui(self, gui):
         self.gui = gui
