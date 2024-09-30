@@ -1163,9 +1163,12 @@ class RudeChatClient:
                 self.gui.insert_text_widget(action_message)
                 self.gui.highlight_nickname()
             if target in self.gui.popped_out_channels:
-                window = self.gui.pop_out_windows[target]
-                window.insert_text(action_message)
-                window.highlight_nickname()
+                try:
+                    window = self.gui.pop_out_windows[target]
+                    window.insert_text(action_message)
+                    window.highlight_nickname()
+                except Exception as e:
+                    logging.error(f"Error Handling Popped Out Windows ACTION command: {e}")
             else:
                 # If it's not the currently viewed channel, highlight the channel in green in the Listbox
                 if target != self.current_channel:
@@ -1932,9 +1935,12 @@ class RudeChatClient:
             self.gui.update_users_label()
         
         if channel in self.gui.popped_out_channels:
-            window = self.gui.pop_out_windows[channel]
-            window.update_gui_user_list(channel)
-            window.update_users_label()
+            try:
+                window = self.gui.pop_out_windows[channel]
+                window.update_gui_user_list(channel)
+                window.update_users_label()
+            except Exception as e:
+                logging.error(f"Error Updating Popped Out User List Box or Label: {e}")
 
     def get_mode_lists(self):
         self.mode_keys = list(self.mode_to_symbol.keys())
