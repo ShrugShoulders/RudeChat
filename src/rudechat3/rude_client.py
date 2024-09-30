@@ -3269,8 +3269,11 @@ class RudeChatClient:
             # Send each line separately
             for line in lines:
                 if line:  # Skip empty lines
-                    # Send the line as a message
-                    await self.send_message(f'PRIVMSG {self.current_channel} :{line}')
+                    # Apply green text formatting here for each line
+                    styled_line = self.green_texter(line)
+
+                    # Send the styled line as a message
+                    await self.send_message(f'PRIVMSG {self.current_channel} :{styled_line}')
                     
                     # Get the mode symbol for the current user
                     user_mode = self.get_user_mode(self.nickname, self.current_channel)
@@ -3278,16 +3281,16 @@ class RudeChatClient:
                     
                     # Insert the message into the text widget
                     if self.use_time_stamp:
-                        self.gui.insert_text_widget(f"{timestamp}<{mode_symbol}{self.nickname}> {line}\n")
+                        self.gui.insert_text_widget(f"{timestamp}<{mode_symbol}{self.nickname}> {styled_line}\n")
                     else:
-                        self.gui.insert_text_widget(f"<{mode_symbol}{self.nickname}> {line}\n")
+                        self.gui.insert_text_widget(f"<{mode_symbol}{self.nickname}> {styled_line}\n")
                     self.gui.highlight_nickname()
 
                     # Check if it's a DM or channel
                     if any(self.current_channel.startswith(prefix) for prefix in self.chantypes):  # It's a channel
-                        self.user_input_channel_message(line, timestamp, mode_symbol)
+                        self.user_input_channel_message(styled_line, timestamp, mode_symbol)
                     else:  # It's a DM
-                        self.user_input_dm_message(line, timestamp)
+                        self.user_input_dm_message(styled_line, timestamp)
 
                     # If there's only one item in the list, don't wait
                     if len(message_chunks) == 1 and len(lines) == 1:
@@ -3346,25 +3349,27 @@ class RudeChatClient:
 
         # Escape color codes
         escaped_input = self.escape_color_codes(user_input)
-        escaped_input = self.green_texter(escaped_input)
 
+        # Replace pronouns if enabled
         if self.replace_pronouns:
-            escaped_input = replace_pronouns(escaped_input, self.current_channel)
+            processed_input = replace_pronouns(escaped_input, self.current_channel)
+        else:
+            processed_input = escaped_input
 
         if self.current_channel:
             # Split the input into lines
-            lines = escaped_input.splitlines()
+            lines = processed_input.splitlines()
             
             # Check the length of the first line
             first_line = lines[0]
             if len(first_line) > 420:
                 # If the first line is longer than 420 characters, split the input into chunks
-                message_chunks = [escaped_input[i:i+420] for i in range(0, len(escaped_input), 420)]
+                message_chunks = [processed_input[i:i+420] for i in range(0, len(processed_input), 420)]
             else:
                 # Otherwise, pass the input without chunking
-                message_chunks = [escaped_input]
+                message_chunks = [processed_input]
             
-            # Send message chunks
+            # Send message chunks (green text is applied within send_message_chunks)
             await self.send_message_chunks(message_chunks, timestamp)
         else:
             self.gui.insert_text_widget(f"No channel selected. Use /join to join a channel.\n")
