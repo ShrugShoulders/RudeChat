@@ -680,8 +680,7 @@ class RudeChatClient:
                         got_396 = True
 
                     case _:
-                        input_line = f"_await_welcome_message: {line}"
-                        self.save_error(tokens, input_line)
+                        logging.info(f"Unhandled Token command in _await_welcome_message: {tokens.command}. Token: {tokens}")
                         self.gui.insert_and_scroll()
 
                 if check_timeout():
@@ -2387,7 +2386,7 @@ class RudeChatClient:
                 #logging.debug(f"Data received: {data[:50]}...")  # Log the first 50 bytes for brevity
 
             except asyncio.TimeoutError as e:
-                self.gui.insert_text_widget(f"Time Out: {e}\n")
+                self.gui.insert_text_widget(f"TimeoutError Caught In handle_incoming_message: {e}\n")
                 logging.warning(f"TimeoutError Caught In handle_incoming_message: {e}")
                 await self.send_message(f'QUIT :{e.strerror}')
                 await self.reconnect(config_file)
@@ -2591,22 +2590,9 @@ class RudeChatClient:
                     case "PONG":
                         self.handle_pong(tokens)
                     case _:
-                        input_line = f"handle_incoming_message: {line}"
-                        self.save_error(tokens, input_line)
+                        logging.info(f"Unhandled Token command in handle_incoming_message: {tokens.command}. Full line: {line} & Full token: {tokens}")
                         if line.startswith(f":{self.server}"):
                             self.handle_server_message(line)
-
-    def save_error(self, tokens, line):
-        script_directory = os.path.dirname(os.path.abspath(__file__))
-        error_log_path = os.path.join(script_directory, "token_error_log.txt")
-        error = f"Debug: Unhandled command {tokens.command}. Full line: {line} & Full token: {tokens}\n"
-
-        try:
-            with open(error_log_path, "a") as error_log_file:
-                error_log_file.write(error)
-        except FileNotFoundError:
-            with open(error_log_path, "w") as error_log_file:
-                error_log_file.write(error)
 
     def handle_263(self, tokens):
         source = tokens.source
@@ -3004,8 +2990,8 @@ class RudeChatClient:
                 await self.send_message(f'WHO {channel_name}')
                 if channel_name not in self.cap_who_for_chan:
                     self.cap_who_for_chan.append(channel_name)
-                    self.gui.highlight_who_channels()
-                    self.gui.update_channel_label()
+                self.gui.highlight_who_channels()
+                self.gui.update_channel_label()
 
             case "query":  # open a DM with a user
                 await self.handle_query_command(args, timestamp)
@@ -3778,6 +3764,8 @@ class RudeChatClient:
             # WHO on a specific channel
             channel = args[0]
             await self.send_message(f'WHO {channel}')
+            if channel not in self.cap_who_for_chan:
+                self.cap_who_for_chan.append(channel)
         else:
             # WHO with mask or user host
             mask = args[0]
