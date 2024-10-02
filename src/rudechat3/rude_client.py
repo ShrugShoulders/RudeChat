@@ -2603,7 +2603,7 @@ class RudeChatClient:
                         if line.startswith(f":{self.server}"):
                             self.handle_server_message(line)
 
-    def handle_invite(self, tokens):
+    async def handle_invite(self, tokens):
         inviter = tokens.source.split('!')[0]  # Extract the nickname of the inviter
         invitee = tokens.params[0]  # The person being invited (usually the user)
         channel = tokens.params[1]  # The channel to which the user is invited

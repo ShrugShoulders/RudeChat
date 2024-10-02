@@ -70,7 +70,7 @@ def clone_and_install_repo(repo_url, dest_dir):
     subprocess.run(['git', 'clone', repo_url, dest_dir], check=True)
     
     # Change to the destination directory and run pip install
-    subprocess.run(['pip', 'install', '.'], cwd=dest_dir, check=True)
+    subprocess.run(['pip', 'install', '-r requirements.txt', '.'], cwd=dest_dir, check=True)
 
 def update_files_with_rude(src_dir, backup_dir, file_ext, merge_function, special_merge_file):
     backup_files = glob.glob(os.path.join(backup_dir, f'*{file_ext}'))
