@@ -2913,6 +2913,16 @@ class RudeChatClient:
             # Update the GUI's channel list
             self.gui.channel_lists[self.server] = self.joined_channels
             self.update_gui_channel_list()
+            if self.joined_channels:
+                try:
+                    print(self.joined_channels)
+                    chosen_chan = f"{self.joined_channels[0]}"
+                    print(chosen_chan)
+                    await self.pop_out_return(chosen_chan)
+                except TypeError as e:
+                    logging.error(f"TypeError in leave_channel: {e}")
+                except Exception as e:
+                    logging.error(f"Exception in leave_channel: {e}")
 
     async def handle_kick_command(self, args):
         modes_to_strip = ''.join(self.mode_values)
@@ -3985,4 +3995,4 @@ class RudeChatClient:
             self.gui.switch_channel(channel)
 
     async def pop_out_return(self, channel):
-        await self.gui.switch_channel(channel)
+        self.gui.switch_channel(channel)
