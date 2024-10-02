@@ -40,7 +40,7 @@ class ChannelListWindow(tk.Toplevel):
         config_file = os.path.join(self.script_directory, 'gui_config.ini')
         config.read(config_file)
 
-        # Load colors from the [GUI] and [WIDGETS] sections
+        # Load colors
         self.main_fg_color = config.get('GUI', 'main_fg_color')
         self.main_bg_color = config.get('GUI', 'main_bg_color')
 

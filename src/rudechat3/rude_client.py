@@ -3934,8 +3934,9 @@ class RudeChatClient:
                 "/cowsay: Built in, /cowsay <text> | /cowsay <fortune list>",
                 "/fortune: Built in, /fortune <fortune list>",
                 "/mac <macro> - sends a chosen macro to a channel /mac - shows available macros",
+                "Macros: To add a macro, save a .txt file with your chosen macro and add it to the Art folder within your installation directory.",
                 "Fortune Lists: dadjoke(jokes your dad makes), yomama(YO MAMA SO FAT), therules(Ferengi Rules of Acquisition)",
-                "Add your own fortune lists to the Fortune List folder in site-packages for python."
+                "Add your own fortune lists to the Fortune List folder within your installation directory."
                 "_________",
             ],
             "Extra Info": [
