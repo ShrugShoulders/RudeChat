@@ -2915,9 +2915,7 @@ class RudeChatClient:
             self.update_gui_channel_list()
             if self.joined_channels:
                 try:
-                    print(self.joined_channels)
                     chosen_chan = f"{self.joined_channels[0]}"
-                    print(chosen_chan)
                     await self.pop_out_return(chosen_chan)
                 except TypeError as e:
                     logging.error(f"TypeError in leave_channel: {e}")
