@@ -1821,6 +1821,7 @@ class RudeChatClient:
         return sorted_users
 
     def handle_mode(self, tokens):
+        print(tokens)
         channel = tokens.params[0]
         mode_changes = tokens.params[1]
         users = tokens.params[2:] if len(tokens.params) > 2 else []
@@ -2544,12 +2545,7 @@ class RudeChatClient:
                         self.handle_unknown_mode(tokens)
 
                     case "473" | "475" | "474" | "471":
-                        channel = tokens.params[1]
-                        reason = tokens.params[2] if len(tokens.params) > 2 else ""
-
-                        # Combine information into one message
-                        message = f"Cannot join channel {channel} - {reason}"
-                        self.gui.insert_text_widget(f"{message}\n")
+                        self.unable_to_join_channel(tokens)
 
                     case "477":
                         self.handle_cannot_join_channel(tokens)
@@ -2602,6 +2598,21 @@ class RudeChatClient:
                         logging.info(f"Unhandled Line in handle_incoming_message: {line}")
                         if line.startswith(f":{self.server}"):
                             self.handle_server_message(line)
+
+    def unable_to_join_channel(self, tokens):
+        channel = tokens.params[1]
+        reason = tokens.params[2] if len(tokens.params) > 2 else ""
+
+        # Combine information into one message
+        message = f"Cannot join channel {channel} - {reason}"
+        self.gui.insert_text_widget(f"{message}\n")
+        self.add_server_message(message)
+
+        # Make sure to remove the channel 
+        if channel in self.joined_channels:
+            self.joined_channels.remove(channel)
+            self.gui.channel_lists[self.server] = self.joined_channels
+            self.update_gui_channel_list()
 
     async def handle_invite(self, tokens):
         inviter = tokens.source.split('!')[0]
@@ -3029,6 +3040,8 @@ class RudeChatClient:
             folder = "Art"
         elif primary_command == "fortunes":
             folder = "Fortune Lists"
+        elif primary_command == "swhois":
+            folder = "whois"
 
         folder_path = os.path.join(script_directory, folder)
 
@@ -3315,13 +3328,7 @@ class RudeChatClient:
                 else:
                     self.gui.insert_text_widget("You must give a nickname\n")
 
-            case "logs":
-                self.show_file_folder(primary_command)
-
-            case "fortunes":
-                self.show_file_folder(primary_command)
-
-            case "macros":
+            case "logs" | "fortunes" | "macros" | "swhois":
                 self.show_file_folder(primary_command)
 
             case None:
@@ -3905,6 +3912,7 @@ class RudeChatClient:
                 "/mentions to show your nicknames mentions. /mentions clear to clear them.",
                 "/unfriend <nickname> - removes a friend from your friends list",
                 "/logs - Shows the channel logs folder",
+                "/swhois - shows the whois logs collected from DMs if auto whois is turned on or if you've whois'd a user",
                 "_________",
             ],
             "String Formatting": [
