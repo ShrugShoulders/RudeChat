@@ -5,11 +5,26 @@ class ChannelListWindow(tk.Toplevel):
     def __init__(self, client, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.title("Channel List")
-        self.geometry("790x400")
-
+        self.geometry("800x400")
+        self.script_directory = os.path.dirname(os.path.abspath(__file__))
         self.client = client
         self.is_destroyed = False  # To check if the window has been destroyed
         self.sort_order = "ascending"  # Default sort order for users
+
+        self.load_configuration()
+
+        # Apply the background color to the main window
+        self.configure(bg=self.main_bg_color)
+
+        # Apply custom styles using ttk.Style
+        style = ttk.Style(self)
+        style.configure("TLabel", background=self.main_bg_color, foreground=self.main_fg_color)
+        style.configure("Treeview", background=self.main_bg_color, fieldbackground=self.main_bg_color, foreground=self.main_fg_color, rowheight=25)
+        style.configure("TButton", background=self.main_bg_color, foreground=self.main_fg_color, padding=5)
+        style.configure("TScrollbar", background=self.main_bg_color)
+
+        # Apply treeview heading colors
+        style.configure("Treeview.Heading", background=self.main_bg_color, foreground=self.main_fg_color)
 
         self.create_widgets()
 
@@ -19,30 +34,40 @@ class ChannelListWindow(tk.Toplevel):
         # Start populating the channel list
         asyncio.create_task(self.populate_channel_list())
 
+    def load_configuration(self):
+        # Load configuration from gui_config.ini
+        config = configparser.ConfigParser()
+        config_file = os.path.join(self.script_directory, 'gui_config.ini')
+        config.read(config_file)
+
+        # Load colors from the [GUI] and [WIDGETS] sections
+        self.main_fg_color = config.get('GUI', 'main_fg_color')
+        self.main_bg_color = config.get('GUI', 'main_bg_color')
+
     def create_widgets(self):
-        self.search_label = ttk.Label(self, text="Search Channel/Topic:")
+        self.search_label = ttk.Label(self, text="Search Channel/Topic:", style="TLabel")
         self.search_label.grid(row=0, column=0, padx=10, pady=5, sticky="w")
 
         self.search_entry = ttk.Entry(self)
         self.search_entry.grid(row=0, column=1, padx=10, pady=5, sticky="ew")
         self.search_entry.bind("<KeyRelease>", self.handle_search)  # Bind the search function
 
-        self.tree = ttk.Treeview(self, columns=("Channel", "Users", "Topic"), show='headings')
+        self.tree = ttk.Treeview(self, columns=("Channel", "Users", "Topic"), show='headings', style="Treeview")
         self.tree.heading("Channel", text="Channel")
         self.tree.heading("Users", text="Users", command=self.sort_by_users)
         self.tree.heading("Topic", text="Topic")
 
-        self.tree.column("Channel", width=150)  
+        self.tree.column("Channel", width=150)
         self.tree.column("Users", width=5)
         self.tree.column("Topic", width=395)
 
         self.tree.grid(row=1, column=0, columnspan=2, sticky="nsew")
 
-        self.scrollbar = ttk.Scrollbar(self, orient="vertical", command=self.tree.yview)
+        self.scrollbar = ttk.Scrollbar(self, orient="vertical", command=self.tree.yview, style="TScrollbar")
         self.tree.configure(yscrollcommand=self.scrollbar.set)
         self.scrollbar.grid(row=1, column=2, sticky="ns")
 
-        self.close_button = ttk.Button(self, text="Close", command=self.destroy)
+        self.close_button = ttk.Button(self, text="Close", command=self.destroy, style="TButton")
         self.close_button.grid(row=2, column=0, columnspan=2, pady=10, padx=10, sticky="ew")
 
         # Make the Treeview and scrollbar resizable
