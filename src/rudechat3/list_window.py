@@ -7,7 +7,7 @@ class ChannelListWindow(tk.Toplevel):
         self.title("Channel List")
         self.geometry("790x400")
 
-        self.client = client  # The AsyncIRCClient instance
+        self.client = client
         self.is_destroyed = False  # To check if the window has been destroyed
         self.sort_order = "ascending"  # Default sort order for users
 
@@ -31,6 +31,10 @@ class ChannelListWindow(tk.Toplevel):
         self.tree.heading("Channel", text="Channel")
         self.tree.heading("Users", text="Users", command=self.sort_by_users)
         self.tree.heading("Topic", text="Topic")
+
+        self.tree.column("Channel", width=150)  
+        self.tree.column("Users", width=5)
+        self.tree.column("Topic", width=395)
 
         self.tree.grid(row=1, column=0, columnspan=2, sticky="nsew")
 
