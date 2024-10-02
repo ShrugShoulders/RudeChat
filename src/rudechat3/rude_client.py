@@ -2604,15 +2604,17 @@ class RudeChatClient:
                             self.handle_server_message(line)
 
     async def handle_invite(self, tokens):
-        inviter = tokens.source.split('!')[0]  # Extract the nickname of the inviter
-        invitee = tokens.params[0]  # The person being invited (usually the user)
-        channel = tokens.params[1]  # The channel to which the user is invited
+        inviter = tokens.source.split('!')[0]
+        invitee = tokens.params[0]
+        channel = tokens.params[1]
 
-        # Notify the user of the invite
-        message = f"{inviter} has invited you to join {channel}"
-        self.gui.insert_text_widget(f"{message}\n")
         if self.auto_join_invite:
+            message = f"{inviter} has invited you to join {channel}, Joining {channel}..."
+            self.gui.insert_text_widget(f"{message}\n")
             await self.command_parser(f"/join {channel}")
+        else:
+            message = f"{inviter} has invited you to join {channel}"
+            self.gui.insert_text_widget(f"{message}\n")
 
     async def handle_bad_channel_name(self, tokens):
         # Extract the channel name and reason from the tokens
