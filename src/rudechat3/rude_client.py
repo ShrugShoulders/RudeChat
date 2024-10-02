@@ -2915,8 +2915,7 @@ class RudeChatClient:
             self.update_gui_channel_list()
             if self.joined_channels:
                 try:
-                    chosen_chan = f"{self.joined_channels[0]}"
-                    await self.pop_out_return(chosen_chan)
+                    self.force_click()
                 except TypeError as e:
                     logging.error(f"TypeError in leave_channel: {e}")
                 except Exception as e:
@@ -3154,8 +3153,7 @@ class RudeChatClient:
             case "sw":
                 channel_name = args[1]
                 if channel_name in self.joined_channels and channel_name not in self.gui.popped_out_channels:
-                    self.current_channel = channel_name
-                    await self.pop_out_return(channel_name)
+                    self.pop_out_return(channel_name)
                 else:
                     self.gui.insert_text_widget(f"Not a member of channel or Channel in Pop Out Window: {channel_name}\n")
 
@@ -3990,7 +3988,24 @@ class RudeChatClient:
         # Pick a channel at random from the channel list
         if channel_list:
             channel = random.choice(channel_list)
-            self.gui.switch_channel(channel)
+            self.force_click(channel)
 
-    async def pop_out_return(self, channel):
-        self.gui.switch_channel(channel)
+    def pop_out_return(self, channel):
+        self.force_click(channel)
+
+    def force_click(self, channel=None):
+        if self.joined_channels: 
+            if channel is not None:
+                current_selected_channel = channel
+            else:
+                current_selected_channel = self.joined_channels[0]
+
+            listbox_size = self.gui.channel_listbox.size()
+            
+            # Iterate through the listbox to find the index of the current selected channel
+            for i in range(listbox_size):
+                item_at_index = self.gui.channel_listbox.get(i)
+
+                if item_at_index == current_selected_channel:
+                    self.gui.the_force_click(i)  # Perform the force click at the matched index
+                    break

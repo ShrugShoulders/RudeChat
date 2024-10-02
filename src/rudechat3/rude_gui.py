@@ -1438,6 +1438,33 @@ class RudeGui:
                 if clicked_channel in server_highlighted_channels:
                     del server_highlighted_channels[clicked_channel]
 
+    def the_force_click(self, index):
+        # Set background of currently selected channel back to default
+        current_selected_channel = self.irc_client.current_channel
+        if current_selected_channel:
+            for i in range(self.channel_listbox.size()):
+                if self.channel_listbox.get(i) == current_selected_channel:
+                    self.channel_listbox.itemconfig(i, {'bg': self.channel_listbox_bg})
+                    break
+
+        # Get index of clicked item
+        clicked_index = index
+        if clicked_index:
+            clicked_channel = self.channel_listbox.get(clicked_index)
+            self.switch_channel(clicked_channel)
+
+            # Turn background blue
+            self.channel_listbox.itemconfig(clicked_index, {'bg': self.channel_select_color})
+            self.highlight_nickname()
+            self.highlight_away_users()
+            self.update_users_label()
+
+            # Remove the clicked channel from highlighted_channels dictionary
+            if self.irc_client.server_name in self.irc_client.highlighted_channels:
+                server_highlighted_channels = self.irc_client.highlighted_channels[self.irc_client.server_name]
+                if clicked_channel in server_highlighted_channels:
+                    del server_highlighted_channels[clicked_channel]
+
     def trim_text_widget(self):
         """Trim the text widget to only hold a maximum of 120 lines."""
         lines = self.text_widget.get("1.0", tk.END).split("\n")
