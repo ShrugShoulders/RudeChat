@@ -3020,6 +3020,76 @@ class RudeChatClient:
             await self.send_message("AWAY")
             self.gui.update_users_label()
 
+    def show_logs_folder(self):
+        script_directory = os.path.dirname(os.path.abspath(__file__))
+        logs_directory = os.path.join(script_directory, 'Logs')
+
+        # Check if the Logs directory exists, if not error out
+        if not os.path.exists(logs_directory):
+            logging.error(f"{logs_directory} Does Not Exist, Cannot Open")
+            return
+
+        # Open the logs directory in the default file manager based on the platform
+        if platform.system() == 'Windows':
+            subprocess.Popen(f'explorer "{logs_directory}"')
+        elif platform.system() == 'Darwin':  # macOS
+            subprocess.Popen(['open', logs_directory])
+        elif platform.system() == 'Linux':
+            # Check if xdg-open is available
+            if shutil.which('xdg-open'):
+                subprocess.Popen(['xdg-open', logs_directory])
+            else:
+                self.gui.insert_text_widget(f"xdg-open is not available Logs are located: {logs_directory}")
+                logging.error("xdg-open is not available on this system.")
+        else:
+            logging.warning(f"Unsupported OS: {platform.system()}")
+
+    def show_macros_folder(self):
+        script_directory = os.path.dirname(os.path.abspath(__file__))
+        ASCII_ART_DIRECTORY = os.path.join(script_directory, 'Art')
+
+        # Check if the macros directory exists, if not error out.
+        if not os.path.exists(ASCII_ART_DIRECTORY):
+            logging.error(f"{ASCII_ART_DIRECTORY} Does Not Exist, Cannot Open")
+            return
+
+        if platform.system() == 'Windows':
+            subprocess.Popen(f'explorer "{ASCII_ART_DIRECTORY}"')
+        elif platform.system() == 'Darwin':  # macOS
+            subprocess.Popen(['open', ASCII_ART_DIRECTORY])
+        elif platform.system() == 'Linux':
+            # Check if xdg-open is available
+            if shutil.which('xdg-open'):
+                subprocess.Popen(['xdg-open', ASCII_ART_DIRECTORY])
+            else:
+                self.gui.insert_text_widget(f"xdg-open is not available Macros are located: {ASCII_ART_DIRECTORY}")
+                logging.error("xdg-open is not available on this system.")
+        else:
+            logging.warning(f"Unsupported OS: {platform.system()}")
+
+    def show_fortune_folder(self):
+        script_directory = os.path.dirname(os.path.abspath(__file__))
+        fortune_list_path = os.path.join(script_directory, "Fortune Lists")
+
+        # Check if the fortune list directory exists, if not error out.
+        if not os.path.exists(fortune_list_path):
+            logging.error(f"{fortune_list_path} Does Not Exist, Cannot Open")
+            return
+
+        if platform.system() == 'Windows':
+            subprocess.Popen(f'explorer "{fortune_list_path}"')
+        elif platform.system() == 'Darwin':  # macOS
+            subprocess.Popen(['open', fortune_list_path])
+        elif platform.system() == 'Linux':
+            # Check if xdg-open is available
+            if shutil.which('xdg-open'):
+                subprocess.Popen(['xdg-open', fortune_list_path])
+            else:
+                self.gui.insert_text_widget(f"xdg-open is not available Fortune Lists are located: {fortune_list_path}")
+                logging.error("xdg-open is not available on this system.")
+        else:
+            logging.warning(f"Unsupported OS: {platform.system()}")
+
     async def command_parser(self, user_input):
         args = user_input[1:].split() if user_input.startswith('/') else []
         primary_command = args[0] if args else None
@@ -3283,6 +3353,15 @@ class RudeChatClient:
                     self.gui.insert_text_widget(f"{remove_friend}\n")
                 else:
                     self.gui.insert_text_widget("You must give a nickname\n")
+
+            case "logs":
+                self.show_logs_folder()
+
+            case "fortunes":
+                self.show_fortune_folder()
+
+            case "macros":
+                self.show_macros_folder()
 
             case None:
                 await self.handle_user_input(user_input, timestamp)
@@ -3864,6 +3943,7 @@ class RudeChatClient:
                 "/friend <nickname> - adds a nickname to your friends list, run without a nickname to display friend list",
                 "/mentions to show your nicknames mentions. /mentions clear to clear them.",
                 "/unfriend <nickname> - removes a friend from your friends list",
+                "/logs - Shows the channel logs folder",
                 "_________",
             ],
             "String Formatting": [
@@ -3934,9 +4014,11 @@ class RudeChatClient:
                 "/cowsay: Built in, /cowsay <text> | /cowsay <fortune list>",
                 "/fortune: Built in, /fortune <fortune list>",
                 "/mac <macro> - sends a chosen macro to a channel /mac - shows available macros",
+                "/macros - Shows the macros folder",
+                "/fortunes - Shows the fortunes folder",
                 "Macros: To add a macro, save a .txt file with your chosen macro and add it to the Art folder within your installation directory.",
                 "Fortune Lists: dadjoke(jokes your dad makes), yomama(YO MAMA SO FAT), therules(Ferengi Rules of Acquisition)",
-                "Add your own fortune lists to the Fortune List folder within your installation directory."
+                "Add your own fortune lists to the Fortune List folder within your installation directory.",
                 "_________",
             ],
             "Extra Info": [

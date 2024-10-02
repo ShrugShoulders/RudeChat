@@ -14,6 +14,8 @@ import random
 import datetime
 import logging
 import os
+import platform
+import subprocess
 import re
 import sys
 import json
