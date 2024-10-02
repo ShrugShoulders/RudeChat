@@ -45,6 +45,9 @@ class ServerConfigWindow:
             'use_irc_colors': 'Enable/Disable IRC Colors',
             'send_ctcp_response': 'Respond to CTCP Requests?',
             'green_text': 'Green Text Styling',
+            'auto_away_minutes': 'Time Until Auto Away',
+            'use_auto_away': 'Use Auto Away?',
+            'auto_join_invite': 'Auto Join On Invite?',
         }
 
         self.read_config()

@@ -92,6 +92,7 @@ class RudeChatClient:
         self.replace_pronouns = config.getboolean('IRC', 'replace_pronouns', fallback=False)
         self.send_ctcp_response = config.getboolean('IRC', 'send_ctcp_response', fallback=True)
         self.green_text = config.getboolean('IRC', 'green_text', fallback=True)
+        self.auto_join_invite = config.getboolean('IRC', 'auto_join_invite', fallback=True)
         await self.load_channel_messages()
         self.load_away_users_from_file()
         self.load_ignore_list()
@@ -119,6 +120,7 @@ class RudeChatClient:
         self.send_ctcp_response = config.getboolean('IRC', 'send_ctcp_response', fallback=True)
         self.green_text = config.getboolean('IRC', 'green_text', fallback=True)
         self.use_auto_away = config.getboolean('IRC', 'use_auto_away', fallback=True)
+        self.auto_join_invite = config.getboolean('IRC', 'auto_join_invite', fallback=True)
         self.watcher.reload_config()
         self.gui.update_nick_channel_label()
 
@@ -2592,10 +2594,25 @@ class RudeChatClient:
                         self.handle_kill_command(tokens)
                     case "PONG":
                         self.handle_pong(tokens)
+                    case "INVITE":
+                        self.handle_invite(tokens)
                     case _:
-                        logging.info(f"Unhandled Token command in handle_incoming_message: {tokens.command}. Full line: {line} & Full token: {tokens}")
+                        logging.info(f"Unhandled Token command in handle_incoming_message: {tokens.command}.")
+                        logging.info(f"Unhandled Token in handle_incoming_message: {tokens}")
+                        logging.info(f"Unhandled Line in handle_incoming_message: {line}")
                         if line.startswith(f":{self.server}"):
                             self.handle_server_message(line)
+
+    def handle_invite(self, tokens):
+        inviter = tokens.source.split('!')[0]  # Extract the nickname of the inviter
+        invitee = tokens.params[0]  # The person being invited (usually the user)
+        channel = tokens.params[1]  # The channel to which the user is invited
+
+        # Notify the user of the invite
+        message = f"{inviter} has invited you to join {channel}"
+        self.gui.insert_text_widget(f"{message}\n")
+        if self.auto_join_invite:
+            await self.command_parser(f"/join {channel}")
 
     async def handle_bad_channel_name(self, tokens):
         # Extract the channel name and reason from the tokens
