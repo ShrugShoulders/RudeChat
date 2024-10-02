@@ -2568,6 +2568,9 @@ class RudeChatClient:
                     case "323":  # End of channel list
                         await self.save_channel_list_to_file()
 
+                    case "476" | "479":
+                        await self.handle_bad_channel_name(tokens)
+
                     case "KICK":
                         await self.handle_kick_event(tokens)
                     case "NOTICE":
@@ -2593,6 +2596,20 @@ class RudeChatClient:
                         logging.info(f"Unhandled Token command in handle_incoming_message: {tokens.command}. Full line: {line} & Full token: {tokens}")
                         if line.startswith(f":{self.server}"):
                             self.handle_server_message(line)
+
+    async def handle_bad_channel_name(self, tokens):
+        # Extract the channel name and reason from the tokens
+        channel = tokens.params[1]
+        reason = tokens.params[2] if len(tokens.params) > 2 else "Invalid channel name"
+
+        # Combine information into a message to display to the user
+        message = f"Cannot join channel {channel} - {reason}"
+        self.gui.insert_text_widget(f"{message}\n")
+        if channel in self.joined_channels:
+            await self.send_message(f'PART {channel}')
+            self.joined_channels.remove(channel)
+            self.gui.channel_lists[self.server] = self.joined_channels
+            self.update_gui_channel_list()
 
     def handle_263(self, tokens):
         source = tokens.source
