@@ -2595,7 +2595,7 @@ class RudeChatClient:
                     case "PONG":
                         self.handle_pong(tokens)
                     case "INVITE":
-                        self.handle_invite(tokens)
+                        await self.handle_invite(tokens)
                     case _:
                         logging.info(f"Unhandled Token command in handle_incoming_message: {tokens.command}.")
                         logging.info(f"Unhandled Token in handle_incoming_message: {tokens}")

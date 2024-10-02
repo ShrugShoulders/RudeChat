@@ -68,9 +68,13 @@ def clone_and_install_repo(repo_url, dest_dir):
     if os.path.exists(dest_dir):
         shutil.rmtree(dest_dir)
     subprocess.run(['git', 'clone', repo_url, dest_dir], check=True)
-    
-    # Change to the destination directory and run pip install
-    subprocess.run(['pip', 'install', '-r requirements.txt', '.'], cwd=dest_dir, check=True)
+
+    requirements_path = os.path.join(dest_dir, 'requirements.txt')
+    if os.path.exists(requirements_path):
+        subprocess.run(['pip', 'install', '-r', requirements_path, '.'], cwd=dest_dir, check=True)
+    else:
+        print(f"No requirements.txt found in {dest_dir}. Installing without it...")
+        subprocess.run(['pip', 'install', '.'], cwd=dest_dir, check=True)
 
 def update_files_with_rude(src_dir, backup_dir, file_ext, merge_function, special_merge_file):
     backup_files = glob.glob(os.path.join(backup_dir, f'*{file_ext}'))
