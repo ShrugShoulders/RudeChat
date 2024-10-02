@@ -3020,72 +3020,33 @@ class RudeChatClient:
             await self.send_message("AWAY")
             self.gui.update_users_label()
 
-    def show_logs_folder(self):
+    def show_file_folder(self, primary_command):
         script_directory = os.path.dirname(os.path.abspath(__file__))
-        logs_directory = os.path.join(script_directory, 'Logs')
 
-        # Check if the Logs directory exists, if not error out
-        if not os.path.exists(logs_directory):
-            logging.error(f"{logs_directory} Does Not Exist, Cannot Open")
-            return
+        if primary_command == "logs":
+            folder = "Logs"
+        elif primary_command == "macros":
+            folder = "Art"
+        elif primary_command == "fortunes":
+            folder = "Fortune Lists"
 
-        # Open the logs directory in the default file manager based on the platform
-        if platform.system() == 'Windows':
-            subprocess.Popen(f'explorer "{logs_directory}"')
-        elif platform.system() == 'Darwin':  # macOS
-            subprocess.Popen(['open', logs_directory])
-        elif platform.system() == 'Linux':
-            # Check if xdg-open is available
-            if shutil.which('xdg-open'):
-                subprocess.Popen(['xdg-open', logs_directory])
-            else:
-                self.gui.insert_text_widget(f"xdg-open is not available Logs are located: {logs_directory}")
-                logging.error("xdg-open is not available on this system.")
-        else:
-            logging.warning(f"Unsupported OS: {platform.system()}")
-
-    def show_macros_folder(self):
-        script_directory = os.path.dirname(os.path.abspath(__file__))
-        ASCII_ART_DIRECTORY = os.path.join(script_directory, 'Art')
-
-        # Check if the macros directory exists, if not error out.
-        if not os.path.exists(ASCII_ART_DIRECTORY):
-            logging.error(f"{ASCII_ART_DIRECTORY} Does Not Exist, Cannot Open")
-            return
-
-        if platform.system() == 'Windows':
-            subprocess.Popen(f'explorer "{ASCII_ART_DIRECTORY}"')
-        elif platform.system() == 'Darwin':  # macOS
-            subprocess.Popen(['open', ASCII_ART_DIRECTORY])
-        elif platform.system() == 'Linux':
-            # Check if xdg-open is available
-            if shutil.which('xdg-open'):
-                subprocess.Popen(['xdg-open', ASCII_ART_DIRECTORY])
-            else:
-                self.gui.insert_text_widget(f"xdg-open is not available Macros are located: {ASCII_ART_DIRECTORY}")
-                logging.error("xdg-open is not available on this system.")
-        else:
-            logging.warning(f"Unsupported OS: {platform.system()}")
-
-    def show_fortune_folder(self):
-        script_directory = os.path.dirname(os.path.abspath(__file__))
-        fortune_list_path = os.path.join(script_directory, "Fortune Lists")
+        folder_path = os.path.join(script_directory, folder)
 
         # Check if the fortune list directory exists, if not error out.
-        if not os.path.exists(fortune_list_path):
-            logging.error(f"{fortune_list_path} Does Not Exist, Cannot Open")
+        if not os.path.exists(folder_path):
+            logging.error(f"{folder_path} Does Not Exist, Cannot Open")
             return
 
         if platform.system() == 'Windows':
-            subprocess.Popen(f'explorer "{fortune_list_path}"')
+            subprocess.Popen(f'explorer "{folder_path}"')
         elif platform.system() == 'Darwin':  # macOS
-            subprocess.Popen(['open', fortune_list_path])
+            subprocess.Popen(['open', folder_path])
         elif platform.system() == 'Linux':
             # Check if xdg-open is available
             if shutil.which('xdg-open'):
-                subprocess.Popen(['xdg-open', fortune_list_path])
+                subprocess.Popen(['xdg-open', folder_path])
             else:
-                self.gui.insert_text_widget(f"xdg-open is not available Fortune Lists are located: {fortune_list_path}")
+                self.gui.insert_text_widget(f"xdg-open is not available {folder} are located: {folder_path}")
                 logging.error("xdg-open is not available on this system.")
         else:
             logging.warning(f"Unsupported OS: {platform.system()}")
@@ -3355,13 +3316,13 @@ class RudeChatClient:
                     self.gui.insert_text_widget("You must give a nickname\n")
 
             case "logs":
-                self.show_logs_folder()
+                self.show_file_folder(primary_command)
 
             case "fortunes":
-                self.show_fortune_folder()
+                self.show_file_folder(primary_command)
 
             case "macros":
-                self.show_macros_folder()
+                self.show_file_folder(primary_command)
 
             case None:
                 await self.handle_user_input(user_input, timestamp)
