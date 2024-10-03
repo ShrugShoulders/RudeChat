@@ -1821,7 +1821,7 @@ class RudeChatClient:
         return sorted_users
 
     def handle_mode(self, tokens):
-        print(tokens)
+        giver = tokens.source.split("!")[0]
         channel = tokens.params[0]
         mode_changes = tokens.params[1]
         users = tokens.params[2:] if len(tokens.params) > 2 else []
@@ -1845,38 +1845,38 @@ class RudeChatClient:
 
             if adding:
                 if stripped_mode in self.chanmodes.get('no_parameter', []) or stripped_mode in self.chanmodes.get('parameter', []):
-                    message = f"\x0304(!)\x0F +{mode} mode for {channel}\n"
+                    message = f"\x0304(!)\x0F +{mode} mode for {channel} by {giver}\n"
                     self._log_channel_message(channel, message)
                     continue
 
                 if stripped_mode in self.chanmodes.get('list', []):
-                    message = f"\x0304(!)\x0F +{mode} mode for {user if user else 'unknown'}\n"
+                    message = f"\x0304(!)\x0F +{mode} mode for {user if user else 'unknown'} by {giver}\n"
                     self._log_channel_message(channel, message)
                     continue
 
                 if stripped_mode in self.chanmodes.get('setting', []):
-                    message = f"\x0304(!)\x0F +{mode} {user} set for {channel}\n"
+                    message = f"\x0304(!)\x0F +{mode} {user} set for {channel} by {giver}\n"
                     self._log_channel_message(channel, message)
                     continue
 
                 current_modes.setdefault(user, set()).add(mode)
-                message = f"\x0303(+)\x0F {user} has been given mode +{mode}\n"
+                message = f"\x0303(+)\x0F {user} has been given mode +{mode} by {giver}\n"
                 self._log_channel_message(channel, message)
                 user_index += 1
 
             else:
                 if stripped_mode in self.chanmodes.get('no_parameter', []) or stripped_mode in self.chanmodes.get('parameter', []):
-                    message = f"\x0312(Δ)\x0F -{mode} mode for {channel}\n"
+                    message = f"\x0312(Δ)\x0F -{mode} mode for {channel} by {giver}\n"
                     self._log_channel_message(channel, message)
                     continue
 
                 if stripped_mode in self.chanmodes.get('list', []):
-                    message = f"\x0312(Δ)\x0F -{mode} mode for {user if user else 'unknown'}\n"
+                    message = f"\x0312(Δ)\x0F -{mode} mode for {user if user else 'unknown'} by {giver}\n"
                     self._log_channel_message(channel, message)
                     continue
 
                 if stripped_mode in self.chanmodes.get('setting', []):
-                    message = f"\x0312(Δ)\x0F -{mode} {user} set for {channel}\n"
+                    message = f"\x0312(Δ)\x0F -{mode} {user} set for {channel} by {giver}\n"
                     self._log_channel_message(channel, message)
                     continue
 
@@ -1890,7 +1890,7 @@ class RudeChatClient:
                 user_modes = current_modes.get(user, set())
                 user_modes.discard(mode)
 
-                message = f"\x0304(-)\x0F {user} has had mode +{mode} removed\n"
+                message = f"\x0304(-)\x0F {user} has had mode +{mode} removed by {giver}\n"
                 self._log_channel_message(channel, message)
 
                 if not user_modes:
