@@ -208,18 +208,24 @@ class RudeGui:
     def create_tray_icon(self, icon_path):
         """Create the system tray icon and menu."""
         
-        # Define the callback for quitting the application
         def on_quit(icon, item):
-            self.master.quit()  # Close the application when tray icon is clicked to quit
+            self.master.client_shutdown()
 
-        # Load the tray icon image from the given path
-        image = Image.open(icon_path)
+        try:
+            # Attempt to create the tray icon
+            image = Image.open(icon_path)
+            menu = pystray.Menu(pystray.MenuItem("Quit", on_quit))
+            self.tray_icon = pystray.Icon("RudeChat", image, "RudeChat", menu)
+            self.tray_icon.run_detached()
+        except Exception as e:
+            print(f"Tray icon not supported: {e}")
 
-        # Create a menu with a single "Quit" item that calls the on_quit callback
-        menu = pystray.Menu(pystray.MenuItem("Quit", self.client_shutdown))
-
-        # Create and run the system tray icon with the given image and menu
-        self.tray_icon = pystray.Icon("RudeChat", image, "RudeChat", menu)
+            # On Linux without system tray support, provide a fallback
+            if platform.system() == "Linux":
+                messagebox.showwarning("Tray Icon", "System tray not supported on this environment.")
+            # On Windows or other platforms, raise the error
+            elif platform.system() == "Windows":
+                messagebox.showerror("Error", f"Failed to create tray icon: {e}")
 
     def select_short_all_text(self, event):
         try:
