@@ -32,7 +32,7 @@ import pystray
 from PIL import Image
 from tzlocal import get_localzone
 from typing import List, Tuple, NamedTuple
-from plyer import notification
+from plyer import notification as plyer_notification
 from tkinter import ttk
 from tkinter.scrolledtext import ScrolledText
 from tkinter import Tk, Frame, Label, Entry, Listbox, Menu, Scrollbar, StringVar, PhotoImage, messagebox

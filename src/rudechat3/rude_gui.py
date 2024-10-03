@@ -243,6 +243,16 @@ class RudeGui:
     def minimize_to_tray(self):
         """Minimize the window to the system tray."""
         self.master.withdraw()  # Hide the window
+
+        # Check if running on Fedora
+        if platform.system() == "Linux":
+            with open("/etc/os-release") as f:
+                os_info = f.read()
+                if "Fedora" in os_info:  # Check for Fedora in the os-release info
+                    print("Running on Fedora. Exiting application.")
+                    self.client_shutdown()  # Perform a full shutdown
+                    return  # Exit this method to avoid running the tray icon
+
         # Ensure the tray icon is running and visible
         if not self.tray_icon.visible:
             self.tray_icon.run_detached()
@@ -262,8 +272,12 @@ class RudeGui:
                 window.destroy_window()
 
         # Shutdown the client
-        loop = asyncio.get_event_loop()
+        loop = self.irc_client.loop
         loop.create_task(self.irc_client.command_parser("/quit"), name="quit_client_task")
+
+        # Stop and remove the tray icon
+        if hasattr(self, 'tray_icon'):
+            self.tray_icon.stop()  # Remove the tray icon
 
     def hidden_windows(self):
         if not self.show_server_window:
@@ -1716,13 +1730,19 @@ class RudeGui:
         icon_path = os.path.join(script_directory, "rude.ico")
 
         try:
-            # Desktop Notification
-            notification.notify(
-                title=title,
-                message=message,
-                app_icon=icon_path,  
-                timeout=5,  
-            )
+            if platform.system() == "Linux":
+                # Use plyer for Linux notifications
+                plyer_notification.notify(
+                    title=title,
+                    message=message,
+                    app_icon=icon_path,  # Only necessary if you have a .ico file
+                    timeout=5,
+                )
+            else:
+                # Use win10toast for Windows notifications
+                toaster = ToastNotifier()
+                toaster.show_toast(title, message, icon_path=icon_path, duration=5)
+
         except Exception as e:
             print(f"Desktop notification error: {e}")
 
