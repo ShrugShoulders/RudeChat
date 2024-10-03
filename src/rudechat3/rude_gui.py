@@ -213,24 +213,28 @@ class RudeGui:
 
         def show_window(icon, item):
             """Restore the window when the tray icon is clicked."""
-            self.master.deiconify()  # Show the window again
-            self.tray_icon.stop()  # Stop the tray icon to avoid duplicates
+            self.master.after(0, self.master.deiconify)  # Show the window in the main thread
+            # Don't stop the tray icon to allow it to minimize back later
 
         try:
-            # Attempt to create the tray icon
-            image = Image.open(icon_path)
-            menu = pystray.Menu(
-                pystray.MenuItem("Show", show_window),
-                pystray.MenuItem("Quit", on_quit)
-            )
-            self.tray_icon = pystray.Icon("RudeChat", image, "RudeChat", menu)
+            # Ensure the tray icon isn't already created
+            if not hasattr(self, 'tray_icon') or self.tray_icon is None:
+                # Attempt to create the tray icon
+                image = Image.open(icon_path)
+                menu = pystray.Menu(
+                    pystray.MenuItem("Show", show_window),
+                    pystray.MenuItem("Quit", on_quit)
+                )
+                self.tray_icon = pystray.Icon("RudeChat", image, "RudeChat", menu)
+                
+                # Run the tray icon
+                self.tray_icon.run_detached()
 
-            # Handle minimizing to tray when window is closed
-            self.master.protocol("WM_DELETE_WINDOW", self.minimize_to_tray)
+                # Handle minimizing to tray when window is closed
+                self.master.protocol("WM_DELETE_WINDOW", self.minimize_to_tray)
             
         except Exception as e:
             print(f"Tray icon not supported: {e}")
-
             if platform.system() == "Linux":
                 messagebox.showwarning("Tray Icon", "System tray not supported on this environment.")
             elif platform.system() == "Windows":
@@ -239,7 +243,9 @@ class RudeGui:
     def minimize_to_tray(self):
         """Minimize the window to the system tray."""
         self.master.withdraw()  # Hide the window
-        self.tray_icon.run_detached()  # Display the tray icon
+        # Ensure the tray icon is running and visible
+        if not self.tray_icon.visible:
+            self.tray_icon.run_detached()
 
     def select_short_all_text(self, event):
         try:
