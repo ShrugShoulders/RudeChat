@@ -8,7 +8,8 @@ import json
 import re
 import random
 import webbrowser
-from plyer import notification
+import platform
+from plyer import notification as plyer_notification
 from threading import Thread
 from tkinter import scrolledtext, Listbox, Scrollbar, Tk, Frame, Label, Entry, Listbox, Menu, Scrollbar, StringVar, PhotoImage 
 from rudechat3.format_decoder import Attribute, decoder
@@ -962,12 +963,6 @@ class RudePopOut:
             # Ensure channel_name is a string
             channel_name = str(channel_name)
 
-            # Remove any prefix from self.irc_client.chantypes
-            for prefix in self.irc_client.chantypes:
-                if channel_name.startswith(prefix):
-                    channel_name = channel_name[len(prefix):]
-                    break  # Break after the first matching prefix is removed
-
             # Construct the notification title and message
             title = f"{title}"
             if message_content:
@@ -978,13 +973,21 @@ class RudePopOut:
         icon_path = os.path.join(script_directory, "rude.ico")
 
         try:
-            # Desktop Notification
-            notification.notify(
-                title=title,
-                message=message,
-                app_icon=icon_path,  
-                timeout=5,  
-            )
+            if platform.system() == "Linux":
+                # Use plyer for Linux notifications
+                plyer_notification.notify(
+                    title=title,
+                    message=message,
+                    app_icon=icon_path,
+                    timeout=5,
+                )
+
+            elif platform.system() == "Windows":
+                # Use win10toast for Windows notifications
+                from win10toast import ToastNotifier
+                toaster = ToastNotifier()
+                toaster.show_toast(title, message, icon_path=icon_path, duration=5)
+
         except Exception as e:
             print(f"Desktop notification error: {e}")
 

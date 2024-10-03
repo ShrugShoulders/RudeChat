@@ -957,6 +957,7 @@ class RudeChatClient:
                 await self.connect(config_file)
                 self.loop_running = True
                 self.add_server_message(f"****Connected: {self.loop_running}\n")
+                self.gui.select_first_server()
                 return
 
             except Exception as e:

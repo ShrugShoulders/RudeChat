@@ -1159,6 +1159,17 @@ class RudeGui:
         self.server_listbox.see(next_index)
         self.on_server_change(None)
 
+    def select_first_server(self):
+        server_num = self.server_listbox.size()
+        index_server = 0
+
+        if server_num > 0:
+            self.server_listbox.selection_clear(0, tk.END)
+            self.server_listbox.selection_set(index_server)
+            self.server_listbox.see(index_server)
+
+            self.on_server_change(None)
+
     def on_server_change(self, event):
         # Get the index of the currently selected server
         selected_server_index_tuple = self.server_listbox.curselection()
@@ -1710,12 +1721,6 @@ class RudeGui:
             # Ensure channel_name is a string
             channel_name = str(channel_name)
 
-            # Remove any prefix from self.irc_client.chantypes
-            for prefix in self.irc_client.chantypes:
-                if channel_name.startswith(prefix):
-                    channel_name = channel_name[len(prefix):]
-                    break  # Break after the first matching prefix is removed
-
             # Construct the notification title and message
             title = f"{title}"
             if message_content:
@@ -1731,11 +1736,13 @@ class RudeGui:
                 plyer_notification.notify(
                     title=title,
                     message=message,
-                    app_icon=icon_path,  # Only necessary if you have a .ico file
+                    app_icon=icon_path,
                     timeout=5,
                 )
-            else:
+
+            elif platform.system() == "Windows":
                 # Use win10toast for Windows notifications
+                from win10toast import ToastNotifier
                 toaster = ToastNotifier()
                 toaster.show_toast(title, message, icon_path=icon_path, duration=5)
 
