@@ -244,18 +244,13 @@ class RudeGui:
         """Minimize the window to the system tray."""
         self.master.withdraw()  # Hide the window
 
-        # Check if running on Fedora
-        if platform.system() == "Linux":
-            with open("/etc/os-release") as f:
-                os_info = f.read()
-                if "Fedora" in os_info:  # Check for Fedora in the os-release info
-                    print("Running on Fedora. Exiting application.")
-                    self.client_shutdown()  # Perform a full shutdown
-                    return  # Exit this method to avoid running the tray icon
-
-        # Ensure the tray icon is running and visible
-        if not self.tray_icon.visible:
-            self.tray_icon.run_detached()
+        if not self.to_tray:
+            self.client_shutdown()
+            return
+        else:
+            # Ensure the tray icon is running and visible
+            if not self.tray_icon.visible:
+                self.tray_icon.run_detached()
 
     def select_short_all_text(self, event):
         try:
@@ -345,6 +340,7 @@ class RudeGui:
             self.list_boxs_font_family = config.get('GUI', 'list_boxs_font_family', fallback='Hack') 
             self.topic_label_font_size = config.getint('GUI', 'topic_label_font_size', fallback=10)
             self.topic_label_font_family = config.get('GUI', 'topic_label_font_family', fallback='Hack')
+            self.to_tray = config.getboolean('GUI', 'minimize_to_tray', fallback=True)
 
             # Read Widget Settings
             self.user_listbox_fg = config.get('WIDGETS', 'users_fg', fallback='#39ff14')
