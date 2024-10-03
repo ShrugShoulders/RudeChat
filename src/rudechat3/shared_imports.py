@@ -28,6 +28,8 @@ import shutil
 import webbrowser
 import pytz
 import threading
+import pystray
+from PIL import Image
 from tzlocal import get_localzone
 from typing import List, Tuple, NamedTuple
 from plyer import notification

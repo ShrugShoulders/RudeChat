@@ -9,6 +9,7 @@ from rudechat3.shared_imports import *
 from rudechat3.rude_dragndrop import DragDropListbox
 from rudechat3.nick_cleaner import clean_nicknames
 
+
 class RudeGui:
     def __init__(self, master):
         self.master = master
@@ -23,6 +24,8 @@ class RudeGui:
             icon_path = os.path.join(self.script_directory, "rude.png")
             img = PhotoImage(file=icon_path)
             self.master.iconphoto(True, img)
+
+        self.create_tray_icon(icon_path)
 
         self.read_config()
 
@@ -201,6 +204,22 @@ class RudeGui:
         self.entry_widget.bind("<Control-u>", lambda event: self.insert_text_format("\x1F"))  # Underline
         self.entry_widget.bind("<Control-s>", lambda event: self.insert_text_format("\x1E"))  # Strike through
         self.entry_widget.bind("<Control-slash>", lambda event: self.insert_text_format("\x16"))  # Inverse
+
+    def create_tray_icon(self, icon_path):
+        """Create the system tray icon and menu."""
+        
+        # Define the callback for quitting the application
+        def on_quit(icon, item):
+            self.master.quit()  # Close the application when tray icon is clicked to quit
+
+        # Load the tray icon image from the given path
+        image = Image.open(icon_path)
+
+        # Create a menu with a single "Quit" item that calls the on_quit callback
+        menu = pystray.Menu(pystray.MenuItem("Quit", self.client_shutdown))
+
+        # Create and run the system tray icon with the given image and menu
+        self.tray_icon = pystray.Icon("RudeChat", image, "RudeChat", menu)
 
     def select_short_all_text(self, event):
         try:
