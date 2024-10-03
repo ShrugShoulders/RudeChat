@@ -25,9 +25,8 @@ class RudeGui:
             img = PhotoImage(file=icon_path)
             self.master.iconphoto(True, img)
 
-        self.create_tray_icon(icon_path)
-
         self.read_config()
+        self.create_tray_icon(icon_path)
 
         self.irc_colors = {
             '00': '#ffffff', '01': '#000000', '02': '#0000AA', '03': '#00AA00',
@@ -221,10 +220,17 @@ class RudeGui:
             if not hasattr(self, 'tray_icon') or self.tray_icon is None:
                 # Attempt to create the tray icon
                 image = Image.open(icon_path)
-                menu = pystray.Menu(
-                    pystray.MenuItem("Show", show_window),
-                    pystray.MenuItem("Quit", on_quit)
-                )
+
+                if not self.to_tray:
+                    menu = pystray.Menu(
+                        pystray.MenuItem("Quit", on_quit)
+                    )
+                else:
+                    menu = pystray.Menu(
+                        pystray.MenuItem("Show", show_window),
+                        pystray.MenuItem("Quit", on_quit)
+                    )
+
                 self.tray_icon = pystray.Icon("RudeChat", image, "RudeChat", menu)
                 
                 # Run the tray icon
@@ -312,6 +318,8 @@ class RudeGui:
         self.tab_complete_terminator = self.tab_complete_terminator
         self.generate_nickname_colors = self.generate_nickname_colors
         self.channel_select_color = self.channel_select_color
+        self.show_server_window = self.show_server_window
+        self.to_tray = self.to_tray
         self.hidden_windows()
         self.highlight_nickname()
         self.highlight_away_users()
