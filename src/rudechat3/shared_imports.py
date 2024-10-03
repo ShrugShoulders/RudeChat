@@ -35,6 +35,6 @@ from typing import List, Tuple, NamedTuple
 from plyer import notification
 from tkinter import ttk
 from tkinter.scrolledtext import ScrolledText
-from tkinter import Tk, Frame, Label, Entry, Listbox, Menu, Scrollbar, StringVar, PhotoImage
+from tkinter import Tk, Frame, Label, Entry, Listbox, Menu, Scrollbar, StringVar, PhotoImage, messagebox
 from tkinter import simpledialog
 from threading import Thread

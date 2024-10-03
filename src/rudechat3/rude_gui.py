@@ -173,7 +173,7 @@ class RudeGui:
         self.init_message_menu()
         self.init_server_menu()
         self.apply_settings()
-        self.master.protocol("WM_DELETE_WINDOW", self.client_shutdown)
+        self.master.protocol("WM_DELETE_WINDOW", self.minimize_to_tray)
 
         # Configure grid weights
         self.master.grid_rowconfigure(0, weight=0)
@@ -209,23 +209,37 @@ class RudeGui:
         """Create the system tray icon and menu."""
         
         def on_quit(icon, item):
-            self.master.client_shutdown()
+            self.client_shutdown()
+
+        def show_window(icon, item):
+            """Restore the window when the tray icon is clicked."""
+            self.master.deiconify()  # Show the window again
+            self.tray_icon.stop()  # Stop the tray icon to avoid duplicates
 
         try:
             # Attempt to create the tray icon
             image = Image.open(icon_path)
-            menu = pystray.Menu(pystray.MenuItem("Quit", on_quit))
+            menu = pystray.Menu(
+                pystray.MenuItem("Show", show_window),
+                pystray.MenuItem("Quit", on_quit)
+            )
             self.tray_icon = pystray.Icon("RudeChat", image, "RudeChat", menu)
-            self.tray_icon.run_detached()
+
+            # Handle minimizing to tray when window is closed
+            self.master.protocol("WM_DELETE_WINDOW", self.minimize_to_tray)
+            
         except Exception as e:
             print(f"Tray icon not supported: {e}")
 
-            # On Linux without system tray support, provide a fallback
             if platform.system() == "Linux":
                 messagebox.showwarning("Tray Icon", "System tray not supported on this environment.")
-            # On Windows or other platforms, raise the error
             elif platform.system() == "Windows":
                 messagebox.showerror("Error", f"Failed to create tray icon: {e}")
+
+    def minimize_to_tray(self):
+        """Minimize the window to the system tray."""
+        self.master.withdraw()  # Hide the window
+        self.tray_icon.run_detached()  # Display the tray icon
 
     def select_short_all_text(self, event):
         try:
