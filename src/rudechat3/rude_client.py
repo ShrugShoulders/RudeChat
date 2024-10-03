@@ -2467,12 +2467,27 @@ class RudeChatClient:
                        await self.handle_cap(tokens)
                     case "ERROR":
                         self.handle_error(tokens)
+                    case "001":
+                        pass
+                    case "002" | "003" | "004":
+                        self.server_message_handler(tokens)
+                    case "005":
+                        self.handle_isupport(tokens)
                     case "263":
                         self.handle_263(tokens)
                     case "412":
                         pass
                     case "353" | "366":  # NAMES list
                         self.handle_names_list(tokens)
+
+                    case "372":
+                        self.handle_motd_line(tokens)
+
+                    case "375":
+                        self.handle_motd_start(tokens)
+
+                    case "376":
+                        self.handle_motd_end(tokens)
 
                     case "305":
                         message = f"{self.server_name}: You are no longer marked as being away"

@@ -26,7 +26,7 @@ class RudeGui:
             self.master.iconphoto(True, img)
 
         self.read_config()
-        self.create_tray_icon(icon_path)
+        self.start_tray_icon()
 
         self.irc_colors = {
             '00': '#ffffff', '01': '#000000', '02': '#0000AA', '03': '#00AA00',
@@ -204,7 +204,7 @@ class RudeGui:
         self.entry_widget.bind("<Control-s>", lambda event: self.insert_text_format("\x1E"))  # Strike through
         self.entry_widget.bind("<Control-slash>", lambda event: self.insert_text_format("\x16"))  # Inverse
 
-    def create_tray_icon(self, icon_path):
+    def create_tray_icon(self):
         """Create the system tray icon and menu."""
         
         def on_quit(icon, item):
@@ -213,14 +213,15 @@ class RudeGui:
         def show_window(icon, item):
             """Restore the window when the tray icon is clicked."""
             self.master.after(0, self.master.deiconify)  # Show the window in the main thread
-            # Don't stop the tray icon to allow it to minimize back later
 
         try:
             # Ensure the tray icon isn't already created
             if not hasattr(self, 'tray_icon') or self.tray_icon is None:
                 # Attempt to create the tray icon
-                image = Image.open(icon_path)
+                icon_path = os.path.join(self.script_directory, "rude_tray_icon.png")
+                image = Image.open(icon_path).convert("RGBA")
 
+                # Create the menu for the tray icon
                 if not self.to_tray:
                     menu = pystray.Menu(
                         pystray.MenuItem("Quit", on_quit)
@@ -233,18 +234,23 @@ class RudeGui:
 
                 self.tray_icon = pystray.Icon("RudeChat", image, "RudeChat", menu)
                 
-                # Run the tray icon
-                self.tray_icon.run_detached()
+                # Run the tray icon in detached mode
+                self.tray_icon.run()
 
                 # Handle minimizing to tray when window is closed
                 self.master.protocol("WM_DELETE_WINDOW", self.minimize_to_tray)
-            
+        
         except Exception as e:
             print(f"Tray icon not supported: {e}")
             if platform.system() == "Linux":
                 messagebox.showwarning("Tray Icon", "System tray not supported on this environment.")
             elif platform.system() == "Windows":
                 messagebox.showerror("Error", f"Failed to create tray icon: {e}")
+
+    def start_tray_icon(self):
+        """Start the tray icon in a separate thread."""
+        tray_thread = threading.Thread(target=self.create_tray_icon)
+        tray_thread.start()
 
     def minimize_to_tray(self):
         """Minimize the window to the system tray."""
@@ -256,7 +262,7 @@ class RudeGui:
         else:
             # Ensure the tray icon is running and visible
             if not self.tray_icon.visible:
-                self.tray_icon.run_detached()
+                self.start_tray_icon()
 
     def select_short_all_text(self, event):
         try:

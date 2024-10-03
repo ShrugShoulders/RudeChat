@@ -33,6 +33,7 @@ setup(
             "nickname_colours.json",
             "rude.ico",
             "rude.png",
+            "rude_tray_icon.png",
             "ignore_list.txt",
             "filtered_channels.txt",
             "first_run.txt",
