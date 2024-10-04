@@ -74,6 +74,7 @@ class RudeGui:
         self.history_index = 0
         self.last_selected_index = None
         self.previous_server_index = None
+        self.iconed = False
         self.url_pattern = re.compile(r'(\w+://[^\s()<>]*\([^\s()<>]*\)[^\s()<>]*(?<![.,;!?])|www\.[^\s()<>]*\([^\s()<>]*\)[^\s()<>]*(?<![.,;!?])|\w+://[^\s()<>]+(?<![.,;!?])|www\.[^\s()<>]+(?<![.,;!?]))')
 
         # Server and Topic Frame
@@ -211,8 +212,15 @@ class RudeGui:
             self.client_shutdown()
 
         def show_window(icon, item):
-            """Restore the window when the tray icon is clicked."""
-            self.master.after(0, self.master.deiconify)  # Show the window in the main thread
+            """Restore or bring the window to the front when the tray icon is clicked."""
+            if self.iconed:
+                self.master.after(0, self.master.deiconify)
+                self.master.after(0, self.master.lift)
+                self.master.after(0, self.master.focus_force)
+                self.iconed = False
+            else:
+                self.master.after(0, self.master.lift)
+                self.master.after(0, self.master.focus_force)
 
         try:
             # Ensure the tray icon isn't already created
@@ -222,15 +230,10 @@ class RudeGui:
                 image = Image.open(icon_path).convert("RGBA")
 
                 # Create the menu for the tray icon
-                if not self.to_tray:
-                    menu = pystray.Menu(
-                        pystray.MenuItem("Quit", on_quit)
-                    )
-                else:
-                    menu = pystray.Menu(
-                        pystray.MenuItem("Show", show_window),
-                        pystray.MenuItem("Quit", on_quit)
-                    )
+                menu = pystray.Menu(
+                    pystray.MenuItem("Show", show_window),
+                    pystray.MenuItem("Quit", on_quit)
+                )
 
                 self.tray_icon = pystray.Icon("RudeChat", image, "RudeChat", menu)
                 
@@ -255,14 +258,11 @@ class RudeGui:
     def minimize_to_tray(self):
         """Minimize the window to the system tray."""
         self.master.withdraw()  # Hide the window
+        self.iconed = True
 
         if not self.to_tray:
             self.client_shutdown()
             return
-        else:
-            # Ensure the tray icon is running and visible
-            if not self.tray_icon.visible:
-                self.start_tray_icon()
 
     def select_short_all_text(self, event):
         try:
