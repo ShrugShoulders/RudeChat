@@ -234,7 +234,7 @@ class RudeGui:
 
                 self.tray_icon = pystray.Icon("RudeChat", image, "RudeChat", menu)
                 
-                # Run the tray icon in detached mode
+                # Run the tray icon
                 self.tray_icon.run()
 
                 # Handle minimizing to tray when window is closed
