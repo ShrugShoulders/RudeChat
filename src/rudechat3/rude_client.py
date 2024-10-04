@@ -2473,118 +2473,89 @@ class RudeChatClient:
                         self.server_message_handler(tokens)
                     case "005":
                         self.handle_isupport(tokens)
+                    case "251" | "252" | "253" | "254" | "255" | "265":
+                        self.server_message_handler(tokens)
+                    case "266":
+                        self.handle_global_users_info(tokens)
                     case "263":
                         self.handle_263(tokens)
                     case "412":
                         pass
                     case "353" | "366":  # NAMES list
                         self.handle_names_list(tokens)
-
                     case "372":
                         self.handle_motd_line(tokens)
-
                     case "375":
                         self.handle_motd_start(tokens)
-
                     case "376":
                         self.handle_motd_end(tokens)
-
                     case "305":
                         message = f"{self.server_name}: You are no longer marked as being away"
                         self.gui.insert_text_widget(f"{message}\n")
-
                     case "306":
                         message = f"{self.server_name}: You have been marked as being away"
                         self.gui.insert_text_widget(f"{message}\n")
-
                     case "307":
                         self.command_307(tokens)
-
                     case "391":
                         self.handle_time_request(tokens)
-
                     case "352" | "315":
                         await self.handle_who_reply(tokens)
-
                     case "311" | "312" | "313" | "317" | "319" | "301" | "671" | "338" | "318" | "330":
                         await self.handle_whois_replies(tokens.command, tokens)
-
                     case "332" | "333" | "TOPIC":
                         self.handle_topic(tokens)
-
                     case "321":
                         pass
-
                     case "324":
                         self.handle_mode_info(tokens)
-
                     case "329":
                         self.handle_creation_time(tokens)
-
                     case "328":
                         self.handle_328(tokens)
-
                     case "367":  
-                        self.handle_banlist(tokens)
-                            
+                        self.handle_banlist(tokens)     
                     case "368":  
                         self.handle_endofbanlist(tokens)
-
                     case "378":
                         self.command_378(tokens)
-
                     case "379":
                         self.command_379(tokens)
-
                     case "401":
                         self.handle_nickname_doesnt_exist(tokens)
-
                     case "396":
                         self.command_396(tokens)
-
                     case "900":
                         self.command_900(tokens)
-
                     case "403":
                         self.command_403(tokens)
-
                     case "404":
                         self.command_404(tokens)
-
                     case "442":
                         self.handle_not_on_channel(tokens)
-
                     case "443":
                         self.handle_already_on_channel(tokens)
-
                     case "472":
                         self.handle_unknown_mode(tokens)
-
                     case "473" | "475" | "474" | "471":
                         self.unable_to_join_channel(tokens)
-
                     case "477":
                         self.handle_cannot_join_channel(tokens)
-
                     case "482":
                         self.handle_not_channel_operator(tokens)
-
                     case "487":
                         self.command_487(tokens)
                     case "433":
                         self.command_433(tokens)
                     case "432":
                         self.command_432(tokens)
-
                     case "322":  # Channel list
                         await self.handle_list_response(tokens)
                         await self.channel_window.update_channel_info(tokens.params[1], tokens.params[2], tokens.params[3])
                     case "323":  # End of channel list
                         await self.save_channel_list_to_file()
-
                     case "476" | "479":
                         await self.handle_bad_channel_name(tokens)
-
                     case "KICK":
                         await self.handle_kick_event(tokens)
                     case "NOTICE":
