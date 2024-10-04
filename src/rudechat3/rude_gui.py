@@ -208,87 +208,6 @@ class RudeGui:
         configure_logging()
         logging.info(f"GUI has completed __init__")
 
-    def create_tray_icon(self):
-        """Create the system tray icon and menu."""
-        
-        def on_quit(icon, item):
-            self.client_shutdown()
-
-        def show_window(icon, item):
-            """Restore or bring the window to the front when the tray icon is clicked."""
-            if self.iconed:
-                self.master.after(0, self.master.deiconify)
-                self.master.after(0, self.master.lift)
-                self.master.after(0, self.master.focus_force)
-                self.iconed = False
-            else:
-                self.master.after(0, self.master.lift)
-                self.master.after(0, self.master.focus_force)
-
-        try:
-            # Ensure the tray icon isn't already created
-            if not hasattr(self, 'tray_icon') or self.tray_icon is None:
-                # Attempt to create the tray icon
-                icon_path = os.path.join(self.script_directory, "rude_tray_icon.png")
-                image = Image.open(icon_path).convert("RGBA")
-
-                # Create the menu for the tray icon
-                menu = pystray.Menu(
-                    pystray.MenuItem("Show", show_window),
-                    pystray.MenuItem("Quit", on_quit)
-                )
-
-                self.tray_icon = pystray.Icon("RudeChat", image, "RudeChat", menu)
-                
-                # Run the tray icon
-                self.tray_icon.run()
-
-                # Handle minimizing to tray when window is closed
-                self.master.protocol("WM_DELETE_WINDOW", self.minimize_to_tray)
-        
-        except Exception as e:
-            logging.error(f"Tray icon not supported: {e}")
-            if platform.system() == "Linux":
-                messagebox.showwarning("Tray Icon", "System tray not supported on this environment.")
-            elif platform.system() == "Windows":
-                messagebox.showerror("Error", f"Failed to create tray icon: {e}")
-
-    def start_tray_icon(self):
-        """Start the tray icon in a separate thread."""
-        tray_thread = threading.Thread(target=self.create_tray_icon)
-        tray_thread.start()
-
-    def minimize_to_tray(self):
-        """Minimize the window to the system tray."""
-        self.master.withdraw()  # Hide the window
-        self.iconed = True
-
-        if not self.to_tray:
-            self.client_shutdown()
-            return
-
-    def select_short_all_text(self, event):
-        try:
-            # Select all text in the entry widget
-            self.entry_widget.focus_set()
-            self.entry_widget.select_range(0, tk.END)
-        except tk.TclError:
-            pass
-
-    def client_shutdown(self):
-        # Close all pop-out windows
-        if self.pop_out_windows:
-            for target, window in self.pop_out_windows.items():
-                window.destroy_window()
-
-        # Shutdown the client
-        loop = self.irc_client.loop
-        loop.create_task(self.irc_client.command_parser("/quit"), name="quit_client_task")
-
-        # Stop and remove the tray icon
-        if hasattr(self, 'tray_icon'):
-            self.tray_icon.stop()  # Remove the tray icon
-
     def hidden_windows(self):
         if not self.show_server_window:
             self.server_frame.grid_forget()
@@ -420,6 +339,147 @@ class RudeGui:
             self.channel_select_color = 'blue'
             self.tab_complete_terminator = ":"
             logging.error("GUI Fallbacks hit.")
+
+    def create_tray_icon(self):
+        """Create the system tray icon and menu."""
+
+        def show_logs():
+            self.irc_client.show_file_folder("logs")
+
+        def show_macros():
+            self.irc_client.show_file_folder("macros")
+
+        def show_fortunes():
+            self.irc_client.show_file_folder("fortunes")
+
+        def show_whois():
+            self.irc_client.show_file_folder("swhois")
+        
+        def on_quit(icon, item):
+            self.client_shutdown()
+
+        def show_window(icon, item):
+            """Restore or bring the window to the front when the tray icon is clicked."""
+            if self.iconed:
+                self.master.after(0, self.master.deiconify)
+                self.master.after(0, self.master.lift)
+                self.master.after(0, self.master.focus_force)
+                self.iconed = False
+            else:
+                self.master.after(0, self.master.lift)
+                self.master.after(0, self.master.focus_force)
+
+        try:
+            # Ensure the tray icon isn't already created
+            if not hasattr(self, 'tray_icon') or self.tray_icon is None:
+                # Attempt to create the tray icon
+                icon_path = os.path.join(self.script_directory, "rude_tray_icon.png")
+                image = Image.open(icon_path).convert("RGBA")
+
+                # Create the menu for the tray icon
+                menu = pystray.Menu(
+                    pystray.MenuItem("Show RudeChat", show_window),
+                    pystray.MenuItem("Channel Logs", show_logs),
+                    pystray.MenuItem("Macro Files", show_macros),
+                    pystray.MenuItem("Forune Files", show_fortunes),
+                    pystray.MenuItem("Whois Log", show_whois),
+                    pystray.MenuItem("Quit Client", on_quit)
+                )
+
+                self.tray_icon = pystray.Icon("RudeChat", image, "RudeChat", menu)
+                
+                # Run the tray icon
+                self.tray_icon.run()
+
+                # Handle minimizing to tray when window is closed
+                self.master.protocol("WM_DELETE_WINDOW", self.minimize_to_tray)
+        
+        except Exception as e:
+            logging.error(f"Tray icon not supported: {e}")
+            if platform.system() == "Linux":
+                messagebox.showwarning("Tray Icon", "System tray not supported on this environment.")
+            elif platform.system() == "Windows":
+                messagebox.showerror("Error", f"Failed to create tray icon: {e}")
+
+    def start_tray_icon(self):
+        """Start the tray icon in a separate thread."""
+        self.stop_tray_event = threading.Event()  # Event to stop the tray icon thread
+        tray_thread = threading.Thread(target=self.create_tray_icon)
+        tray_thread.daemon = True  # Make it a daemon thread so it will exit with the program
+        tray_thread.start()
+
+    def minimize_to_tray(self):
+        """Minimize the window to the system tray."""
+        if not self.to_tray:
+            self.client_shutdown()
+            return
+        else:
+            self.master.withdraw()  # Hide the window
+            self.iconed = True
+
+    def select_short_all_text(self, event):
+        try:
+            # Select all text in the entry widget
+            self.entry_widget.focus_set()
+            self.entry_widget.select_range(0, tk.END)
+        except tk.TclError:
+            pass
+
+    def quit_clients(self):
+        logging.info("Attempting to Quit Clients")
+        try:
+            for server_name, irc_client in self.clients.items():
+                # Assign the client reference
+                client = irc_client
+                logging.info(f"Client {client} quit attempt")
+                loop = client.loop
+                logging.info(f"Current Loop: {loop}")
+                loop.create_task(client.spec_quit(), name="quit_client_task")
+                logging.info(f"Sending QUIT to client: {client}")
+        except Exception as e:
+            logging.error(f"Error in quit_clients: {e}")
+
+    def quit_clients_with_message(self, quit_message):
+        logging.info("Attempting to Quit Clients With Message")
+        try:
+            for server_name, irc_client in self.clients.items():
+                # Assign the client reference
+                client = irc_client
+                logging.info(f"Client {client} quit attempt")
+                loop = client.loop
+                logging.info(f"Current Loop: {loop}")
+                loop.create_task(client.send_quit(quit_message), name="quit_client_task")
+                logging.info(f"Sending QUIT to client: {client}")
+                logging.info(f"Quit Message: {quit_message}")
+        except Exception as e:
+            logging.error(f"Error in quit_clients: {e}")
+
+    def client_shutdown(self):
+        # Close all pop-out windows
+        self.close_all_popouts()
+
+        # Shutdown the clients
+        self.quit_clients()
+
+        # Stop and remove the tray icon
+        self.remove_tray_icon()
+
+        # Destroy the GUI
+        self.destroy_client()
+
+    def close_all_popouts(self):
+        if self.pop_out_windows:
+            for target, window in self.pop_out_windows.items():
+                window.destroy_window()
+
+    def destroy_client(self):
+        if self.master.winfo_exists():
+            self.master.destroy()
+
+    def remove_tray_icon(self):
+        if hasattr(self, 'tray_icon'):
+            self.stop_tray_event.set()
+            self.tray_icon.stop()
 
     def open_gui_config_window(self):
         config_file = os.path.join(self.script_directory, 'gui_config.ini')
@@ -1266,6 +1326,7 @@ class RudeGui:
         irc_client = None
         try:
             irc_client = RudeChatClient(self.text_widget, self.server_text_widget, self.entry_widget, self.master, self)
+            logging.info(f"initializing client {irc_client} in progress")
             irc_client.client_event_loops[irc_client] = asyncio.get_event_loop()  # Store a reference to the event loop
             irc_client.tasks = {}  # Create a dictionary to store references to tasks
         except Exception as e:
@@ -1274,6 +1335,7 @@ class RudeGui:
 
         try:
             irc_client.tasks["load_ascii_art_macros"] = asyncio.create_task(irc_client.load_ascii_art_macros(), name="load_ascii_art_macros_task")
+            logging.info(f"Created ASCII art task")
         except Exception as e:
             logging.error(f"Error loading ASCII art macros: {e}")
 
@@ -1325,10 +1387,14 @@ class RudeGui:
         except Exception as e:
             logging.error(f"Error starting auto_away task: {e}")
 
+        logging.info("Finished Creating Client Tasks: auto_who, auto_away, handle_incoming_message, auto_trim, auto_save, & keep_alive")
+
         try:
             self.bind_return_key()
         except Exception as e:
             logging.error(f"Error binding return key: {e}")
+
+        logging.info("Client initializing completed.")
 
     def bind_return_key(self):
         loop = asyncio.get_event_loop()

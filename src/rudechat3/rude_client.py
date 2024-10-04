@@ -100,6 +100,7 @@ class RudeChatClient:
         self.gui.update_nick_channel_label()
         self.config = config_file
         self.watcher = AutoAway(self.config)
+        logging.info(f"Client config for {self.server_name} Completed")
 
     def reload_config(self, config_file):
         config = configparser.ConfigParser()
@@ -3026,6 +3027,17 @@ class RudeChatClient:
         else:
             logging.warning(f"Unsupported OS: {platform.system()}")
 
+    async def spec_quit(self):
+        self.gui.save_nickname_colors()
+        self.remove_ampersand_channels()
+        await self.send_message(f"QUIT :RudeChat3")
+        self.loop_running = False
+        await self.stop_async_loop()
+        return False 
+
+    async def send_quit(self, message):
+        await self.send_message(f"QUIT :{message}")
+
     async def command_parser(self, user_input):
         args = user_input[1:].split() if user_input.startswith('/') else []
         primary_command = args[0] if args else None
@@ -3199,10 +3211,12 @@ class RudeChatClient:
                 self.gui.save_nickname_colors()
                 self.remove_ampersand_channels()
                 quit_message = " ".join(args[1:]) if len(args) > 0 else None
-                await self.send_message(f"QUIT :{quit_message}")
+                self.gui.quit_clients_with_message(quit_message)
                 self.loop_running = False
                 await self.stop_async_loop()
-                self.master.destroy()
+                self.gui.close_all_popouts()
+                self.gui.remove_tray_icon()
+                self.gui.destroy_client()
                 return False
 
             case "help":
