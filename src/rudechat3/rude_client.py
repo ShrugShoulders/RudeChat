@@ -4,6 +4,7 @@ from rudechat3.rude_pronouns import replace_pronouns
 from rudechat3.rude_auto_away import AutoAway
 from rudechat3.rude_friends import RudeFriends
 from rudechat3.shared_imports import *
+from rudechat3.rude_logger import configure_logging
 
 class RudeChatClient:
     def __init__(self, text_widget, server_text_widget, entry_widget, master, gui):
@@ -53,7 +54,7 @@ class RudeChatClient:
         self.delete_lock_files()
         self.loop = asyncio.get_event_loop()
         self.time_zone = get_localzone()
-        self.configure_logging()
+        configure_logging()
         self.friends = RudeFriends()
 
     async def read_config(self, config_file):
@@ -123,32 +124,6 @@ class RudeChatClient:
         self.auto_join_invite = config.getboolean('IRC', 'auto_join_invite', fallback=True)
         self.watcher.reload_config()
         self.gui.update_nick_channel_label()
-
-    def configure_logging(self):
-        # Get the script directory
-        script_directory = os.path.dirname(os.path.abspath(__file__))
-        
-        # Log file path within the script directory
-        log_file = os.path.join(script_directory, 'RudeChat3.log')
-        
-        # Configure logging only if not already configured
-        if not logging.getLogger().hasHandlers():
-            # Create handlers
-            console_handler = logging.StreamHandler()
-            file_handler = logging.FileHandler(log_file)
-            
-            # Set levels and formatters
-            console_handler.setLevel(logging.DEBUG)
-            file_handler.setLevel(logging.DEBUG)
-            formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
-            console_handler.setFormatter(formatter)
-            file_handler.setFormatter(formatter)
-            
-            # Add handlers to the logger
-            logger = logging.getLogger()
-            logger.setLevel(logging.DEBUG)
-            logger.addHandler(console_handler)
-            logger.addHandler(file_handler)
 
     def save_away_users_to_file(self):
         script_directory = os.path.dirname(os.path.abspath(__file__))

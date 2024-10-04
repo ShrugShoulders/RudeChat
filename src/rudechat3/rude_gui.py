@@ -8,6 +8,7 @@ from rudechat3.rude_popout import RudePopOut
 from rudechat3.shared_imports import *
 from rudechat3.rude_dragndrop import DragDropListbox
 from rudechat3.nick_cleaner import clean_nicknames
+from rudechat3.rude_logger import configure_logging
 
 
 class RudeGui:
@@ -204,6 +205,8 @@ class RudeGui:
         self.entry_widget.bind("<Control-u>", lambda event: self.insert_text_format("\x1F"))  # Underline
         self.entry_widget.bind("<Control-s>", lambda event: self.insert_text_format("\x1E"))  # Strike through
         self.entry_widget.bind("<Control-slash>", lambda event: self.insert_text_format("\x16"))  # Inverse
+        configure_logging()
+        logging.info(f"GUI has completed __init__")
 
     def create_tray_icon(self):
         """Create the system tray icon and menu."""
@@ -244,7 +247,7 @@ class RudeGui:
                 self.master.protocol("WM_DELETE_WINDOW", self.minimize_to_tray)
         
         except Exception as e:
-            print(f"Tray icon not supported: {e}")
+            logging.error(f"Tray icon not supported: {e}")
             if platform.system() == "Linux":
                 messagebox.showwarning("Tray Icon", "System tray not supported on this environment.")
             elif platform.system() == "Windows":
@@ -416,7 +419,7 @@ class RudeGui:
             self.show_server_window = True
             self.channel_select_color = 'blue'
             self.tab_complete_terminator = ":"
-            print("GUI Fallbacks hit.")
+            logging.error("GUI Fallbacks hit.")
 
     def open_gui_config_window(self):
         config_file = os.path.join(self.script_directory, 'gui_config.ini')
@@ -447,7 +450,7 @@ class RudeGui:
 
                 self.insert_text_widget(escaped_art_content)
         except FileNotFoundError as e:
-            print(f"Error displaying startup art: {e}")
+            logging.error(f"Error displaying startup art: {e}")
 
     def highlight_away_users(self):
         # Loop through the items in the user_listbox
@@ -570,13 +573,13 @@ class RudeGui:
                 nickname_colors = json.load(file)
             return nickname_colors
         except FileNotFoundError:
-            print(f"Nickname colors file not found at {nickname_colors_path}. Returning an empty dictionary.")
+            logging.error(f"Nickname colors file not found at {nickname_colors_path}. Returning an empty dictionary.")
             return {}
         except json.JSONDecodeError as e:
-            print(f"Error decoding JSON in nickname colors file: {e}. Returning an empty dictionary.")
+            logging.error(f"Error decoding JSON in nickname colors file: {e}. Returning an empty dictionary.")
             return {}
         except Exception as e:
-            print(f"An unexpected error occurred while loading nickname colors: {e}. Returning an empty dictionary.")
+            logging.error(f"An unexpected error occurred while loading nickname colors: {e}. Returning an empty dictionary.")
             return {}
 
     def save_nickname_colors(self):
@@ -587,7 +590,7 @@ class RudeGui:
             with open(nickname_colors_path, 'w') as file:
                 json.dump(clean_nicks, file, indent=2)
         except Exception as e:
-            print(f"An unexpected error occurred while saving nickname colors: {e}. Unable to save nickname colors.")
+            logging.error(f"An unexpected error occurred while saving nickname colors: {e}. Unable to save nickname colors.")
 
     def init_input_menu(self):
         """
@@ -792,7 +795,7 @@ class RudeGui:
                 menu.unpost()
                 self.master.unbind("<Motion>")
         except Exception as e:
-            print(f"Exception in check_mouse_position: {e}")
+            logging.error(f"Exception in check_mouse_position: {e}")
 
     def check_input_mouse_position(self, event):
         self.check_mouse_position(event, self.input_menu)
@@ -1024,7 +1027,7 @@ class RudeGui:
             # Start tagging URLs using the non-blocking approach
             self.tag_urls(urls)
         except Exception as e:
-            print(f"Exception in insert_text {e}")
+            logging.error(f"Exception in insert_text {e}")
 
     def tag_text(self, formatted_text):
         for text, attributes in formatted_text:
@@ -1109,14 +1112,14 @@ class RudeGui:
                 quit_cmd = f'QUIT :{quit_message}' if quit_message else 'QUIT :RudeChat3 https://github.com/ShrugShoulders/RudeChat'
                 await self.irc_client.send_message(quit_cmd)
         except Exception as e:
-            print(f"Exception in send_quit_to_all_clients: {e}")
+            logging.error(f"Exception in send_quit_to_all_clients: {e}")
 
     async def stop_all_tasks(self):
         try:
             for irc_client in self.clients.values():
                 await irc_client.stop_tasks()
         except Exception as e:
-            print(f"Exception in stop_all_tasks: {e}")
+            logging.error(f"Exception in stop_all_tasks: {e}")
 
     def add_client(self, server_name, irc_client):
         self.clients[server_name] = irc_client # Store clients here.
@@ -1266,66 +1269,66 @@ class RudeGui:
             irc_client.client_event_loops[irc_client] = asyncio.get_event_loop()  # Store a reference to the event loop
             irc_client.tasks = {}  # Create a dictionary to store references to tasks
         except Exception as e:
-            print(f"Error initializing IRC client: {e}")
+            logging.error(f"Error initializing IRC client: {e}")
             return  # Stop further execution if client initialization fails
 
         try:
             irc_client.tasks["load_ascii_art_macros"] = asyncio.create_task(irc_client.load_ascii_art_macros(), name="load_ascii_art_macros_task")
         except Exception as e:
-            print(f"Error loading ASCII art macros: {e}")
+            logging.error(f"Error loading ASCII art macros: {e}")
 
         try:
             await irc_client.read_config(config_file)
         except Exception as e:
-            print(f"Error reading configuration from {config_file}: {e}")
+            logging.error(f"Error reading configuration from {config_file}: {e}")
 
         try:
             await irc_client.connect(config_file)
         except Exception as e:
-            print(f"Error connecting with configuration {config_file}: {e}")
+            logging.error(f"Error connecting with configuration {config_file}: {e}")
 
         try:
             # Use the server_name from config, otherwise fallback
             server_name = irc_client.server_name if irc_client.server_name else fallback_server_name
             self.add_client(server_name, irc_client)
         except Exception as e:
-            print(f"Error adding client {server_name}: {e}")
+            logging.error(f"Error adding client {server_name}: {e}")
 
         try:
             # Create and store references to tasks
             irc_client.tasks["keep_alive"] = asyncio.create_task(irc_client.keep_alive(config_file), name="keep_alive_task")
         except Exception as e:
-            print(f"Error starting keep_alive task: {e}")
+            logging.error(f"Error starting keep_alive task: {e}")
 
         try:
             irc_client.tasks["auto_save"] = asyncio.create_task(irc_client.auto_save(), name="auto_save_task")
         except Exception as e:
-            print(f"Error starting auto_save task: {e}")
+            logging.error(f"Error starting auto_save task: {e}")
 
         try:
             irc_client.tasks["auto_trim"] = asyncio.create_task(irc_client.auto_trim(), name="auto_trim_task")
         except Exception as e:
-            print(f"Error starting auto_trim task: {e}")
+            logging.error(f"Error starting auto_trim task: {e}")
 
         try:
             irc_client.tasks["handle_incoming_message"] = asyncio.create_task(irc_client.handle_incoming_message(config_file), name="handle_incoming_message_task")
         except Exception as e:
-            print(f"Error starting handle_incoming_message task: {e}")
+            logging.error(f"Error starting handle_incoming_message task: {e}")
 
         try:
             irc_client.tasks["auto_who"] = asyncio.create_task(irc_client.request_who_for_all_channels(), name="auto_who_task")
         except Exception as e:
-            print(f"Error starting auto_who task: {e}")
+            logging.error(f"Error starting auto_who task: {e}")
 
         try:
             irc_client.tasks["auto_away"] = asyncio.create_task(irc_client.away_watcher(), name="auto_away_task")
         except Exception as e:
-            print(f"Error starting auto_away task: {e}")
+            logging.error(f"Error starting auto_away task: {e}")
 
         try:
             self.bind_return_key()
         except Exception as e:
-            print(f"Error binding return key: {e}")
+            logging.error(f"Error binding return key: {e}")
 
     def bind_return_key(self):
         loop = asyncio.get_event_loop()
@@ -1557,7 +1560,7 @@ class RudeGui:
         try:
             server = self.irc_client.server  # Assume the server is saved in the irc_client object
         except AttributeError as e:
-            print(f"AttributeError in switch_channel: server assignment {e}")
+            logging.error(f"AttributeError in switch_channel: server assignment {e}")
             return
 
         # Clear the text window
@@ -1761,7 +1764,7 @@ class RudeGui:
                 toaster.show_toast(title, message, icon_path=icon_path, duration=5)
 
         except Exception as e:
-            print(f"Desktop notification error: {e}")
+            logging.error(f"Desktop notification error: {e}")
 
     def is_app_focused(self):
         return bool(self.master.focus_displayof())
