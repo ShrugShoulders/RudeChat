@@ -41,6 +41,7 @@ class RudeChatClient:
         self.ASCII_ART_MACROS = {}
         self.client_event_loops = {}
         self.tasks = {}
+        self.account_cache = {}
         self.whois_executed = set()
         self.decoder = irctokens.StatefulDecoder()
         self.encoder = irctokens.StatefulEncoder()
@@ -51,6 +52,9 @@ class RudeChatClient:
         self.isupport_flag = False
         self.loop_running = True
         self.config = ''
+        self.away_notify = False
+        self.extended_join = False
+        self.account_notify = False
         self.delete_lock_files()
         self.loop = asyncio.get_event_loop()
         self.time_zone = get_localzone()
@@ -328,7 +332,10 @@ class RudeChatClient:
     async def request_who_for_all_channels(self):
         while True:
             for channel in self.joined_channels:
-                await self.send_message(f"WHO {channel}")
+                if self.account_notify:
+                    await self.send_message(f"WHO {channel} %nuhsrcdfa")
+                else:
+                    await self.send_message(f"WHO {channel}")
                 self.gui.highlight_away_users()
                 self.cap_who_for_chan.append(channel)
                 await asyncio.sleep(8.5)
@@ -413,6 +420,8 @@ class RudeChatClient:
                 await self.handle_privmsg(tokens, znc_privmsg=True)
             self.gui.insert_text_widget(f'\n\x0303\x02DONE!\x0F\n')
             await self.send_message('CAP REQ :away-notify')
+            await self.send_message('CAP REQ :account-notify')
+            await self.send_message('CAP REQ :extended-join')
             await self.send_message("AWAY")
             await asyncio.sleep(0.8)
             self.gui.clear_text_widget()
@@ -458,8 +467,10 @@ class RudeChatClient:
                         return
 
                 match tokens.command:
+                    case "ACCOUNT":
+                        self.handle_account_message(tokens)
                     case "AWAY":
-                        pass
+                        self.handle_away(tokens)
                     case "NOTICE":
                         if self.handle_notice_message(tokens):
                             if self.use_auto_join:
@@ -694,6 +705,8 @@ class RudeChatClient:
         # Check if the server is listing capabilities
         if "LS" in tokens.params:
             await self.send_message('CAP REQ :away-notify')
+            await self.send_message('CAP REQ :account-notify')
+            await self.send_message('CAP REQ :extended-join')
             if self.sasl_enabled:
                 await self.send_message("CAP REQ :sasl")
 
@@ -703,24 +716,60 @@ class RudeChatClient:
 
             # Handle away-notify ACK
             if "away-notify" in acknowledged_capabilities:
-                self.gui.insert_text_widget("\nServer acknowledged away-notify capability.\n")
-                if not self.sasl_enabled:
-                    await self.send_message("CAP END")
+                data = f"{self.server_name}: Server acknowledged away-notify capability.\n"
+                self.gui.insert_text_widget(f"\n{self.server_name}: Server acknowledged away-notify capability.\n")
+                self.add_server_message(data)
+                self.away_notify = True
+
+            # Handle account-notify ACK
+            if "account-notify" in acknowledged_capabilities:
+                data = f"{self.server_name}: Server acknowledged account-notify capability.\n"
+                self.gui.insert_text_widget(f"\n{self.server_name}: Server acknowledged account-notify capability.\n")
+                self.add_server_message(data)
+                self.account_notify = True
+
+            if "extended-join" in acknowledged_capabilities:
+                data = f"{self.server_name}: Server acknowledged extended-join capability.\n"
+                self.gui.insert_text_widget(f"\n{self.server_name}: Server acknowledged extended-join capability.\n")
+                self.add_server_message(data)
+                self.extended_join = True
 
             # Handle SASL ACK
             if "sasl" in acknowledged_capabilities and self.sasl_enabled:
-                self.gui.insert_text_widget("\nServer acknowledged SASL capability.\n")
+                data = f"{self.server_name}: Server acknowledged SASL capability.\n"
+                self.gui.insert_text_widget(f"\n{self.server_name}: Server acknowledged SASL capability.\n")
+                self.add_server_message(data)
                 await self.send_message("AUTHENTICATE PLAIN")
+
+            if not self.sasl_enabled:
+                await self.send_message("CAP END")
 
         # Handle capability rejection (NAK) if needed...
         elif "NAK" in tokens.params:
             rejected_capabilities = tokens.params[2].split()
 
             if "away-notify" in rejected_capabilities:
-                self.gui.insert_text_widget("\nServer denied away-notify capability.\n")
+                data = f"{self.server_name}: Server denied away-notify capability.\n"
+                self.gui.insert_text_widget(f"\n{self.server_name}: Server denied away-notify capability.\n")
+                self.add_server_message(data)
+                self.away_notify = False
+
+            if "account-notify" in rejected_capabilities:
+                data = f"{self.server_name}: Server denied account-notify capability.\n"
+                self.gui.insert_text_widget(f"\n{self.server_name}: Server denied account-notify capability.\n")
+                self.add_server_message(data)
+                self.account_notify = False
+
+            if "extended-join" in rejected_capabilities:
+                data = f"{self.server_name}: Server denied extended-join capability.\n"
+                self.gui.insert_text_widget(f"\n{self.server_name}: Server denied extended-join capability.\n")
+                self.add_server_message(data)
+                self.extended_join = False
 
             if "sasl" in rejected_capabilities:
-                self.gui.insert_text_widget("\nServer denied SASL capability.\n")
+                data = f"{self.server_name}: Server denied SASL capability.\n"
+                self.gui.insert_text_widget(f"\n{self.server_name}: Server denied SASL capability.\n")
+                self.add_server_message(data)
             await self.send_message("CAP END")
 
     async def handle_sasl_auth(self, tokens):
@@ -748,7 +797,7 @@ class RudeChatClient:
     async def send_message(self, message):
         try:
             if self.log_on:
-                logging.debug(f"Attempting to send message: {message[:10]}")
+                logging.debug(f"Attempting to send message: {message}")
             if self.writer is None:
                 logging.warning("send_message called, but self.writer is not set.")
                 raise AttributeError("Writer is not initialized.")
@@ -762,7 +811,7 @@ class RudeChatClient:
             await asyncio.wait_for(self.writer.drain(), timeout=10)
             
             if self.log_on:
-                logging.info(f"Message sent successfully: {message[:10]}")
+                logging.info(f"Message sent successfully: {message}")
             
         except AttributeError as e:
             logging.error(f"AttributeError in send_message: {e}")
@@ -1580,15 +1629,24 @@ class RudeChatClient:
         user_info = tokens.hostmask.nickname
         user_mask = tokens.hostmask
         channel = tokens.params[0]
+        if self.extended_join:
+            account = tokens.params[1]
+            self.cache_accountname(user_info, account)
 
         friends_here = self.friends.friend_online(channel, user_info)
         if friends_here is not None:
             self.gui.insert_text_widget(f"{friends_here}\n")
 
         if self.show_full_hostmask == True:
-            join_message = f"\x0312(→)\x0F {user_mask} has joined channel {channel}\n"
+            if self.extended_join:
+                join_message = f"\x0312(→)\x0F User {account} on Hostmask {user_mask} has joined channel {channel}\n"
+            else:
+                join_message = f"\x0312(→)\x0F {user_mask} has joined channel {channel}\n"
         elif self.show_full_hostmask == False:
-            join_message = f"\x0312(→)\x0F {user_info} has joined channel {channel}\n"
+            if self.extended_join:
+                join_message = f"\x0312(→)\x0F User {account} on Nick {user_info} has joined channel {channel}\n"
+            else:
+                join_message = f"\x0312(→)\x0F {user_info} has joined channel {channel}\n"
 
         # Update the message history for the channel
         if self.server not in self.channel_messages:
@@ -1999,10 +2057,18 @@ class RudeChatClient:
                 }
         self.get_mode_lists()
 
+    def cache_accountname(self, nick, accountname):
+        """
+        Cache accountname for the given nick.
+        """
+        self.account_cache[nick] = accountname
+
     async def handle_who_reply(self, tokens):
         """
         Handle the WHO reply from the server.
         """
+        if self.log_on:
+            logging.debug(f"WHO Tokens: {tokens}")
         if not hasattr(self, 'who_details'):
             self.who_details = []
 
@@ -2035,6 +2101,38 @@ class RudeChatClient:
                 "who_message": who_message
             }
             self.who_details.append(user_details)
+
+        elif tokens.command == "354": # WHOX %nuhsrcdfa
+            channel = tokens.params[1]
+            username = tokens.params[2]
+            host = tokens.params[3]
+            server = tokens.params[4]
+            nickname = tokens.params[5]
+            status = tokens.params[6]
+            mode_state = status[1:] if len(status) > 1 else ""
+            account = tokens.params[8]
+            who_message = tokens.params[9]
+
+            # Determine if the user is away
+            away_status = "Away" if status.startswith('G') else "Active"
+            if away_status == "Away" and nickname not in self.away_users:
+                self.away_users.append(nickname)
+            if away_status == "Active" and nickname in self.away_users:
+                self.away_users.remove(nickname)
+
+            user_details = {
+                "nickname": nickname,
+                "username": username,
+                "host": host,
+                "server": server,
+                "channel": channel,
+                "status": away_status,
+                "mode": mode_state,
+                "account": account,
+                "who_message": who_message
+            }
+            self.who_details.append(user_details)
+            self.cache_accountname(nickname, account)
 
         elif tokens.command == "315":  # End of WHO list
             messages = []
@@ -2368,6 +2466,41 @@ class RudeChatClient:
                 self.away_users.remove(nickname)
                 self.gui.highlight_away_users()
 
+    def handle_account_message(self, tokens):
+        """
+        Handle the ACCOUNT message from the server and update accountname cache.
+        """
+        if self.log_on:
+            logging.debug(f"ACCOUNT Token: {tokens}")
+        prefix = tokens.source
+        accountname = tokens.params[0]
+
+        # Parse prefix into nick!user@host
+        nick, user_host = self.parse_prefix(prefix)
+        
+        if accountname == '*':
+            # User logged out, remove from account cache
+            if nick in self.account_cache:
+                if self.log_on:
+                    logging.info(f"{nick} logged out of their account")
+                del self.account_cache[nick]
+                if nick in self.friends.friend_list:
+                    self.gui.insert_text_widget(f"{nick} logged out of their account\n")
+        else:
+            # User logged into a new account, update cache
+            if self.log_on:
+                logging.info(f"{nick} logged into account {accountname}")
+            self.account_cache[nick] = accountname
+            if nick in self.friends.friend_list:
+                self.gui.insert_text_widget(f"{nick} logged into account {accountname}\n")
+
+    def parse_prefix(self, prefix):
+        """
+        Parse :nick!user@host into (nick, user_host)
+        """
+        nick, user_host = prefix[1:].split('!', 1)
+        return nick, user_host
+
     async def handle_incoming_message(self, config_file):
         buffer = ""
         current_users_list = []
@@ -2376,9 +2509,11 @@ class RudeChatClient:
 
         while self.loop_running:
             try:
-                #logging.debug("Waiting for data...")
+                if self.log_on:
+                    logging.debug("Waiting for data...")
                 data = await asyncio.wait_for(self.reader.read(4096), timeout_seconds)
-                #logging.debug(f"Data received: {data[:50]}...")  # Log the first 50 bytes for brevity
+                if self.log_on:
+                    logging.debug(f"Data received: {data}...")
 
             except asyncio.TimeoutError as e:
                 self.gui.insert_text_widget(f"TimeoutError Caught In handle_incoming_message: {e}\n")
@@ -2408,20 +2543,20 @@ class RudeChatClient:
             try:
                 decoded_data = data.decode('UTF-8', errors='ignore')
                 if self.log_on:
-                    logging.debug(f"Decoded data: {decoded_data[:50]}...")  # Log the first 50 characters for brevity
+                    logging.debug(f"Decoded data: {decoded_data}...")
                 cleaned_data = decoded_data.replace("\x06", "")  # Remove the character with ASCII value 6
                 if self.log_on:
-                    logging.debug(f"Cleaned data (post ASCII-6 removal): {cleaned_data[:50]}...")
+                    logging.debug(f"Cleaned data (post ASCII-6 removal): {cleaned_data}...")
 
                 if not self.use_colors:
                     # Remove IRC colors and formatting using regular expressions
                     cleaned_data = re.sub(r'\x03(?:\d{1,2}(?:,\d{1,2})?)?', '', cleaned_data)
                     if self.log_on:
-                        logging.debug(f"Cleaned data (post color removal): {cleaned_data[:50]}...")
+                        logging.debug(f"Cleaned data (post color removal): {cleaned_data}...")
 
                 buffer += cleaned_data
                 if self.log_on:
-                    logging.debug(f"Buffer updated: {buffer[:50]}...")
+                    logging.debug(f"Buffer updated: {buffer}...")
 
             except Exception as e:
                 logging.exception(f"Exception occurred during data processing: {e}")
@@ -2497,7 +2632,7 @@ class RudeChatClient:
                         self.command_307(tokens)
                     case "391":
                         self.handle_time_request(tokens)
-                    case "352" | "315":
+                    case "352" | "315" | "354":
                         await self.handle_who_reply(tokens)
                     case "311" | "312" | "313" | "317" | "319" | "301" | "671" | "338" | "318" | "330":
                         await self.handle_whois_replies(tokens.command, tokens)
@@ -2577,6 +2712,8 @@ class RudeChatClient:
                         self.handle_pong(tokens)
                     case "INVITE":
                         await self.handle_invite(tokens)
+                    case "ACCOUNT":
+                        self.handle_account_message(tokens)
                     case _:
                         if self.log_on:
                             logging.info(f"Unhandled Token command in handle_incoming_message: {tokens.command}.")
@@ -3071,7 +3208,10 @@ class RudeChatClient:
             case "join":
                 channel_name = args[1]
                 await self.join_channel(channel_name)
-                await self.send_message(f'WHO {channel_name}')
+                if self.account_notify:
+                    await self.send_message(f'WHO {channel_name} %nuhsrcdfa')
+                else:
+                    await self.send_message(f'WHO {channel_name}')
                 if channel_name not in self.cap_who_for_chan:
                     self.cap_who_for_chan.append(channel_name)
                 self.gui.highlight_who_channels()
@@ -3851,13 +3991,20 @@ class RudeChatClient:
         elif any(args[0].startswith(prefix) for prefix in self.chantypes):
             # WHO on a specific channel
             channel = args[0]
-            await self.send_message(f'WHO {channel}')
+            if self.account_notify:
+                await self.send_message(f'WHO {channel} %nuhsrcdfa')
+            else:
+                await self.send_message(f'WHO {channel}')
+
             if channel not in self.cap_who_for_chan:
                 self.cap_who_for_chan.append(channel)
         else:
             # WHO with mask or user host
             mask = args[0]
-            await self.send_message(f'WHO {mask}')
+            if self.account_notify:
+                await self.send_message(f'WHO {mask} %nuhsrcdfa')
+            else:
+                await self.send_message(f'WHO {mask}')
 
     async def whois(self, target):
         """
