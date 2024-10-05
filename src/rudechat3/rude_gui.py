@@ -248,6 +248,7 @@ class RudeGui:
         self.channel_select_color = self.channel_select_color
         self.show_server_window = self.show_server_window
         self.to_tray = self.to_tray
+        self.log_on = self.log_on
         self.hidden_windows()
         self.highlight_nickname()
         self.highlight_away_users()
@@ -277,6 +278,7 @@ class RudeGui:
             self.topic_label_font_size = config.getint('GUI', 'topic_label_font_size', fallback=10)
             self.topic_label_font_family = config.get('GUI', 'topic_label_font_family', fallback='Hack')
             self.to_tray = config.getboolean('GUI', 'minimize_to_tray', fallback=True)
+            self.log_on = config.getboolean('GUI', 'log_on', fallback=False)
 
             # Read Widget Settings
             self.user_listbox_fg = config.get('WIDGETS', 'users_fg', fallback='#39ff14')
@@ -338,7 +340,8 @@ class RudeGui:
             self.show_server_window = True
             self.channel_select_color = 'blue'
             self.tab_complete_terminator = ":"
-            logging.error("GUI Fallbacks hit.")
+            if self.log_on:
+                logging.error("GUI Fallbacks hit.")
 
     def create_tray_icon(self):
         """Create the system tray icon and menu."""
@@ -426,31 +429,39 @@ class RudeGui:
             pass
 
     def quit_clients(self):
-        logging.info("Attempting to Quit Clients")
+        if self.log_on:
+            logging.info("Attempting to Quit Clients")
         try:
             for server_name, irc_client in self.clients.items():
                 # Assign the client reference
                 client = irc_client
-                logging.info(f"Client {client} quit attempt")
+                if self.log_on:
+                    logging.info(f"Client {client} quit attempt")
                 loop = client.loop
-                logging.info(f"Current Loop: {loop}")
+                if self.log_on:
+                    logging.info(f"Current Loop: {loop}")
                 loop.create_task(client.spec_quit(), name="quit_client_task")
-                logging.info(f"Sending QUIT to client: {client}")
+                if self.log_on:
+                    logging.info(f"Sending QUIT to client: {client}")
         except Exception as e:
             logging.error(f"Error in quit_clients: {e}")
 
     def quit_clients_with_message(self, quit_message):
-        logging.info("Attempting to Quit Clients With Message")
+        if self.log_on:
+            logging.info("Attempting to Quit Clients With Message")
         try:
             for server_name, irc_client in self.clients.items():
                 # Assign the client reference
                 client = irc_client
-                logging.info(f"Client {client} quit attempt")
+                if self.log_on:
+                    logging.info(f"Client {client} quit attempt")
                 loop = client.loop
-                logging.info(f"Current Loop: {loop}")
+                if self.log_on:
+                    logging.info(f"Current Loop: {loop}")
                 loop.create_task(client.send_quit(quit_message), name="quit_client_task")
-                logging.info(f"Sending QUIT to client: {client}")
-                logging.info(f"Quit Message: {quit_message}")
+                if self.log_on:
+                    logging.info(f"Sending QUIT to client: {client}")
+                    logging.info(f"Quit Message: {quit_message}")
         except Exception as e:
             logging.error(f"Error in quit_clients: {e}")
 
@@ -1326,7 +1337,8 @@ class RudeGui:
         irc_client = None
         try:
             irc_client = RudeChatClient(self.text_widget, self.server_text_widget, self.entry_widget, self.master, self)
-            logging.info(f"initializing client {irc_client} in progress")
+            if self.log_on:
+                logging.info(f"initializing client {irc_client} in progress")
             irc_client.client_event_loops[irc_client] = asyncio.get_event_loop()  # Store a reference to the event loop
             irc_client.tasks = {}  # Create a dictionary to store references to tasks
         except Exception as e:
@@ -1335,7 +1347,8 @@ class RudeGui:
 
         try:
             irc_client.tasks["load_ascii_art_macros"] = asyncio.create_task(irc_client.load_ascii_art_macros(), name="load_ascii_art_macros_task")
-            logging.info(f"Created ASCII art task")
+            if self.log_on:
+                logging.info(f"Created ASCII art task")
         except Exception as e:
             logging.error(f"Error loading ASCII art macros: {e}")
 
@@ -1387,14 +1400,15 @@ class RudeGui:
         except Exception as e:
             logging.error(f"Error starting auto_away task: {e}")
 
-        logging.info("Finished Creating Client Tasks: auto_who, auto_away, handle_incoming_message, auto_trim, auto_save, & keep_alive")
+        if self.log_on:
+            logging.info("Finished Creating Client Tasks: auto_who, auto_away, handle_incoming_message, auto_trim, auto_save, & keep_alive")
 
         try:
             self.bind_return_key()
         except Exception as e:
             logging.error(f"Error binding return key: {e}")
-
-        logging.info("Client initializing completed.")
+        if self.log_on:
+            logging.info("Client initializing completed.")
 
     def bind_return_key(self):
         loop = asyncio.get_event_loop()

@@ -94,6 +94,7 @@ class RudeChatClient:
         self.send_ctcp_response = config.getboolean('IRC', 'send_ctcp_response', fallback=True)
         self.green_text = config.getboolean('IRC', 'green_text', fallback=True)
         self.auto_join_invite = config.getboolean('IRC', 'auto_join_invite', fallback=True)
+        self.log_on = config.getboolean('IRC', 'log_on', fallback=False)
         await self.load_channel_messages()
         self.load_away_users_from_file()
         self.load_ignore_list()
@@ -123,6 +124,7 @@ class RudeChatClient:
         self.green_text = config.getboolean('IRC', 'green_text', fallback=True)
         self.use_auto_away = config.getboolean('IRC', 'use_auto_away', fallback=True)
         self.auto_join_invite = config.getboolean('IRC', 'auto_join_invite', fallback=True)
+        self.log_on = config.getboolean('IRC', 'log_on', fallback=False)
         self.watcher.reload_config()
         self.gui.update_nick_channel_label()
 
@@ -658,7 +660,8 @@ class RudeChatClient:
                         got_396 = True
 
                     case _:
-                        logging.info(f"Unhandled Token command in _await_welcome_message: {tokens.command}. Token: {tokens}")
+                        if self.log_on:
+                            logging.info(f"Unhandled Token command in _await_welcome_message: {tokens.command}. Token: {tokens}")
                         self.gui.insert_and_scroll()
 
                 if check_timeout():
@@ -743,18 +746,22 @@ class RudeChatClient:
 
     async def send_message(self, message):
         try:
-            #logging.debug(f"Attempting to send message: {message[:10]}")
+            if self.log_on:
+                logging.debug(f"Attempting to send message: {message[:10]}")
             if self.writer is None:
                 logging.warning("send_message called, but self.writer is not set.")
                 raise AttributeError("Writer is not initialized.")
             
-            #logging.debug("Writing to writer...")
+            if self.log_on:
+                logging.debug("Writing to writer...")
             self.writer.write(f'{message}\r\n'.encode('UTF-8'))
             
-            #logging.debug("Draining writer...")
+            if self.log_on:
+                logging.debug("Draining writer...")
             await asyncio.wait_for(self.writer.drain(), timeout=10)
             
-            #logging.info(f"Message sent successfully: {message[:10]}")
+            if self.log_on:
+                logging.info(f"Message sent successfully: {message[:10]}")
             
         except AttributeError as e:
             logging.error(f"AttributeError in send_message: {e}")
@@ -940,7 +947,8 @@ class RudeChatClient:
                 logging.error(f"Failed to reconnect ({retries}/{MAX_RETRIES}): {e}. Retrying in {RETRY_DELAY} seconds.")
                 await asyncio.sleep(RETRY_DELAY)
 
-        logging.info(f"Failed to reconnect ({retries}/{MAX_RETRIES}): Retrying in {RETRY_DELAY} seconds.")
+        if self.log_on:
+            logging.info(f"Failed to reconnect ({retries}/{MAX_RETRIES}): Retrying in {RETRY_DELAY} seconds.")
 
     async def away_watcher(self):
         while self.loop_running:
@@ -1067,7 +1075,8 @@ class RudeChatClient:
         if ssender.startswith("nickserv") and "invalid password" in smessage:
             self.gui.insert_text_widget(f"{sdata}")
             self.add_server_message(data)
-            logging.info("Invalid password detected in NOTICE message.")
+            if self.log_on:
+                logging.info("Invalid password detected in NOTICE message.")
             return True  # Return True to indicate an "Invalid password" was detected
         
         if self.znc_connection and target not in self.gui.popped_out_channels:
@@ -1127,7 +1136,9 @@ class RudeChatClient:
                     case "ACTION":
                         await self.handle_action_ctcp(timestamp, sender, target, ctcp_content)
                     case _:
-                        logging.info(f"Unhandled CTCP command: {ctcp_command}")
+                        if self.log_on:
+                            logging.info(f"Unhandled CTCP command: {ctcp_command}")
+                        pass
         else:
             return
 
@@ -1271,7 +1282,8 @@ class RudeChatClient:
                 winsound.Beep(frequency, duration)
             else:
                 # For other platforms, print a message
-                logging.info("Beep notification not supported on this platform.")
+                if self.log_on:
+                    logging.info("Beep notification not supported on this platform.")
 
             self.gui.trigger_desktop_notification(channel_name, message_content=message_content)
         except Exception as e:
@@ -2338,7 +2350,9 @@ class RudeChatClient:
             
             self.gui.insert_text_widget(f"The nickname '{nickname}' doesn't exist on the server.\n")
         else:
-            logging.info("Invalid response format for '401'.")
+            if self.log_on:
+                logging.info("Invalid response format for '401'.")
+            pass
 
     def handle_away(self, tokens):
         nickname = tokens.hostmask.nickname
@@ -2392,17 +2406,21 @@ class RudeChatClient:
 
             try:
                 decoded_data = data.decode('UTF-8', errors='ignore')
-                #logging.debug(f"Decoded data: {decoded_data[:50]}...")  # Log the first 50 characters for brevity
+                if self.log_on:
+                    logging.debug(f"Decoded data: {decoded_data[:50]}...")  # Log the first 50 characters for brevity
                 cleaned_data = decoded_data.replace("\x06", "")  # Remove the character with ASCII value 6
-                #logging.debug(f"Cleaned data (post ASCII-6 removal): {cleaned_data[:50]}...")
+                if self.log_on:
+                    logging.debug(f"Cleaned data (post ASCII-6 removal): {cleaned_data[:50]}...")
 
                 if not self.use_colors:
                     # Remove IRC colors and formatting using regular expressions
                     cleaned_data = re.sub(r'\x03(?:\d{1,2}(?:,\d{1,2})?)?', '', cleaned_data)
-                    #logging.debug(f"Cleaned data (post color removal): {cleaned_data[:50]}...")
+                    if self.log_on:
+                        logging.debug(f"Cleaned data (post color removal): {cleaned_data[:50]}...")
 
                 buffer += cleaned_data
-                #logging.debug(f"Buffer updated: {buffer[:50]}...")
+                if self.log_on:
+                    logging.debug(f"Buffer updated: {buffer[:50]}...")
 
             except Exception as e:
                 logging.exception(f"Exception occurred during data processing: {e}")
@@ -2413,16 +2431,19 @@ class RudeChatClient:
                 try:
                     # Check for an empty line or line with only whitespace before attempting to tokenize
                     if len(line.strip()) == 0:
-                        #logging.info(f"Debug: Received an empty or whitespace-only line: '{line}'\n")
+                        if self.log_on:
+                            logging.info(f"Debug: Received an empty or whitespace-only line: '{line}'\n")
                         continue
 
                     # Additional check: Ensure that the line has at least one character
                     if len(line) < 1:
-                        #logging.info(f"Debug: Received a too-short line: '{line}'\n")
+                        if self.log_on:
+                            logging.info(f"Debug: Received a too-short line: '{line}'\n")
                         continue
 
                     # Debug statement before tokenizing line
-                    #logging.info(f"Debug: About to tokenize the line - '{line}'")
+                    if self.log_on:
+                        logging.info(f"Debug: About to tokenize the line - '{line}'")
 
                     tokens = irctokens.tokenise(line)
                 except ValueError as e:
@@ -2556,9 +2577,10 @@ class RudeChatClient:
                     case "INVITE":
                         await self.handle_invite(tokens)
                     case _:
-                        logging.info(f"Unhandled Token command in handle_incoming_message: {tokens.command}.")
-                        logging.info(f"Unhandled Token in handle_incoming_message: {tokens}")
-                        logging.info(f"Unhandled Line in handle_incoming_message: {line}")
+                        if self.log_on:
+                            logging.info(f"Unhandled Token command in handle_incoming_message: {tokens.command}.")
+                            logging.info(f"Unhandled Token in handle_incoming_message: {tokens}")
+                            logging.info(f"Unhandled Line in handle_incoming_message: {line}")
                         if line.startswith(f":{self.server}"):
                             self.handle_server_message(line)
 
