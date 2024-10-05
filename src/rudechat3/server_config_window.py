@@ -48,7 +48,7 @@ class ServerConfigWindow:
             'auto_away_minutes': 'Time Until Auto Away',
             'use_auto_away': 'Use Auto Away?',
             'auto_join_invite': 'Auto Join On Invite?',
-            'log_ong': 'Turn Client Debug Logging On',
+            'log_on': 'Turn Client Debug Logging On',
         }
 
         self.read_config()
