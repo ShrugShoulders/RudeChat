@@ -1638,15 +1638,9 @@ class RudeChatClient:
             self.gui.insert_text_widget(f"{friends_here}\n")
 
         if self.show_full_hostmask == True:
-            if self.extended_join:
-                join_message = f"\x0312(→)\x0F User {account} on Hostmask {user_mask} has joined channel {channel}\n"
-            else:
-                join_message = f"\x0312(→)\x0F {user_mask} has joined channel {channel}\n"
+            join_message = f"\x0312(→)\x0F {user_mask} has joined channel {channel}\n"
         elif self.show_full_hostmask == False:
-            if self.extended_join:
-                join_message = f"\x0312(→)\x0F User {account} on Nick {user_info} has joined channel {channel}\n"
-            else:
-                join_message = f"\x0312(→)\x0F {user_info} has joined channel {channel}\n"
+            join_message = f"\x0312(→)\x0F {user_info} has joined channel {channel}\n"
 
         # Update the message history for the channel
         if self.server not in self.channel_messages:
