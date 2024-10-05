@@ -101,7 +101,8 @@ class RudeChatClient:
         self.gui.update_nick_channel_label()
         self.config = config_file
         self.watcher = AutoAway(self.config)
-        logging.info(f"Client config for {self.server_name} Completed")
+        if self.log_on:
+            logging.info(f"Client config for {self.server_name} Completed")
 
     def reload_config(self, config_file):
         config = configparser.ConfigParser()

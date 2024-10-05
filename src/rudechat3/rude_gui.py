@@ -206,7 +206,8 @@ class RudeGui:
         self.entry_widget.bind("<Control-s>", lambda event: self.insert_text_format("\x1E"))  # Strike through
         self.entry_widget.bind("<Control-slash>", lambda event: self.insert_text_format("\x16"))  # Inverse
         configure_logging()
-        logging.info(f"GUI has completed __init__")
+        if self.log_on:
+            logging.info(f"GUI has completed __init__")
 
     def hidden_windows(self):
         if not self.show_server_window:
@@ -278,7 +279,7 @@ class RudeGui:
             self.topic_label_font_size = config.getint('GUI', 'topic_label_font_size', fallback=10)
             self.topic_label_font_family = config.get('GUI', 'topic_label_font_family', fallback='Hack')
             self.to_tray = config.getboolean('GUI', 'minimize_to_tray', fallback=True)
-            self.log_on = config.getboolean('GUI', 'log_on', fallback=False)
+            self.log_on = config.getboolean('GUI', 'turn_logging_on', fallback=False)
 
             # Read Widget Settings
             self.user_listbox_fg = config.get('WIDGETS', 'users_fg', fallback='#39ff14')
