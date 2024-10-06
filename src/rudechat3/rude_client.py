@@ -2974,24 +2974,24 @@ class RudeChatClient:
         nickname = nickname.lstrip(modes_to_strip)
 
         if nickname not in self.joined_channels:
-            self.open_dm(nickname, timestamp)
+            self.open_dm(nickname)
             if message:
                 await self.send_message(f"PRIVMSG {nickname} :{message}")
                 self.query_msg_handler(nickname, message, timestamp)
         else:
             self.gui.insert_text_widget(f"You already have a DM open with {nickname}.\n")
 
-    def handle_cq_command(self, args, timestamp):
+    def handle_cq_command(self, args):
         if len(args) < 2:
             self.gui.insert_text_widget(f"Usage: /cq <nickname>\n")
         else:
             nickname = args[1]
             if nickname in self.joined_channels:
-                self.close_dm(nickname, timestamp)
+                self.close_dm(nickname)
             else:
                 self.gui.insert_text_widget(f"No open private message with {nickname}.\n")
 
-    def open_dm(self, nickname, timestamp):
+    def open_dm(self, nickname):
         # Add the DM to the channel list
         self.joined_channels.append(nickname)
         if nickname not in self.cap_who_for_chan:
@@ -3000,17 +3000,13 @@ class RudeChatClient:
         self.update_gui_channel_list()
         self.gui.insert_text_widget(f"Opened DM with {nickname}.\n")
 
-    def close_dm(self, nickname, timestamp):
+    def close_dm(self, nickname):
         # Remove the DM from the list of joined channels
         if nickname in self.joined_channels:
             self.joined_channels.remove(nickname)
 
         if nickname in self.cap_who_for_chan:
             self.cap_who_for_chan.remove(nickname)
-
-        # Remove the DM's messages from the channel_messages dictionary
-        if self.server in self.channel_messages and nickname in self.channel_messages[self.server]:
-            del self.channel_messages[self.server][nickname]
 
         # Remove the DM's entry from the highlighted_channels dictionary
         if self.server_name in self.highlighted_channels:
@@ -3215,7 +3211,7 @@ class RudeChatClient:
                 await self.handle_query_command(args, timestamp)
 
             case "cq":  # close a private message (query) with a user
-                self.handle_cq_command(args, timestamp)
+                self.handle_cq_command(args)
 
             case "quote":  # sends raw IRC message to the server
                 if len(args) < 2:
@@ -3268,7 +3264,7 @@ class RudeChatClient:
                     await self.send_message(f"PRIVMSG {nickname} :{message}")
                     self.query_msg_handler(nickname, message, timestamp)
                     if nickname not in self.joined_channels:
-                        self.open_dm(nickname, timestamp)
+                        self.open_dm(nickname)
                     self.gui.insert_text_widget(f'{self.nickname} \x0312(→)\x0F {nickname}: {message}\n')
 
             case "ctcp":
