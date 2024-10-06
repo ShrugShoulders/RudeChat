@@ -3464,7 +3464,9 @@ class RudeChatClient:
                 removed_friend = self.friends.remove_friend(enemy)
                 self.gui.insert_text_widget(f"{removed_friend}\n")
         else:
+            watch_list = self.friends.show_friend_list()
             self.gui.insert_text_widget("Error: /watch [+,-]nickname, Example: /watch +Rude to add, /watch -Rude to remove.\n")
+            self.gui.insert_text_widget(f"{watch_list}\n")
 
     async def send_message_chunks(self, message_chunks, timestamp):
         for chunk in message_chunks:
