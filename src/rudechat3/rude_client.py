@@ -3458,10 +3458,10 @@ class RudeChatClient:
             user = args[1]
 
             if user.startswith('+'):
-                added_friend = self.friends.add_friend(user)
+                added_friend = self.friends.add_friend(user[1:])
                 self.gui.insert_text_widget(f"{added_friend}\n")
             if user.startswith('-'):
-                removed_friend = self.friends.remove_friend(enemy)
+                removed_friend = self.friends.remove_friend(user[1:])
                 self.gui.insert_text_widget(f"{removed_friend}\n")
         else:
             watch_list = self.friends.show_friend_list()
