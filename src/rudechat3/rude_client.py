@@ -3445,6 +3445,9 @@ class RudeChatClient:
             case "watch":
                 self.watch_list(args)
 
+            case "broadcast":
+                await self.broadcaster(args)
+
             case "logs" | "fortunes" | "macros" | "swhois":
                 self.show_file_folder(primary_command)
 
@@ -3452,6 +3455,29 @@ class RudeChatClient:
                 await self.handle_user_input(user_input, timestamp)
 
         return True
+
+    async def broadcaster(self, args):
+        if len(args) > 2:
+            channels = args[1].split(',')
+            message = " ".join(args[2:])
+
+            for channel in channels:
+                if channel.startswith(tuple(self.chantypes)):
+                    timestamp = datetime.datetime.now().strftime('[%H:%M:%S]')
+                    user_mode = self.get_user_mode(self.nickname, channel)
+                    mode_symbol = self.get_mode_symbol(user_mode) if user_mode else ''
+                    await self.append_to_channel_history(channel, message, mode_symbol, is_action=False)
+                    await self.send_message(f"PRIVMSG {channel} :{message}")
+                    self.gui.insert_text_widget(f"Message Sent To: {channel}\n")
+                    if channel == self.current_channel:
+                        self.gui.insert_text_widget(f"{timestamp} <{mode_symbol}{self.nickname}> {message}\n")
+                        self.gui.highlight_nickname()
+                else:
+                    self.gui.insert_text_widget(f"Error: bad channel {channel}\n")
+            return
+        else:
+            self.gui.insert_text_widget(f"Error: /broadcast #channel,#channel,#channel <your message here>\n")
+            return
 
     def watch_list(self, args):
         if len(args) > 1:
@@ -3465,7 +3491,7 @@ class RudeChatClient:
                 self.gui.insert_text_widget(f"{removed_friend}\n")
         else:
             watch_list = self.friends.show_friend_list()
-            self.gui.insert_text_widget("Error: /watch [+,-]nickname, Example: /watch +Rude to add, /watch -Rude to remove.\n")
+            self.gui.insert_text_widget("Error: /watch [+/-]nickname, Example: /watch +Rude to add, /watch -Rude to remove.\n")
             self.gui.insert_text_widget(f"{watch_list}\n")
 
     async def send_message_chunks(self, message_chunks, timestamp):
@@ -4090,7 +4116,8 @@ class RudeChatClient:
                 "_________",
             ],
             "Broadcasting": [
-                "/notice <target> [message]",
+                "/notice <target> [message] - Sends notice to target or channel.",
+                "/broadcast #channel,#channel,#channel <message> - Sents message to all listed channels.",
                 "_________",
             ],
             "Help and Connection": [

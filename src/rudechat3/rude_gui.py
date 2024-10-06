@@ -432,37 +432,52 @@ class RudeGui:
     def quit_clients(self):
         if self.log_on:
             logging.info("Attempting to Quit Clients")
+
         try:
             for server_name, irc_client in self.clients.items():
                 # Assign the client reference
                 client = irc_client
+
                 if self.log_on:
                     logging.info(f"Client {client} quit attempt")
+
                 loop = client.loop
+
                 if self.log_on:
                     logging.info(f"Current Loop: {loop}")
+
                 loop.create_task(client.spec_quit(), name="quit_client_task")
+                loop.create_task(client.stop_async_loop(), name="stop_async_task")
+
                 if self.log_on:
                     logging.info(f"Sending QUIT to client: {client}")
+
         except Exception as e:
             logging.error(f"Error in quit_clients: {e}")
 
     def quit_clients_with_message(self, quit_message):
         if self.log_on:
             logging.info("Attempting to Quit Clients With Message")
+
         try:
             for server_name, irc_client in self.clients.items():
                 # Assign the client reference
                 client = irc_client
+
                 if self.log_on:
                     logging.info(f"Client {client} quit attempt")
+
                 loop = client.loop
+
                 if self.log_on:
                     logging.info(f"Current Loop: {loop}")
+
                 loop.create_task(client.send_quit(quit_message), name="quit_client_task")
+
                 if self.log_on:
                     logging.info(f"Sending QUIT to client: {client}")
                     logging.info(f"Quit Message: {quit_message}")
+
         except Exception as e:
             logging.error(f"Error in quit_clients: {e}")
 
