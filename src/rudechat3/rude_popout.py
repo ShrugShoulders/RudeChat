@@ -984,9 +984,9 @@ class RudePopOut:
 
             elif platform.system() == "Windows":
                 # Use win10toast for Windows notifications
-                from win10toast import ToastNotifier
+                from win10toast_click import ToastNotifier
                 toaster = ToastNotifier()
-                toaster.show_toast(title, message, icon_path=icon_path, duration=5)
+                toaster.show_toast(title, message, icon_path=icon_path, duration=5, threaded=True)
 
         except Exception as e:
             print(f"Desktop notification error: {e}")
