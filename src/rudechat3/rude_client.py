@@ -3673,7 +3673,6 @@ class RudeChatClient:
         self.gui.insert_text_widget(f"Available ASCII art macros: {available_macros}\n") 
 
     async def ignore_user(self, args):
-        print(len(args))
         if len(args) > 1:
             user_to_ignore = " ".join(args[1:])
             if user_to_ignore not in self.ignore_list:
