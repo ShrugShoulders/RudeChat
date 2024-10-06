@@ -2492,7 +2492,7 @@ class RudeChatClient:
         """
         Parse :nick!user@host into (nick, user_host)
         """
-        nick, user_host = prefix[1:].split('!', 1)
+        nick, user_host = prefix.split('!', 1)
         return nick, user_host
 
     async def handle_incoming_message(self, config_file):
