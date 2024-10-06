@@ -3442,24 +3442,8 @@ class RudeChatClient:
                 else:
                     self.gui.insert_text_widget("You're Not Using A ZNC")
 
-            case "friend":
-                if len(args) > 1:
-                    friend = args[1]
-                    added_friend = self.friends.add_friend(friend)
-                    self.friends.save_friend_list()
-                    self.gui.insert_text_widget(f"{added_friend}\n")
-                else:
-                    friends_list = self.friends.show_friend_list()
-                    self.gui.insert_text_widget(f"{friends_list}\n")
-                    self.gui.insert_text_widget("Give a Nickname to add to friends list\n")
-
-            case "unfriend":
-                if len(args) > 1:
-                    enemy = args[1]
-                    removed_friend = self.friends.remove_friend(enemy)
-                    self.gui.insert_text_widget(f"{removed_friend}\n")
-                else:
-                    self.gui.insert_text_widget("You must give a nickname\n")
+            case "watch":
+                self.watch_list(args)
 
             case "logs" | "fortunes" | "macros" | "swhois":
                 self.show_file_folder(primary_command)
@@ -3468,6 +3452,19 @@ class RudeChatClient:
                 await self.handle_user_input(user_input, timestamp)
 
         return True
+
+    def watch_list(self, args):
+        if len(args) > 1:
+            user = args[1]
+
+            if user.startswith('+'):
+                added_friend = self.friends.add_friend(user)
+                self.gui.insert_text_widget(f"{added_friend}\n")
+            if user.startswith('-'):
+                removed_friend = self.friends.remove_friend(enemy)
+                self.gui.insert_text_widget(f"{removed_friend}\n")
+        else:
+            self.gui.insert_text_widget("Error: /watch [+,-]nickname, Example: /watch +Rude to add, /watch -Rude to remove.\n")
 
     async def send_message_chunks(self, message_chunks, timestamp):
         for chunk in message_chunks:
@@ -4048,9 +4045,8 @@ class RudeChatClient:
                 "/invite <user> <channel> - invites a user to a channel",
                 "/kick <user> <channel> [message]",
                 "/mentions to show all mentions of your nickname. /mentions clear to clear these messages",
-                "/friend <nickname> - adds a nickname to your friends list, run without a nickname to display friend list",
+                "/watch Example /watch [+/-]: /watch +exampleuser or /watch -exampleuser",
                 "/mentions to show your nicknames mentions. /mentions clear to clear them.",
-                "/unfriend <nickname> - removes a friend from your friends list",
                 "/logs - Shows the channel logs folder",
                 "/swhois - shows the whois logs collected from DMs if auto whois is turned on or if you've whois'd a user",
                 "_________",

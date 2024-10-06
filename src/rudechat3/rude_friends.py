@@ -39,9 +39,9 @@ class RudeFriends:
         if friend not in self.friend_list:
             self.friend_list.append(friend)
             self.save_friend_list()
-            return f"Added {friend} to friends"
+            return f"Added {friend} to watch list."
         else:
-            return "Friend already in list"
+            return "Already in watch list."
 
     def remove_friend(self, enemy):
         """
@@ -50,16 +50,16 @@ class RudeFriends:
         if enemy in self.friend_list:
             self.friend_list.remove(enemy)
             self.save_friend_list()
-            return f"Removed {enemy} from friends"
+            return f"Removed {enemy} from watch list."
         else:
-            return "Not found in friends list"
+            return "Not found in watch list."
 
     def show_friend_list(self):
         """
         Show Friends!
         """
         if not self.friend_list:
-            return "No friends in the list."
+            return "No users in the watch list."
         
         return "Friends: " + ", ".join(self.friend_list)
 
