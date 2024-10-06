@@ -447,7 +447,6 @@ class RudeGui:
                     logging.info(f"Current Loop: {loop}")
 
                 loop.create_task(client.spec_quit(), name="quit_client_task")
-                loop.create_task(client.stop_async_loop(), name="stop_async_task")
 
                 if self.log_on:
                     logging.info(f"Sending QUIT to client: {client}")
