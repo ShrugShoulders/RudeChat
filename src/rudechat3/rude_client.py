@@ -3673,13 +3673,18 @@ class RudeChatClient:
         self.gui.insert_text_widget(f"Available ASCII art macros: {available_macros}\n") 
 
     async def ignore_user(self, args):
-        user_to_ignore = " ".join(args[1:])
-        if user_to_ignore not in self.ignore_list:
-            self.ignore_list.append(user_to_ignore)
-            self.gui.insert_text_widget(f"You've ignored {user_to_ignore}.\n")
-            await self.save_ignore_list()
+        print(len(args))
+        if len(args) > 1:
+            user_to_ignore = " ".join(args[1:])
+            if user_to_ignore not in self.ignore_list:
+                self.ignore_list.append(user_to_ignore)
+                self.gui.insert_text_widget(f"You've ignored {user_to_ignore}.\n")
+                await self.save_ignore_list()
+            else:
+                self.gui.insert_text_widget(f"{user_to_ignore} is already in your ignore list.\n")
         else:
-            self.gui.insert_text_widget(f"{user_to_ignore} is already in your ignore list.\n")
+            ignored_users = "Ignored: " + ", ".join(self.ignore_list)
+            self.gui.insert_text_widget(f"{ignored_users}\n")
 
     async def unignore_user(self, args):
         if len(args) < 2:  # Check if the user has provided the username to unignore
