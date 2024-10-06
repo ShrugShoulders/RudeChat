@@ -3456,7 +3456,7 @@ class RudeChatClient:
             case "unfriend":
                 if len(args) > 1:
                     enemy = args[1]
-                    removed_friend = self.friends.remove_friend()
+                    removed_friend = self.friends.remove_friend(enemy)
                     self.gui.insert_text_widget(f"{remove_friend}\n")
                 else:
                     self.gui.insert_text_widget("You must give a nickname\n")
