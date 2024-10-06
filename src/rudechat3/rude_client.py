@@ -3454,12 +3454,15 @@ class RudeChatClient:
                     self.gui.insert_text_widget("Give a Nickname to add to friends list\n")
 
             case "unfriend":
-                if len(args) > 1:
-                    enemy = args[1]
-                    removed_friend = self.friends.remove_friend(enemy)
-                    self.gui.insert_text_widget(f"{remove_friend}\n")
-                else:
-                    self.gui.insert_text_widget("You must give a nickname\n")
+                try:
+                    if len(args) > 1:
+                        enemy = args[1]
+                        removed_friend = self.friends.remove_friend(enemy)
+                        self.gui.insert_text_widget(f"{removed_friend}\n")
+                    else:
+                        self.gui.insert_text_widget("You must give a nickname\n")
+                except Exception as e:
+                    logging.error(f"Error Removing Friend: {e}")
 
             case "logs" | "fortunes" | "macros" | "swhois":
                 self.show_file_folder(primary_command)
