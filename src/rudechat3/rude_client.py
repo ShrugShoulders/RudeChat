@@ -398,7 +398,7 @@ class RudeChatClient:
         count_366 = 0
         got_topic = 0
         last_366_time = None
-        TIMEOUT_SECONDS = 0.15
+        TIMEOUT_SECONDS = 0.2
         MAX_WAIT_TIME = 60
         PRIVMSGTOKENS = []
         NAMESTOKENS = []
@@ -1478,6 +1478,7 @@ class RudeChatClient:
             window.insert_text(formatted_message)
             window.highlight_nickname()
             window.check_focus_and_notify(message)
+            window.update_users_label()
 
     async def handle_channel_message(self, sender, target, message, timestamp, mode_symbol, znc_privmsg):
         if znc_privmsg:

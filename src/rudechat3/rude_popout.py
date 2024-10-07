@@ -278,6 +278,7 @@ class RudePopOut:
                     self.irc_client.remove_away_status(), 
                     self.irc_client.loop
                 )
+                self.update_users_label()
 
         except Exception as e:
             print(f"Exception in send_text: {e}")
