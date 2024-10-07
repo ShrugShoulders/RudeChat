@@ -4137,6 +4137,7 @@ class RudeChatClient:
                 "/whois <nickname> - Shows information about a user",
                 "/me <action text> - Sends an action to the current channel",
                 "/clear - clears the chat window and removes all messages for the current channel",
+                "/swhois - shows the whois log folder, not to be confused with /whois.",
                 "_________",
             ],
             "Server Interaction": [
@@ -4244,11 +4245,19 @@ class RudeChatClient:
         self.force_click(channel)
 
     def force_click(self, channel=None):
+        if self.log_on:
+            logging.info(f"force click channel: {channel}")
         if channel is not None:
+            if self.log_on:
+                logging.info(f"channel is not None")
             current_selected_channel = channel
+            if self.log_on:
+                logging.info(f"Currently Selected Channel: {current_selected_channel}")
         else:
             try:
                 current_selected_channel = self.joined_channels[0]
+                if self.log_on:
+                    logging.info(f"Else Currently Selected Channel: {current_selected_channel}")
             except Exception as e:
                 logging.error(f"Error1 force_click: {e}")
 
@@ -4257,8 +4266,12 @@ class RudeChatClient:
         # Iterate through the listbox to find the index of the current selected channel
         for i in range(listbox_size):
             item_at_index = self.gui.channel_listbox.get(i)
+            if self.log_on:
+                logging.info(f"item at index: {item_at_index}")
 
             if item_at_index == current_selected_channel:
+                if self.log_on:
+                    logging.info(f"Time for the force click!")
                 try:
                     self.gui.the_force_click(i)  # Perform the force click at the matched index
                 except Exception as e:

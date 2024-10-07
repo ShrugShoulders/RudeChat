@@ -917,6 +917,8 @@ class RudeGui:
         if selected_user_index:
             selected_user = self.user_listbox.get(selected_user_index)
             cleaned_nickname = selected_user.lstrip(modes_to_strip)
+            if cleaned_nickname not in self.irc_client.cap_who_for_chan:
+                self.irc_client.cap_who_for_chan.append(cleaned_nickname)
 
             # Check if the cleaned nickname is in the channel listbox and remove it
             listbox_items = self.channel_listbox.get(0, tk.END)
@@ -1621,6 +1623,8 @@ class RudeGui:
     def the_force_click(self, index):
         # Set background of currently selected channel back to default
         current_selected_channel = self.irc_client.current_channel
+        if self.log_on:
+            logging.debug(f"the_force_click current_channel {current_selected_channel}")
         if current_selected_channel:
             for i in range(self.channel_listbox.size()):
                 if self.channel_listbox.get(i) == current_selected_channel:
@@ -1629,15 +1633,25 @@ class RudeGui:
 
         # Get index of clicked item
         clicked_index = index
-        if clicked_index:
+        if self.log_on:
+            logging.debug(f"Simulated Clicked Index: {clicked_index}")
+        if clicked_index or clicked_index == 0:
             clicked_channel = self.channel_listbox.get(clicked_index)
+            if self.log_on:
+                logging.debug(f"Clicked Channel: {clicked_channel}")
             self.switch_channel(clicked_channel)
+            if self.log_on:
+                logging.debug(f"Switching channels...")
 
             # Turn background blue
+            if self.log_on:
+                logging.debug(f"Recolor background hit")
             self.channel_listbox.itemconfig(clicked_index, {'bg': self.channel_select_color})
             self.highlight_nickname()
             self.highlight_away_users()
             self.update_users_label()
+            if self.log_on:
+                logging.debug(f"Finished with GUI update.")
 
             # Remove the clicked channel from highlighted_channels dictionary
             if self.irc_client.server_name in self.irc_client.highlighted_channels:
