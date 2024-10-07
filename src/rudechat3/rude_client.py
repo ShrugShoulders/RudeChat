@@ -27,7 +27,8 @@ class RudeChatClient:
         self.detached_channels = []
         self.mode_keys = []
         self.mode_values = []
-        self.away_users = []
+        self.away_users = [] # make this a dict & whois each user, getting the away message and saving self.away_users[user] = 'away_message'
+        self.away_users_dict = {}
         self.cap_who_for_chan = []
         self.away_servers = []
         self.motd_dict = {}
@@ -44,6 +45,7 @@ class RudeChatClient:
         self.tasks = {}
         self.account_cache = {}
         self.whois_executed = set()
+        self.away_notified = set()
         self.decoder = irctokens.StatefulDecoder()
         self.encoder = irctokens.StatefulEncoder()
         self.reader = None
@@ -1422,6 +1424,12 @@ class RudeChatClient:
     def is_direct_message(self, target):
         return target == self.nickname
 
+    async def get_away_user_whois(self, target):
+        if target not in self.whois_executed:
+            await self.send_message(f'WHOIS {target}')
+            self.whois_executed.add(target)
+        return
+
     async def get_direct_message_target(self, sender, target):
         if self.auto_whois == True:
             if sender not in self.whois_executed:
@@ -2059,6 +2067,19 @@ class RudeChatClient:
         """
         self.account_cache[nick] = accountname
 
+    def _who_reply_data_handler(self, away_status, nickname):
+        # Add the user to the away dictionary if they are marked as Away
+        if away_status == "Away" and nickname not in self.away_users_dict:
+            self.away_users_dict[nickname] = ''
+            if nickname not in self.away_users:
+                self.away_users.append(nickname)
+
+        # Remove the user from the away dictionary if they are marked as Active
+        if away_status == "Active" and nickname in self.away_users_dict:
+            del self.away_users_dict[nickname]
+            if nickname in self.away_users:
+                self.away_users.remove(nickname)
+
     async def handle_who_reply(self, tokens):
         """
         Handle the WHO reply from the server.
@@ -2081,10 +2102,7 @@ class RudeChatClient:
 
             # Determine if the user is away
             away_status = "Away" if status.startswith('G') else "Active"
-            if away_status == "Away" and nickname not in self.away_users:
-                self.away_users.append(nickname)
-            if away_status == "Active" and nickname in self.away_users:
-                self.away_users.remove(nickname)
+            self._who_reply_data_handler(away_status, nickname)
 
             user_details = {
                 "nickname": nickname,
@@ -2111,10 +2129,7 @@ class RudeChatClient:
 
             # Determine if the user is away
             away_status = "Away" if status.startswith('G') else "Active"
-            if away_status == "Away" and nickname not in self.away_users:
-                self.away_users.append(nickname)
-            if away_status == "Active" and nickname in self.away_users:
-                self.away_users.remove(nickname)
+            self._who_reply_data_handler(away_status, nickname)
 
             user_details = {
                 "nickname": nickname,
@@ -2178,6 +2193,8 @@ class RudeChatClient:
                 if nickname not in self.whois_data:
                     self.whois_data[nickname] = {}  
                 self.whois_data[nickname]["Away"] = away_message
+                if nickname in self.away_users_dict:
+                    self.away_users_dict[nickname] = away_message
 
             elif command == "671":
                 secure_message = tokens.params[2]
@@ -2451,13 +2468,18 @@ class RudeChatClient:
         params = tokens.params
         
         if params:
+            away_message = str(tokens.params[0])
+            if nickname not in self.away_users_dict:
+                self.away_users_dict[nickname] = away_message
             if nickname not in self.away_users:
                 self.away_users.append(nickname)
-                self.gui.highlight_away_users()
+            self.gui.highlight_away_users()
         else:
+            if nickname in self.away_users_dict:
+                del self.away_users_dict[nickname]
             if nickname in self.away_users:
                 self.away_users.remove(nickname)
-                self.gui.highlight_away_users()
+            self.gui.highlight_away_users()
 
     def handle_account_message(self, tokens):
         """
@@ -3184,6 +3206,26 @@ class RudeChatClient:
     async def send_quit(self, message):
         await self.send_message(f"QUIT :{message}")
 
+    async def send_away_notification(self, away_message):
+        timestamp = datetime.datetime.now().strftime('[%Y-%m-%d %H:%M:%S]')
+        if away_message:
+            if self.nickname not in self.away_users:
+                self.away_users.append(self.nickname)
+                self.gui.highlight_away_users()
+                if self.server_name not in self.away_servers:
+                    self.away_servers.append(self.server_name)
+            await self.send_message(f"AWAY :{away_message}")
+            self.gui.insert_text_widget(f"{away_message}\n")
+            self.gui.update_users_label()
+        else:
+            if self.nickname not in self.away_users:
+                self.away_users.append(self.nickname)
+                self.gui.highlight_away_users()
+                if self.server_name not in self.away_servers:
+                    self.away_servers.append(self.server_name)
+            await self.send_message(f"AWAY :Away @ {timestamp}")
+            self.gui.update_users_label()
+
     async def command_parser(self, user_input):
         args = user_input[1:].split() if user_input.startswith('/') else []
         primary_command = args[0] if args else None
@@ -3228,24 +3270,11 @@ class RudeChatClient:
                     self.handle_mentions_command()
 
             case "away":  # set the user as away
-                away_message = " ".join(args[1:])
-                if away_message:
-                    if self.nickname not in self.away_users:
-                        self.away_users.append(self.nickname)
-                        self.gui.highlight_away_users()
-                        if self.server_name not in self.away_servers:
-                            self.away_servers.append(self.server_name)
-                    await self.send_message(f"AWAY :{away_message}")
-                    self.gui.insert_text_widget(f"{away_message}\n")
-                    self.gui.update_users_label()
+                if len(args) > 1:
+                    away_message = " ".join(args[1:])
+                    self.gui.send_away_to_clients(away_message)
                 else:
-                    if self.nickname not in self.away_users:
-                        self.away_users.append(self.nickname)
-                        self.gui.highlight_away_users()
-                        if self.server_name not in self.away_servers:
-                            self.away_servers.append(self.server_name)
-                    await self.send_message("AWAY :Away")
-                    self.gui.update_users_label()
+                    self.gui.send_away_to_clients(away_message=None)
 
             case "back":  # remove the "away" status
                 await self.remove_away_status()
@@ -3516,12 +3545,39 @@ class RudeChatClient:
                         self.user_input_channel_message(styled_line, timestamp, mode_symbol)
                     else:  # It's a DM
                         self.user_input_dm_message(styled_line, timestamp)
+                        await self._away_user_helper()
 
                     # If there's only one item in the list, don't wait
                     if len(message_chunks) == 1 and len(lines) == 1:
                         return
                     else:
                         await asyncio.sleep(0.7)
+
+    async def _away_user_helper(self):
+        try:
+            if self.current_channel in self.away_users_dict:
+                if self.away_users_dict.get(self.current_channel) == "":
+                    # Run the WHOIS check since the entry is an empty string
+                    await self.get_away_user_whois(self.current_channel)
+                    await asyncio.sleep(0.3)
+                    
+                    # Re-check the dictionary after the WHOIS call for an updated entry
+                    away_message = self.away_users_dict.get(self.current_channel, "")
+                    if away_message and self.current_channel not in self.away_notified:
+                        self.gui.insert_text_widget(f"User Is AWAY: {away_message}\n")
+                        self.away_notified.add(self.current_channel)
+                        
+                else:
+                    # Directly use the existing away message
+                    if self.current_channel not in self.away_notified:
+                        away_message = self.away_users_dict[self.current_channel]
+                        if away_message:
+                            self.gui.insert_text_widget(f"User Is AWAY: {away_message}\n")
+                            self.away_notified.add(self.current_channel)
+            else:
+                return
+        except Exception as e:
+            logging.error(f"Error in _away_user_helper: {e}")
 
     def user_input_channel_message(self, chunk, timestamp, mode_symbol):
         if self.server not in self.channel_messages:
