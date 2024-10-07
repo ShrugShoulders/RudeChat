@@ -27,7 +27,6 @@ class RudeChatClient:
         self.detached_channels = []
         self.mode_keys = []
         self.mode_values = []
-        self.away_users = [] # make this a dict & whois each user, getting the away message and saving self.away_users[user] = 'away_message'
         self.away_users_dict = {}
         self.cap_who_for_chan = []
         self.away_servers = []
@@ -137,28 +136,30 @@ class RudeChatClient:
         self.gui.update_nick_channel_label()
 
     def save_away_users_to_file(self):
-        file_path = os.path.join(self.script_directory, f'{self.server_name}_away_users.txt')
+        file_path = os.path.join(self.script_directory, f'{self.server_name}_away_users.json')
         
         with open(file_path, 'w') as file:
-            for user in self.away_users:
-                file.write(f"{user}\n")
+            # Write the dictionary as a JSON object
+            json.dump(self.away_users_dict, file, indent=4)
 
     def load_away_users_from_file(self):
-        file_path = os.path.join(self.script_directory, f'{self.server_name}_away_users.txt')
+        file_path = os.path.join(self.script_directory, f'{self.server_name}_away_users.json')
 
         try:
             with open(file_path, 'r') as file:
-                self.away_users = [line.strip() for line in file.readlines()]
+                # Load the dictionary from the JSON file
+                self.away_users_dict = json.load(file)
         except FileNotFoundError:
-            self.away_users = []
-        
-        # Check if self.nickname is in the list and remove it
-        if self.nickname in self.away_users:
-            self.away_users.remove(self.nickname)
+            # Initialize as empty dictionary if file not found
+            self.away_users_dict = {}
+
+        # Check if self.nickname is in the dictionary and remove it
+        if self.nickname in self.away_users_dict:
+            del self.away_users_dict[self.nickname]
 
     def away_clean(self):
-        if self.nickname in self.away_users:
-            self.away_users.remove(self.nickname)
+        if self.nickname in self.away_users_dict:
+            del self.away_users_dict[self.nickname]
 
     def delete_lock_files(self):
         lock_file_pattern = os.path.join(self.script_directory, '*.lock')
@@ -1015,8 +1016,8 @@ class RudeChatClient:
                 date_time_now = datetime.datetime.now().strftime('[%Y-%m-%d %H:%M:%S]')
                 user_away = self.watcher.check_auto_away()
 
-                if user_away and self.nickname not in self.away_users:
-                    self.away_users.append(self.nickname)
+                if user_away and self.nickname not in self.away_users_dict:
+                    self.away_users_dict[self.nickname] = f"Auto Away @ {date_time_now}"
 
                     if self.server_name not in self.away_servers:
                         self.away_servers.append(self.server_name)
@@ -2071,14 +2072,10 @@ class RudeChatClient:
         # Add the user to the away dictionary if they are marked as Away
         if away_status == "Away" and nickname not in self.away_users_dict:
             self.away_users_dict[nickname] = ''
-            if nickname not in self.away_users:
-                self.away_users.append(nickname)
 
         # Remove the user from the away dictionary if they are marked as Active
         if away_status == "Active" and nickname in self.away_users_dict:
             del self.away_users_dict[nickname]
-            if nickname in self.away_users:
-                self.away_users.remove(nickname)
 
     async def handle_who_reply(self, tokens):
         """
@@ -2471,14 +2468,10 @@ class RudeChatClient:
             away_message = str(tokens.params[0])
             if nickname not in self.away_users_dict:
                 self.away_users_dict[nickname] = away_message
-            if nickname not in self.away_users:
-                self.away_users.append(nickname)
             self.gui.highlight_away_users()
         else:
             if nickname in self.away_users_dict:
                 del self.away_users_dict[nickname]
-            if nickname in self.away_users:
-                self.away_users.remove(nickname)
             self.gui.highlight_away_users()
 
     def handle_account_message(self, tokens):
@@ -3154,8 +3147,8 @@ class RudeChatClient:
 
     async def remove_away_status(self):
         """Removes the 'away' status and updates the necessary UI elements."""
-        if self.nickname in self.away_users:
-            self.away_users.remove(self.nickname)
+        if self.nickname in self.away_users_dict:
+            del self.away_users_dict[self.nickname]
 
             if self.server_name in self.away_servers:
                 self.away_servers.remove(self.server_name)
@@ -3209,8 +3202,8 @@ class RudeChatClient:
     async def send_away_notification(self, away_message):
         timestamp = datetime.datetime.now().strftime('[%Y-%m-%d %H:%M:%S]')
         if away_message:
-            if self.nickname not in self.away_users:
-                self.away_users.append(self.nickname)
+            if self.nickname not in self.away_users_dict:
+                self.away_users_dict[self.nickname] = away_message
                 self.gui.highlight_away_users()
                 if self.server_name not in self.away_servers:
                     self.away_servers.append(self.server_name)
@@ -3218,8 +3211,8 @@ class RudeChatClient:
             self.gui.insert_text_widget(f"{away_message}\n")
             self.gui.update_users_label()
         else:
-            if self.nickname not in self.away_users:
-                self.away_users.append(self.nickname)
+            if self.nickname not in self.away_users_dict:
+                self.away_users_dict[self.nickname] = f'Away @ {timestamp}'
                 self.gui.highlight_away_users()
                 if self.server_name not in self.away_servers:
                     self.away_servers.append(self.server_name)

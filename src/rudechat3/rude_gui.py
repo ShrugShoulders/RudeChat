@@ -481,17 +481,30 @@ class RudeGui:
             logging.error(f"Error in quit_clients: {e}")
 
     def client_shutdown(self):
-        # Close all pop-out windows
-        self.close_all_popouts()
+        logging.info(f"Attempting Client Shutdown.")
+        try:
+            # Close all pop-out windows
+            self.close_all_popouts()
+        except Exception as e:
+            logging.error(f"Error Closing Pop Outs: {e}")
 
-        # Shutdown the clients
-        self.quit_clients()
+        try:
+            # Shutdown the clients
+            self.quit_clients()
+        except Exception as e:
+            logging.error(f"Error quitting Clients: {e}")
 
-        # Stop and remove the tray icon
-        self.remove_tray_icon()
+        try:
+            # Stop and remove the tray icon
+            self.remove_tray_icon()
+        except Exception as e:
+            logging.error(f"Error Removing Tray Icon: {e}")
 
-        # Destroy the GUI
-        self.destroy_client()
+        try:
+            # Destroy the GUI
+            self.destroy_client()
+        except Exception as e:
+            logging.error(f"Error destroying clients: {e}")
 
     def close_all_popouts(self):
         if self.pop_out_windows:
@@ -576,7 +589,7 @@ class RudeGui:
             stripped_username = username.lstrip(''.join(self.irc_client.mode_values))
             
             # Check if the stripped username is in the away_users list
-            if stripped_username in self.irc_client.away_users:
+            if stripped_username in self.irc_client.away_users_dict:
                 # Change the foreground color of the user to red
                 self.user_listbox.itemconfig(index, {'fg': self.away_user_fg})
             else:
