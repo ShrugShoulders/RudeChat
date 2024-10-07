@@ -1397,7 +1397,7 @@ class RudeChatClient:
             self.joined_channels.append(channel)
             self.gui.channel_lists[self.server] = self.joined_channels
             self.update_gui_channel_list()
-
+            self.gui.update_channel_label()
             self.highlight_channel(channel)
 
             channel_idx = self.joined_channels.index(channel)
@@ -3015,6 +3015,8 @@ class RudeChatClient:
         # Update the GUI's list of channels
         self.update_gui_channel_list()
 
+        self.force_click(channel=None)
+
         # Display a message indicating the DM was closed
         self.gui.insert_text_widget(f"Private message with {nickname} closed.\n")
 
@@ -3602,6 +3604,34 @@ class RudeChatClient:
             await self.send_message_chunks(message_chunks, timestamp)
         else:
             self.gui.insert_text_widget(f"No channel selected. Use /join to join a channel.\n")
+
+    async def handle_pop_out_mac_command(self, args, channel):
+        window = self.gui.pop_out_windows.get(channel)
+        user_mode = self.get_user_mode(self.nickname, channel)
+        mode_symbol = self.get_mode_symbol(user_mode) if user_mode else ''
+        timestamp = datetime.datetime.now().strftime('[%H:%M:%S]')
+        if len(args) < 2:
+            available_macros = ", ".join(self.ASCII_ART_MACROS.keys())
+            if window:
+                window.insert_text(f"Available ASCII art macros: {available_macros}\n")
+                window.insert_text("Usage: /mac <macro_name>\n")
+                return
+
+        macro_name = args[1]
+        if window:
+            if macro_name in self.ASCII_ART_MACROS:
+                for line in self.ASCII_ART_MACROS[macro_name].splitlines():
+                    formatted_message = self.format_message(line, timestamp)
+                    await self.send_message(f'PRIVMSG {channel} :{formatted_message}')
+                    await asyncio.sleep(0.4)
+                    if self.use_time_stamp:
+                        window.insert_text(f"{timestamp} <{mode_symbol}{self.nickname}> {formatted_message}")
+                    else:
+                        window.insert_text(f"<{mode_symbol}{self.nickname}> {formatted_message}")
+                    window.highlight_nickname()
+                    await self.append_to_channel_history(channel, line, mode_symbol)
+            else:
+                window.insert_text(f"Unknown ASCII art macro: {macro_name}. Type '/mac' to see available macros.\n")
 
     async def handle_mac_command(self, args):
         if len(args) < 2:
@@ -4213,18 +4243,23 @@ class RudeChatClient:
         self.force_click(channel)
 
     def force_click(self, channel=None):
-        if self.joined_channels: 
-            if channel is not None:
-                current_selected_channel = channel
-            else:
+        if channel is not None:
+            current_selected_channel = channel
+        else:
+            try:
                 current_selected_channel = self.joined_channels[0]
+            except Exception as e:
+                logging.error(f"Error1 force_click: {e}")
 
-            listbox_size = self.gui.channel_listbox.size()
+        listbox_size = self.gui.channel_listbox.size()
             
-            # Iterate through the listbox to find the index of the current selected channel
-            for i in range(listbox_size):
-                item_at_index = self.gui.channel_listbox.get(i)
+        # Iterate through the listbox to find the index of the current selected channel
+        for i in range(listbox_size):
+            item_at_index = self.gui.channel_listbox.get(i)
 
-                if item_at_index == current_selected_channel:
+            if item_at_index == current_selected_channel:
+                try:
                     self.gui.the_force_click(i)  # Perform the force click at the matched index
-                    break
+                except Exception as e:
+                    logging.error(f"Error2 force_click: {e}")
+                break

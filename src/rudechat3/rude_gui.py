@@ -499,8 +499,10 @@ class RudeGui:
                 window.destroy_window()
 
     def destroy_client(self):
-        if self.master.winfo_exists():
+        try:
             self.master.destroy()
+        except Exception as e:
+            logging.error(f"Error When Destroying Client: {e}")
 
     def remove_tray_icon(self):
         if hasattr(self, 'tray_icon'):
@@ -1043,7 +1045,7 @@ class RudeGui:
         selected_channel_index = self.channel_listbox.curselection()
         if selected_channel_index:
             selected_channel = self.channel_listbox.get(selected_channel_index)
-            self.irc_client.handle_cq_command(["/cq", selected_channel], "</3 ")
+            self.irc_client.handle_cq_command(["/cq", selected_channel])
 
     def leave_channel_from_menu(self, reason=None):
         selected_channel_index = self.channel_listbox.curselection()
@@ -1895,8 +1897,13 @@ class RudeGui:
             self.user_label.config(text=away_text, fg="red")
         else:
             user_num = len(self.irc_client.channel_users.get(self.irc_client.current_channel, []))
+            
+            if user_num == 0:
+                user_num = self.user_listbox.size()
+
             back_text = f"Users ({user_num})"
             self.user_label.config(text=back_text, fg=self.user_label_fg)
+            
             if self.irc_client.server_name in self.irc_client.away_servers:
                 self.irc_client.away_servers.remove(self.irc_client.server_name)
 

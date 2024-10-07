@@ -261,12 +261,7 @@ class RudePopOut:
                 self.entry.delete(0, tk.END)
 
                 # Update channel_messages dictionary
-                if server not in self.irc_client.channel_messages:
-                    self.irc_client.channel_messages[server] = {}
-                if current_channel not in self.irc_client.channel_messages[server]:
-                    self.irc_client.channel_messages[server][current_channel] = []
-
-                self.irc_client.channel_messages[server][current_channel].append(f"{timestamp} <{mode_symbol}{self.nick_name}> {shortened_text}\n")
+                self.update_channel_messages(server, current_channel, timestamp, mode_symbol, shortened_text)
 
                 self.log_message(self.irc_client.server_name, current_channel, self.nick_name, shortened_text, is_sent=True)
 
@@ -277,8 +272,23 @@ class RudePopOut:
                 )
 
                 self.highlight_nickname()
+                if self.irc_client.use_auto_away:
+                    self.irc_client.watcher.update_last_message_time()
+                asyncio.run_coroutine_threadsafe(
+                    self.irc_client.remove_away_status(), 
+                    self.irc_client.loop
+                )
+
         except Exception as e:
             print(f"Exception in send_text: {e}")
+
+    def update_channel_messages(self, server, current_channel, timestamp, mode_symbol, shortened_text):
+        if server not in self.irc_client.channel_messages:
+            self.irc_client.channel_messages[server] = {}
+        if current_channel not in self.irc_client.channel_messages[server]:
+            self.irc_client.channel_messages[server][current_channel] = []
+
+        self.irc_client.channel_messages[server][current_channel].append(f"{timestamp} <{mode_symbol}{self.nick_name}> {shortened_text}\n")
 
     def handle_arrow_keys(self, event):
         if event.keysym == 'Up':
@@ -309,6 +319,11 @@ class RudePopOut:
         timestamp = datetime.datetime.now().strftime('[%H:%M:%S]')
 
         match primary_command:
+            case "mac":
+                asyncio.run_coroutine_threadsafe(
+                    self.irc_client.handle_pop_out_mac_command(args, channel),
+                    self.irc_client.loop
+                )    
             case "me":
                 self.handle_action(args, channel, timestamp)
             case "whois" | "help" | "list" | "ping":
@@ -405,9 +420,10 @@ class RudePopOut:
             del self.main_app.pop_out_windows[self.selected_channel]
         # Close the window if it exists
         if self.root:
-            self.irc_client.update_gui_channel_list()
             self.main_app.return_channel_to_listbox(self.selected_channel)
-            self.irc_client.pop_out_return(self.selected_channel)
+            self.irc_client.update_gui_channel_list()
+            self.irc_client.force_click(self.selected_channel)
+            self.main_app.highlight_who_channels()
             self.root.destroy()
             self.root = None
 
@@ -993,11 +1009,19 @@ class RudePopOut:
 
     def update_users_label(self):
         if self.irc_client.server_name in self.irc_client.away_servers:
-            away_text = f"You're Away"
+            away_text = "You're Away"
             self.user_label.config(text=away_text, fg="red")
         else:
+            # Try to get the user count from the selected channel
             user_num = len(self.irc_client.channel_users.get(self.selected_channel, []))
+
+            # If there are no users, get the count from the listbox itself
+            if user_num == 0:
+                user_num = self.user_listbox.size()
+
             back_text = f"Users ({user_num})"
             self.user_label.config(text=back_text, fg=self.main_app.user_label_fg)
+
+            # Ensure server is removed from away servers if present
             if self.irc_client.server_name in self.irc_client.away_servers:
                 self.irc_client.away_servers.remove(self.irc_client.server_name)
