@@ -1839,8 +1839,6 @@ class RudeGui:
         """
         Show a system desktop notification.
         """
-        script_directory = os.path.dirname(os.path.abspath(__file__))
-
         # Check if the application window is the active window
         if self.is_app_focused():  # If the app is focused, return early
             return
@@ -1856,7 +1854,7 @@ class RudeGui:
             else:
                 message = f"You've been pinged in {channel_name}!"
 
-        icon_path = os.path.join(script_directory, "rude.ico")
+        icon_path = os.path.join(self.script_directory, "rude.ico")
 
         try:
             if platform.system() == "Linux":

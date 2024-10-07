@@ -13,6 +13,7 @@ class RudeChatClient:
         self.entry_widget = entry_widget
         self.server_text_widget = server_text_widget
         self.gui = gui
+        self.script_directory = os.path.dirname(os.path.abspath(__file__))
         self.nicknamelen = 0
         self.chan_limit = 0
         self.channellen = 0
@@ -134,16 +135,14 @@ class RudeChatClient:
         self.gui.update_nick_channel_label()
 
     def save_away_users_to_file(self):
-        script_directory = os.path.dirname(os.path.abspath(__file__))
-        file_path = os.path.join(script_directory, f'{self.server_name}_away_users.txt')
+        file_path = os.path.join(self.script_directory, f'{self.server_name}_away_users.txt')
         
         with open(file_path, 'w') as file:
             for user in self.away_users:
                 file.write(f"{user}\n")
 
     def load_away_users_from_file(self):
-        script_directory = os.path.dirname(os.path.abspath(__file__))
-        file_path = os.path.join(script_directory, f'{self.server_name}_away_users.txt')
+        file_path = os.path.join(self.script_directory, f'{self.server_name}_away_users.txt')
 
         try:
             with open(file_path, 'r') as file:
@@ -160,8 +159,7 @@ class RudeChatClient:
             self.away_users.remove(self.nickname)
 
     def delete_lock_files(self):
-        script_directory = os.path.dirname(os.path.abspath(__file__))
-        lock_file_pattern = os.path.join(script_directory, '*.lock')
+        lock_file_pattern = os.path.join(self.script_directory, '*.lock')
         lock_files = glob.glob(lock_file_pattern)
 
         for lock_file in lock_files:
@@ -171,8 +169,7 @@ class RudeChatClient:
                 logging.error(f"Error deleting {lock_file}: {e}")
 
     async def load_channel_messages(self):
-        script_directory = os.path.dirname(os.path.abspath(__file__))
-        file_path = os.path.join(script_directory, f'channel_messages_{self.server_name}.json')
+        file_path = os.path.join(self.script_directory, f'channel_messages_{self.server_name}.json')
         try:
             async with aiofiles.open(file_path, 'r') as file:
                 file_content = await file.read()
@@ -184,9 +181,8 @@ class RudeChatClient:
             self.channel_messages = {}
 
     async def save_channel_messages(self):
-        script_directory = os.path.dirname(os.path.abspath(__file__))
-        file_path = os.path.join(script_directory, f'channel_messages_{self.server_name}.json')
-        lock_file_path = os.path.join(script_directory, f'channel_messages_{self.server_name}.lock')
+        file_path = os.path.join(self.script_directory, f'channel_messages_{self.server_name}.json')
+        lock_file_path = os.path.join(self.script_directory, f'channel_messages_{self.server_name}.lock')
 
         try:
             # Acquire the lock
@@ -1309,14 +1305,13 @@ class RudeChatClient:
         """
         You've been pinged! Plays a beep or noise on mention.
         """
-        script_directory = os.path.dirname(os.path.abspath(__file__))
         try:
             if sys.platform.startswith("linux"):
                 # Check if paplay is available
                 if self.custom_sounds:
                     if shutil.which("paplay"):
                         # Linux-specific notification sound using paplay
-                        sound_path = os.path.join(script_directory, "Sounds", "Notification4.wav")
+                        sound_path = os.path.join(self.script_directory, "Sounds", "Notification4.wav")
                         os.system(f"paplay {sound_path}")
                 elif not self.custom_sounds:
                     # System bell beep
@@ -2227,10 +2222,8 @@ class RudeChatClient:
 
     async def save_whois_to_file(self, nickname):
         """Save WHOIS data for a given nickname to a file."""
-        script_directory = os.path.dirname(os.path.abspath(__file__))
-        
         # Construct the full path for the WHOIS directory
-        whois_directory = os.path.join(script_directory, 'whois')
+        whois_directory = os.path.join(self.script_directory, 'whois')
         
         # Create the WHOIS directory if it doesn't exist
         os.makedirs(whois_directory, exist_ok=True)
@@ -2336,8 +2329,7 @@ class RudeChatClient:
         self.channel_window = ChannelListWindow(self, self.master)
 
     async def save_channel_list_to_file(self):
-        script_directory = os.path.dirname(os.path.abspath(__file__))
-        channel_list_path = os.path.join(script_directory, "channel_list.txt")
+        channel_list_path = os.path.join(self.script_directory, "channel_list.txt")
 
         with open(channel_list_path, "w", encoding='utf-8') as f:
             for channel, info in self.download_channel_list.items():
@@ -2944,9 +2936,7 @@ class RudeChatClient:
                 log_line += f'           <{sender if is_sent else self.nickname}> {line}\n'
 
         # Determine script directory
-        script_directory = os.path.dirname(os.path.abspath(__file__))
-
-        logs_directory = os.path.join(script_directory, 'Logs')
+        logs_directory = os.path.join(self.script_directory, 'Logs')
 
         try:
             if channel == self.nickname:
@@ -3081,9 +3071,8 @@ class RudeChatClient:
         self.gui.insert_text_widget(f"Sent NOTICE to {target}: {message}\n")
 
     async def connect_to_specific_server(self, server_name):
-        script_directory = os.path.dirname(os.path.abspath(__file__))
         config_file = f"conf.{server_name}.rude"
-        config_path = os.path.join(script_directory, config_file)
+        config_path = os.path.join(self.script_directory, config_file)
         check_server = self.gui.server_checker(server_name)
         data = f"Config file '{config_file}' not found."
 
@@ -3148,8 +3137,6 @@ class RudeChatClient:
             self.gui.update_users_label()
 
     def show_file_folder(self, primary_command):
-        script_directory = os.path.dirname(os.path.abspath(__file__))
-
         if primary_command == "logs":
             folder = "Logs"
         elif primary_command == "macros":
@@ -3159,7 +3146,7 @@ class RudeChatClient:
         elif primary_command == "swhois":
             folder = "whois"
 
-        folder_path = os.path.join(script_directory, folder)
+        folder_path = os.path.join(self.script_directory, folder)
 
         # Check if the fortune list directory exists, if not error out.
         if not os.path.exists(folder_path):
@@ -3680,8 +3667,7 @@ class RudeChatClient:
     async def load_ascii_art_macros(self):
         """Load ASCII art from files into a dictionary asynchronously."""
         self.gui.insert_text_widget("\nLoading ASCII art macros...\n")
-        script_directory = os.path.dirname(os.path.abspath(__file__))
-        ASCII_ART_DIRECTORY = os.path.join(script_directory, 'Art')
+        ASCII_ART_DIRECTORY = os.path.join(self.script_directory, 'Art')
 
         for file in os.listdir(ASCII_ART_DIRECTORY):
             if file.endswith(".txt"):
@@ -3726,20 +3712,16 @@ class RudeChatClient:
             self.gui.insert_text_widget(f"{user_to_unignore} is not in your ignore list.\n")
 
     async def save_ignore_list(self):
-        script_directory = os.path.dirname(os.path.abspath(__file__))
-        
         # Construct the full path for the ignore_list.txt
-        file_path = os.path.join(script_directory, 'ignore_list.txt')
+        file_path = os.path.join(self.script_directory, 'ignore_list.txt')
         
         async with aiofiles.open(file_path, mode="w", encoding='utf-8') as f:
             for user in self.ignore_list:
                 await f.write(f"{user}\n")
 
     def load_ignore_list(self):
-        script_directory = os.path.dirname(os.path.abspath(__file__))
-        
         # Construct the full path for the ignore_list.txt
-        file_path = os.path.join(script_directory, 'ignore_list.txt')
+        file_path = os.path.join(self.script_directory, 'ignore_list.txt')
         
         if os.path.exists(file_path):
             with open(file_path, "r", encoding='utf-8') as f:
@@ -3810,12 +3792,11 @@ class RudeChatClient:
     async def handle_cowsay_command(self, args):
         user_mode = self.get_user_mode(self.nickname, self.current_channel)
         mode_symbol = self.get_mode_symbol(user_mode) if user_mode else ''
-        script_directory = os.path.dirname(os.path.abspath(__file__))
 
         if len(args) > 1:
             file_name_arg = args[1]
             # Construct the potential file path using the absolute path
-            potential_path = os.path.join(script_directory, "Fortune Lists", f"{file_name_arg}.txt")
+            potential_path = os.path.join(self.script_directory, "Fortune Lists", f"{file_name_arg}.txt")
 
             # Check if the provided argument corresponds to a valid fortune file
             if os.path.exists(potential_path):
@@ -3885,8 +3866,7 @@ class RudeChatClient:
         return textwrap.fill(text, width)
 
     def get_fortune_file(self, file_name=None):
-        script_directory = os.path.dirname(os.path.abspath(__file__))
-        fortune_directory = os.path.join(script_directory, "Fortune Lists")
+        fortune_directory = os.path.join(self.script_directory, "Fortune Lists")
         
         if file_name:
             return os.path.join(fortune_directory, file_name + ".txt")
