@@ -326,8 +326,14 @@ class RudeChatClient:
                 await asyncio.sleep(0.1)
 
     async def request_who_for_all_channels(self):
+        await asyncio.sleep(4)
         while True:
             for channel in self.joined_channels:
+                if not self.away_notify:
+                    self.gui.highlight_away_users()
+                    self.cap_who_for_chan.append(channel)
+                    self.gui.highlight_who_channels()
+                    break
                 if self.account_notify:
                     await self.send_message(f"WHO {channel} %nuhsrcdfa")
                 else:
