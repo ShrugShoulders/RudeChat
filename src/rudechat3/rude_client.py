@@ -1009,7 +1009,8 @@ class RudeChatClient:
         while self.loop_running:
             try:
                 if not self.use_auto_away:
-                    await asyncio.sleep(120)
+                    await asyncio.sleep(250)
+                    self.save_away_users_to_file()
                     continue
 
                 await asyncio.sleep(120)
