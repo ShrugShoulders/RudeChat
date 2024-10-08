@@ -278,7 +278,11 @@ class RudePopOut:
                     self.irc_client.remove_away_status(), 
                     self.irc_client.loop
                 )
-                self.update_users_label()
+                self.update_users_label() #_away_user_pop_out_helper
+                asyncio.run_coroutine_threadsafe(
+                    self.irc_client._away_user_pop_out_helper(self.selected_channel), 
+                    self.irc_client.loop
+                )
 
         except Exception as e:
             print(f"Exception in send_text: {e}")
@@ -459,7 +463,7 @@ class RudePopOut:
             stripped_username = username.lstrip(''.join(self.irc_client.mode_values))
             
             # Check if the stripped username is in the away_users list
-            if stripped_username in self.irc_client.away_users:
+            if stripped_username in self.irc_client.away_users_dict:
                 # Change the foreground color of the user to red
                 self.user_listbox.itemconfig(index, {'fg': self.main_app.away_user_fg})
             else:

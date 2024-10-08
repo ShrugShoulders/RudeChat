@@ -3585,6 +3585,30 @@ class RudeChatClient:
         except Exception as e:
             logging.error(f"Error in _away_user_helper: {e}")
 
+    async def _away_user_pop_out_helper(self, userchan):
+        if userchan.startswith(tuple(self.chantypes)):
+            return
+        if userchan in self.gui.popped_out_channels:
+            window = self.gui.pop_out_windows.get(userchan)
+            if userchan in self.away_users_dict:
+                if self.away_users_dict.get(userchan) == "":
+                    await self.get_away_user_whois(userchan)
+                    await asyncio.sleep(0.3)
+
+                    away_message = self.away_users_dict.get(userchan, "")
+                    if away_message and userchan not in self.away_notified:
+                        window.insert_text(f"User Is AWAY: {away_message}\n")
+                        self.away_notified.add(userchan)
+
+                else:
+                    if userchan not in self.away_notified:
+                        away_message = self.away_users_dict[userchan]
+                        if away_message:
+                            window.insert_text(f"User Is AWAY: {away_message}\n")
+                            self.away_notified.add(userchan)
+        else:
+            return
+
     def user_input_channel_message(self, chunk, timestamp, mode_symbol):
         if self.server not in self.channel_messages:
             self.channel_messages[self.server] = {}
