@@ -717,65 +717,71 @@ class RudeChatClient:
 
         # Check if the server has acknowledged a capability request
         elif "ACK" in tokens.params:
-            acknowledged_capabilities = tokens.params[2].split()
+            try:
+                acknowledged_capabilities = tokens.params[2].split()
 
-            # Handle away-notify ACK
-            if "away-notify" in acknowledged_capabilities:
-                data = f"{self.server_name}: Server acknowledged away-notify capability.\n"
-                self.gui.insert_text_widget(f"\n{self.server_name}: Server acknowledged away-notify capability.\n")
-                self.add_server_message(data)
-                self.away_notify = True
+                # Handle away-notify ACK
+                if "away-notify" in acknowledged_capabilities:
+                    data = f"{self.server_name}: Server acknowledged away-notify capability.\n"
+                    self.gui.insert_text_widget(f"\n{self.server_name}: Server acknowledged away-notify capability.\n")
+                    self.add_server_message(data)
+                    self.away_notify = True
 
-            # Handle account-notify ACK
-            if "account-notify" in acknowledged_capabilities:
-                data = f"{self.server_name}: Server acknowledged account-notify capability.\n"
-                self.gui.insert_text_widget(f"\n{self.server_name}: Server acknowledged account-notify capability.\n")
-                self.add_server_message(data)
-                self.account_notify = True
+                # Handle account-notify ACK
+                if "account-notify" in acknowledged_capabilities:
+                    data = f"{self.server_name}: Server acknowledged account-notify capability.\n"
+                    self.gui.insert_text_widget(f"\n{self.server_name}: Server acknowledged account-notify capability.\n")
+                    self.add_server_message(data)
+                    self.account_notify = True
 
-            if "extended-join" in acknowledged_capabilities:
-                data = f"{self.server_name}: Server acknowledged extended-join capability.\n"
-                self.gui.insert_text_widget(f"\n{self.server_name}: Server acknowledged extended-join capability.\n")
-                self.add_server_message(data)
-                self.extended_join = True
+                if "extended-join" in acknowledged_capabilities:
+                    data = f"{self.server_name}: Server acknowledged extended-join capability.\n"
+                    self.gui.insert_text_widget(f"\n{self.server_name}: Server acknowledged extended-join capability.\n")
+                    self.add_server_message(data)
+                    self.extended_join = True
 
-            # Handle SASL ACK
-            if "sasl" in acknowledged_capabilities and self.sasl_enabled:
-                data = f"{self.server_name}: Server acknowledged SASL capability.\n"
-                self.gui.insert_text_widget(f"\n{self.server_name}: Server acknowledged SASL capability.\n")
-                self.add_server_message(data)
-                await self.send_message("AUTHENTICATE PLAIN")
+                # Handle SASL ACK
+                if "sasl" in acknowledged_capabilities and self.sasl_enabled:
+                    data = f"{self.server_name}: Server acknowledged SASL capability.\n"
+                    self.gui.insert_text_widget(f"\n{self.server_name}: Server acknowledged SASL capability.\n")
+                    self.add_server_message(data)
+                    await self.send_message("AUTHENTICATE PLAIN")
 
-            if not self.sasl_enabled:
-                await self.send_message("CAP END")
+                if not self.sasl_enabled:
+                    await self.send_message("CAP END")
+            except Exception as e:
+                logging.error(f"Error in handle_cap ACK block: {e}")
 
         # Handle capability rejection (NAK) if needed...
         elif "NAK" in tokens.params:
-            rejected_capabilities = tokens.params[2].split()
+            try:
+                rejected_capabilities = tokens.params[2].split()
 
-            if "away-notify" in rejected_capabilities:
-                data = f"{self.server_name}: Server denied away-notify capability.\n"
-                self.gui.insert_text_widget(f"\n{self.server_name}: Server denied away-notify capability.\n")
-                self.add_server_message(data)
-                self.away_notify = False
+                if "away-notify" in rejected_capabilities:
+                    data = f"{self.server_name}: Server denied away-notify capability.\n"
+                    self.gui.insert_text_widget(f"\n{self.server_name}: Server denied away-notify capability.\n")
+                    self.add_server_message(data)
+                    self.away_notify = False
 
-            if "account-notify" in rejected_capabilities:
-                data = f"{self.server_name}: Server denied account-notify capability.\n"
-                self.gui.insert_text_widget(f"\n{self.server_name}: Server denied account-notify capability.\n")
-                self.add_server_message(data)
-                self.account_notify = False
+                if "account-notify" in rejected_capabilities:
+                    data = f"{self.server_name}: Server denied account-notify capability.\n"
+                    self.gui.insert_text_widget(f"\n{self.server_name}: Server denied account-notify capability.\n")
+                    self.add_server_message(data)
+                    self.account_notify = False
 
-            if "extended-join" in rejected_capabilities:
-                data = f"{self.server_name}: Server denied extended-join capability.\n"
-                self.gui.insert_text_widget(f"\n{self.server_name}: Server denied extended-join capability.\n")
-                self.add_server_message(data)
-                self.extended_join = False
+                if "extended-join" in rejected_capabilities:
+                    data = f"{self.server_name}: Server denied extended-join capability.\n"
+                    self.gui.insert_text_widget(f"\n{self.server_name}: Server denied extended-join capability.\n")
+                    self.add_server_message(data)
+                    self.extended_join = False
 
-            if "sasl" in rejected_capabilities:
-                data = f"{self.server_name}: Server denied SASL capability.\n"
-                self.gui.insert_text_widget(f"\n{self.server_name}: Server denied SASL capability.\n")
-                self.add_server_message(data)
-            await self.send_message("CAP END")
+                if "sasl" in rejected_capabilities:
+                    data = f"{self.server_name}: Server denied SASL capability.\n"
+                    self.gui.insert_text_widget(f"\n{self.server_name}: Server denied SASL capability.\n")
+                    self.add_server_message(data)
+                await self.send_message("CAP END")
+            except Exception as e:
+                logging.error(f"Error in handle_cap NAK block: {e}")
 
     async def handle_sasl_auth(self, tokens):
         if not self.sasl_enabled:
@@ -889,47 +895,50 @@ class RudeChatClient:
             self.gui.insert_text_widget(f"To \x02REATTACH\x0F simply issue a normal /join \x02{channel}\x0F\n")
 
     def update_gui_channel_list(self):
-        # Clear existing items
-        self.gui.channel_listbox.delete(0, tk.END)
+        try:
+            # Clear existing items
+            self.gui.channel_listbox.delete(0, tk.END)
 
-        # Sort channels by the number of prefix characters at the beginning
-        sorted_channels = sorted(
-            (chan for chan in self.joined_channels if chan not in self.gui.popped_out_channels),
-            key=lambda chan: len(chan) - len(chan.lstrip(''.join(self.chantypes)))
-        )
+            # Sort channels by the number of prefix characters at the beginning
+            sorted_channels = sorted(
+                (chan for chan in self.joined_channels if chan not in self.gui.popped_out_channels),
+                key=lambda chan: len(chan) - len(chan.lstrip(''.join(self.chantypes)))
+            )
 
-        # Insert sorted channels into the listbox
-        for chan in sorted_channels:
-            self.gui.channel_listbox.insert(tk.END, chan)
+            # Insert sorted channels into the listbox
+            for chan in sorted_channels:
+                self.gui.channel_listbox.insert(tk.END, chan)
 
-        # Update and restore the highlighted background color for all previously highlighted channels
-        updated_highlighted_channels = {}
-        for channel, highlighted_info in self.highlighted_channels.get(self.server_name, {}).items():
-            if highlighted_info is not None:
-                old_index = highlighted_info.get('index')
-                if old_index is not None:
-                    # Find the new index in the current listbox
-                    new_index = None
-                    for idx in range(self.gui.channel_listbox.size()):
-                        if self.gui.channel_listbox.get(idx) == channel:
-                            new_index = idx
-                            break
+            # Update and restore the highlighted background color for all previously highlighted channels
+            updated_highlighted_channels = {}
+            for channel, highlighted_info in self.highlighted_channels.get(self.server_name, {}).items():
+                if highlighted_info is not None:
+                    old_index = highlighted_info.get('index')
+                    if old_index is not None:
+                        # Find the new index in the current listbox
+                        new_index = None
+                        for idx in range(self.gui.channel_listbox.size()):
+                            if self.gui.channel_listbox.get(idx) == channel:
+                                new_index = idx
+                                break
 
-                    if new_index is not None:
-                        # Update the index in the highlighted info
-                        highlighted_info['index'] = new_index
+                        if new_index is not None:
+                            # Update the index in the highlighted info
+                            highlighted_info['index'] = new_index
 
-                        # Set the background color directly based on the dictionary entry
-                        bg_color = highlighted_info.get('bg', self.mention_note_color)
-                        self.gui.channel_listbox.itemconfig(new_index, {'bg': bg_color})
+                            # Set the background color directly based on the dictionary entry
+                            bg_color = highlighted_info.get('bg', self.mention_note_color)
+                            self.gui.channel_listbox.itemconfig(new_index, {'bg': bg_color})
 
-                        # Update the dictionary with the new index
-                        updated_highlighted_channels[channel] = highlighted_info
+                            # Update the dictionary with the new index
+                            updated_highlighted_channels[channel] = highlighted_info
 
-        # Update the highlighted_channels dictionary with the new indexes
-        self.highlighted_channels[self.server_name] = updated_highlighted_channels
-        self.gui.scroll_channel_list()
-        self.gui.highlight_who_channels()
+            # Update the highlighted_channels dictionary with the new indexes
+            self.highlighted_channels[self.server_name] = updated_highlighted_channels
+            self.gui.scroll_channel_list()
+            self.gui.highlight_who_channels()
+        except Exception as e:
+            logging.error(f"Error in update_gui_channel_list: {e}")
 
     def update_gui_user_list(self, channel):
         self.gui.user_listbox.delete(0, tk.END)
@@ -1132,83 +1141,89 @@ class RudeChatClient:
         self.add_server_message(data)
 
     def handle_notice_message(self, tokens):
-        sender = tokens.hostmask if tokens.hostmask else "Server"
-        target = tokens.params[0]
-        message = tokens.params[1]
-        data = f"NOTICE {sender} {target}: {message}\n"
-        sdata = f"\nNOTICE {sender} {target}: {message}\n"
-        ssender = str(sender).lower()
-        smessage = str(message).lower()
+        try:
+            sender = tokens.hostmask if tokens.hostmask else "Server"
+            target = tokens.params[0]
+            message = tokens.params[1]
+            data = f"NOTICE {sender} {target}: {message}\n"
+            sdata = f"\nNOTICE {sender} {target}: {message}\n"
+            ssender = str(sender).lower()
+            smessage = str(message).lower()
 
-        if ssender.startswith("nickserv") and "invalid password" in smessage:
-            self.gui.insert_text_widget(f"{sdata}")
-            self.add_server_message(data)
-            if self.log_on:
-                logging.info("Invalid password detected in NOTICE message.")
-            return True  # Return True to indicate an "Invalid password" was detected
-        
-        if self.znc_connection and target not in self.gui.popped_out_channels:
-            self.gui.insert_text_widget(f"{sdata}")
-            self.add_server_message(data)
-        elif self.znc_connection and target in self.gui.popped_out_channels:
-            self.pipe_mode_to_pop_out(message, target)
-            self.add_server_message(data)
-        else:
-            self.gui.insert_text_widget(f"{sdata}")
-            self.add_server_message(data)
-        
-        return False  # Return False to indicate no special case was detected
+            if ssender.startswith("nickserv") and "invalid password" in smessage:
+                self.gui.insert_text_widget(f"{sdata}")
+                self.add_server_message(data)
+                if self.log_on:
+                    logging.info("Invalid password detected in NOTICE message.")
+                return True  # Return True to indicate an "Invalid password" was detected
+            
+            if self.znc_connection and target not in self.gui.popped_out_channels:
+                self.gui.insert_text_widget(f"{sdata}")
+                self.add_server_message(data)
+            elif self.znc_connection and target in self.gui.popped_out_channels:
+                self.pipe_mode_to_pop_out(message, target)
+                self.add_server_message(data)
+            else:
+                self.gui.insert_text_widget(f"{sdata}")
+                self.add_server_message(data)
+            
+            return False  # Return False to indicate no special case was detected
+        except Exception as e:
+            logging.error(f"Error in handle_notice_message: {e}")
 
     async def handle_ctcp(self, tokens):
-        timestamp = datetime.datetime.now().strftime('[%H:%M:%S] ')
-        sender = tokens.hostmask.nickname
-        target = tokens.params[0]
-        message = tokens.params[1]
-        smessage = message.strip() # Strip any whitespaces - swee
+        try:
+            timestamp = datetime.datetime.now().strftime('[%H:%M:%S] ')
+            sender = tokens.hostmask.nickname
+            target = tokens.params[0]
+            message = tokens.params[1]
+            smessage = message.strip() # Strip any whitespaces - swee
 
-        # Detect if this is a CTCP message
-        if self.send_ctcp_response:
-            if smessage.startswith('\x01') and smessage.endswith('\x01'):
-                ctcp_command = smessage[1:-1].split(' ', 1)[0]  # Extract the CTCP command
-                ctcp_content = smessage[1:-1].split(' ', 1)[1] if ' ' in smessage else None  # Extract the content if present
+            # Detect if this is a CTCP message
+            if self.send_ctcp_response:
+                if smessage.startswith('\x01') and smessage.endswith('\x01'):
+                    ctcp_command = smessage[1:-1].split(' ', 1)[0]  # Extract the CTCP command
+                    ctcp_content = smessage[1:-1].split(' ', 1)[1] if ' ' in smessage else None  # Extract the content if present
 
-                match ctcp_command:
-                    case "VERSION" | "version":
-                        if tokens.command == "PRIVMSG":
-                            await self.send_message(f'NOTICE {sender} :\x01VERSION RudeChat3.1.4\x01')
-                            self.add_server_message(f"CTCP: {sender} {target}: {ctcp_command}\n")
-                    case "MOO" | "moo":
-                        if tokens.command == "PRIVMSG":
-                            await self.send_message(f'NOTICE {sender} :\x01MoooOOO! Hi Cow!! RudeChat3.1.4\x01')
-                            self.add_server_message(f"CTCP: {sender} {target}: {ctcp_command}\n")
-                    case "PING" | "ping":
-                        if tokens.command == "PRIVMSG":
-                            timestamp = str(int(time.time()))  # Get the current Unix timestamp
-                            await self.send_message(f'NOTICE {sender} :\x01PING {ctcp_content} {timestamp}\x01')
-                            self.add_server_message(f"CTCP: {sender} {target}: {ctcp_command}\n")
-                    case "FINGER" | "finger":
-                        if tokens.command == "PRIVMSG":
-                            await self.send_message(f'NOTICE {sender} :\x01FINGER: {self.nickname} {self.server_name} RudeChat3.1.4\x01')
-                            self.add_server_message(f"CTCP: {sender} {target}: {ctcp_command}\n")
-                    case "CLIENTINFO" | "clientinfo":
-                        if tokens.command == "PRIVMSG":
-                            await self.send_message(f'NOTICE {sender} :\x01CLIENTINFO VERSION TIME PING FINGER\x01')
-                            self.add_server_message(f"CTCP: {sender} {target}: {ctcp_command}\n")
-                    case "TIME" | "time":
-                        if tokens.command == "PRIVMSG":
-                            tz = pytz.timezone(str(self.time_zone))
-                            local_time = datetime.datetime.now(tz).strftime("%Y-%m-%d %H:%M:%S")
-                            time_reply = "\x01TIME " + local_time + "\x01"
-                            await self.send_message(f'NOTICE {sender} :{time_reply}')
-                            self.add_server_message(f"CTCP: {sender} {target}: {ctcp_command}\n")
-                    case "ACTION":
-                        await self.handle_action_ctcp(timestamp, sender, target, ctcp_content)
-                    case _:
-                        if self.log_on:
-                            logging.info(f"Unhandled CTCP command: {ctcp_command}")
-                        pass
-        else:
-            return
+                    match ctcp_command:
+                        case "VERSION" | "version":
+                            if tokens.command == "PRIVMSG":
+                                await self.send_message(f'NOTICE {sender} :\x01VERSION RudeChat3.1.4\x01')
+                                self.add_server_message(f"CTCP: {sender} {target}: {ctcp_command}\n")
+                        case "MOO" | "moo":
+                            if tokens.command == "PRIVMSG":
+                                await self.send_message(f'NOTICE {sender} :\x01MoooOOO! Hi Cow!! RudeChat3.1.4\x01')
+                                self.add_server_message(f"CTCP: {sender} {target}: {ctcp_command}\n")
+                        case "PING" | "ping":
+                            if tokens.command == "PRIVMSG":
+                                timestamp = str(int(time.time()))  # Get the current Unix timestamp
+                                await self.send_message(f'NOTICE {sender} :\x01PING {ctcp_content} {timestamp}\x01')
+                                self.add_server_message(f"CTCP: {sender} {target}: {ctcp_command}\n")
+                        case "FINGER" | "finger":
+                            if tokens.command == "PRIVMSG":
+                                await self.send_message(f'NOTICE {sender} :\x01FINGER: {self.nickname} {self.server_name} RudeChat3.1.4\x01')
+                                self.add_server_message(f"CTCP: {sender} {target}: {ctcp_command}\n")
+                        case "CLIENTINFO" | "clientinfo":
+                            if tokens.command == "PRIVMSG":
+                                await self.send_message(f'NOTICE {sender} :\x01CLIENTINFO VERSION TIME PING FINGER\x01')
+                                self.add_server_message(f"CTCP: {sender} {target}: {ctcp_command}\n")
+                        case "TIME" | "time":
+                            if tokens.command == "PRIVMSG":
+                                tz = pytz.timezone(str(self.time_zone))
+                                local_time = datetime.datetime.now(tz).strftime("%Y-%m-%d %H:%M:%S")
+                                time_reply = "\x01TIME " + local_time + "\x01"
+                                await self.send_message(f'NOTICE {sender} :{time_reply}')
+                                self.add_server_message(f"CTCP: {sender} {target}: {ctcp_command}\n")
+                        case "ACTION":
+                            await self.handle_action_ctcp(timestamp, sender, target, ctcp_content)
+                        case _:
+                            if self.log_on:
+                                logging.info(f"Unhandled CTCP command: {ctcp_command}")
+                            pass
+            else:
+                return
+        except Exception as e:
+            logging.error(f"Error in handle_ctcp: {e}")
 
     def add_server_message(self, data):
         if not self.gui.show_server_window:
@@ -1495,13 +1510,16 @@ class RudeChatClient:
             logging.error(f"Exception in prepare_direct_message: {e}")
 
     def pip_to_pop_out(self, timestamp, sender, message, target, mode_symbol):
-        window = self.gui.pop_out_windows.get(target) or self.gui.pop_out_windows.get(sender)
-        if window:
-            formatted_message = f"{timestamp}<{mode_symbol}{sender}> {message}\n" if self.use_time_stamp else f"<{mode_symbol}{sender}> {message}\n"
-            window.insert_text(formatted_message)
-            window.highlight_nickname()
-            window.check_focus_and_notify(message)
-            window.update_users_label()
+        try:
+            window = self.gui.pop_out_windows.get(target) or self.gui.pop_out_windows.get(sender)
+            if window:
+                formatted_message = f"{timestamp}<{mode_symbol}{sender}> {message}\n" if self.use_time_stamp else f"<{mode_symbol}{sender}> {message}\n"
+                window.insert_text(formatted_message)
+                window.highlight_nickname()
+                window.check_focus_and_notify(message)
+                window.update_users_label()
+        except Exception as e:
+            logging.error(f"Error in pip_to_pop_out: {e}")
 
     async def handle_channel_message(self, sender, target, message, timestamp, mode_symbol, znc_privmsg):
         if znc_privmsg:
@@ -1583,25 +1601,28 @@ class RudeChatClient:
             return None
 
     def display_message(self, timestamp, sender, message, target, mode_symbol, is_direct=False):
-        if target == self.current_channel and self.gui.irc_client == self:
-            if self.use_time_stamp:
-                self.gui.insert_text_widget(f"{timestamp}<{mode_symbol}{sender}> {message}\n")
-            else:
-                self.gui.insert_text_widget(f"<{mode_symbol}{sender}> {message}\n")
-            self.gui.highlight_nickname()
-        elif sender == self.current_channel and self.gui.irc_client == self:
-            if is_direct:
+        try:
+            if target == self.current_channel and self.gui.irc_client == self:
                 if self.use_time_stamp:
-                    self.gui.insert_text_widget(f"{timestamp}<{sender}> {message}\n")
+                    self.gui.insert_text_widget(f"{timestamp}<{mode_symbol}{sender}> {message}\n")
                 else:
-                    self.gui.insert_text_widget(f"<{sender}> {message}\n")
+                    self.gui.insert_text_widget(f"<{mode_symbol}{sender}> {message}\n")
                 self.gui.highlight_nickname()
-        else:
-            user_mention = self.is_it_a_mention(message)
-            if not user_mention:
-                self.highlight_channel_if_not_current(target, sender, user_mention)
+            elif sender == self.current_channel and self.gui.irc_client == self:
+                if is_direct:
+                    if self.use_time_stamp:
+                        self.gui.insert_text_widget(f"{timestamp}<{sender}> {message}\n")
+                    else:
+                        self.gui.insert_text_widget(f"<{sender}> {message}\n")
+                    self.gui.highlight_nickname()
             else:
-                self.highlight_channel_if_not_current(target, sender, user_mention)
+                user_mention = self.is_it_a_mention(message)
+                if not user_mention:
+                    self.highlight_channel_if_not_current(target, sender, user_mention)
+                else:
+                    self.highlight_channel_if_not_current(target, sender, user_mention)
+        except Exception as e:
+            logging.error(f"Error in display_message: {e}")
 
     def highlight_channel_if_not_current(self, target, sender, user_mention):
         highlighted_channel = target
@@ -1650,142 +1671,102 @@ class RudeChatClient:
             logging.error(f"Exception in save_highlight: {e}")
 
     def handle_join(self, tokens):
-        user_info = tokens.hostmask.nickname
-        user_mask = tokens.hostmask
-        channel = tokens.params[0]
-        if self.extended_join:
-            account = tokens.params[1]
-            self.cache_accountname(user_info, account)
+        try:
+            user_info = tokens.hostmask.nickname
+            user_mask = tokens.hostmask
+            channel = tokens.params[0]
+            if self.extended_join:
+                account = tokens.params[1]
+                self.cache_accountname(user_info, account)
 
-        friends_here = self.friends.friend_online(channel, user_info)
-        if friends_here is not None:
-            self.gui.insert_text_widget(f"{friends_here}\n")
+            friends_here = self.friends.friend_online(channel, user_info)
+            if friends_here is not None:
+                self.gui.insert_text_widget(f"{friends_here}\n")
 
-        if self.show_full_hostmask == True:
-            join_message = f"\x0312(→)\x0F {user_mask} has joined channel {channel}\n"
-        elif self.show_full_hostmask == False:
-            join_message = f"\x0312(→)\x0F {user_info} has joined channel {channel}\n"
+            if self.show_full_hostmask == True:
+                join_message = f"\x0312(→)\x0F {user_mask} has joined channel {channel}\n"
+            elif self.show_full_hostmask == False:
+                join_message = f"\x0312(→)\x0F {user_info} has joined channel {channel}\n"
 
-        # Update the message history for the channel
-        if self.server not in self.channel_messages:
-            self.channel_messages[self.server] = {}
-        if channel not in self.channel_messages[self.server]:
-            self.channel_messages[self.server][channel] = []
+            # Update the message history for the channel
+            if self.server not in self.channel_messages:
+                self.channel_messages[self.server] = {}
+            if channel not in self.channel_messages[self.server]:
+                self.channel_messages[self.server][channel] = []
 
-        if self.show_join_part_quit_nick:
-            self.channel_messages[self.server][channel].append(join_message)
-
-        # Display the message in the text_widget only if the channel matches the current channel
-        if channel == self.current_channel and self.gui.irc_client == self and channel not in self.gui.popped_out_channels:
             if self.show_join_part_quit_nick:
-                self.gui.insert_text_widget(join_message)
-                self.gui.highlight_nickname()
-        if channel in self.gui.popped_out_channels:
-            if self.show_join_part_quit_nick:
-                self.pipe_mode_to_pop_out(join_message, channel)
+                self.channel_messages[self.server][channel].append(join_message)
 
-        # If the user joining is the client's user, return
-        if user_info == self.nickname:
-            if self.znc_connection:
-                self.join_znc_channel(tokens)
-            return
+            # Display the message in the text_widget only if the channel matches the current channel
+            if channel == self.current_channel and self.gui.irc_client == self and channel not in self.gui.popped_out_channels:
+                if self.show_join_part_quit_nick:
+                    self.gui.insert_text_widget(join_message)
+                    self.gui.highlight_nickname()
+            if channel in self.gui.popped_out_channels:
+                if self.show_join_part_quit_nick:
+                    self.pipe_mode_to_pop_out(join_message, channel)
 
-        # Check if the user is not already in the channel_users list for the channel
-        if user_info not in self.channel_users.get(channel, []):
-            # Add the user to the channel_users list
-            self.channel_users.setdefault(channel, []).append(user_info)
+            # If the user joining is the client's user, return
+            if user_info == self.nickname:
+                if self.znc_connection:
+                    self.join_znc_channel(tokens)
+                return
 
-        # Sort the user list for the channel
-        sorted_users = self.sort_users(self.channel_users[channel], channel)
+            # Check if the user is not already in the channel_users list for the channel
+            if user_info not in self.channel_users.get(channel, []):
+                # Add the user to the channel_users list
+                self.channel_users.setdefault(channel, []).append(user_info)
 
-        # Update the user listbox for the channel with sorted users
-        self.update_user_listbox(channel)
+            # Sort the user list for the channel
+            sorted_users = self.sort_users(self.channel_users[channel], channel)
 
-    def handle_part(self, tokens):
-        modes_to_strip = ''.join(self.mode_values)
-        user_info = tokens.hostmask.nickname
-        user_mask = tokens.hostmask
-        channel = tokens.params[0]
-        reason = tokens.params[1] if len(tokens.params) > 1 else None
-        
-        if reason:
-            part_message = f"\x0304(←)\x0F {user_mask} has parted from channel {channel}: {reason}\n"
-        else:
-            part_message = f"\x0304(←)\x0F {user_mask} has parted from channel {channel}\n"
-        
-        if not self.show_full_hostmask:
-            part_message = part_message.replace(user_mask, user_info)
-
-        # Update the message history for the channel
-        if self.server not in self.channel_messages:
-            self.channel_messages[self.server] = {}
-        if channel not in self.channel_messages[self.server]:
-            self.channel_messages[self.server][channel] = []
-
-        if self.show_join_part_quit_nick:
-            self.channel_messages[self.server][channel].append(part_message)
-
-        # Display the message in the text_widget only if the channel matches the current channel
-        if channel == self.current_channel and self.gui.irc_client == self and channel not in self.gui.popped_out_channels:
-            if self.show_join_part_quit_nick:
-                self.gui.insert_text_widget(part_message)
-                self.gui.highlight_nickname()
-        if channel in self.gui.popped_out_channels:
-            if self.show_join_part_quit_nick:
-                self.pipe_mode_to_pop_out(part_message, channel)
-
-        # Check if the user is in the channel_users list for the channel
-        user_found = False
-        for user_with_symbol in self.channel_users.get(channel, []):
-            # Check if the stripped user matches user_info
-            if user_with_symbol.lstrip(modes_to_strip) == user_info:
-                user_found = True
-                self.channel_users[channel].remove(user_with_symbol)
-                break
-
-        if user_found:
-            # Update the user listbox for the channel & Modes
-            current_modes = self.user_modes.get(channel, {})
-            user_modes = current_modes.get(user_info, set())
-            current_modes.pop(user_info, None)
+            # Update the user listbox for the channel with sorted users
             self.update_user_listbox(channel)
 
-    def handle_quit(self, tokens):
-        modes_to_strip = ''.join(self.mode_values)
-        user_info = tokens.hostmask.nickname
-        user_mask = tokens.hostmask
-        reason = tokens.params[0] if tokens.params else "No reason"
-        if self.show_full_hostmask == True:
-            quit_message = f"\x0304(←)\x0F {user_mask} has quit: {reason}\n"
-        elif self.show_full_hostmask == False:
-            quit_message = f"\x0304(←)\x0F {user_info} has quit: {reason}\n"
+        except Exception as e:
+            logging.error(f"Error In handle_join: {e}")
 
-        # Remove the user from all channel_users lists
-        for channel, users in self.channel_users.items():
+    def handle_part(self, tokens):
+        try:
+            modes_to_strip = ''.join(self.mode_values)
+            user_info = tokens.hostmask.nickname
+            user_mask = tokens.hostmask
+            channel = tokens.params[0]
+            reason = tokens.params[1] if len(tokens.params) > 1 else None
+            
+            if reason:
+                part_message = f"\x0304(←)\x0F {user_mask} has parted from channel {channel}: {reason}\n"
+            else:
+                part_message = f"\x0304(←)\x0F {user_mask} has parted from channel {channel}\n"
+            
+            if not self.show_full_hostmask:
+                part_message = part_message.replace(user_mask, user_info)
+
+            # Update the message history for the channel
+            if self.server not in self.channel_messages:
+                self.channel_messages[self.server] = {}
+            if channel not in self.channel_messages[self.server]:
+                self.channel_messages[self.server][channel] = []
+
+            if self.show_join_part_quit_nick:
+                self.channel_messages[self.server][channel].append(part_message)
+
+            # Display the message in the text_widget only if the channel matches the current channel
+            if channel == self.current_channel and self.gui.irc_client == self and channel not in self.gui.popped_out_channels:
+                if self.show_join_part_quit_nick:
+                    self.gui.insert_text_widget(part_message)
+                    self.gui.highlight_nickname()
+            if channel in self.gui.popped_out_channels:
+                if self.show_join_part_quit_nick:
+                    self.pipe_mode_to_pop_out(part_message, channel)
+
+            # Check if the user is in the channel_users list for the channel
             user_found = False
-            for idx, user_with_symbol in enumerate(users):
+            for user_with_symbol in self.channel_users.get(channel, []):
                 # Check if the stripped user matches user_info
                 if user_with_symbol.lstrip(modes_to_strip) == user_info:
                     user_found = True
-                    del self.channel_users[channel][idx]
-                    
-                    # Update the message history for the channel
-                    if self.server not in self.channel_messages:
-                        self.channel_messages[self.server] = {}
-                    if channel not in self.channel_messages[self.server]:
-                        self.channel_messages[self.server][channel] = []
-                    if self.show_join_part_quit_nick:
-                        self.channel_messages[self.server][channel].append(quit_message)
-
-                    # Display the message in the text_widget only if the channel matches the current channel
-                    if channel == self.current_channel and self.gui.irc_client == self and channel not in self.gui.popped_out_channels:
-                        if self.show_join_part_quit_nick:
-                            self.gui.insert_text_widget(quit_message)
-                            self.gui.highlight_nickname()
-                    if channel in self.gui.popped_out_channels:
-                        if self.show_join_part_quit_nick:
-                            self.pipe_mode_to_pop_out(quit_message, channel)
-
+                    self.channel_users[channel].remove(user_with_symbol)
                     break
 
             if user_found:
@@ -1795,192 +1776,256 @@ class RudeChatClient:
                 current_modes.pop(user_info, None)
                 self.update_user_listbox(channel)
 
-    async def handle_nick(self, tokens):
-        modes_to_strip = ''.join(self.mode_values)
-        old_nick = tokens.hostmask.nickname
-        new_nick = tokens.params[0]
-        message = f"\x0307(⟳)\x0F {old_nick} has changed their nickname to {new_nick}\n"
+        except Exception as e:
+            logging.error(f"Error in handle_part: {e}")
 
-        # Update the user's nick in all channel_users lists they are part of
-        for channel, users in self.channel_users.items():
-            for idx, user_with_symbol in enumerate(users):
-                # Check if the stripped user matches old_nick
-                if user_with_symbol.lstrip(modes_to_strip) == old_nick:
-                    # Extract the mode symbols from the old nickname
-                    mode_symbols = ''.join([c for c in user_with_symbol if c in modes_to_strip])
-                    
-                    # Replace old_nick with new_nick, retaining the mode symbols
-                    users[idx] = mode_symbols + new_nick
-                    
-                    # Update the user listbox for the channel if necessary
+    def handle_quit(self, tokens):
+        try:
+            modes_to_strip = ''.join(self.mode_values)
+            user_info = tokens.hostmask.nickname
+            user_mask = tokens.hostmask
+            reason = tokens.params[0] if tokens.params else "No reason"
+            if self.show_full_hostmask == True:
+                quit_message = f"\x0304(←)\x0F {user_mask} has quit: {reason}\n"
+            elif self.show_full_hostmask == False:
+                quit_message = f"\x0304(←)\x0F {user_info} has quit: {reason}\n"
+
+            # Remove the user from all channel_users lists
+            for channel, users in self.channel_users.items():
+                user_found = False
+                for idx, user_with_symbol in enumerate(users):
+                    # Check if the stripped user matches user_info
+                    if user_with_symbol.lstrip(modes_to_strip) == user_info:
+                        user_found = True
+                        del self.channel_users[channel][idx]
+                        
+                        # Update the message history for the channel
+                        if self.server not in self.channel_messages:
+                            self.channel_messages[self.server] = {}
+                        if channel not in self.channel_messages[self.server]:
+                            self.channel_messages[self.server][channel] = []
+                        if self.show_join_part_quit_nick:
+                            self.channel_messages[self.server][channel].append(quit_message)
+
+                        # Display the message in the text_widget only if the channel matches the current channel
+                        if channel == self.current_channel and self.gui.irc_client == self and channel not in self.gui.popped_out_channels:
+                            if self.show_join_part_quit_nick:
+                                self.gui.insert_text_widget(quit_message)
+                                self.gui.highlight_nickname()
+                        if channel in self.gui.popped_out_channels:
+                            if self.show_join_part_quit_nick:
+                                self.pipe_mode_to_pop_out(quit_message, channel)
+
+                        break
+
+                if user_found:
+                    # Update the user listbox for the channel & Modes
+                    current_modes = self.user_modes.get(channel, {})
+                    user_modes = current_modes.get(user_info, set())
+                    current_modes.pop(user_info, None)
                     self.update_user_listbox(channel)
 
-                    # Display the nick change message in the channel
-                    if self.server not in self.channel_messages:
-                        self.channel_messages[self.server] = {}
-                    if channel not in self.channel_messages[self.server]:
-                        self.channel_messages[self.server][channel] = []
-                    if self.show_join_part_quit_nick:
-                        self.channel_messages[self.server][channel].append(f"\x0307(⟳)\x0F {old_nick} has changed their nickname to {new_nick}\n")
-                    
-                    # Insert message into the text widget only if this is the current channel
-                    if channel == self.current_channel and self.gui.irc_client == self and channel not in self.gui.popped_out_channels:
-                        if self.show_join_part_quit_nick:
-                            self.gui.insert_text_widget(message)
-                            self.gui.highlight_nickname()
-                    if channel in self.gui.popped_out_channels:
-                        if self.show_join_part_quit_nick:
-                            self.pipe_mode_to_pop_out(message, channel)
+        except Exception as e:
+            logging.error(f"Error in handle_quit: {e}")
 
-                    break
+    async def handle_nick(self, tokens):
+        try:
+            modes_to_strip = ''.join(self.mode_values)
+            old_nick = tokens.hostmask.nickname
+            new_nick = tokens.params[0]
+            message = f"\x0307(⟳)\x0F {old_nick} has changed their nickname to {new_nick}\n"
 
-        # If the old nickname is the same as the client's current nickname, update the client state
-        if old_nick == self.nickname:
-            await self.change_nickname(new_nick, is_from_token=True)
+            # Update the user's nick in all channel_users lists they are part of
+            for channel, users in self.channel_users.items():
+                for idx, user_with_symbol in enumerate(users):
+                    # Check if the stripped user matches old_nick
+                    if user_with_symbol.lstrip(modes_to_strip) == old_nick:
+                        # Extract the mode symbols from the old nickname
+                        mode_symbols = ''.join([c for c in user_with_symbol if c in modes_to_strip])
+                        
+                        # Replace old_nick with new_nick, retaining the mode symbols
+                        users[idx] = mode_symbols + new_nick
+                        
+                        # Update the user listbox for the channel if necessary
+                        self.update_user_listbox(channel)
+
+                        # Display the nick change message in the channel
+                        if self.server not in self.channel_messages:
+                            self.channel_messages[self.server] = {}
+                        if channel not in self.channel_messages[self.server]:
+                            self.channel_messages[self.server][channel] = []
+                        if self.show_join_part_quit_nick:
+                            self.channel_messages[self.server][channel].append(f"\x0307(⟳)\x0F {old_nick} has changed their nickname to {new_nick}\n")
+                        
+                        # Insert message into the text widget only if this is the current channel
+                        if channel == self.current_channel and self.gui.irc_client == self and channel not in self.gui.popped_out_channels:
+                            if self.show_join_part_quit_nick:
+                                self.gui.insert_text_widget(message)
+                                self.gui.highlight_nickname()
+                        if channel in self.gui.popped_out_channels:
+                            if self.show_join_part_quit_nick:
+                                self.pipe_mode_to_pop_out(message, channel)
+
+                        break
+
+            # If the old nickname is the same as the client's current nickname, update the client state
+            if old_nick == self.nickname:
+                await self.change_nickname(new_nick, is_from_token=True)
+
+        except Exception as e:
+            logging.error(f"Error in handle_nick: {e}")
 
     def sort_users(self, users, channel):
-        self.channel_users[channel] = []
-        sorted_users = []
-        current_modes = self.user_modes.get(channel, {})
-
-        raw_users = []
-        for user_with_possible_mode in users:
-            detected_modes = set()
-            for mode, symbol in self.mode_to_symbol.items():
-                if user_with_possible_mode.startswith(symbol):
-                    detected_modes.add(mode)
-                    user_with_possible_mode = user_with_possible_mode[len(symbol):]
-
-            # Update the user's modes in the current_modes dictionary
-            if detected_modes:
-                if user_with_possible_mode in current_modes:
-                    current_modes[user_with_possible_mode].update(detected_modes)
-                else:
-                    current_modes[user_with_possible_mode] = detected_modes
-
-            raw_users.append(user_with_possible_mode)
-
-        # Now, for each raw user, apply the highest-priority mode
-        mode_priority = list(self.mode_to_symbol.keys())
-        for user in raw_users:
-            modes = current_modes.get(user, set())
-
-            # Pick the highest priority mode for the user
-            chosen_mode = None
-            for priority_mode in mode_priority:
-                if priority_mode in modes:
-                    chosen_mode = priority_mode
-                    break
-
-            mode_symbol = self.mode_to_symbol.get(chosen_mode, "")
-            sorted_users.append(f"{mode_symbol}{user}")
-
-        # Sort the user list based on the mode symbols
-        sorted_users = sorted(
-            sorted_users,
-            key=lambda x: (mode_priority.index(next((m for m, s in self.mode_to_symbol.items() if s == x[0]), None)) if x and x[0] in self.mode_to_symbol.values() else len(mode_priority),x,))
-
-
-        # Update the user modes dictionary and the channel_users list
-        self.user_modes[channel] = current_modes
-        self.channel_users[channel] = sorted_users
-        return sorted_users
-
-    def handle_mode(self, tokens):
-        giver = tokens.source.split("!")[0]
-        channel = tokens.params[0]
-        mode_changes = tokens.params[1]
-        users = tokens.params[2:] if len(tokens.params) > 2 else []
-        
-        user_index = 0
-        adding = None
-
-        for mode_change in mode_changes:
-            if mode_change in '+-':
-                adding = mode_change == '+'
-                continue
-
-            mode = mode_change
-            user = users[user_index] if user_index < len(users) else None
-            stripped_mode = mode.lstrip('+-')
-
-            if adding is None:
-                continue
-
+        try:
+            self.channel_users[channel] = []
+            sorted_users = []
             current_modes = self.user_modes.get(channel, {})
 
-            if adding:
-                if stripped_mode in self.chanmodes.get('no_parameter', []) or stripped_mode in self.chanmodes.get('parameter', []):
-                    message = f"\x0304(!)\x0F +{mode} mode for {channel} by {giver}\n"
-                    self._log_channel_message(channel, message)
-                    continue
+            raw_users = []
+            for user_with_possible_mode in users:
+                detected_modes = set()
+                for mode, symbol in self.mode_to_symbol.items():
+                    if user_with_possible_mode.startswith(symbol):
+                        detected_modes.add(mode)
+                        user_with_possible_mode = user_with_possible_mode[len(symbol):]
 
-                if stripped_mode in self.chanmodes.get('list', []):
-                    message = f"\x0304(!)\x0F +{mode} mode for {user if user else 'unknown'} by {giver}\n"
-                    self._log_channel_message(channel, message)
-                    continue
-
-                if stripped_mode in self.chanmodes.get('setting', []):
-                    message = f"\x0304(!)\x0F +{mode} {user} set for {channel} by {giver}\n"
-                    self._log_channel_message(channel, message)
-                    continue
-
-                current_modes.setdefault(user, set()).add(mode)
-                message = f"\x0303(+)\x0F {user} has been given mode +{mode} by {giver}\n"
-                self._log_channel_message(channel, message)
-                user_index += 1
-
-            else:
-                if stripped_mode in self.chanmodes.get('no_parameter', []) or stripped_mode in self.chanmodes.get('parameter', []):
-                    message = f"\x0312(Δ)\x0F -{mode} mode for {channel} by {giver}\n"
-                    self._log_channel_message(channel, message)
-                    continue
-
-                if stripped_mode in self.chanmodes.get('list', []):
-                    message = f"\x0312(Δ)\x0F -{mode} mode for {user if user else 'unknown'} by {giver}\n"
-                    self._log_channel_message(channel, message)
-                    continue
-
-                if stripped_mode in self.chanmodes.get('setting', []):
-                    message = f"\x0312(Δ)\x0F -{mode} {user} set for {channel} by {giver}\n"
-                    self._log_channel_message(channel, message)
-                    continue
-
-                if mode in self.mode_to_symbol:
-                    symbol_to_remove = self.mode_to_symbol[mode]
-                    self.channel_users[channel] = [
-                        u.replace(symbol_to_remove, '') if u.endswith(user) else u
-                        for u in self.channel_users.get(channel, [])
-                    ]
-
-                user_modes = current_modes.get(user, set())
-                user_modes.discard(mode)
-
-                message = f"\x0304(-)\x0F {user} has had mode +{mode} removed by {giver}\n"
-                self._log_channel_message(channel, message)
-
-                if not user_modes:
-                    if user in current_modes:
-                        del current_modes[user]
+                # Update the user's modes in the current_modes dictionary
+                if detected_modes:
+                    if user_with_possible_mode in current_modes:
+                        current_modes[user_with_possible_mode].update(detected_modes)
                     else:
-                        user_modes = set()
-                        for mode, symbol in self.mode_to_symbol.items():
-                            if symbol in user:
-                                user_modes.add(mode)
-                        # Update the current_modes dictionary
-                        current_modes[user] = user_modes
-                else:
-                    current_modes[user] = user_modes
+                        current_modes[user_with_possible_mode] = detected_modes
 
-                self.user_modes[channel] = current_modes
-                user_index += 1
+                raw_users.append(user_with_possible_mode)
 
-            sorted_users = self.sort_users(self.channel_users.get(channel, []), channel)
+            # Now, for each raw user, apply the highest-priority mode
+            mode_priority = list(self.mode_to_symbol.keys())
+            for user in raw_users:
+                modes = current_modes.get(user, set())
+
+                # Pick the highest priority mode for the user
+                chosen_mode = None
+                for priority_mode in mode_priority:
+                    if priority_mode in modes:
+                        chosen_mode = priority_mode
+                        break
+
+                mode_symbol = self.mode_to_symbol.get(chosen_mode, "")
+                sorted_users.append(f"{mode_symbol}{user}")
+
+            # Sort the user list based on the mode symbols
+            sorted_users = sorted(
+                sorted_users,
+                key=lambda x: (mode_priority.index(next((m for m, s in self.mode_to_symbol.items() if s == x[0]), None)) if x and x[0] in self.mode_to_symbol.values() else len(mode_priority),x,))
+
+
+            # Update the user modes dictionary and the channel_users list
+            self.user_modes[channel] = current_modes
             self.channel_users[channel] = sorted_users
-            self.update_user_listbox(channel)
-            if channel == self.current_channel:
-                self.gui.update_nick_channel_label()
-        return 
+            return sorted_users
+
+        except Exception as e:
+            logging.error(f"Error in sort_users: {e}")
+
+    def handle_mode(self, tokens):
+        try:
+            giver = tokens.source.split("!")[0]
+            channel = tokens.params[0]
+            mode_changes = tokens.params[1]
+            users = tokens.params[2:] if len(tokens.params) > 2 else []
+            
+            user_index = 0
+            adding = None
+
+            for mode_change in mode_changes:
+                if mode_change in '+-':
+                    adding = mode_change == '+'
+                    continue
+
+                mode = mode_change
+                user = users[user_index] if user_index < len(users) else None
+                stripped_mode = mode.lstrip('+-')
+
+                if adding is None:
+                    continue
+
+                current_modes = self.user_modes.get(channel, {})
+
+                if adding:
+                    if stripped_mode in self.chanmodes.get('no_parameter', []) or stripped_mode in self.chanmodes.get('parameter', []):
+                        message = f"\x0304(!)\x0F +{mode} mode for {channel} by {giver}\n"
+                        self._log_channel_message(channel, message)
+                        continue
+
+                    if stripped_mode in self.chanmodes.get('list', []):
+                        message = f"\x0304(!)\x0F +{mode} mode for {user if user else 'unknown'} by {giver}\n"
+                        self._log_channel_message(channel, message)
+                        continue
+
+                    if stripped_mode in self.chanmodes.get('setting', []):
+                        message = f"\x0304(!)\x0F +{mode} {user} set for {channel} by {giver}\n"
+                        self._log_channel_message(channel, message)
+                        continue
+
+                    current_modes.setdefault(user, set()).add(mode)
+                    message = f"\x0303(+)\x0F {user} has been given mode +{mode} by {giver}\n"
+                    self._log_channel_message(channel, message)
+                    user_index += 1
+
+                else:
+                    if stripped_mode in self.chanmodes.get('no_parameter', []) or stripped_mode in self.chanmodes.get('parameter', []):
+                        message = f"\x0312(Δ)\x0F -{mode} mode for {channel} by {giver}\n"
+                        self._log_channel_message(channel, message)
+                        continue
+
+                    if stripped_mode in self.chanmodes.get('list', []):
+                        message = f"\x0312(Δ)\x0F -{mode} mode for {user if user else 'unknown'} by {giver}\n"
+                        self._log_channel_message(channel, message)
+                        continue
+
+                    if stripped_mode in self.chanmodes.get('setting', []):
+                        message = f"\x0312(Δ)\x0F -{mode} {user} set for {channel} by {giver}\n"
+                        self._log_channel_message(channel, message)
+                        continue
+
+                    if mode in self.mode_to_symbol:
+                        symbol_to_remove = self.mode_to_symbol[mode]
+                        self.channel_users[channel] = [
+                            u.replace(symbol_to_remove, '') if u.endswith(user) else u
+                            for u in self.channel_users.get(channel, [])
+                        ]
+
+                    user_modes = current_modes.get(user, set())
+                    user_modes.discard(mode)
+
+                    message = f"\x0304(-)\x0F {user} has had mode +{mode} removed by {giver}\n"
+                    self._log_channel_message(channel, message)
+
+                    if not user_modes:
+                        if user in current_modes:
+                            del current_modes[user]
+                        else:
+                            user_modes = set()
+                            for mode, symbol in self.mode_to_symbol.items():
+                                if symbol in user:
+                                    user_modes.add(mode)
+                            # Update the current_modes dictionary
+                            current_modes[user] = user_modes
+                    else:
+                        current_modes[user] = user_modes
+
+                    self.user_modes[channel] = current_modes
+                    user_index += 1
+
+                sorted_users = self.sort_users(self.channel_users.get(channel, []), channel)
+                self.channel_users[channel] = sorted_users
+                self.update_user_listbox(channel)
+                if channel == self.current_channel:
+                    self.gui.update_nick_channel_label()
+            return 
+
+        except Exception as e:
+            logging.error(f"Error in handle_mode: {e}")
 
     def pipe_mode_to_pop_out(self, message, target):
         if target in self.gui.pop_out_windows:
@@ -2008,20 +2053,23 @@ class RudeChatClient:
             self.channel_messages[self.server][channel].append(message)
 
     def update_user_listbox(self, channel):
-        current_users = self.channel_users.get(channel, [])
-        sorted_users = self.sort_users(current_users, channel)
-        
-        # Remove duplicates from the sorted_users list
-        unique_users = list(dict.fromkeys(sorted_users))
-        
-        # Only update the user listbox if the channel is the currently selected channel
-        if channel == self.current_channel and self.gui.irc_client == self and channel not in self.gui.popped_out_channels:
-            # Update the Tkinter Listbox to reflect the current users in the channel
-            self.gui.user_listbox.delete(0, tk.END)  # Clear existing items
-            for user in unique_users:
-                self.gui.user_listbox.insert(tk.END, user)
-            self.gui.highlight_away_users()
-            self.gui.update_users_label()
+        try:
+            current_users = self.channel_users.get(channel, [])
+            sorted_users = self.sort_users(current_users, channel)
+            
+            # Remove duplicates from the sorted_users list
+            unique_users = list(dict.fromkeys(sorted_users))
+            
+            # Only update the user listbox if the channel is the currently selected channel
+            if channel == self.current_channel and self.gui.irc_client == self and channel not in self.gui.popped_out_channels:
+                # Update the Tkinter Listbox to reflect the current users in the channel
+                self.gui.user_listbox.delete(0, tk.END)  # Clear existing items
+                for user in unique_users:
+                    self.gui.user_listbox.insert(tk.END, user)
+                self.gui.highlight_away_users()
+                self.gui.update_users_label()
+        except Exception as e:
+            logging.error(f"Error1 in update_user_listbox: {e}")
         
         if channel in self.gui.popped_out_channels:
             try:
@@ -2029,50 +2077,57 @@ class RudeChatClient:
                 window.update_gui_user_list(channel)
                 window.update_users_label()
             except Exception as e:
-                logging.error(f"Error Updating Popped Out User List Box or Label: {e}")
+                logging.error(f"Error2 Updating Popped Out User List Box or Label: {e}")
 
     def get_mode_lists(self):
-        self.mode_keys = list(self.mode_to_symbol.keys())
-        self.mode_values = list(self.mode_to_symbol.values())
-        return
+        try:
+            self.mode_keys = list(self.mode_to_symbol.keys())
+            self.mode_values = list(self.mode_to_symbol.values())
+            return
+        except Exception as e:
+            logging.error(f"Error in get_mode_lists: {e}")
                        
     def handle_isupport(self, tokens):
-        params = tokens.params[:-1]  # Exclude the trailing "are supported by this server" message
-        isupport_message = " ".join(params)
+        try:
+            params = tokens.params[:-1]  # Exclude the trailing "are supported by this server" message
+            isupport_message = " ".join(params)
 
-        data = f"ISUPPORT: {isupport_message}\n"
-        self.add_server_message(data)
+            data = f"ISUPPORT: {isupport_message}\n"
+            self.add_server_message(data)
 
-        # Parse ISUPPORT parameters
-        for param in params:
-            if param.startswith("PREFIX="):
-                _, mappings = param.split("=")
-                modes, symbols = mappings[1:].split(")")
-                self.mode_to_symbol = dict(zip(modes, symbols))
-            elif param.startswith("CHANTYPES="):
-                _, channel_types = param.split("=")
-                self.chantypes = list(channel_types)
-            elif param.startswith("NICKLEN="):
-                _, nick_len = param.split("=")
-                self.nicknamelen = int(nick_len)
-            elif param.startswith("CHANLIMIT="):
-                _, chan_limit = param.split("=")
-                self.chan_limit = int(chan_limit.split(":")[1])
-            elif param.startswith("CHANNELLEN="):
-                _, channel_len = param.split("=")
-                self.channellen = int(channel_len)
-            elif param.startswith("TOPICLEN="):
-                _, topic_len = param.split("=")
-                self.topiclen = int(topic_len)
-            elif param.startswith("CHANMODES="):
-                _, chan_modes = param.split("=")
-                mode_categories = chan_modes.split(',')
-                self.chanmodes = {
-                    'list': list(mode_categories[0]),
-                    'parameter': list(mode_categories[1]),
-                    'setting': list(mode_categories[2]),
-                    'no_parameter': list(mode_categories[3])
-                }
+            # Parse ISUPPORT parameters
+            for param in params:
+                if param.startswith("PREFIX="):
+                    _, mappings = param.split("=")
+                    modes, symbols = mappings[1:].split(")")
+                    self.mode_to_symbol = dict(zip(modes, symbols))
+                elif param.startswith("CHANTYPES="):
+                    _, channel_types = param.split("=")
+                    self.chantypes = list(channel_types)
+                elif param.startswith("NICKLEN="):
+                    _, nick_len = param.split("=")
+                    self.nicknamelen = int(nick_len)
+                elif param.startswith("CHANLIMIT="):
+                    _, chan_limit = param.split("=")
+                    self.chan_limit = int(chan_limit.split(":")[1])
+                elif param.startswith("CHANNELLEN="):
+                    _, channel_len = param.split("=")
+                    self.channellen = int(channel_len)
+                elif param.startswith("TOPICLEN="):
+                    _, topic_len = param.split("=")
+                    self.topiclen = int(topic_len)
+                elif param.startswith("CHANMODES="):
+                    _, chan_modes = param.split("=")
+                    mode_categories = chan_modes.split(',')
+                    self.chanmodes = {
+                        'list': list(mode_categories[0]),
+                        'parameter': list(mode_categories[1]),
+                        'setting': list(mode_categories[2]),
+                        'no_parameter': list(mode_categories[3])
+                    }
+        except Exception as e:
+            logging.error(f"Error in handle_isupport: {e}")
+
         self.get_mode_lists()
 
     def cache_accountname(self, nick, accountname):
@@ -2101,137 +2156,179 @@ class RudeChatClient:
 
         if tokens.command == "352":  # Standard WHO reply
             # Parse the WHO reply
-            channel = tokens.params[1]
-            username = tokens.params[2]
-            host = tokens.params[3]
-            server = tokens.params[4]
-            nickname = tokens.params[5]
-            status = tokens.params[6]
-            mode_state = status[1:] if len(status) > 1 else ""
-            who_message = tokens.params[7]
+            try:
+                channel = tokens.params[1]
+                username = tokens.params[2]
+                host = tokens.params[3]
+                server = tokens.params[4]
+                nickname = tokens.params[5]
+                status = tokens.params[6]
+                mode_state = status[1:] if len(status) > 1 else ""
+                who_message = tokens.params[7]
 
-            # Determine if the user is away
-            away_status = "Away" if status.startswith('G') else "Active"
-            self._who_reply_data_handler(away_status, nickname)
+                # Determine if the user is away
+                away_status = "Away" if status.startswith('G') else "Active"
+                self._who_reply_data_handler(away_status, nickname)
 
-            user_details = {
-                "nickname": nickname,
-                "username": username,
-                "host": host,
-                "server": server,
-                "channel": channel,
-                "status": away_status,
-                "mode": mode_state,
-                "who_message": who_message
-            }
-            self.who_details.append(user_details)
+                user_details = {
+                    "nickname": nickname,
+                    "username": username,
+                    "host": host,
+                    "server": server,
+                    "channel": channel,
+                    "status": away_status,
+                    "mode": mode_state,
+                    "who_message": who_message
+                }
+                self.who_details.append(user_details)
+
+            except Exception as e:
+                logging.error(f"Error in handle_who_reply command 352: {e}")
 
         elif tokens.command == "354": # WHOX %nuhsrcdfa
-            channel = tokens.params[1]
-            username = tokens.params[2]
-            host = tokens.params[3]
-            server = tokens.params[4]
-            nickname = tokens.params[5]
-            status = tokens.params[6]
-            mode_state = status[1:] if len(status) > 1 else ""
-            account = tokens.params[8]
-            who_message = tokens.params[9]
+            try:
+                channel = tokens.params[1]
+                username = tokens.params[2]
+                host = tokens.params[3]
+                server = tokens.params[4]
+                nickname = tokens.params[5]
+                status = tokens.params[6]
+                mode_state = status[1:] if len(status) > 1 else ""
+                account = tokens.params[8]
+                who_message = tokens.params[9]
 
-            # Determine if the user is away
-            away_status = "Away" if status.startswith('G') else "Active"
-            self._who_reply_data_handler(away_status, nickname)
+                # Determine if the user is away
+                away_status = "Away" if status.startswith('G') else "Active"
+                self._who_reply_data_handler(away_status, nickname)
 
-            user_details = {
-                "nickname": nickname,
-                "username": username,
-                "host": host,
-                "server": server,
-                "channel": channel,
-                "status": away_status,
-                "mode": mode_state,
-                "account": account,
-                "who_message": who_message
-            }
-            self.who_details.append(user_details)
-            self.cache_accountname(nickname, account)
+                user_details = {
+                    "nickname": nickname,
+                    "username": username,
+                    "host": host,
+                    "server": server,
+                    "channel": channel,
+                    "status": away_status,
+                    "mode": mode_state,
+                    "account": account,
+                    "who_message": who_message
+                }
+                self.who_details.append(user_details)
+                self.cache_accountname(nickname, account)
+
+            except Exception as e:
+                logging.error(f"Error in handle_who_reply command 354: {e}")
 
         elif tokens.command == "315":  # End of WHO list
-            messages = []
-            for details in self.who_details:
-                message = f"User {details['nickname']} ({details['username']}@{details['host']}) on {details['server']} in {details['channel']} - Status: {details['status']} ({details['mode']}) {details['who_message']}"
-                messages.append(message)
-            
-            final_message = "\n".join(messages)
-            if self.who_user_request:
-                self.gui.insert_text_widget(final_message)
-                self.who_user_request = False
+            try:
+                messages = []
+                for details in self.who_details:
+                    message = f"User {details['nickname']} ({details['username']}@{details['host']}) on {details['server']} in {details['channel']} - Status: {details['status']} ({details['mode']}) {details['who_message']}"
+                    messages.append(message)
+                
+                final_message = "\n".join(messages)
+                if self.who_user_request:
+                    self.gui.insert_text_widget(final_message)
+                    self.who_user_request = False
 
-            # Reset the who_details for future use
-            self.who_details = []
+                # Reset the who_details for future use
+                self.who_details = []
+
+            except Exception as e:
+                logging.error(f"Error in handle_who_reply command 315: {e}")
 
     async def handle_whois_replies(self, command, tokens):
             nickname = tokens.params[1] 
 
             if command == "311":
-                username = tokens.params[2]
-                hostname = tokens.params[3]
-                realname = tokens.params[5]
-                self.whois_data[nickname] = {"Username": username, "Hostname": hostname, "Realname": realname}
+                try:
+                    username = tokens.params[2]
+                    hostname = tokens.params[3]
+                    realname = tokens.params[5]
+                    self.whois_data[nickname] = {"Username": username, "Hostname": hostname, "Realname": realname}
+                except Exception as e:
+                    logging.error(f"Error in handle_whois_replies command 311: {e}")
 
             elif command == "312":
-                server_info = tokens.params[2]
-                if self.whois_data.get(nickname):
-                    self.whois_data[nickname]["Server"] = server_info
+                try:
+                    server_info = tokens.params[2]
+                    if self.whois_data.get(nickname):
+                        self.whois_data[nickname]["Server"] = server_info
+                except Exception as e:
+                    logging.error(f"Error in handle_whois_replies command 312: {e}")
 
             elif command == "313":
-                operator_info = tokens.params[2]
-                if self.whois_data.get(nickname):
-                    self.whois_data[nickname]["Operator"] = operator_info
+                try:
+                    operator_info = tokens.params[2]
+                    if self.whois_data.get(nickname):
+                        self.whois_data[nickname]["Operator"] = operator_info
+                except Exception as e:
+                    logging.error(f"Error in handle_whois_replies command 313: {e}")
 
             elif command == "317":
-                idle_time_seconds = int(tokens.params[2])
-                idle_time = str(datetime.timedelta(seconds=idle_time_seconds))
-                if self.whois_data.get(nickname):
-                    self.whois_data[nickname]["Idle Time"] = idle_time
+                try:
+                    idle_time_seconds = int(tokens.params[2])
+                    idle_time = str(datetime.timedelta(seconds=idle_time_seconds))
+                    if self.whois_data.get(nickname):
+                        self.whois_data[nickname]["Idle Time"] = idle_time
+                except Exception as e:
+                    logging.error(f"Error in handle_whois_replies command 317: {e}")
 
             elif command == "319":
-                channels = tokens.params[2]
-                self.whois_data[nickname]["Channels"] = channels
+                try:
+                    channels = tokens.params[2]
+                    self.whois_data[nickname]["Channels"] = channels
+                except Exception as e:
+                    logging.error(f"Error in handle_whois_replies command 319: {e}")
 
             elif command == "301":
-                away_message = tokens.params[2]
-                if nickname not in self.whois_data:
-                    self.whois_data[nickname] = {}  
-                self.whois_data[nickname]["Away"] = away_message
-                if nickname in self.away_users_dict:
-                    self.away_users_dict[nickname] = away_message
+                try:
+                    away_message = tokens.params[2]
+                    if nickname not in self.whois_data:
+                        self.whois_data[nickname] = {}  
+                    self.whois_data[nickname]["Away"] = away_message
+                    if nickname in self.away_users_dict:
+                        self.away_users_dict[nickname] = away_message
+                except Exception as e:
+                    logging.error(f"Error in handle_whois_replies command 301: {e}")
 
             elif command == "671":
-                secure_message = tokens.params[2]
-                self.whois_data[nickname]["Secure Connection"] = secure_message
+                try:
+                    secure_message = tokens.params[2]
+                    self.whois_data[nickname]["Secure Connection"] = secure_message
+                except Exception as e:
+                    logging.error(f"Error in handle_whois_replies command 671: {e}")
 
             elif command == "330":
-                logged_in_as = tokens.params[2]
-                if nickname not in self.whois_data:
-                    self.whois_data[nickname] = {}
-                self.whois_data[nickname]["Logged In As"] = logged_in_as
+                try:
+                    logged_in_as = tokens.params[2]
+                    if nickname not in self.whois_data:
+                        self.whois_data[nickname] = {}
+                    self.whois_data[nickname]["Logged In As"] = logged_in_as
+                except Exception as e:
+                    logging.error(f"Error in handle_whois_replies command 330: {e}")
 
             elif command == "338":
-                ip_address = tokens.params[2]
-                self.whois_data[nickname]["Actual IP"] = ip_address
+                try:
+                    ip_address = tokens.params[2]
+                    self.whois_data[nickname]["Actual IP"] = ip_address
+                except Exception as e:
+                    logging.error(f"Error in handle_whois_replies command 338: {e}")
 
             elif command == "318":
-                if self.whois_data.get(nickname):
-                    whois_response = f"WHOIS for {nickname}:\n"
-                    for key, value in self.whois_data[nickname].items():
-                        whois_response += f"{key}: {value}\n"
+                try:
+                    if self.whois_data.get(nickname):
+                        whois_response = f"WHOIS for {nickname}:\n"
+                        for key, value in self.whois_data[nickname].items():
+                            whois_response += f"{key}: {value}\n"
 
-                    # Generate and append the /ignore suggestion
-                    ignore_suggestion = f"*!{self.whois_data[nickname]['Username']}@{self.whois_data[nickname]['Hostname']}"
-                    whois_response += f"\nSuggested /ignore mask: {ignore_suggestion}\n"
+                        # Generate and append the /ignore suggestion
+                        ignore_suggestion = f"*!{self.whois_data[nickname]['Username']}@{self.whois_data[nickname]['Hostname']}"
+                        whois_response += f"\nSuggested /ignore mask: {ignore_suggestion}\n"
 
-                    self.whois_display(whois_response)
-                    await self.save_whois_to_file(nickname)
+                        self.whois_display(whois_response)
+                        await self.save_whois_to_file(nickname)
+                except Exception as e:
+                    logging.error(f"Error in handle_whois_replies command 318: {e}")
 
     def whois_display(self, whois_response):
         try:
@@ -2286,42 +2383,45 @@ class RudeChatClient:
         """
         Handle the KICK event from the server.
         """
-        modes_to_strip = ''.join(self.mode_values)
-        channel = tokens.params[0]
-        kicked_nickname = tokens.params[1]
-        reason = tokens.params[2] if len(tokens.params) > 2 else 'No reason provided'
+        try:
+            modes_to_strip = ''.join(self.mode_values)
+            channel = tokens.params[0]
+            kicked_nickname = tokens.params[1]
+            reason = tokens.params[2] if len(tokens.params) > 2 else 'No reason provided'
 
-        # Update the message history for the channel
-        if self.server not in self.channel_messages:
-            self.channel_messages[self.server] = {}
-        if channel not in self.channel_messages[self.server]:
-            self.channel_messages[self.server][channel] = []
+            # Update the message history for the channel
+            if self.server not in self.channel_messages:
+                self.channel_messages[self.server] = {}
+            if channel not in self.channel_messages[self.server]:
+                self.channel_messages[self.server][channel] = []
 
-        # Display the kick message in the chat window only if the channel is the current channel
-        kick_message_content = f"\x0304(←)\x0F {kicked_nickname} has been kicked from {channel} by {tokens.hostmask.nickname} ({reason})\n"
-        self.channel_messages[self.server][channel].append(kick_message_content)
+            # Display the kick message in the chat window only if the channel is the current channel
+            kick_message_content = f"\x0304(←)\x0F {kicked_nickname} has been kicked from {channel} by {tokens.hostmask.nickname} ({reason})\n"
+            self.channel_messages[self.server][channel].append(kick_message_content)
 
-        if channel == self.current_channel and self.gui.irc_client == self and channel not in self.gui.popped_out_channels:
-            self.gui.insert_text_widget(kick_message_content)
-            self.gui.highlight_nickname()
-        if channel in self.gui.popped_out_channels:
-            self.pipe_mode_to_pop_out(kick_message_content, channel)
+            if channel == self.current_channel and self.gui.irc_client == self and channel not in self.gui.popped_out_channels:
+                self.gui.insert_text_widget(kick_message_content)
+                self.gui.highlight_nickname()
+            if channel in self.gui.popped_out_channels:
+                self.pipe_mode_to_pop_out(kick_message_content, channel)
 
-        # Remove the user from the channel_users list for the channel
-        user_found = False
-        for user_with_symbol in self.channel_users.get(channel, []):
-            # Check if the stripped user matches kicked_nickname
-            if user_with_symbol.lstrip(modes_to_strip) == kicked_nickname:
-                user_found = True
-                self.channel_users[channel].remove(user_with_symbol)
-                break
+            # Remove the user from the channel_users list for the channel
+            user_found = False
+            for user_with_symbol in self.channel_users.get(channel, []):
+                # Check if the stripped user matches kicked_nickname
+                if user_with_symbol.lstrip(modes_to_strip) == kicked_nickname:
+                    user_found = True
+                    self.channel_users[channel].remove(user_with_symbol)
+                    break
 
-        if user_found:
-            # Update the user listbox for the channel
-            current_modes = self.user_modes.get(channel, {})
-            user_modes = current_modes.get(kicked_nickname, set())
-            current_modes.pop(kicked_nickname, None)
-            self.update_user_listbox(channel)
+            if user_found:
+                # Update the user listbox for the channel
+                current_modes = self.user_modes.get(channel, {})
+                user_modes = current_modes.get(kicked_nickname, set())
+                current_modes.pop(kicked_nickname, None)
+                self.update_user_listbox(channel)
+        except Exception as e:
+            logging.error(f"Error1 in handle_kick_event: {e}")
 
         if kicked_nickname == self.nickname:
             try:
@@ -2330,7 +2430,7 @@ class RudeChatClient:
                 else:
                     await self.remove_kicked_channel(channel)
             except Exception as e:
-                logging.error(f"Exception upon attempting to remove kicked channel or auto_rejoin: {e}")
+                logging.error(f"Error2 in handle_kick_event upon attempting to remove kicked channel or auto_rejoin: {e}")
 
     async def remove_kicked_channel(self, channel):
         if channel in self.joined_channels:
@@ -2372,27 +2472,36 @@ class RudeChatClient:
         command = tokens.command
 
         if command == "353":
-            current_channel = tokens.params[2]
-            users = tokens.params[3].split(" ")
-            # If this channel isn't in channel_users, initialize it with an empty list
-            if current_channel not in self.channel_users:
-                self.channel_users[current_channel] = []
+            try:
+                current_channel = tokens.params[2]
+                users = tokens.params[3].split(" ")
+                # If this channel isn't in channel_users, initialize it with an empty list
+                if current_channel not in self.channel_users:
+                    self.channel_users[current_channel] = []
 
-            # Append the users to the channel's list only if they are not already in it
-            for user in users:
-                if user not in self.channel_users[current_channel]:
-                    self.channel_users[current_channel].append(user)
+                # Append the users to the channel's list only if they are not already in it
+                for user in users:
+                    if user not in self.channel_users[current_channel]:
+                        self.channel_users[current_channel].append(user)
+
+            except Exception as e:
+                logging.error(f"Error in handle_names_list command 353: {e}")
+
         if command == "366":
-            current_channel = tokens.params[1]
-            if current_channel:
-                # Get the list of users for the current channel or an empty list if the key doesn't exist
-                channel_users = self.channel_users.get(current_channel, [])
-                # Sort the list of users
-                sorted_users = self.sort_users(channel_users, current_channel)
-                # Update the channel users with the sorted list
-                self.channel_users[current_channel] = sorted_users
-                # Update the user listbox
-                self.update_user_listbox(current_channel)
+            try:
+                current_channel = tokens.params[1]
+                if current_channel:
+                    # Get the list of users for the current channel or an empty list if the key doesn't exist
+                    channel_users = self.channel_users.get(current_channel, [])
+                    # Sort the list of users
+                    sorted_users = self.sort_users(channel_users, current_channel)
+                    # Update the channel users with the sorted list
+                    self.channel_users[current_channel] = sorted_users
+                    # Update the user listbox
+                    self.update_user_listbox(current_channel)
+
+            except Exception as e:
+                logging.error(f"Error in handle_names_list command 366: {e}")
 
     def handle_pong(self, tokens):
         pong_server = tokens.params[-1]  # Assumes the server name is the last parameter
@@ -2421,43 +2530,52 @@ class RudeChatClient:
         command = tokens.command
 
         if command == "332":
-            # RPL_TOPIC (numeric 332) - Topic for the channel is being sent
-            topic = tokens.params[2]
-            # Check if the server entry exists in the dictionary
-            if self.server not in self.gui.channel_topics:
-                self.gui.channel_topics[self.server] = {}
-            # Set the topic for the channel under the server entry
-            self.gui.channel_topics[self.server][channel_name] = topic
-            if channel_name == self.current_channel:
-                self.gui.current_topic.set(f"{topic}")
+            try:
+                # RPL_TOPIC (numeric 332) - Topic for the channel is being sent
+                topic = tokens.params[2]
+                # Check if the server entry exists in the dictionary
+                if self.server not in self.gui.channel_topics:
+                    self.gui.channel_topics[self.server] = {}
+                # Set the topic for the channel under the server entry
+                self.gui.channel_topics[self.server][channel_name] = topic
+                if channel_name == self.current_channel:
+                    self.gui.current_topic.set(f"{topic}")
+            except Exception as e:
+                logging.error(f"Error in handle_topic command 332: {e}")
 
         elif command == "333":
-            # RPL_TOPICWHOTIME (numeric 333) - Who set the topic and when
-            who_set = tokens.params[2]
+            try:
+                # RPL_TOPICWHOTIME (numeric 333) - Who set the topic and when
+                who_set = tokens.params[2]
+            except Exception as e:
+                logging.error(f"Error in handle_topic command 333: {e}")
 
         elif command == "TOPIC":
-            # TOPIC command is received indicating a change in topic
-            channel_name = tokens.params[0]
-            topic = tokens.params[1]
-            message = f"Topic has been changed to: {topic}\n"
+            try:
+                # TOPIC command is received indicating a change in topic
+                channel_name = tokens.params[0]
+                topic = tokens.params[1]
+                message = f"Topic has been changed to: {topic}\n"
 
-            # Check if the server entry exists in the dictionary
-            if self.server not in self.gui.channel_topics:
-                self.gui.channel_topics[self.server] = {}
-            self.gui.channel_topics[self.server][channel_name] = topic
+                # Check if the server entry exists in the dictionary
+                if self.server not in self.gui.channel_topics:
+                    self.gui.channel_topics[self.server] = {}
+                self.gui.channel_topics[self.server][channel_name] = topic
 
-            # Add TOPIC CHANGED message to channel history & Display message 
-            if self.server not in self.channel_messages:
-                self.channel_messages[self.server] = {}
-            if channel_name not in self.channel_messages[self.server]:
-                self.channel_messages[self.server][channel_name] = []
+                # Add TOPIC CHANGED message to channel history & Display message 
+                if self.server not in self.channel_messages:
+                    self.channel_messages[self.server] = {}
+                if channel_name not in self.channel_messages[self.server]:
+                    self.channel_messages[self.server][channel_name] = []
 
-            self.channel_messages[self.server][channel_name].append(message)
+                self.channel_messages[self.server][channel_name].append(message)
 
-            # Set the topic for the channel under the server entry
-            if channel_name == self.current_channel:
-                self.gui.current_topic.set(f"{topic}")
-                self.gui.insert_text_widget(f"{message}")
+                # Set the topic for the channel under the server entry
+                if channel_name == self.current_channel:
+                    self.gui.current_topic.set(f"{topic}")
+                    self.gui.insert_text_widget(f"{message}")
+            except Exception as e:
+                logging.error(f"Error in handle_topic command TOPIC: {e}")
 
     def handle_nickname_doesnt_exist(self, tokens):
         """
@@ -2493,34 +2611,40 @@ class RudeChatClient:
         """
         if self.log_on:
             logging.debug(f"ACCOUNT Token: {tokens}")
-        prefix = tokens.source
-        accountname = tokens.params[0]
+        try:
+            prefix = tokens.source
+            accountname = tokens.params[0]
 
-        # Parse prefix into nick!user@host
-        nick, user_host = self.parse_prefix(prefix)
-        
-        if accountname == '*':
-            # User logged out, remove from account cache
-            if nick in self.account_cache:
+            # Parse prefix into nick!user@host
+            nick, user_host = self.parse_prefix(prefix)
+            
+            if accountname == '*':
+                # User logged out, remove from account cache
+                if nick in self.account_cache:
+                    if self.log_on:
+                        logging.info(f"{nick} logged out of their account")
+                    del self.account_cache[nick]
+                    if nick in self.friends.friend_list:
+                        self.gui.insert_text_widget(f"{nick} logged out of their account\n")
+            else:
+                # User logged into a new account, update cache
                 if self.log_on:
-                    logging.info(f"{nick} logged out of their account")
-                del self.account_cache[nick]
+                    logging.info(f"{nick} logged into account {accountname}")
+                self.account_cache[nick] = accountname
                 if nick in self.friends.friend_list:
-                    self.gui.insert_text_widget(f"{nick} logged out of their account\n")
-        else:
-            # User logged into a new account, update cache
-            if self.log_on:
-                logging.info(f"{nick} logged into account {accountname}")
-            self.account_cache[nick] = accountname
-            if nick in self.friends.friend_list:
-                self.gui.insert_text_widget(f"{nick} logged into account {accountname}\n")
+                    self.gui.insert_text_widget(f"{nick} logged into account {accountname}\n")
+        except Exception as e:
+            logging.error(f"Error in handle_account_message: {e}")
 
     def parse_prefix(self, prefix):
         """
         Parse :nick!user@host into (nick, user_host)
         """
-        nick, user_host = prefix.split('!', 1)
-        return nick, user_host
+        try:
+            nick, user_host = prefix.split('!', 1)
+            return nick, user_host
+        except Exception as e:
+            logging.error(f"Error in parse_prefix: {e}")
 
     async def handle_incoming_message(self, config_file):
         buffer = ""
@@ -2626,7 +2750,7 @@ class RudeChatClient:
                     case "002" | "003" | "004":
                         self.server_message_handler(tokens)
                     case "005":
-                        self.handle_isupport(tokens)
+                        pass
                     case "251" | "252" | "253" | "254" | "255" | "265":
                         self.server_message_handler(tokens)
                     case "266":
