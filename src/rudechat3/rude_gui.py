@@ -481,7 +481,8 @@ class RudeGui:
             logging.error(f"Error in quit_clients: {e}")
 
     def client_shutdown(self):
-        logging.info(f"Attempting Client Shutdown.")
+        if self.log_on:
+            logging.info(f"Attempting Client Shutdown.")
         try:
             # Close all pop-out windows
             self.close_all_popouts()
@@ -1457,6 +1458,11 @@ class RudeGui:
             irc_client.tasks["auto_away"] = asyncio.create_task(irc_client.away_watcher(), name="auto_away_task")
         except Exception as e:
             logging.error(f"Error starting auto_away task: {e}")
+
+        try:
+            irc_client.tasks["auto_clean"] = asyncio.create_task(irc_client.the_cleaner(), name="auto_clean")
+        except Exception as e:
+            logging.error(f"Error starting auto_clean task: {e}")
 
         if self.log_on:
             logging.info("Finished Creating Client Tasks: auto_who, auto_away, handle_incoming_message, auto_trim, auto_save, & keep_alive")

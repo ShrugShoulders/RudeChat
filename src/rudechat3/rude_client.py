@@ -1114,6 +1114,18 @@ class RudeChatClient:
                 logging.error(f"Unhandled exception in auto_trim: {e}")
                 continue
 
+    async def the_cleaner(self):
+        while self.loop_running:
+            try:
+                await asyncio.sleep(1200)
+                self.away_notified.clear()
+            except asyncio.CancelledError:
+                self.loop_running = False
+                logging.info("Exiting the_cleaner loop.")
+                break
+            except Exception as e:
+                logging.error(f"Cleaner Error: {e}")
+
     def handle_server_message(self, line):
         data = line + "\n"
         self.add_server_message(data)
@@ -1272,7 +1284,7 @@ class RudeChatClient:
             self.highlight_channel(channel)
 
         # Highlight the server in the server_listbox if it's not selected
-        self.highlight_server()
+        self.highlight_server(is_mention=True)
 
         # Play the beep sound/notification
         if self.use_beep_noise == True:
@@ -1292,7 +1304,7 @@ class RudeChatClient:
         except Exception as e:
             logging.error(f"Exception in highlighted_channel: {e}")
 
-    def highlight_server(self, server_activity=False):
+    def highlight_server(self, server_activity=False, is_mention=False):
         try:
             for idx in range(self.gui.server_listbox.size()):
                 listbox_server_name = self.gui.server_listbox.get(idx)
@@ -1302,7 +1314,7 @@ class RudeChatClient:
                         self.gui.server_listbox.itemconfig(idx, {'bg': self.activity_note_color})
                         self.gui.server_colors[idx] = {'fg': self.gui.server_list_fg, 'bg': self.activity_note_color}
 
-                    if self.gui.irc_client != self and idx not in self.gui.server_listbox.curselection():
+                    if is_mention:
                         self.gui.server_listbox.itemconfig(idx, {'bg': self.mention_note_color})
                         self.gui.server_colors[idx] = {'fg': self.gui.server_list_fg, 'bg': self.mention_note_color}
                     break
