@@ -3,13 +3,15 @@
 To install on Linux:
 
         Download the Stand Alone and extract.(recommended for Debain/Ubuntu users.)
+        In your Terminal cd to the folder where you extracted the package.
+        Using ./rudechat3 will open rudechat. 
         or
         Clone the repo, cd into its cloned directory, and use pip to install. 
-        Command: pip install -r requirements.txt .
+        Command: 'pip install -r requirements.txt .'
         Once pip has completed you can then run rudechat in your terminal. 
-        Command: rudechat
+        Command: 'rudechat'
 
-Main Stan Alone files found in: \_internal\/rudechat3\/
+Main Stand Alone files found in: \_internal\/rudechat3\/
 Pip Install Directory: \/home\/username\/.local\/lib\/python3.12\/site-packages\/rudechat3\/
 
 To install on Windows Download the installer.
@@ -51,6 +53,14 @@ file name: conf.libera.rude(config files should follow conf.server_name.rude nam
         znc_password = password # Password for ZNC Server. 
         ignore_cert = False # You can ignore ssl certs that are not signed. 
         znc_user = Rude # User name for ZNC. 
+        replace_pronouns = False # Might Remove This - Replaces gender pronouns with gender neutral statements.
+        display_user_modes = True # This will display the user mode beside the nickname. 
+        send_ctcp_response = True # Turns CTCP responses on or off
+        green_text = False # Automatic green text styling
+        auto_away_minutes = 30 # Auto Away timer - sets user auto away after a certain time.
+        use_auto_away = True # Turn this to True for auto away, see time above.
+        auto_join_invite = True # This will auto-join on invite to a channel. 
+        log_on = False # Logs everything in the client including incoming data, etc. 
 
 ### GUI Config Example:
 
@@ -63,7 +73,16 @@ file name: gui_config.ini
         main_fg_color = #C0FFEE # This is the main chat display window foreground (text color)
         main_bg_color = black # This is the main chat display window background color.
         server_fg = #7882ff # This is the main console window or server window foreground (text color)
-        server_bg = black # This is the main console window or server window background color. 
+        server_bg = black # This is the main console window or server window background color.
+        selected_list_server = blue # The background for the selected server.
+        user_font_size = 9 # Users listbox font size.
+        channel_font_size = 9 # Channel listbox font size
+        server_font_size = 9 # Server listbox font size
+        list_boxs_font_family = Hack # Font for all list boxes.
+        topic_label_font_size = 10 # Topic Display Font size
+        topic_label_font_family = Hack # Topic Display Font
+        minimize_to_tray = True # This will allow RudeChat to be minimized to the tray - Set to False and client will simply shutdown.
+        turn_logging_on = False # This enables GUI logging for ayncio task creation & more
         
         [WIDGETS]
         users_fg = #39ff14 # This is the user list foreground (text color)
