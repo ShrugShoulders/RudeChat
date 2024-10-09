@@ -1330,7 +1330,7 @@ class RudeChatClient:
                         self.gui.server_listbox.itemconfig(idx, {'bg': self.activity_note_color})
                         self.gui.server_colors[idx] = {'fg': self.gui.server_list_fg, 'bg': self.activity_note_color}
 
-                    if is_mention:
+                    if is_mention and self.gui.irc_client != self and idx not in self.gui.server_listbox.curselection():
                         self.gui.server_listbox.itemconfig(idx, {'bg': self.mention_note_color})
                         self.gui.server_colors[idx] = {'fg': self.gui.server_list_fg, 'bg': self.mention_note_color}
                     break
@@ -1367,7 +1367,7 @@ class RudeChatClient:
                 if self.log_on:
                     logging.info("Beep notification not supported on this platform.")
 
-            self.gui.trigger_desktop_notification(channel_name, message_content=message_content)
+            await self.gui.trigger_desktop_notification(channel_name, message_content=message_content)
         except Exception as e:
             logging.error(f"Error triggering desktop notification: {e}")
 
@@ -1504,19 +1504,19 @@ class RudeChatClient:
                     if sender not in self.gui.popped_out_channels:
                         self.display_message(timestamp, sender, message, target, mode_symbol, is_direct=True)
                     else:
-                        self.pip_to_pop_out(timestamp, sender, message, target, mode_symbol)
+                        await self.pip_to_pop_out(timestamp, sender, message, target, mode_symbol)
 
         except Exception as e:
             logging.error(f"Exception in prepare_direct_message: {e}")
 
-    def pip_to_pop_out(self, timestamp, sender, message, target, mode_symbol):
+    async def pip_to_pop_out(self, timestamp, sender, message, target, mode_symbol):
         try:
             window = self.gui.pop_out_windows.get(target) or self.gui.pop_out_windows.get(sender)
             if window:
                 formatted_message = f"{timestamp}<{mode_symbol}{sender}> {message}\n" if self.use_time_stamp else f"<{mode_symbol}{sender}> {message}\n"
                 window.insert_text(formatted_message)
                 window.highlight_nickname()
-                window.check_focus_and_notify(message)
+                await window.check_focus_and_notify(message)
                 window.update_users_label()
         except Exception as e:
             logging.error(f"Error in pip_to_pop_out: {e}")
@@ -1559,7 +1559,7 @@ class RudeChatClient:
             if target not in self.gui.popped_out_channels:
                 self.display_message(timestamp, sender, message, target, mode_symbol, is_direct=False)
             else:
-                self.pip_to_pop_out(timestamp, sender, message, target, mode_symbol)
+                await self.pip_to_pop_out(timestamp, sender, message, target, mode_symbol)
 
     def save_message(self, server, target, sender, message, mode_symbol, is_sent):
         timestamp = datetime.datetime.now().strftime('[%H:%M:%S] ')
@@ -2751,6 +2751,8 @@ class RudeChatClient:
                         self.server_message_handler(tokens)
                     case "005":
                         pass
+                    case "250":
+                        self.handle_connection_info(tokens)
                     case "251" | "252" | "253" | "254" | "255" | "265":
                         self.server_message_handler(tokens)
                     case "266":

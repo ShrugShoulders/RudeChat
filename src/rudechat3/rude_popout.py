@@ -963,14 +963,14 @@ class RudePopOut:
     def is_app_focused(self):
         return bool(self.root.focus_displayof())
 
-    def check_focus_and_notify(self, message):
+    async def check_focus_and_notify(self, message):
         if not self.is_app_focused():
             try:
-                self.trigger_desktop_notification(self.selected_channel, message)
+                await self.trigger_desktop_notification(self.selected_channel, message)
             except Exception as e:
                 print(f"Exception in check_focus_and_notify: {e}")
 
-    def trigger_desktop_notification(self, channel_name=None, title="RudeChat", message_content=None):
+    async def trigger_desktop_notification(self, channel_name=None, title="RudeChat", message_content=None):
         """
         Show a system desktop notification.
         """
@@ -1004,10 +1004,12 @@ class RudePopOut:
                 )
 
             elif platform.system() == "Windows":
-                # Use win10toast for Windows notifications
-                from win10toast_click import ToastNotifier
+                # Use win10toast_click & threading for Windows notifications
+                from win10toast import ToastNotifier
                 toaster = ToastNotifier()
                 toaster.show_toast(title, message, icon_path=icon_path, duration=5, threaded=True)
+                while toaster.notification_active():
+                    await asyncio.sleep(0.1)
 
         except Exception as e:
             print(f"Desktop notification error: {e}")

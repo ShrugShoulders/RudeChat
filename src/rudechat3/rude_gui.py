@@ -1880,7 +1880,7 @@ class RudeGui:
             if max(r, g, b) - min(r, g, b) > 50:  # 50 is the threshold, you can adjust this value as needed
                 return "#{:02x}{:02x}{:02x}".format(r, g, b)
 
-    def trigger_desktop_notification(self, channel_name=None, title="RudeChat", message_content=None):
+    async def trigger_desktop_notification(self, channel_name=None, title="RudeChat", message_content=None):
         """
         Show a system desktop notification.
         """
@@ -1913,9 +1913,11 @@ class RudeGui:
 
             elif platform.system() == "Windows":
                 # Use win10toast_click & threading for Windows notifications
-                from win10toast_click import ToastNotifier
+                from win10toast import ToastNotifier
                 toaster = ToastNotifier()
                 toaster.show_toast(title, message, icon_path=icon_path, duration=5, threaded=True)
+                while toaster.notification_active():
+                    await asyncio.sleep(0.1)
 
         except Exception as e:
             logging.error(f"Desktop notification error: {e}")
