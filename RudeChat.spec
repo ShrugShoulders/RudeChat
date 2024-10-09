@@ -20,7 +20,7 @@ a = Analysis(
         ('src/rudechat3/Splash/*', 'rudechat3/Splash'),
         ('src/rudechat3/Fortune Lists/*', 'rudechat3/Fortune Lists')
     ],
-    hiddenimports=[],
+    hiddenimports=['plyer.platforms', 'plyer.platforms.linux', 'plyer.platforms.linux.notification'],
     hookspath=[],
     runtime_hooks=[],
     excludes=[],
