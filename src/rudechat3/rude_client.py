@@ -780,8 +780,29 @@ class RudeChatClient:
                     self.gui.insert_text_widget(f"\n{self.server_name}: Server denied SASL capability.\n")
                     self.add_server_message(data)
                 await self.send_message("CAP END")
+
             except Exception as e:
                 logging.error(f"Error in handle_cap NAK block: {e}")
+
+        elif "NEW" in tokens.params:
+            try:
+                if self.znc_connection:
+                    if self.away_notify == True:
+                        await self.send_message('CAP REQ :away-notify')
+                        await asyncio.sleep(1)
+                        await self.send_message("CAP END")
+                    if self.extended_join == True:
+                        await self.send_message('CAP REQ :account-notify')
+                        await asyncio.sleep(1)
+                        await self.send_message("CAP END")
+                    if self.account_notify == True:
+                        await self.send_message('CAP REQ :extended-join')
+                        await asyncio.sleep(1)
+                        await self.send_message("CAP END")
+                    return
+                    
+            except Exception as e:
+                logging.error(f"Error in handle_cap NEW block: {e}")
 
     async def handle_sasl_auth(self, tokens):
         if not self.sasl_enabled:
