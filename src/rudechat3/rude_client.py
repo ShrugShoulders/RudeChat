@@ -787,20 +787,17 @@ class RudeChatClient:
         elif "NEW" in tokens.params:
             try:
                 if self.znc_connection:
-                    if self.away_notify == True:
+                    if "away-notify" in tokens.params:
                         await self.send_message('CAP REQ :away-notify')
                         await asyncio.sleep(1)
-                        await self.send_message("CAP END")
-                    if self.extended_join == True:
+                    if "account-notify" in tokens.params:
                         await self.send_message('CAP REQ :account-notify')
                         await asyncio.sleep(1)
-                        await self.send_message("CAP END")
-                    if self.account_notify == True:
+                    if "extended-join" in tokens.params:
                         await self.send_message('CAP REQ :extended-join')
                         await asyncio.sleep(1)
-                        await self.send_message("CAP END")
-                    return
-                    
+                    return await self.send_message("CAP END")
+
             except Exception as e:
                 logging.error(f"Error in handle_cap NEW block: {e}")
 
