@@ -750,7 +750,7 @@ class RudeChatClient:
                 if not self.sasl_enabled:
                     await self.send_message("CAP END")
             except Exception as e:
-                logging.error(f"Error in handle_cap ACK block: {e}")
+                logging.error(f"Error1 in handle_cap ACK block: {e}")
 
         # Handle capability rejection (NAK) if needed...
         elif "NAK" in tokens.params:
@@ -782,7 +782,7 @@ class RudeChatClient:
                 await self.send_message("CAP END")
 
             except Exception as e:
-                logging.error(f"Error in handle_cap NAK block: {e}")
+                logging.error(f"Error2 in handle_cap NAK block: {e}")
 
         elif "NEW" in tokens.params:
             try:
@@ -799,7 +799,7 @@ class RudeChatClient:
                     return await self.send_message("CAP END")
 
             except Exception as e:
-                logging.error(f"Error in handle_cap NEW block: {e}")
+                logging.error(f"Error3 in handle_cap NEW block: {e}")
 
     async def handle_sasl_auth(self, tokens):
         if not self.sasl_enabled:
