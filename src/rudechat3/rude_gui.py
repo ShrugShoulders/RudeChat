@@ -1547,6 +1547,8 @@ class RudeGui:
         # Turn background blue for the next channel
         self.channel_listbox.itemconfig(index, {'bg': self.channel_select_color})
         self.highlight_nickname()
+        self.highlight_away_users()
+        self.update_users_label()
 
         # Remove the next channel from highlighted_channels dictionary if present
         if self.irc_client.server_name in self.irc_client.highlighted_channels:
@@ -1584,6 +1586,8 @@ class RudeGui:
         # Turn background blue for the next channel
         self.channel_listbox.itemconfig(next_index, {'bg': self.channel_select_color})
         self.highlight_nickname()
+        self.highlight_away_users()
+        self.update_users_label()
 
         # Remove the next channel from highlighted_channels dictionary if present
         if self.irc_client.server_name in self.irc_client.highlighted_channels:
@@ -1625,6 +1629,8 @@ class RudeGui:
         # Turn background blue for the previous channel
         self.channel_listbox.itemconfig(previous_index, {'bg': self.channel_select_color})
         self.highlight_nickname()
+        self.highlight_away_users()
+        self.update_users_label()
 
         # Remove the previous channel from highlighted_channels dictionary if present
         if self.irc_client.server_name in self.irc_client.highlighted_channels:

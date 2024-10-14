@@ -47,16 +47,17 @@ class RudeChatClient:
         self.away_notified = set()
         self.decoder = irctokens.StatefulDecoder()
         self.encoder = irctokens.StatefulEncoder()
+        self.config = ''
         self.reader = None
         self.writer = None
         self.ping_start_time = None
         self.who_user_request = False
         self.isupport_flag = False
         self.loop_running = True
-        self.config = ''
         self.away_notify = False
         self.extended_join = False
         self.account_notify = False
+        self.znc_reconnect = False
         self.delete_lock_files()
         self.loop = asyncio.get_event_loop()
         self.time_zone = get_localzone()
@@ -721,20 +722,20 @@ class RudeChatClient:
                 acknowledged_capabilities = tokens.params[2].split()
 
                 # Handle away-notify ACK
-                if "away-notify" in acknowledged_capabilities:
+                if "away-notify" in acknowledged_capabilities and not self.away_notify:
                     data = f"{self.server_name}: Server acknowledged away-notify capability.\n"
                     self.gui.insert_text_widget(f"\n{self.server_name}: Server acknowledged away-notify capability.\n")
                     self.add_server_message(data)
                     self.away_notify = True
 
                 # Handle account-notify ACK
-                if "account-notify" in acknowledged_capabilities:
+                if "account-notify" in acknowledged_capabilities and not self.account_notify:
                     data = f"{self.server_name}: Server acknowledged account-notify capability.\n"
                     self.gui.insert_text_widget(f"\n{self.server_name}: Server acknowledged account-notify capability.\n")
                     self.add_server_message(data)
                     self.account_notify = True
 
-                if "extended-join" in acknowledged_capabilities:
+                if "extended-join" in acknowledged_capabilities and not self.extended_join:
                     data = f"{self.server_name}: Server acknowledged extended-join capability.\n"
                     self.gui.insert_text_widget(f"\n{self.server_name}: Server acknowledged extended-join capability.\n")
                     self.add_server_message(data)
@@ -749,6 +750,7 @@ class RudeChatClient:
 
                 if not self.sasl_enabled:
                     await self.send_message("CAP END")
+
             except Exception as e:
                 logging.error(f"Error1 in handle_cap ACK block: {e}")
 
@@ -779,7 +781,9 @@ class RudeChatClient:
                     data = f"{self.server_name}: Server denied SASL capability.\n"
                     self.gui.insert_text_widget(f"\n{self.server_name}: Server denied SASL capability.\n")
                     self.add_server_message(data)
-                await self.send_message("CAP END")
+
+                if not self.sasl_enabled:
+                    await self.send_message("CAP END")
 
             except Exception as e:
                 logging.error(f"Error2 in handle_cap NAK block: {e}")
@@ -787,16 +791,16 @@ class RudeChatClient:
         elif "NEW" in tokens.params:
             try:
                 if self.znc_connection:
-                    if "away-notify" in tokens.params:
+                    if "away-notify" in tokens.params and not self.away_notify:
                         await self.send_message('CAP REQ :away-notify')
                         await asyncio.sleep(1)
-                    if "account-notify" in tokens.params:
+                    if "account-notify" in tokens.params and not self.account_notify:
                         await self.send_message('CAP REQ :account-notify')
                         await asyncio.sleep(1)
-                    if "extended-join" in tokens.params:
+                    if "extended-join" in tokens.params and not self.extended_join:
                         await self.send_message('CAP REQ :extended-join')
                         await asyncio.sleep(1)
-                    return await self.send_message("CAP END")
+                    await self.send_message("CAP END")
 
             except Exception as e:
                 logging.error(f"Error3 in handle_cap NEW block: {e}")
@@ -1486,6 +1490,36 @@ class RudeChatClient:
         else:
             return target
 
+    async def handle_znc_status_message(self, target, sender, message, mode_symbol):
+        if self.log_on:
+            logging.info(f"handle_znc_status_message variables: Target: {target} / Sender: {sender} / Message: {message} / Mode symbol: {mode_symbol}")
+        try:
+            smessage = message.lower()
+
+            if "disconnected" in smessage:
+                self.away_notify = False
+                self.extended_join = False
+                self.account_notify = False
+
+            elif sender != self.current_channel and sender not in self.gui.popped_out_channels:
+                self.save_message(self.server, target, sender, message, mode_symbol, is_sent=False)
+                user_mention = self.is_it_a_mention(message)
+                if not user_mention:
+                    await self.trigger_beep_notification(channel_name=sender, message_content=f"Message From {sender}")
+                    self.highlight_channel_if_not_current(target, sender, user_mention)
+                elif user_mention:
+                    self.highlight_channel_if_not_current(target, sender, user_mention)
+
+            else:
+                self.save_message(self.server, target, sender, message, mode_symbol, is_sent=False)
+                if sender not in self.gui.popped_out_channels:
+                    self.display_message(timestamp, sender, message, target, mode_symbol, is_direct=True)
+                else:
+                    await self.pip_to_pop_out(timestamp, sender, message, target, mode_symbol)
+
+        except Exception as e:
+            logging.error(f"Error in handle_znc_status_message: {e}")
+
     async def prepare_direct_message(self, sender, target, message, timestamp, mode_symbol, znc_privmsg):
         self.log_message(self.server_name, target, sender, message, is_sent=False)
         try:
@@ -1500,6 +1534,11 @@ class RudeChatClient:
                     self.gui.channel_lists[self.server] = self.joined_channels
                     self.update_gui_channel_list()
 
+                if sender.startswith("*status"):
+                    self.save_message(self.server, target, sender, message, mode_symbol, is_sent=False)
+                    await self.handle_znc_status_message(target, sender, message, mode_symbol)
+                    return
+
                 if znc_privmsg:
                     self.save_message(self.server, target, sender, message, mode_symbol, is_sent=False)
                     user_mention = self.is_it_a_mention(message)
@@ -1508,6 +1547,7 @@ class RudeChatClient:
                         self.highlight_channel_if_not_current(target, sender, user_mention)
                     elif user_mention:
                         self.highlight_channel_if_not_current(target, sender, user_mention)
+
                 elif sender != self.current_channel and sender not in self.gui.popped_out_channels:
                     self.save_message(self.server, target, sender, message, mode_symbol, is_sent=False)
                     user_mention = self.is_it_a_mention(message)
@@ -1516,6 +1556,7 @@ class RudeChatClient:
                         self.highlight_channel_if_not_current(target, sender, user_mention)
                     elif user_mention:
                         self.highlight_channel_if_not_current(target, sender, user_mention)
+
                 else:
                     self.save_message(self.server, target, sender, message, mode_symbol, is_sent=False)
 
