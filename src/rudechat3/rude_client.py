@@ -57,7 +57,6 @@ class RudeChatClient:
         self.away_notify = False
         self.extended_join = False
         self.account_notify = False
-        self.znc_reconnect = False
         self.delete_lock_files()
         self.loop = asyncio.get_event_loop()
         self.time_zone = get_localzone()
