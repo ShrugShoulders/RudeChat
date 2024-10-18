@@ -2630,7 +2630,7 @@ class RudeChatClient:
                 self.channel_messages[self.server][channel_name].append(message)
 
                 # Set the topic for the channel under the server entry
-                if channel_name == self.current_channel:
+                if channel_name == self.current_channel and self.gui.irc_client == self:
                     self.gui.current_topic.set(f"{topic}")
                     self.gui.insert_text_widget(f"{message}")
             except Exception as e:
