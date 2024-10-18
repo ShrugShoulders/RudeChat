@@ -1001,7 +1001,7 @@ class RudeGui:
             if selected_channel.startswith('#'):
                 menu.add_command(label="Leave Channel", command=self.leave_channel_from_menu)
                 menu.add_command(label="Pop Out Channel", command=self.open_pop_out_window)
-            elif selected_channel.startswith('&'):
+            elif selected_channel.startswith('!'):
                 menu.add_command(label="Close", command=self.close_query_from_menu)
             else:
                 menu.add_command(label="Close Query", command=self.close_query_from_menu)
@@ -1082,12 +1082,14 @@ class RudeGui:
             selected_user = self.user_listbox.get(selected_user_index)
             loop = asyncio.get_event_loop()
             loop.create_task(self.irc_client.handle_query_command(["/query", selected_user], "<3 "))
+            self.update_channel_label()
 
     def close_query_from_menu(self):
         selected_channel_index = self.channel_listbox.curselection()
         if selected_channel_index:
             selected_channel = self.channel_listbox.get(selected_channel_index)
             self.irc_client.handle_cq_command(["/cq", selected_channel])
+            self.update_channel_label()
 
     def leave_channel_from_menu(self, reason=None):
         selected_channel_index = self.channel_listbox.curselection()
@@ -1096,6 +1098,7 @@ class RudeGui:
             if '#' in selected_channel:
                 loop = asyncio.get_event_loop()
                 loop.create_task(self.irc_client.leave_channel(selected_channel, reason))
+                self.update_channel_label()
 
     def whois_from_menu(self):
         modes_to_strip = ''.join(self.irc_client.mode_values)

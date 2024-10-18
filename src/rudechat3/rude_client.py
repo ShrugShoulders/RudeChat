@@ -1301,17 +1301,17 @@ class RudeChatClient:
             for channel, messages in channels.items():
                 channels[channel] = messages[-125:]
 
-    def remove_ampersand_channels(self):
+    def remove_bang_channels(self):
         try:
             for server, channels in self.channel_messages.items():
                 # Identify keys to be deleted
-                keys_to_delete = [channel for channel in channels.keys() if channel.startswith('&')]
+                keys_to_delete = [channel for channel in channels.keys() if channel.startswith('!')]
                 
                 # Delete identified keys
                 for key in keys_to_delete:
                     del channels[key]
         except (AttributeError, Exception) as e:
-            logging.error(f'AttributeError or Exception in remove_ampersand_channels: {e}')
+            logging.error(f'AttributeError or Exception in remove_bang_channels: {e}')
 
     async def notify_user_of_mention(self, server, channel, sender, message):
         notification_msg = f"<{sender}> {message}"
@@ -2390,13 +2390,14 @@ class RudeChatClient:
 
     def whois_display(self, whois_response):
         try:
-            whois_channel = "&WHOIS&"
+            whois_channel = f"!WHOIS!"
             if whois_channel not in self.joined_channels:
                 self.joined_channels.append(whois_channel)
                 if whois_channel not in self.cap_who_for_chan:
                     self.cap_who_for_chan.append(whois_channel)
                 self.gui.channel_lists[self.server] = self.joined_channels
                 self.update_gui_channel_list()
+                self.gui.update_channel_label()
 
             # Add data to the channel history
             if whois_channel not in self.channel_messages[self.server]:
@@ -3319,13 +3320,14 @@ class RudeChatClient:
                 self.gui.insert_text_widget(f"No client found for server {server_name}\n")
 
     def handle_mentions_command(self):
-        mentions_channel = "&MENTIONS&"
+        mentions_channel = f"!MENTIONS!"
         if mentions_channel not in self.joined_channels:
             self.joined_channels.append(mentions_channel)
             self.gui.channel_lists[self.server] = self.joined_channels
             if mentions_channel not in self.cap_who_for_chan:
                 self.cap_who_for_chan.append(mentions_channel)
             self.update_gui_channel_list()
+            self.gui.update_channel_label()
 
         if mentions_channel not in self.channel_messages[self.server]:
             self.channel_messages[self.server][mentions_channel] = []
@@ -3387,7 +3389,7 @@ class RudeChatClient:
 
     async def spec_quit(self):
         self.gui.save_nickname_colors()
-        self.remove_ampersand_channels()
+        self.remove_bang_channels()
         await self.send_message(f"QUIT :RudeChat3")
         self.loop_running = False
         await self.stop_async_loop()
@@ -3577,7 +3579,7 @@ class RudeChatClient:
 
             case "quit":
                 self.gui.save_nickname_colors()
-                self.remove_ampersand_channels()
+                self.remove_bang_channels()
                 quit_message = " ".join(args[1:]) if len(args) > 0 else None
                 self.gui.quit_clients_with_message(quit_message)
                 self.loop_running = False
@@ -4449,13 +4451,14 @@ class RudeChatClient:
         }
 
         try:
-            help_channel = "&HELP&"
+            help_channel = f"!HELP!"
             if help_channel not in self.joined_channels:
                 self.joined_channels.append(help_channel)
                 self.gui.channel_lists[self.server] = self.joined_channels
                 if help_channel not in self.cap_who_for_chan:
                     self.cap_who_for_chan.append(help_channel)
                 self.update_gui_channel_list()
+                self.gui.update_channel_label()
 
                 # Add help data to the channel history
                 for category, commands in categories.items():
