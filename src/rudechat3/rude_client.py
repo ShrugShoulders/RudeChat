@@ -2885,7 +2885,7 @@ class RudeChatClient:
                     case "487":
                         self.command_487(tokens)
                     case "433":
-                        self.command_433(tokens)
+                        await self.command_433(tokens)
                     case "432":
                         self.command_432(tokens)
                     case "322":  # Channel list
@@ -3051,13 +3051,15 @@ class RudeChatClient:
 
         self.add_server_message(data)
 
-    def command_433(self, tokens):
+    async def command_433(self, tokens):
         source = tokens.source
+        current_nick = tokens.params[0]
         user = tokens.params[1]
         message = f"""{tokens.params[2]}"""
         data = f"{source} {user}: {message}\n"
 
         self.add_server_message(data)
+        await self.change_nickname(current_nick, is_from_token=True)
 
     def handle_already_on_channel(self, tokens):
         channel = tokens.params[2]
