@@ -9,11 +9,13 @@ import re
 import random
 import webbrowser
 import platform
+import logging
 from plyer import notification as plyer_notification
 from threading import Thread
 from tkinter import scrolledtext, Listbox, Scrollbar, Tk, Frame, Label, Entry, Listbox, Menu, Scrollbar, StringVar, PhotoImage 
 from rudechat3.format_decoder import Attribute, decoder
 from rudechat3.rude_pronouns import replace_pronouns
+from rudechat3.rude_logger import configure_logging
 
 class RudePopOut:
     def __init__(self, root, selected_channel, irc_client, nick_name, main_app):
@@ -285,7 +287,7 @@ class RudePopOut:
                 )
 
         except Exception as e:
-            print(f"Exception in send_text: {e}")
+            logging.error(f"Exception in send_text: {e}")
 
     def update_channel_messages(self, server, current_channel, timestamp, mode_symbol, shortened_text):
         if server not in self.irc_client.channel_messages:
@@ -418,14 +420,17 @@ class RudePopOut:
         self.insert_text(f"{timestamp} {formatted_message}\n")
 
     def close_window(self):
-        # Close the window if it exists
-        if self.root:
-            self.main_app.return_channel_to_listbox(self.selected_channel)
-            self.main_app.highlight_who_channels()
-            self.irc_client.update_gui_channel_list()
-            self.irc_client.force_click(self.selected_channel)
-            self.root.destroy()
-            self.root = None
+        try:
+            # Close the window if it exists
+            if self.root:
+                self.main_app.return_channel_to_listbox(self.selected_channel)
+                self.main_app.highlight_who_channels()
+                self.irc_client.update_gui_channel_list()
+                self.irc_client.force_click(self.selected_channel)
+                self.root.destroy()
+                self.root = None
+        except Exception as e:
+            logging.error(f"Error Closing Window: {e}")
 
     def destroy_window(self):
         self.root.destroy()
@@ -653,7 +658,7 @@ class RudePopOut:
             with open(filename, 'a', encoding='utf-8') as file:
                 file.write(log_line)
         except Exception as e:
-            print(f"Error logging message: {e}")
+            logging.error(f"Error logging message: {e}")
 
     def insert_and_scroll(self):
         self.text_widget.see(tk.END)
@@ -680,7 +685,7 @@ class RudePopOut:
             # Start tagging URLs using the non-blocking approach
             self.tag_urls(urls)
         except Exception as e:
-            print(f"Exception in insert_text {e}")
+            logging.error(f"Exception in insert_text {e}")
 
     def tag_text(self, formatted_text):
         # Initialize a cache for tag configurations to avoid redundant setups
@@ -884,7 +889,7 @@ class RudePopOut:
                 menu.unpost()
                 self.root.unbind("<Motion>")
         except Exception as e:
-            print(f"Exception in check_mouse_position: {e}")
+            logging.error(f"Exception in check_mouse_position: {e}")
 
     def check_input_mouse_position(self, event):
         self.check_mouse_position(event, self.input_menu)
@@ -922,7 +927,7 @@ class RudePopOut:
             server_topics = self.main_app.channel_topics.get(self.irc_client.server, {})
             topic = server_topics.get(channel_name, "N/A")
         except Exception as e:
-            print(f"Could Not Get Topic {e}")
+            logging.error(f"Could Not Get Topic {e}")
         if self.tooltip:
             self.tooltip.destroy()
         x, y, _, _ = self.topic_label.bbox("insert")
@@ -953,7 +958,7 @@ class RudePopOut:
             
             self.topic_label.configure(text=f"{topic}")
         except Exception as e:
-            print(f"Exception in set_topic: {e}")
+            logging.error(f"Exception in set_topic: {e}")
 
     def is_app_focused(self):
         return bool(self.root.focus_displayof())
@@ -970,7 +975,7 @@ class RudePopOut:
                 try:
                     await self.trigger_desktop_notification(self.selected_channel, message)
                 except Exception as e:
-                    print(f"Exception in check_focus_and_notify: {e}")
+                    logging.error(f"Exception in check_focus_and_notify: {e}")
 
     async def trigger_desktop_notification(self, channel_name=None, title="RudeChat", message_content=None):
         """
@@ -1014,7 +1019,7 @@ class RudePopOut:
                     await asyncio.sleep(0.1)
 
         except Exception as e:
-            print(f"Desktop notification error: {e}")
+            logging.error(f"Desktop notification error: {e}")
 
     def update_users_label(self):
         if self.irc_client.server_name in self.irc_client.away_servers:

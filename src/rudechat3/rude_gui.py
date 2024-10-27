@@ -1011,6 +1011,8 @@ class RudeGui:
         if self.irc_client.server_name in self.popped_out_channels:
             if user_or_chan in self.popped_out_channels[self.irc_client.server_name]:
                 self.popped_out_channels[self.irc_client.server_name].remove(user_or_chan)
+        if user_or_chan in self.pop_out_windows:
+            del self.pop_out_windows[user_or_chan]
 
     def open_pop_out_window(self):
         self.clear_text_widget()
