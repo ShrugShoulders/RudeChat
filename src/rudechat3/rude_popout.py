@@ -178,12 +178,38 @@ class RudePopOut:
             )
             self.main_app.open_dm_pop_out_from_window(cleaned_nickname)
 
+    def ignore_user(self):
+        modes_to_strip = ''.join(self.irc_client.mode_values)
+        selected_user_index = self.user_listbox.curselection()
+        if selected_user_index:
+            selected_user = self.user_listbox.get(selected_user_index)
+            cleaned_nickname = selected_user.lstrip(modes_to_strip)
+            asyncio.run_coroutine_threadsafe(
+                self.irc_client.ignore_user_from_gui(cleaned_nickname),
+                self.irc_client.loop
+            )
+            self.insert_text(f"User {cleaned_nickname} Ignored.\n")
+
+    def unignore_user(self):
+        modes_to_strip = ''.join(self.irc_client.mode_values)
+        selected_user_index = self.user_listbox.curselection()
+        if selected_user_index:
+            selected_user = self.user_listbox.get(selected_user_index)
+            cleaned_nickname = selected_user.lstrip(modes_to_strip)
+            asyncio.run_coroutine_threadsafe(
+                self.irc_client.unignore_user_from_gui(cleaned_nickname),
+                self.irc_client.loop
+            )
+            self.insert_text(f"User {cleaned_nickname} Unignored.\n")
+
     def create_user_list_menu(self):
         menu = tk.Menu(self.user_listbox, tearoff=0)
         menu.add_command(label="Open Query", command=self.open_query_from_menu)
         menu.add_command(label="Whois", command=self.whois_from_menu)
         menu.add_command(label="Kick", command=self.kick_user_from_channel)
         menu.add_command(label="Copy", command=self.copy_text_user)
+        menu.add_command(label="Ignore User", command=self.ignore_user)
+        menu.add_command(label="Unignore User", command=self.unignore_user)
         return menu
 
     def show_user_list_menu(self, event):

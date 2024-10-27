@@ -976,6 +976,8 @@ class RudeGui:
         menu.add_command(label="Copy", command=self.copy_text_user)
         menu.add_command(label="Whois", command=self.whois_from_menu)
         menu.add_command(label="Kick", command=self.kick_user_from_channel)
+        menu.add_command(label="Ignore User", command=self.ignore_user)
+        menu.add_command(label="Unignore User", command=self.unignore_user)
         return menu
 
     def show_user_list_menu(self, event):
@@ -1089,15 +1091,29 @@ class RudeGui:
         channel = self.irc_client.current_channel
         if selected_user_index:
             selected_user = self.user_listbox.get(selected_user_index)
-            loop = asyncio.get_event_loop()
-            loop.create_task(self.irc_client.handle_kick_command(["/kick", selected_user, channel, "Bye <3"]))
+            self.irc_client.loop.create_task(self.irc_client.handle_kick_command(["/kick", selected_user, channel, "Bye <3"]))
+
+    def ignore_user(self):
+        modes_to_strip = ''.join(self.irc_client.mode_values)
+        selected_user_index = self.user_listbox.curselection()
+        if selected_user_index:
+            selected_user = self.user_listbox.get(selected_user_index)
+            cleaned_nickname = selected_user.lstrip(modes_to_strip)
+            self.irc_client.loop.create_task(self.irc_client.ignore_user_from_gui(cleaned_nickname))
+
+    def unignore_user(self):
+        modes_to_strip = ''.join(self.irc_client.mode_values)
+        selected_user_index = self.user_listbox.curselection()
+        if selected_user_index:
+            selected_user = self.user_listbox.get(selected_user_index)
+            cleaned_nickname = selected_user.lstrip(modes_to_strip)
+            self.irc_client.loop.create_task(self.irc_client.unignore_user_from_gui(cleaned_nickname))
 
     def open_query_from_menu(self):
         selected_user_index = self.user_listbox.curselection()
         if selected_user_index:
             selected_user = self.user_listbox.get(selected_user_index)
-            loop = asyncio.get_event_loop()
-            loop.create_task(self.irc_client.handle_query_command(["/query", selected_user], "<3 "))
+            self.irc_client.loop.create_task(self.irc_client.handle_query_command(["/query", selected_user], "<3 "))
             self.update_channel_label()
 
     def close_query_from_menu(self):
@@ -1111,9 +1127,9 @@ class RudeGui:
         selected_channel_index = self.channel_listbox.curselection()
         if selected_channel_index:
             selected_channel = self.channel_listbox.get(selected_channel_index)
-            if '#' in selected_channel:
-                loop = asyncio.get_event_loop()
-                loop.create_task(self.irc_client.leave_channel(selected_channel, reason))
+            is_channel = any(selected_channel.startswith(prefix) for prefix in self.irc_client.chantypes)
+            if is_channel:
+                self.irc_client.loop.create_task(self.irc_client.leave_channel(selected_channel, reason))
                 self.update_channel_label()
 
     def whois_from_menu(self):
@@ -1122,8 +1138,7 @@ class RudeGui:
         if selected_user_index:
             selected_user = self.user_listbox.get(selected_user_index)
             cleaned_nickname = selected_user.lstrip(modes_to_strip)
-            loop = asyncio.get_event_loop()
-            loop.create_task(self.irc_client.whois(cleaned_nickname))
+            self.irc_client.loop.create_task(self.irc_client.whois(cleaned_nickname))
 
     def reset_nick_colors(self):
         self.nickname_colors = self.load_nickname_colors()
