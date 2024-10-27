@@ -107,6 +107,7 @@ class RudeChatClient:
         self.gui.update_nick_channel_label()
         self.config = config_file
         self.watcher = AutoAway(self.config)
+        self.inform_gui()
         if self.log_on:
             logging.info(f"Client config for {self.server_name} Completed")
 
@@ -134,6 +135,10 @@ class RudeChatClient:
         self.log_on = config.getboolean('IRC', 'log_on', fallback=False)
         self.watcher.reload_config()
         self.gui.update_nick_channel_label()
+
+    def inform_gui(self):
+        if self.server_name not in self.gui.popped_out_channels:
+            self.gui.popped_out_channels[self.server_name] = []
 
     def save_away_users_to_file(self):
         file_path = os.path.join(self.script_directory, f'{self.server_name}_away_users.json')
@@ -917,8 +922,6 @@ class RudeChatClient:
 
     def update_gui_channel_list(self):
         try:
-            if self.server_name not in self.gui.popped_out_channels:
-                self.gui.popped_out_channels[self.server_name] = []
             # Clear existing items
             self.gui.channel_listbox.delete(0, tk.END)
 
