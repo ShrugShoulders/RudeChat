@@ -69,7 +69,7 @@ class RudeGui:
         self.url_cache = {}
         self.tag_cache = {}
         self.entry_history = []
-        self.popped_out_channels = []
+        self.popped_out_channels = {}
         self.pop_out_windows = {}
         self.server_colors = {}
         self.history_index = 0
@@ -598,33 +598,25 @@ class RudeGui:
                 self.user_listbox.itemconfig(index, {'fg': self.user_listbox_fg})
 
     def highlight_who_channels(self):
-        # Loop through the items in the channel_listbox
-        for index in range(self.channel_listbox.size()):
-            # Get the channel from the listbox
-            channel = self.channel_listbox.get(index)
+        try:
+            # Loop through the items in the channel_listbox
+            for index in range(self.channel_listbox.size()):
+                # Get the channel from the listbox
+                channel = self.channel_listbox.get(index)
 
-            # Check if the stripped channel is in the away_users list
-            if channel in self.irc_client.cap_who_for_chan:
-                # Make sure the index exists in the channel_listbox
-                if 0 <= index < self.channel_listbox.size():
-                    # Change the foreground color 
-                    self.channel_listbox.itemconfig(index, {'fg': self.channel_listbox_fg})
-            else:
-                # Make sure the index exists in the channel_listbox
-                if 0 <= index < self.channel_listbox.size():
-                    # Reset the foreground color 
-                    self.channel_listbox.itemconfig(index, {'fg': self.need_who_chan_fg})
-
-    def return_channel_to_listbox(self, entry):
-        if entry in self.pop_out_windows:
-            self.popped_out_channels.remove(entry)
-        # Get all items in the listbox
-        listbox_items = self.channel_listbox.get(0, tk.END)
-        
-        # Check if the entry is already in the listbox
-        if entry not in listbox_items:
-            # Insert the entry into the listbox if not found
-            self.channel_listbox.insert(tk.END, entry)
+                # Check if the stripped channel is in the away_users list
+                if channel in self.irc_client.cap_who_for_chan:
+                    # Make sure the index exists in the channel_listbox
+                    if 0 <= index < self.channel_listbox.size():
+                        # Change the foreground color 
+                        self.channel_listbox.itemconfig(index, {'fg': self.channel_listbox_fg})
+                else:
+                    # Make sure the index exists in the channel_listbox
+                    if 0 <= index < self.channel_listbox.size():
+                        # Reset the foreground color 
+                        self.channel_listbox.itemconfig(index, {'fg': self.need_who_chan_fg})
+        except Exception as e:
+            logging.error(f"Exception in highlight_who_channels: {e}")
 
     def clear_channel_listbox(self):
         self.channel_listbox.delete(0, tk.END)
@@ -1009,6 +1001,17 @@ class RudeGui:
         
         return menu
 
+    def append_to_pop_out_dict(self, user_or_chan):
+        if self.irc_client.server_name not in self.popped_out_channels:
+            self.popped_out_channels[self.irc_client.server_name] = []
+        if user_or_chan not in self.popped_out_channels[self.irc_client.server_name]:
+            self.popped_out_channels[self.irc_client.server_name].append(user_or_chan)
+
+    def remove_from_pop_out_dict(self, user_or_chan):
+        if self.irc_client.server_name in self.popped_out_channels:
+            if user_or_chan in self.popped_out_channels[self.irc_client.server_name]:
+                self.popped_out_channels[self.irc_client.server_name].remove(user_or_chan)
+
     def open_pop_out_window(self):
         self.clear_text_widget()
         self.clear_user_listbox()
@@ -1016,7 +1019,7 @@ class RudeGui:
         self.irc_client.pop_out_switch()
         selected_channel = self.channel_listbox.get(self.channel_listbox.curselection())
         if selected_channel not in self.pop_out_windows:
-            self.popped_out_channels.append(selected_channel)
+            self.append_to_pop_out_dict(selected_channel)
             self.channel_listbox.delete(self.channel_listbox.curselection())
             root = tk.Tk()
             app = RudePopOut(root, selected_channel, self.irc_client, self.irc_client.nickname, self)
@@ -1025,7 +1028,7 @@ class RudeGui:
 
     def open_dm_pop_out_from_window(self, user):
         if user not in self.pop_out_windows:
-            self.popped_out_channels.append(user)
+            self.append_to_pop_out_dict(user)
             
             # Get all items in the channel_listbox
             channel_list = self.channel_listbox.get(0, self.channel_listbox.size())
@@ -1040,6 +1043,17 @@ class RudeGui:
             app = RudePopOut(root, user, self.irc_client, self.irc_client.nickname, self)
             self.pop_out_windows[user] = app
             root.mainloop()
+
+    def return_channel_to_listbox(self, entry):
+        if entry in self.pop_out_windows:
+            self.remove_from_pop_out_dict(entry)
+        # Get all items in the listbox
+        listbox_items = self.channel_listbox.get(0, tk.END)
+        
+        # Check if the entry is already in the listbox
+        if entry not in listbox_items:
+            # Insert the entry into the listbox if not found
+            self.channel_listbox.insert(tk.END, entry)
 
     def show_channel_list_menu(self, event):
         menu = self.create_channel_list_menu()

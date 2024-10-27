@@ -917,12 +917,19 @@ class RudeChatClient:
 
     def update_gui_channel_list(self):
         try:
+            if self.server_name not in self.gui.popped_out_channels:
+                self.gui.popped_out_channels[self.server_name] = []
             # Clear existing items
             self.gui.channel_listbox.delete(0, tk.END)
 
             # Sort channels by the number of prefix characters at the beginning
             sorted_channels = sorted(
-                (chan for chan in self.joined_channels if chan not in self.gui.popped_out_channels),
+                (
+                    chan
+                    for chan in self.joined_channels
+                    if self.server_name in self.gui.popped_out_channels
+                       and chan not in self.gui.popped_out_channels[self.server_name]
+                ),
                 key=lambda chan: len(chan) - len(chan.lstrip(''.join(self.chantypes)))
             )
 
@@ -1177,16 +1184,23 @@ class RudeChatClient:
                 if self.log_on:
                     logging.info("Invalid password detected in NOTICE message.")
                 return True  # Return True to indicate an "Invalid password" was detected
-            
-            if self.znc_connection and target not in self.gui.popped_out_channels:
-                self.gui.insert_text_widget(f"{sdata}")
-                self.add_server_message(data)
-            elif self.znc_connection and target in self.gui.popped_out_channels:
-                self.pipe_mode_to_pop_out(message, target)
-                self.add_server_message(data)
-            else:
-                self.gui.insert_text_widget(f"{sdata}")
-                self.add_server_message(data)
+
+            if self.znc_connection:
+                if (
+                    self.server_name in self.gui.popped_out_channels
+                    and target not in self.gui.popped_out_channels[self.server_name]
+                ):
+                    self.gui.insert_text_widget(f"{sdata}")
+                    self.add_server_message(data)
+                elif (
+                    self.server_name in self.gui.popped_out_channels
+                    and target in self.gui.popped_out_channels[self.server_name]
+                ):
+                    self.pipe_mode_to_pop_out(data, target)
+                    self.add_server_message(data)
+                else:
+                    self.gui.insert_text_widget(f"{sdata}")
+                    self.add_server_message(data)
             
             return False  # Return False to indicate no special case was detected
         except Exception as e:
@@ -1259,9 +1273,9 @@ class RudeChatClient:
 
     async def handle_action_ctcp(self, timestamp, sender, target, ctcp_content):
         try:
-            if self.use_time_stamp == True:
+            if self.use_time_stamp:
                 action_message = f"{timestamp}* {sender} {ctcp_content}\n"
-            elif self.use_time_stamp == False:
+            else:
                 action_message = f"* {sender} {ctcp_content}\n"
 
             # Update the message history
@@ -1273,16 +1287,28 @@ class RudeChatClient:
             self.channel_messages[self.server][target].append(action_message)
 
             # Display the message in the text_widget if the target matches the current channel or DM
-            if target == self.current_channel and self.gui.irc_client == self and target not in self.gui.popped_out_channels:
+            if (
+                target == self.current_channel
+                and self.gui.irc_client == self
+                and (
+                    self.server_name not in self.gui.popped_out_channels
+                    or target not in self.gui.popped_out_channels[self.server_name]
+                )
+            ):
                 self.gui.insert_text_widget(action_message)
                 self.gui.highlight_nickname()
-            if target in self.gui.popped_out_channels:
+            
+            elif (
+                self.server_name in self.gui.popped_out_channels
+                and target in self.gui.popped_out_channels[self.server_name]
+            ):
                 try:
                     window = self.gui.pop_out_windows[target]
                     window.insert_text(action_message)
                     window.highlight_nickname()
                 except Exception as e:
                     logging.error(f"Error Handling Popped Out Windows ACTION command: {e}")
+            
             else:
                 # If it's not the currently viewed channel, highlight the channel in green in the Listbox
                 if target != self.current_channel:
@@ -1290,7 +1316,7 @@ class RudeChatClient:
                         if self.gui.channel_listbox.get(idx) == target:
                             current_bg = self.gui.channel_listbox.itemcget(idx, 'bg')
                             if current_bg != 'red':
-                                self.gui.channel_listbox.itemconfig(idx, {'bg':self.activity_note_color})
+                                self.gui.channel_listbox.itemconfig(idx, {'bg': self.activity_note_color})
                             break
         except Exception as e:
             logging.error(f"Exception in handle_action_ctcp: {e}")
@@ -1500,7 +1526,7 @@ class RudeChatClient:
                 self.extended_join = False
                 self.account_notify = False
 
-            elif sender != self.current_channel and sender not in self.gui.popped_out_channels:
+            elif sender != self.current_channel and self.server_name in self.gui.popped_out_channels and sender not in self.gui.popped_out_channels[self.server_name]:
                 self.save_message(self.server, target, sender, message, mode_symbol, is_sent=False)
                 user_mention = self.is_it_a_mention(message)
                 if not user_mention:
@@ -1511,7 +1537,7 @@ class RudeChatClient:
 
             else:
                 self.save_message(self.server, target, sender, message, mode_symbol, is_sent=False)
-                if sender not in self.gui.popped_out_channels:
+                if self.server_name in self.gui.popped_out_channels and sender not in self.gui.popped_out_channels[self.server_name]:
                     self.display_message(timestamp, sender, message, target, mode_symbol, is_direct=True)
                 else:
                     await self.pip_to_pop_out(timestamp, sender, message, target, mode_symbol)
@@ -1547,7 +1573,7 @@ class RudeChatClient:
                     elif user_mention:
                         self.highlight_channel_if_not_current(target, sender, user_mention)
 
-                elif sender != self.current_channel and sender not in self.gui.popped_out_channels:
+                elif sender != self.current_channel and self.server_name in self.gui.popped_out_channels and sender not in self.gui.popped_out_channels[self.server_name]:
                     self.save_message(self.server, target, sender, message, mode_symbol, is_sent=False)
                     user_mention = self.is_it_a_mention(message)
                     if not user_mention:
@@ -1559,7 +1585,7 @@ class RudeChatClient:
                 else:
                     self.save_message(self.server, target, sender, message, mode_symbol, is_sent=False)
 
-                    if sender not in self.gui.popped_out_channels:
+                    if self.server_name in self.gui.popped_out_channels and sender not in self.gui.popped_out_channels[self.server_name]:
                         self.display_message(timestamp, sender, message, target, mode_symbol, is_direct=True)
                     else:
                         await self.pip_to_pop_out(timestamp, sender, message, target, mode_symbol)
@@ -1593,7 +1619,7 @@ class RudeChatClient:
             elif user_mention:
                 self.highlight_channel_if_not_current(target, sender, user_mention)
 
-        elif target != self.current_channel and target not in self.gui.popped_out_channels:
+        elif target != self.current_channel and self.server_name in self.gui.popped_out_channels and target not in self.gui.popped_out_channels[self.server_name]:
             if self.server not in self.channel_messages:
                 self.channel_messages[self.server] = {}
             if target not in self.channel_messages[self.server]:
@@ -1614,7 +1640,7 @@ class RudeChatClient:
             self.save_message(self.server, target, sender, message, mode_symbol, is_sent=False)
             self.log_message(self.server_name, target, sender, message, is_sent=False)
 
-            if target not in self.gui.popped_out_channels:
+            if self.server_name in self.gui.popped_out_channels and target not in self.gui.popped_out_channels[self.server_name]:
                 self.display_message(timestamp, sender, message, target, mode_symbol, is_direct=False)
             else:
                 await self.pip_to_pop_out(timestamp, sender, message, target, mode_symbol)
@@ -1756,11 +1782,11 @@ class RudeChatClient:
                 self.channel_messages[self.server][channel].append(join_message)
 
             # Display the message in the text_widget only if the channel matches the current channel
-            if channel == self.current_channel and self.gui.irc_client == self and channel not in self.gui.popped_out_channels:
+            if channel == self.current_channel and self.gui.irc_client == self and self.server_name in self.gui.popped_out_channels and channel not in self.gui.popped_out_channels[self.server_name]:
                 if self.show_join_part_quit_nick:
                     self.gui.insert_text_widget(join_message)
                     self.gui.highlight_nickname()
-            if channel in self.gui.popped_out_channels:
+            if self.server_name in self.gui.popped_out_channels and channel in self.gui.popped_out_channels[self.server_name]:
                 if self.show_join_part_quit_nick:
                     self.pipe_mode_to_pop_out(join_message, channel)
 
@@ -1810,11 +1836,11 @@ class RudeChatClient:
                 self.channel_messages[self.server][channel].append(part_message)
 
             # Display the message in the text_widget only if the channel matches the current channel
-            if channel == self.current_channel and self.gui.irc_client == self and channel not in self.gui.popped_out_channels:
+            if channel == self.current_channel and self.gui.irc_client == self and self.server_name in self.gui.popped_out_channels and channel not in self.gui.popped_out_channels[self.server_name]:
                 if self.show_join_part_quit_nick:
                     self.gui.insert_text_widget(part_message)
                     self.gui.highlight_nickname()
-            if channel in self.gui.popped_out_channels:
+            if self.server_name in self.gui.popped_out_channels and channel in self.gui.popped_out_channels[self.server_name]:
                 if self.show_join_part_quit_nick:
                     self.pipe_mode_to_pop_out(part_message, channel)
 
@@ -1866,11 +1892,11 @@ class RudeChatClient:
                             self.channel_messages[self.server][channel].append(quit_message)
 
                         # Display the message in the text_widget only if the channel matches the current channel
-                        if channel == self.current_channel and self.gui.irc_client == self and channel not in self.gui.popped_out_channels:
+                        if channel == self.current_channel and self.gui.irc_client == self and self.server_name in self.gui.popped_out_channels and channel not in self.gui.popped_out_channels[self.server_name]:
                             if self.show_join_part_quit_nick:
                                 self.gui.insert_text_widget(quit_message)
                                 self.gui.highlight_nickname()
-                        if channel in self.gui.popped_out_channels:
+                        if self.server_name in self.gui.popped_out_channels and channel in self.gui.popped_out_channels[self.server_name]:
                             if self.show_join_part_quit_nick:
                                 self.pipe_mode_to_pop_out(quit_message, channel)
 
@@ -1916,11 +1942,11 @@ class RudeChatClient:
                             self.channel_messages[self.server][channel].append(f"\x0307(⟳)\x0F {old_nick} has changed their nickname to {new_nick}\n")
                         
                         # Insert message into the text widget only if this is the current channel
-                        if channel == self.current_channel and self.gui.irc_client == self and channel not in self.gui.popped_out_channels:
+                        if channel == self.current_channel and self.gui.irc_client == self and self.server_name in self.gui.popped_out_channels and channel not in self.gui.popped_out_channels[self.server_name]:
                             if self.show_join_part_quit_nick:
                                 self.gui.insert_text_widget(message)
                                 self.gui.highlight_nickname()
-                        if channel in self.gui.popped_out_channels:
+                        if self.server_name in self.gui.popped_out_channels and channel in self.gui.popped_out_channels[self.server_name]:
                             if self.show_join_part_quit_nick:
                                 self.pipe_mode_to_pop_out(message, channel)
 
@@ -2099,10 +2125,10 @@ class RudeChatClient:
     def _log_channel_message(self, channel, message):
         if channel != self.nickname:
             if channel == self.current_channel and self.gui.irc_client == self:
-                if channel not in self.gui.popped_out_channels:
+                if self.server_name in self.gui.popped_out_channels and channel not in self.gui.popped_out_channels[self.server_name]:
                     self.gui.insert_text_widget(f"{message}")
                     self.gui.highlight_nickname()
-            if channel in self.gui.popped_out_channels:
+            if self.server_name in self.gui.popped_out_channels and channel in self.gui.popped_out_channels[self.server_name]:
                 self.pipe_mode_to_pop_out(message, channel)
             if self.server not in self.channel_messages:
                 self.channel_messages[self.server] = {}
@@ -2119,7 +2145,7 @@ class RudeChatClient:
             unique_users = list(dict.fromkeys(sorted_users))
             
             # Only update the user listbox if the channel is the currently selected channel
-            if channel == self.current_channel and self.gui.irc_client == self and channel not in self.gui.popped_out_channels:
+            if channel == self.current_channel and self.gui.irc_client == self and self.server_name in self.gui.popped_out_channels and channel not in self.gui.popped_out_channels[self.server_name]:
                 # Update the Tkinter Listbox to reflect the current users in the channel
                 self.gui.user_listbox.delete(0, tk.END)  # Clear existing items
                 for user in unique_users:
@@ -2129,7 +2155,7 @@ class RudeChatClient:
         except Exception as e:
             logging.error(f"Error1 in update_user_listbox: {e}")
         
-        if channel in self.gui.popped_out_channels:
+        if self.server_name in self.gui.popped_out_channels and channel in self.gui.popped_out_channels[self.server_name]:
             try:
                 window = self.gui.pop_out_windows[channel]
                 window.update_gui_user_list(channel)
@@ -2458,10 +2484,10 @@ class RudeChatClient:
             kick_message_content = f"\x0304(←)\x0F {kicked_nickname} has been kicked from {channel} by {tokens.hostmask.nickname} ({reason})\n"
             self.channel_messages[self.server][channel].append(kick_message_content)
 
-            if channel == self.current_channel and self.gui.irc_client == self and channel not in self.gui.popped_out_channels:
+            if channel == self.current_channel and self.gui.irc_client == self and self.server_name in self.gui.popped_out_channels and channel not in self.gui.popped_out_channels[self.server_name]:
                 self.gui.insert_text_widget(kick_message_content)
                 self.gui.highlight_nickname()
-            if channel in self.gui.popped_out_channels:
+            if self.server_name in self.gui.popped_out_channels and channel in self.gui.popped_out_channels[self.server_name]:
                 self.pipe_mode_to_pop_out(kick_message_content, channel)
 
             # Remove the user from the channel_users list for the channel
@@ -3544,7 +3570,7 @@ class RudeChatClient:
 
             case "sw":
                 channel_name = args[1]
-                if channel_name in self.joined_channels and channel_name not in self.gui.popped_out_channels:
+                if channel_name in self.joined_channels and self.server_name in self.gui.popped_out_channels and channel_name not in self.gui.popped_out_channels[self.server_name]:
                     self.pop_out_return(channel_name)
                 else:
                     self.gui.insert_text_widget(f"Not a member of channel or Channel in Pop Out Window: {channel_name}\n")
@@ -3776,7 +3802,7 @@ class RudeChatClient:
     async def _away_user_pop_out_helper(self, userchan):
         if userchan.startswith(tuple(self.chantypes)):
             return
-        if userchan in self.gui.popped_out_channels:
+        if self.server_name in self.gui.popped_out_channels and userchan in self.gui.popped_out_channels[self.server_name]:
             window = self.gui.pop_out_windows.get(userchan)
             if userchan in self.away_users_dict:
                 if self.away_users_dict.get(userchan) == "":

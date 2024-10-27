@@ -418,17 +418,12 @@ class RudePopOut:
         self.insert_text(f"{timestamp} {formatted_message}\n")
 
     def close_window(self):
-        # Remove the channel and window from the popped_out_channels and pop_out_windows
-        if self.selected_channel in self.main_app.popped_out_channels:
-            self.main_app.popped_out_channels.remove(self.selected_channel)
-        if self.selected_channel in self.main_app.pop_out_windows:
-            del self.main_app.pop_out_windows[self.selected_channel]
         # Close the window if it exists
         if self.root:
             self.main_app.return_channel_to_listbox(self.selected_channel)
+            self.main_app.highlight_who_channels()
             self.irc_client.update_gui_channel_list()
             self.irc_client.force_click(self.selected_channel)
-            self.main_app.highlight_who_channels()
             self.root.destroy()
             self.root = None
 
@@ -963,12 +958,19 @@ class RudePopOut:
     def is_app_focused(self):
         return bool(self.root.focus_displayof())
 
+    def is_mention(self, message):
+        if self.nick_name in message:
+            return True
+        else:
+            return False
+
     async def check_focus_and_notify(self, message):
         if not self.is_app_focused():
-            try:
-                await self.trigger_desktop_notification(self.selected_channel, message)
-            except Exception as e:
-                print(f"Exception in check_focus_and_notify: {e}")
+            if self.is_mention(message):
+                try:
+                    await self.trigger_desktop_notification(self.selected_channel, message)
+                except Exception as e:
+                    print(f"Exception in check_focus_and_notify: {e}")
 
     async def trigger_desktop_notification(self, channel_name=None, title="RudeChat", message_content=None):
         """
