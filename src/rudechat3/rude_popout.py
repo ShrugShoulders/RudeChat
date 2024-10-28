@@ -450,7 +450,6 @@ class RudePopOut:
             # Close the window if it exists
             if self.root:
                 self.main_app.return_channel_to_listbox(self.selected_channel)
-                self.main_app.highlight_who_channels()
                 self.irc_client.update_gui_channel_list()
                 self.irc_client.force_click(self.selected_channel)
                 self.root.destroy()
