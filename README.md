@@ -13,11 +13,11 @@ To install on Linux:
 
 Main Stand Alone files found in: 
 
-        \_internal\/rudechat3\/
+        /_internal/rudechat3/
 
 Pip Install Directory: 
 
-        \/home\/username\/.local\/lib\/python3.12\/site-packages\/rudechat3\/
+        /home/username/.local/lib/python3.12/site-packages/rudechat3/
 
 To install on Windows Download the installer.
 
