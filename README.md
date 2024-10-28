@@ -11,12 +11,19 @@ To install on Linux:
         Once pip has completed you can then run rudechat in your terminal. 
         Command: 'rudechat'
 
-Main Stand Alone files found in: \_internal\/rudechat3\/
-Pip Install Directory: \/home\/username\/.local\/lib\/python3.12\/site-packages\/rudechat3\/
+Main Stand Alone files found in: 
+
+        \_internal\/rudechat3\/
+
+Pip Install Directory: 
+
+        \/home\/username\/.local\/lib\/python3.12\/site-packages\/rudechat3\/
 
 To install on Windows Download the installer.
 
-It will install to %LOCALAPPDATA%\Programs\RudeChat3
+Windows installs to: 
+
+        %LOCALAPPDATA%\Programs\RudeChat3
 
 It is suggested that you use: https://github.com/source-foundry/Hack as your font.
 
