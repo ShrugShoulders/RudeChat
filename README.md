@@ -13,7 +13,7 @@ To install on Linux:
 
 Main Stand Alone files found in: 
 
-        /rudechat3/_internal/rudechat3/
+        /_internal/rudechat3/
 
 Pip Install Directory: 
 
