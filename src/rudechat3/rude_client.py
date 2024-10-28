@@ -1211,7 +1211,7 @@ class RudeChatClient:
                 break
             except asyncio.CancelledError:
                 self.loop_running = False
-                logging.info("Exiting away_updater loop.")
+                logging.info("Exiting the_worker loop.")
                 break
             except Exception as e:
                 logging.error(f"the_worker Error: {e}")
@@ -1219,6 +1219,15 @@ class RudeChatClient:
     def handle_server_message(self, line):
         data = line + "\n"
         self.add_server_message(data)
+
+    def add_notice_to_history(self, target, message):
+        # Update the message history for NOTICE messages.
+        if self.server not in self.channel_messages:
+            self.channel_messages[self.server] = {}
+        if target not in self.channel_messages[self.server]:
+            self.channel_messages[self.server][target] = []
+
+        self.channel_messages[self.server][target].append(message)
 
     def handle_notice_message(self, tokens):
         try:
@@ -1237,23 +1246,27 @@ class RudeChatClient:
                     logging.info("Invalid password detected in NOTICE message.")
                 return True  # Return True to indicate an "Invalid password" was detected
 
-            if self.znc_connection:
-                if (
-                    self.server_name in self.gui.popped_out_channels
-                    and target not in self.gui.popped_out_channels[self.server_name]
-                ):
-                    self.gui.insert_text_widget(f"{sdata}")
-                    self.add_server_message(data)
-                elif (
-                    self.server_name in self.gui.popped_out_channels
-                    and target in self.gui.popped_out_channels[self.server_name]
-                ):
-                    self.pipe_mode_to_pop_out(data, target)
-                    self.add_server_message(data)
-                else:
-                    self.gui.insert_text_widget(f"{sdata}")
-                    self.add_server_message(data)
-            
+            if any(target.startswith(prefix) for prefix in self.chantypes):
+                self.add_notice_to_history(target, data)
+
+            if (
+                self.server_name in self.gui.popped_out_channels
+                and target not in self.gui.popped_out_channels[self.server_name]
+            ):
+                self.gui.insert_text_widget(f"{sdata}")
+                self.add_server_message(data)
+
+            elif (
+                self.server_name in self.gui.popped_out_channels
+                and target in self.gui.popped_out_channels[self.server_name]
+            ):
+                self.pipe_mode_to_pop_out(data, target)
+                self.add_server_message(data)
+
+            else:
+                self.gui.insert_text_widget(f"{sdata}")
+                self.add_server_message(data)
+
             return False  # Return False to indicate no special case was detected
         except Exception as e:
             logging.error(f"Error in handle_notice_message: {e}")
