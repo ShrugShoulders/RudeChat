@@ -1532,6 +1532,16 @@ class RudeGui:
         except Exception as e:
             logging.error(f"Error starting auto_clean task: {e}")
 
+        try:
+            irc_client.tasks["away_update"] = asyncio.create_task(irc_client.away_updater(), name="away_update")
+        except Exception as e:
+            logging.error(f"Error starting away_updater task: {e}")
+
+        try:
+            irc_client.tasks["el_worker"] = asyncio.create_task(irc_client.the_worker(), name="la_worker")
+        except Exception as e:
+            logging.error(f"Error starting the_worker task: {e}")
+
         if self.log_on:
             logging.info("Finished Creating Client Tasks: auto_who, auto_away, handle_incoming_message, auto_trim, auto_save, & keep_alive")
 

@@ -53,6 +53,7 @@ class RudeChatClient:
         self.writer = None
         self.ping_start_time = None
         self.who_user_request = False
+        self.whois_user_request = False
         self.isupport_flag = False
         self.loop_running = True
         self.away_notify = False
@@ -136,6 +137,32 @@ class RudeChatClient:
         self.log_on = config.getboolean('IRC', 'log_on', fallback=False)
         self.watcher.reload_config()
         self.gui.update_nick_channel_label()
+
+    def update_away_status(self):
+        for nickname, away_message in self.away_users_dict.items():
+            # Create the away status message
+            away_status = f"Away: {away_message}"
+
+            # Check if the user is already in who_user_data
+            if nickname in self.who_user_data:
+                user_details = self.who_user_data[nickname]
+                user_details['status'] = away_status  # Update the status with away message
+
+    async def whois_worker(self):
+        while True:
+            try:
+                for nickname in list(self.away_users_dict.keys()):
+                    away_message = self.away_users_dict.get(nickname, "")
+                    
+                    if not away_message:
+                        if self.log_on:
+                            logging.info(f"Sending WHOIS for {nickname}")
+                        await self.whois(nickname)
+                        await asyncio.sleep(5)
+                break
+            except RuntimeError:
+                logging.error("whois_worker Error: dictionary changed size during iteration. Retrying...")
+                await asyncio.sleep(1)
 
     def inform_gui(self):
         if self.server_name not in self.gui.popped_out_channels:
@@ -1163,6 +1190,32 @@ class RudeChatClient:
             except Exception as e:
                 logging.error(f"Cleaner Error: {e}")
 
+    async def away_updater(self):
+        while self.loop_running:
+            try:
+                await asyncio.sleep(250)
+                self.update_away_status()
+            except asyncio.CancelledError:
+                self.loop_running = False
+                logging.info("Exiting away_updater loop.")
+                break
+            except Exception as e:
+                logging.error(f"away_updater Error: {e}")
+
+    async def the_worker(self):
+        while self.loop_running:
+            try:
+                await asyncio.sleep(160)
+                await self.whois_worker()
+                self.whois_data.clear()
+                break
+            except asyncio.CancelledError:
+                self.loop_running = False
+                logging.info("Exiting away_updater loop.")
+                break
+            except Exception as e:
+                logging.error(f"the_worker Error: {e}")
+
     def handle_server_message(self, line):
         data = line + "\n"
         self.add_server_message(data)
@@ -1906,6 +1959,8 @@ class RudeChatClient:
                     current_modes = self.user_modes.get(channel, {})
                     user_modes = current_modes.get(user_info, set())
                     current_modes.pop(user_info, None)
+                    if user_info in self.away_users_dict:
+                        del self.away_users_dict[user_info]
                     self.update_user_listbox(channel)
 
         except Exception as e:
@@ -2412,7 +2467,8 @@ class RudeChatClient:
                         whois_response += f"\nSuggested /ignore mask: {ignore_suggestion}\n"
 
                         await self.save_whois_to_file(nickname)
-                        self.whois_display(whois_response)
+                        if self.whois_user_request:
+                            self.whois_display(whois_response)
 
                 except Exception as e:
                     logging.error(f"Error in handle_whois_replies command 318: {e}")
@@ -2433,8 +2489,8 @@ class RudeChatClient:
                 self.channel_messages[self.server][whois_channel] = [] 
             self.channel_messages[self.server][whois_channel].append(f"{whois_response}\n")
 
-            # Update the GUI
-            self.gui.insert_and_scroll()
+            self.whois_user_request = False
+
         except Exception as e:
             logging.error(f"Exception in help: {e}")
 
@@ -2672,6 +2728,8 @@ class RudeChatClient:
         if len(tokens.params) >= 2:
             # Extract the nickname from the second element of the list
             nickname = tokens.params[1]
+            if nickname in self.away_users_dict:
+                del self.away_users_dict[nickname]
             
             self.gui.insert_text_widget(f"The nickname '{nickname}' doesn't exist on the server.\n")
         else:
@@ -2682,16 +2740,29 @@ class RudeChatClient:
     def handle_away(self, tokens):
         nickname = tokens.hostmask.nickname
         params = tokens.params
-        
+
         if params:
+            # User is away with a message
             away_message = str(tokens.params[0])
+            away_status = f"Away: {away_message}"  # Set the away status message
+
+            # Update the dictionaries.
             if nickname not in self.away_users_dict:
                 self.away_users_dict[nickname] = away_message
-            self.gui.highlight_away_users()
+
+            if nickname in self.who_user_data:
+                user_details = self.who_user_data[nickname]
+                user_details['status'] = away_status  # Update the status
         else:
+            # User is back (no params)
             if nickname in self.away_users_dict:
                 del self.away_users_dict[nickname]
-            self.gui.highlight_away_users()
+
+            if nickname in self.who_user_data:
+                user_details = self.who_user_data[nickname]
+                user_details['status'] = "Active"  # Set status as Active
+
+        self.gui.highlight_away_users()
 
     def handle_account_message(self, tokens):
         """
@@ -3548,6 +3619,7 @@ class RudeChatClient:
                 await self.handle_who_command(args[1:])
 
             case "whois": #who is that?
+                self.whois_user_request = True
                 target = user_input.split()[1]
                 await self.whois(target)
 
