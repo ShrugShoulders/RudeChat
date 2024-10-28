@@ -2313,7 +2313,7 @@ class RudeChatClient:
                 
                 final_message = "\n".join(messages)
                 if self.who_user_request:
-                    self.gui.insert_text_widget(final_message)
+                    self.gui.insert_text_widget(f"{final_message}\n")
                     self.who_user_request = False
 
                 # Reset the who_details for future use
