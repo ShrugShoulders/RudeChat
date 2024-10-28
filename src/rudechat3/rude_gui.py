@@ -9,6 +9,7 @@ from rudechat3.shared_imports import *
 from rudechat3.rude_dragndrop import DragDropListbox
 from rudechat3.nick_cleaner import clean_nicknames
 from rudechat3.rude_logger import configure_logging
+from rudechat3.user_data_display import RudeToolTip
 
 
 class RudeGui:
@@ -112,6 +113,9 @@ class RudeGui:
         self.user_listbox.grid(row=1, column=0, sticky='nsew')
         self.user_scrollbar.grid(row=1, column=1, sticky='ns')
         self.user_listbox.bind("<Button-3>", self.show_user_list_menu)
+        self.user_listbox.bind("<Motion>", self.on_hover)
+        self.user_listbox.bind("<Leave>", self.on_leave)
+        self.usertooltip = RudeToolTip(self.user_listbox)
 
         # Channel frame
         self.channel_frame = tk.Frame(self.list_frame, bg="black")
@@ -420,6 +424,36 @@ class RudeGui:
         else:
             self.master.withdraw()  # Hide the window
             self.iconed = True
+
+    def on_hover(self, event):
+        try:
+            # Get the index of the user under the cursor
+            index = self.user_listbox.nearest(event.y)
+            username = self.user_listbox.get(index)
+            modes_to_strip = ''.join(self.irc_client.mode_values)
+            cleaned_nickname = username.lstrip(modes_to_strip)
+            
+            # Retrieve WHO data if it exists
+            if cleaned_nickname in self.irc_client.who_user_data:
+                who_info = self.irc_client.who_user_data[cleaned_nickname]
+                tooltip_text = f"WHOIS for {cleaned_nickname}:\n"
+                for key, value in who_info.items():
+                    tooltip_text += f"{key}: {value}\n"
+                
+                ignore_suggestion = f"*!{who_info['username']}@{who_info['host']}"
+                tooltip_text += f"\nSuggested /ignore mask: {ignore_suggestion}\n"
+                
+                # Show the tooltip at mouse position
+                self.usertooltip.show_tooltip(tooltip_text, event.x, event.y)
+            else:
+                # Hide tooltip if there is no WHO data for this user
+                self.usertooltip.hide_tooltip()
+
+        except Exception as e:
+            logging.error(f"Error Showing User tooltip: {e}")
+
+    def on_leave(self, event):
+        self.usertooltip.hide_tooltip()
 
     def select_short_all_text(self, event):
         try:

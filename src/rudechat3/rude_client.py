@@ -36,6 +36,7 @@ class RudeChatClient:
         self.user_modes = {}
         self.mode_to_symbol = {}
         self.whois_data = {}
+        self.who_user_data = {}
         self.download_channel_list = {}
         self.highlighted_channels = {}
         self.mentions = {}
@@ -52,7 +53,6 @@ class RudeChatClient:
         self.writer = None
         self.ping_start_time = None
         self.who_user_request = False
-        self.whois_user_request = False
         self.isupport_flag = False
         self.loop_running = True
         self.away_notify = False
@@ -338,11 +338,6 @@ class RudeChatClient:
         await asyncio.sleep(4)
         while True:
             for channel in self.joined_channels:
-                if not self.away_notify:
-                    self.gui.highlight_away_users()
-                    self.cap_who_for_chan.append(channel)
-                    self.gui.highlight_who_channels()
-                    break
                 if self.account_notify:
                     await self.send_message(f"WHO {channel} %nuhsrcdfa")
                 else:
@@ -2269,6 +2264,7 @@ class RudeChatClient:
                     "who_message": who_message
                 }
                 self.who_details.append(user_details)
+                self.who_user_data[nickname] = user_details
 
             except Exception as e:
                 logging.error(f"Error in handle_who_reply command 352: {e}")
@@ -2300,6 +2296,8 @@ class RudeChatClient:
                     "account": account,
                     "who_message": who_message
                 }
+
+                self.who_user_data[nickname] = user_details
                 self.who_details.append(user_details)
                 self.cache_accountname(nickname, account)
 
@@ -2414,8 +2412,7 @@ class RudeChatClient:
                         whois_response += f"\nSuggested /ignore mask: {ignore_suggestion}\n"
 
                         await self.save_whois_to_file(nickname)
-                        if self.whois_user_request:
-                            self.whois_display(whois_response)
+                        self.whois_display(whois_response)
 
                 except Exception as e:
                     logging.error(f"Error in handle_whois_replies command 318: {e}")
@@ -2438,7 +2435,6 @@ class RudeChatClient:
 
             # Update the GUI
             self.gui.insert_and_scroll()
-            self.whois_user_request = False
         except Exception as e:
             logging.error(f"Exception in help: {e}")
 
@@ -3552,7 +3548,6 @@ class RudeChatClient:
                 await self.handle_who_command(args[1:])
 
             case "whois": #who is that?
-                self.whois_user_request = True
                 target = user_input.split()[1]
                 await self.whois(target)
 
@@ -4001,9 +3996,9 @@ class RudeChatClient:
 
     async def ignore_user_from_gui(self, nickname):
         try:
-            if self.whois_data.get(nickname):
+            if self.who_user_data.get(nickname):
                 # Generate the ignore data
-                ignore_data = f"*!{self.whois_data[nickname]['Username']}@{self.whois_data[nickname]['Hostname']}"
+                ignore_data = f"*!{self.who_user_data[nickname]['username']}@{self.who_user_data[nickname]['host']}"
                 if ignore_data not in self.ignore_list:
                     self.ignore_list.append(ignore_data)
                     await self.save_ignore_list()
@@ -4012,10 +4007,13 @@ class RudeChatClient:
                     self.gui.insert_text_widget(f"User Already In Ignore List {nickname} - {ignore_data}.\n")
 
             else:
-                await self.send_message(f'WHOIS {nickname}')
+                if self.account_notify:
+                    await self.send_message(f'WHO {nickname} %nuhsrcdfa')
+                else:
+                    await self.send_message(f'WHO {nickname}')
                 await asyncio.sleep(0.5)
-                if self.whois_data.get(nickname):
-                    ignore_data = f"*!{self.whois_data[nickname]['Username']}@{self.whois_data[nickname]['Hostname']}"
+                if self.who_user_data.get(nickname):
+                    ignore_data = f"*!{self.who_user_data[nickname]['username']}@{self.who_user_data[nickname]['host']}"
                     if ignore_data not in self.ignore_list:
                         self.ignore_list.append(ignore_data)
                         await self.save_ignore_list()
@@ -4028,9 +4026,9 @@ class RudeChatClient:
 
     async def unignore_user_from_gui(self, nickname):
         try:
-            if self.whois_data.get(nickname):
+            if self.who_user_data.get(nickname):
                 # Generate the ignore data
-                ignore_data = f"*!{self.whois_data[nickname]['Username']}@{self.whois_data[nickname]['Hostname']}"
+                ignore_data = f"*!{self.who_user_data[nickname]['username']}@{self.who_user_data[nickname]['host']}"
                 if ignore_data in self.ignore_list:
                     self.ignore_list.remove(ignore_data)
                     await self.save_ignore_list()
@@ -4039,19 +4037,23 @@ class RudeChatClient:
                     self.gui.insert_text_widget(f"User Not Found In Ignore List {nickname} - {ignore_data}.\n")
 
             else:
-                await self.send_message(f'WHOIS {nickname}')
+                if self.account_notify:
+                    await self.send_message(f'WHO {nickname} %nuhsrcdfa')
+                else:
+                    await self.send_message(f'WHO {nickname}')
                 await asyncio.sleep(0.5)
-                if self.whois_data.get(nickname):
-                    ignore_data = f"*!{self.whois_data[nickname]['Username']}@{self.whois_data[nickname]['Hostname']}"
+                if self.who_user_data.get(nickname):
+                    ignore_data = f"*!{self.who_user_data[nickname]['username']}@{self.who_user_data[nickname]['host']}"
                     if ignore_data in self.ignore_list:
                         self.ignore_list.remove(ignore_data)
                         await self.save_ignore_list()
-                        self.gui.insert_text_widget(f"You've ignored {nickname} - {ignore_data}.\n")
+                        self.gui.insert_text_widget(f"You've unignored {nickname} - {ignore_data}.\n")
                     else:
                         self.gui.insert_text_widget(f"User Not Found In Ignore List {nickname} - {ignore_data}.\n")
 
         except Exception as e:
             logging.error(f"Error in unignore_user_from_gui: {e}")
+
 
     async def ignore_user(self, args):
         if len(args) > 1:
