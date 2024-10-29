@@ -1574,6 +1574,7 @@ class RudeChatClient:
     async def get_direct_message_target(self, sender, target):
         if self.auto_whois == True:
             if sender not in self.whois_executed:
+                self.whois_user_request = True
                 await self.send_message(f'WHOIS {sender}')
                 self.whois_executed.add(sender)
             return target
@@ -2305,13 +2306,13 @@ class RudeChatClient:
         if not hasattr(self, 'who_details'):
             self.who_details = []
 
-        # Helper method to update self.who_user_data with shared channels.
+        # Helper method to compile WHO data.
         def update_user_data(nickname, new_data):
             # Check if the user already exists in who_user_data
             if nickname in self.who_user_data:
                 user_data = self.who_user_data[nickname]
                 
-                # Update the "shared-channels" field if "channel" is present in new_data
+                # Update the "shared-channels"
                 if "channel" in new_data:
                     # Ensure "shared-channels" is a string
                     if "shared-channels" not in user_data:
@@ -2319,14 +2320,31 @@ class RudeChatClient:
                     elif new_data["channel"] not in user_data["shared-channels"].split(", "):
                         # Append the new channel to the string if it's not already included
                         user_data["shared-channels"] += f", {new_data['channel']}"
-                
+
                 # Update other fields in user_data
                 for key, value in new_data.items():
-                    if key != "channel" and key != "shared-channels" and (key not in user_data or user_data[key] != value):
+                    if key not in {"shared-channels", "mode"} and (key not in user_data or user_data[key] != value):
                         user_data[key] = value
+                
+                # Update the "mode" field
+                if "mode" in new_data and "channel" in new_data:
+                    # Only proceed if the mode is not empty
+                    if new_data["mode"]:
+                        channel_mode = f"{new_data['channel']}({new_data['mode']})"
+                        
+                        # Initialize "mode" as an empty string if not already present or inconsistently formatted
+                        if "mode" not in user_data or user_data["mode"] == "":
+                            user_data["mode"] = channel_mode
+                        else:
+                            existing_modes = user_data["mode"].split(", ")
+                            # Append only if this channel_mode isn't already present
+                            if channel_mode not in existing_modes:
+                                user_data["mode"] += f", {channel_mode}"
+
             else:
-                # Initialize new user data with "shared-channels" as a string
+                # Initialize new user data with "shared-channels" and "mode" as strings
                 new_data["shared-channels"] = new_data.get("channel", "")
+                new_data["mode"] = f"{new_data['channel']}({new_data['mode']})" if "mode" in new_data else ""
                 self.who_user_data[nickname] = new_data
 
         if tokens.command == "352":  # Standard WHO reply
@@ -2496,18 +2514,18 @@ class RudeChatClient:
 
             elif command == "318":
                 try:
-                    if self.whois_data.get(nickname):
-                        whois_response = f"WHOIS for {nickname}:\n"
-                        for key, value in self.whois_data[nickname].items():
-                            whois_response += f"{key}: {value}\n"
+                    if self.whois_user_request:
+                        if self.whois_data.get(nickname):
+                            whois_response = f"WHOIS for {nickname}:\n"
+                            for key, value in self.whois_data[nickname].items():
+                                whois_response += f"{key}: {value}\n"
 
-                        # Generate and append the /ignore suggestion
-                        ignore_suggestion = f"*!{self.whois_data[nickname]['Username']}@{self.whois_data[nickname]['Hostname']}"
-                        whois_response += f"\nSuggested /ignore mask: {ignore_suggestion}\n"
+                            # Generate and append the /ignore suggestion
+                            ignore_suggestion = f"*!{self.whois_data[nickname]['Username']}@{self.whois_data[nickname]['Hostname']}"
+                            whois_response += f"\nSuggested /ignore mask: {ignore_suggestion}\n"
 
-                        await self.save_whois_to_file(nickname)
-                        if self.whois_user_request:
                             self.whois_display(whois_response)
+                            await self.save_whois_to_file(nickname)
 
                 except Exception as e:
                     logging.error(f"Error in handle_whois_replies command 318: {e}")
