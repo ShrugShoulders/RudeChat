@@ -158,7 +158,7 @@ class RudeChatClient:
                         if self.log_on:
                             logging.info(f"Sending WHOIS for {nickname}")
                         await self.whois(nickname)
-                        await asyncio.sleep(5)
+                        await asyncio.sleep(2)
                 break
             except RuntimeError:
                 logging.error("whois_worker Error: dictionary changed size during iteration. Retrying...")
@@ -2305,9 +2305,33 @@ class RudeChatClient:
         if not hasattr(self, 'who_details'):
             self.who_details = []
 
+        # Helper method to update self.who_user_data with shared channels.
+        def update_user_data(nickname, new_data):
+            # Check if the user already exists in who_user_data
+            if nickname in self.who_user_data:
+                user_data = self.who_user_data[nickname]
+                
+                # Update the "shared-channels" field if "channel" is present in new_data
+                if "channel" in new_data:
+                    # Ensure "shared-channels" is a string
+                    if "shared-channels" not in user_data:
+                        user_data["shared-channels"] = user_data.get("channel", new_data["channel"])
+                    elif new_data["channel"] not in user_data["shared-channels"].split(", "):
+                        # Append the new channel to the string if it's not already included
+                        user_data["shared-channels"] += f", {new_data['channel']}"
+                
+                # Update other fields in user_data
+                for key, value in new_data.items():
+                    if key != "channel" and key != "shared-channels" and (key not in user_data or user_data[key] != value):
+                        user_data[key] = value
+            else:
+                # Initialize new user data with "shared-channels" as a string
+                new_data["shared-channels"] = new_data.get("channel", "")
+                self.who_user_data[nickname] = new_data
+
         if tokens.command == "352":  # Standard WHO reply
-            # Parse the WHO reply
             try:
+                # Parse the WHO reply
                 channel = tokens.params[1]
                 username = tokens.params[2]
                 host = tokens.params[3]
@@ -2331,14 +2355,16 @@ class RudeChatClient:
                     "mode": mode_state,
                     "who_message": who_message
                 }
+                
+                update_user_data(nickname, user_details)
                 self.who_details.append(user_details)
-                self.who_user_data[nickname] = user_details
 
             except Exception as e:
                 logging.error(f"Error in handle_who_reply command 352: {e}")
 
-        elif tokens.command == "354": # WHOX %nuhsrcdfa
+        elif tokens.command == "354":  # WHOX %nuhsrcdfa
             try:
+                # Parse the WHOX reply
                 channel = tokens.params[1]
                 username = tokens.params[2]
                 host = tokens.params[3]
@@ -2364,8 +2390,8 @@ class RudeChatClient:
                     "account": account,
                     "who_message": who_message
                 }
-
-                self.who_user_data[nickname] = user_details
+                
+                update_user_data(nickname, user_details)
                 self.who_details.append(user_details)
                 self.cache_accountname(nickname, account)
 
@@ -2901,7 +2927,7 @@ class RudeChatClient:
                     tokens = irctokens.tokenise(line)
                 except ValueError as e:
                     self.gui.insert_text_widget(f"ValueError in handle_incoming_message: {e}\n")
-                    logging.error(f"ValueError in handle_incoming_message: {e}")
+                    logging.error(f"ValueError in handle_incoming_message: {e} line: {line}")
                     continue
                 except IndexError as ie:
                     self.gui.insert_text_widget(f"IndexError in handle_incoming_message: {ie}. Line: '{line}'\n")
