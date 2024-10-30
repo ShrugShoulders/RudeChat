@@ -60,6 +60,7 @@ class RudeChatClient:
         self.extended_join = False
         self.account_notify = False
         self.who_for_chan_complete = False
+        self.whois_gathering_complete = False
         self.delete_lock_files()
         self.loop = asyncio.get_event_loop()
         self.time_zone = get_localzone()
@@ -164,6 +165,13 @@ class RudeChatClient:
             except RuntimeError:
                 logging.error("whois_worker Error: dictionary changed size during iteration. Retrying...")
                 await asyncio.sleep(1)
+
+    async def send_who(self, target):
+        if self.account_notify:
+            await self.send_message(f"WHO {target} %nuhsrcdfa")
+        else:
+            await self.send_message(f"WHO {target}")
+        return
 
     def inform_gui(self):
         if self.server_name not in self.gui.popped_out_channels:
@@ -383,11 +391,11 @@ class RudeChatClient:
             data = tokens.params[1]
             self.add_server_message(data + "\n")
 
-    def join_znc_channel(self, tokens):
+    async def join_znc_channel(self, tokens):
         channel = tokens.params[0]
         user_info = tokens.hostmask.nickname
         if user_info != self.nickname:
-            self.handle_join(tokens)
+            await self.handle_join(tokens)
             return
 
         # Check if the server entry exists
@@ -570,7 +578,7 @@ class RudeChatClient:
                             await self.handle_nick(tokens)
                     case "JOIN":
                         if self.znc_connection:
-                            self.join_znc_channel(tokens)
+                            await self.join_znc_channel(tokens)
                             reset_timer("#")
                     case "PRIVMSG":
                         if self.znc_connection:
@@ -1177,8 +1185,12 @@ class RudeChatClient:
     async def away_updater(self):
         while self.loop_running:
             try:
-                await asyncio.sleep(250)
-                self.update_away_status()
+                if self.whois_gathering_complete:
+                    self.update_away_status()
+                    await asyncio.sleep(300)
+                else:
+                    await asyncio.sleep(60)
+
             except asyncio.CancelledError:
                 self.loop_running = False
                 logging.info("Exiting away_updater loop.")
@@ -1192,9 +1204,11 @@ class RudeChatClient:
                 if self.who_for_chan_complete:
                     await self.whois_worker()
                     self.whois_data.clear()
+                    self.whois_gathering_complete = True
                     break
                 else:
                     await asyncio.sleep(60)
+
             except asyncio.CancelledError:
                 self.loop_running = False
                 logging.info("Exiting the_worker loop.")
@@ -1206,13 +1220,10 @@ class RudeChatClient:
         await asyncio.sleep(4)
         while True:
             for channel in self.joined_channels:
-                if self.account_notify:
-                    await self.send_message(f"WHO {channel} %nuhsrcdfa")
-                else:
-                    await self.send_message(f"WHO {channel}")
+                await self.send_who(channel)
                 self.gui.highlight_away_users()
                 self.cap_who_for_chan.append(channel)
-                await asyncio.sleep(8.5)
+                await asyncio.sleep(9)
                 self.gui.highlight_who_channels()
             self.who_for_chan_complete = True
             break
@@ -1821,7 +1832,7 @@ class RudeChatClient:
         except Exception as e:
             logging.error(f"Exception in save_highlight: {e}")
 
-    def handle_join(self, tokens):
+    async def handle_join(self, tokens):
         try:
             user_info = tokens.hostmask.nickname
             user_mask = tokens.hostmask
@@ -1860,7 +1871,7 @@ class RudeChatClient:
             # If the user joining is the client's user, return
             if user_info == self.nickname:
                 if self.znc_connection:
-                    self.join_znc_channel(tokens)
+                    await self.join_znc_channel(tokens)
                 return
 
             # Check if the user is not already in the channel_users list for the channel
@@ -1873,6 +1884,8 @@ class RudeChatClient:
 
             # Update the user listbox for the channel with sorted users
             self.update_user_listbox(channel)
+
+            await self.send_who(user_info)
 
         except Exception as e:
             logging.error(f"Error In handle_join: {e}")
@@ -2024,6 +2037,8 @@ class RudeChatClient:
             # If the old nickname is the same as the client's current nickname, update the client state
             if old_nick == self.nickname:
                 await self.change_nickname(new_nick, is_from_token=True)
+            else:
+                await self.send_who(new_nick)
 
         except Exception as e:
             logging.error(f"Error in handle_nick: {e}")
@@ -2335,7 +2350,8 @@ class RudeChatClient:
                         
                         # Initialize "mode" as an empty string if not already present or inconsistently formatted
                         if "mode" not in user_data or user_data["mode"] == "":
-                            user_data["mode"] = channel_mode
+                            data = f"No Modes"
+                            user_data["mode"] = data
                         else:
                             existing_modes = user_data["mode"].split(", ")
                             # Append only if this channel_mode isn't already present
@@ -3058,7 +3074,7 @@ class RudeChatClient:
                     case "NOTICE":
                         self.handle_notice_message(tokens)
                     case "JOIN":
-                        self.handle_join(tokens)
+                        await self.handle_join(tokens)
                     case "PART":
                         self.handle_part(tokens)
                     case "QUIT":
@@ -3588,10 +3604,7 @@ class RudeChatClient:
             case "join":
                 channel_name = args[1]
                 await self.join_channel(channel_name)
-                if self.account_notify:
-                    await self.send_message(f'WHO {channel_name} %nuhsrcdfa')
-                else:
-                    await self.send_message(f'WHO {channel_name}')
+                await self.send_who(channel_name)
                 if channel_name not in self.cap_who_for_chan:
                     self.cap_who_for_chan.append(channel_name)
                 self.gui.highlight_who_channels()
@@ -4140,10 +4153,7 @@ class RudeChatClient:
                     self.gui.insert_text_widget(f"User Already In Ignore List {nickname} - {ignore_data}.\n")
 
             else:
-                if self.account_notify:
-                    await self.send_message(f'WHO {nickname} %nuhsrcdfa')
-                else:
-                    await self.send_message(f'WHO {nickname}')
+                await self.send_who(nickname)
                 await asyncio.sleep(0.5)
                 if self.who_user_data.get(nickname):
                     ignore_data = f"*!{self.who_user_data[nickname]['username']}@{self.who_user_data[nickname]['host']}"
@@ -4170,10 +4180,7 @@ class RudeChatClient:
                     self.gui.insert_text_widget(f"User Not Found In Ignore List {nickname} - {ignore_data}.\n")
 
             else:
-                if self.account_notify:
-                    await self.send_message(f'WHO {nickname} %nuhsrcdfa')
-                else:
-                    await self.send_message(f'WHO {nickname}')
+                await self.send_who(nickname)
                 await asyncio.sleep(0.5)
                 if self.who_user_data.get(nickname):
                     ignore_data = f"*!{self.who_user_data[nickname]['username']}@{self.who_user_data[nickname]['host']}"
@@ -4524,20 +4531,14 @@ class RudeChatClient:
         elif any(args[0].startswith(prefix) for prefix in self.chantypes):
             # WHO on a specific channel
             channel = args[0]
-            if self.account_notify:
-                await self.send_message(f'WHO {channel} %nuhsrcdfa')
-            else:
-                await self.send_message(f'WHO {channel}')
+            await self.send_who(channel)
 
             if channel not in self.cap_who_for_chan:
                 self.cap_who_for_chan.append(channel)
         else:
             # WHO with mask or user host
             mask = args[0]
-            if self.account_notify:
-                await self.send_message(f'WHO {mask} %nuhsrcdfa')
-            else:
-                await self.send_message(f'WHO {mask}')
+            await self.send_who(mask)
 
     async def whois(self, target):
         """
