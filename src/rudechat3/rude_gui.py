@@ -436,7 +436,7 @@ class RudeGui:
             # Retrieve WHO data if it exists
             if cleaned_nickname in self.irc_client.who_user_data:
                 who_info = self.irc_client.who_user_data[cleaned_nickname]
-                tooltip_text = f"WHOIS for {cleaned_nickname}:\n"
+                tooltip_text = f"Data for {cleaned_nickname}:\n"
                 for key, value in who_info.items():
                     tooltip_text += f"{key}: {value}\n"
                 

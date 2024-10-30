@@ -18,6 +18,7 @@ class RudeChatClient:
         self.chan_limit = 0
         self.channellen = 0
         self.topiclen = 0
+        self.ping_time = 0
         self.current_channel = ''
         self.nickname = ''
         self.chantypes = []
@@ -59,6 +60,7 @@ class RudeChatClient:
         self.away_notify = False
         self.extended_join = False
         self.account_notify = False
+        self.who_for_chan_complete = False
         self.delete_lock_files()
         self.loop = asyncio.get_event_loop()
         self.time_zone = get_localzone()
@@ -360,20 +362,6 @@ class RudeChatClient:
             for channel in self.auto_join_channels:
                 await self.join_channel(channel)
                 await asyncio.sleep(0.1)
-
-    async def request_who_for_all_channels(self):
-        await asyncio.sleep(4)
-        while True:
-            for channel in self.joined_channels:
-                if self.account_notify:
-                    await self.send_message(f"WHO {channel} %nuhsrcdfa")
-                else:
-                    await self.send_message(f"WHO {channel}")
-                self.gui.highlight_away_users()
-                self.cap_who_for_chan.append(channel)
-                await asyncio.sleep(8.5)
-                self.gui.highlight_who_channels()
-            break
 
     async def auto_topic_nicklist(self):
         for channel in self.auto_join_channels:
@@ -685,6 +673,8 @@ class RudeChatClient:
 
                     case "PING":
                         await self.initial_ping(tokens)
+                    case "PONG":
+                        self.handle_pong(tokens)
 
                     case "900":
                         logged_in = True
@@ -1121,11 +1111,6 @@ class RudeChatClient:
                     logging.error("loop not running. breaking keep_alive")
                     break
                 else:
-                    #disconnected_server = self.grab_server_name(config_file)
-                    #await self.disconnect(disconnected_server)
-                    #self.gui.remove_server_from_listbox(disconnected_server)
-                    #await self.connect_to_specific_server(disconnected_server)
-                    #break
                     continue
 
             except AttributeError as e:
@@ -1205,16 +1190,33 @@ class RudeChatClient:
     async def the_worker(self):
         while self.loop_running:
             try:
-                await asyncio.sleep(160)
-                await self.whois_worker()
-                self.whois_data.clear()
-                break
+                if self.who_for_chan_complete:
+                    await self.whois_worker()
+                    self.whois_data.clear()
+                    break
+                else:
+                    await asyncio.sleep(60)
             except asyncio.CancelledError:
                 self.loop_running = False
                 logging.info("Exiting the_worker loop.")
                 break
             except Exception as e:
                 logging.error(f"the_worker Error: {e}")
+
+    async def request_who_for_all_channels(self):
+        await asyncio.sleep(4)
+        while True:
+            for channel in self.joined_channels:
+                if self.account_notify:
+                    await self.send_message(f"WHO {channel} %nuhsrcdfa")
+                else:
+                    await self.send_message(f"WHO {channel}")
+                self.gui.highlight_away_users()
+                self.cap_who_for_chan.append(channel)
+                await asyncio.sleep(8.5)
+                self.gui.highlight_who_channels()
+            self.who_for_chan_complete = True
+            break
 
     def handle_server_message(self, line):
         data = line + "\n"
@@ -2718,6 +2720,7 @@ class RudeChatClient:
         if self.ping_start_time is not None:
             ping_time = current_time - self.ping_start_time
             ping_time_formatted = "{:.3f}".format(ping_time).lstrip('0') + "ms"
+            self.ping_time = round(ping_time, 3)
             self.gui.update_ping_label(self.server_name, ping_time_formatted)
 
         self.ping_start_time = None
@@ -3825,7 +3828,7 @@ class RudeChatClient:
                 self.show_file_folder(primary_command)
 
             case None:
-                await self.handle_user_input(user_input, timestamp)
+                await self.handle_user_input(user_input)
 
         return True
 
@@ -3867,7 +3870,7 @@ class RudeChatClient:
             self.gui.insert_text_widget("Error: /watch [+/-]nickname, Example: /watch +Rude to add, /watch -Rude to remove.\n")
             self.gui.insert_text_widget(f"{watch_list}\n")
 
-    async def send_message_chunks(self, message_chunks, timestamp):
+    async def send_message_chunks(self, message_chunks):
         for chunk in message_chunks:
             # Split the chunk into lines
             lines = chunk.split('\n')
@@ -3886,18 +3889,24 @@ class RudeChatClient:
                     mode_symbol = self.get_mode_symbol(user_mode) if user_mode else ''
                     
                     # Insert the message into the text widget
-                    if self.use_time_stamp:
-                        self.gui.insert_text_widget(f"{timestamp}<{mode_symbol}{self.nickname}> {styled_line}\n")
-                    else:
-                        self.gui.insert_text_widget(f"<{mode_symbol}{self.nickname}> {styled_line}\n")
-                    self.gui.highlight_nickname()
+                    try:
+                        await asyncio.sleep(self.ping_time)
+                        timestamp = datetime.datetime.now().strftime('[%H:%M:%S] ')
+                        if self.use_time_stamp:
+                            self.gui.insert_text_widget(f"{timestamp}<{mode_symbol}{self.nickname}> {styled_line}\n")
+                        else:
+                            self.gui.insert_text_widget(f"<{mode_symbol}{self.nickname}> {styled_line}\n")
+                        self.gui.highlight_nickname()
 
-                    # Check if it's a DM or channel
-                    if any(self.current_channel.startswith(prefix) for prefix in self.chantypes):  # It's a channel
-                        self.user_input_channel_message(styled_line, timestamp, mode_symbol)
-                    else:  # It's a DM
-                        self.user_input_dm_message(styled_line, timestamp)
-                        await self._away_user_helper()
+                        # Check if it's a DM or channel
+                        if any(self.current_channel.startswith(prefix) for prefix in self.chantypes):  # It's a channel
+                            self.user_input_channel_message(styled_line, timestamp, mode_symbol)
+                        else:  # It's a DM
+                            self.user_input_dm_message(styled_line, timestamp)
+                            await self._away_user_helper()
+
+                    except Exception as e:
+                        logging.error(f"Error waiting on self.ping_time: {e}")
 
                     # If there's only one item in the list, don't wait
                     if len(message_chunks) == 1 and len(lines) == 1:
@@ -3997,7 +4006,7 @@ class RudeChatClient:
         # Log the sent message using the new logging method
         self.log_message(self.server_name, user, self.nickname, chunk, is_sent=True)
 
-    async def handle_user_input(self, user_input, timestamp):
+    async def handle_user_input(self, user_input):
         if not user_input:
             return
         if self.use_auto_away:
@@ -4027,7 +4036,7 @@ class RudeChatClient:
                 message_chunks = [processed_input]
             
             # Send message chunks (green text is applied within send_message_chunks)
-            await self.send_message_chunks(message_chunks, timestamp)
+            await self.send_message_chunks(message_chunks)
         else:
             self.gui.insert_text_widget(f"No channel selected. Use /join to join a channel.\n")
 
