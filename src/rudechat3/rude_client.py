@@ -391,11 +391,11 @@ class RudeChatClient:
             data = tokens.params[1]
             self.add_server_message(data + "\n")
 
-    async def join_znc_channel(self, tokens):
+    def join_znc_channel(self, tokens):
         channel = tokens.params[0]
         user_info = tokens.hostmask.nickname
         if user_info != self.nickname:
-            await self.handle_join(tokens)
+            self.handle_join(tokens)
             return
 
         # Check if the server entry exists
@@ -578,7 +578,7 @@ class RudeChatClient:
                             await self.handle_nick(tokens)
                     case "JOIN":
                         if self.znc_connection:
-                            await self.join_znc_channel(tokens)
+                            self.join_znc_channel(tokens)
                             reset_timer("#")
                     case "PRIVMSG":
                         if self.znc_connection:
@@ -1218,7 +1218,7 @@ class RudeChatClient:
 
     async def request_who_for_all_channels(self):
         await asyncio.sleep(4)
-        while True:
+        while self.loop_running:
             for channel in self.joined_channels:
                 await self.send_who(channel)
                 self.gui.highlight_away_users()
@@ -1227,6 +1227,22 @@ class RudeChatClient:
                 self.gui.highlight_who_channels()
             self.who_for_chan_complete = True
             break
+
+    async def request_who_for_missing_users(self):
+        modes_to_strip = ''.join(self.mode_values)
+        while self.loop_running:
+            try:
+                await asyncio.sleep(600)
+                for channel in self.joined_channels:
+                    users = self.channel_users.get(channel, [])
+                    if users:
+                        for user in users:
+                            cleaned_user = user.lstrip(modes_to_strip)
+                            if cleaned_user not in self.who_user_data:
+                                await asyncio.sleep(10)
+                                await self.send_who(cleaned_user)
+            except Exception as e:
+                logging.error(f"Error in request_who_for_missing_users: {e}")
 
     def handle_server_message(self, line):
         data = line + "\n"
@@ -1832,7 +1848,7 @@ class RudeChatClient:
         except Exception as e:
             logging.error(f"Exception in save_highlight: {e}")
 
-    async def handle_join(self, tokens):
+    def handle_join(self, tokens):
         try:
             user_info = tokens.hostmask.nickname
             user_mask = tokens.hostmask
@@ -1871,7 +1887,7 @@ class RudeChatClient:
             # If the user joining is the client's user, return
             if user_info == self.nickname:
                 if self.znc_connection:
-                    await self.join_znc_channel(tokens)
+                    self.join_znc_channel(tokens)
                 return
 
             # Check if the user is not already in the channel_users list for the channel
@@ -1884,8 +1900,6 @@ class RudeChatClient:
 
             # Update the user listbox for the channel with sorted users
             self.update_user_listbox(channel)
-
-            await self.send_who(user_info)
 
         except Exception as e:
             logging.error(f"Error In handle_join: {e}")
@@ -2037,8 +2051,6 @@ class RudeChatClient:
             # If the old nickname is the same as the client's current nickname, update the client state
             if old_nick == self.nickname:
                 await self.change_nickname(new_nick, is_from_token=True)
-            else:
-                await self.send_who(new_nick)
 
         except Exception as e:
             logging.error(f"Error in handle_nick: {e}")
@@ -3074,7 +3086,7 @@ class RudeChatClient:
                     case "NOTICE":
                         self.handle_notice_message(tokens)
                     case "JOIN":
-                        await self.handle_join(tokens)
+                        self.handle_join(tokens)
                     case "PART":
                         self.handle_part(tokens)
                     case "QUIT":

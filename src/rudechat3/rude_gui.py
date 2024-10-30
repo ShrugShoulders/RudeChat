@@ -1542,6 +1542,11 @@ class RudeGui:
         except Exception as e:
             logging.error(f"Error starting the_worker task: {e}")
 
+        try:
+            irc_client.tasks["who_missing_users"] = asyncio.create_task(irc_client.request_who_for_missing_users(), name="who_missing")
+        except Exception as e:
+            logging.error(f"Error starting request_who_for_missing_users task: {e}")
+
         if self.log_on:
             logging.info("Finished Creating Client Tasks: auto_who, auto_away, handle_incoming_message, auto_trim, auto_save, & keep_alive")
 
