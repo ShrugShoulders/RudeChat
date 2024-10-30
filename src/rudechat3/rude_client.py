@@ -18,7 +18,6 @@ class RudeChatClient:
         self.chan_limit = 0
         self.channellen = 0
         self.topiclen = 0
-        self.ping_time = 0
         self.current_channel = ''
         self.nickname = ''
         self.chantypes = []
@@ -2720,7 +2719,6 @@ class RudeChatClient:
         if self.ping_start_time is not None:
             ping_time = current_time - self.ping_start_time
             ping_time_formatted = "{:.3f}".format(ping_time).lstrip('0') + "ms"
-            self.ping_time = round(ping_time, 3)
             self.gui.update_ping_label(self.server_name, ping_time_formatted)
 
         self.ping_start_time = None
@@ -3828,7 +3826,7 @@ class RudeChatClient:
                 self.show_file_folder(primary_command)
 
             case None:
-                await self.handle_user_input(user_input)
+                await self.handle_user_input(user_input, timestamp)
 
         return True
 
@@ -3870,7 +3868,7 @@ class RudeChatClient:
             self.gui.insert_text_widget("Error: /watch [+/-]nickname, Example: /watch +Rude to add, /watch -Rude to remove.\n")
             self.gui.insert_text_widget(f"{watch_list}\n")
 
-    async def send_message_chunks(self, message_chunks):
+    async def send_message_chunks(self, message_chunks, channel, timestamp):
         for chunk in message_chunks:
             # Split the chunk into lines
             lines = chunk.split('\n')
@@ -3882,31 +3880,27 @@ class RudeChatClient:
                     styled_line = self.green_texter(line)
 
                     # Send the styled line as a message
-                    await self.send_message(f'PRIVMSG {self.current_channel} :{styled_line}')
+                    await self.send_message(f'PRIVMSG {channel} :{styled_line}')
                     
                     # Get the mode symbol for the current user
-                    user_mode = self.get_user_mode(self.nickname, self.current_channel)
+                    user_mode = self.get_user_mode(self.nickname, channel)
                     mode_symbol = self.get_mode_symbol(user_mode) if user_mode else ''
                     
                     # Insert the message into the text widget
-                    try:
-                        await asyncio.sleep(self.ping_time)
-                        timestamp = datetime.datetime.now().strftime('[%H:%M:%S] ')
-                        if self.use_time_stamp:
+                    if self.use_time_stamp:
+                        if channel == self.current_channel:
                             self.gui.insert_text_widget(f"{timestamp}<{mode_symbol}{self.nickname}> {styled_line}\n")
-                        else:
+                    else:
+                        if channel == self.current_channel:
                             self.gui.insert_text_widget(f"<{mode_symbol}{self.nickname}> {styled_line}\n")
-                        self.gui.highlight_nickname()
+                    self.gui.highlight_nickname()
 
-                        # Check if it's a DM or channel
-                        if any(self.current_channel.startswith(prefix) for prefix in self.chantypes):  # It's a channel
-                            self.user_input_channel_message(styled_line, timestamp, mode_symbol)
-                        else:  # It's a DM
-                            self.user_input_dm_message(styled_line, timestamp)
-                            await self._away_user_helper()
-
-                    except Exception as e:
-                        logging.error(f"Error waiting on self.ping_time: {e}")
+                    # Check if it's a DM or channel
+                    if any(channel.startswith(prefix) for prefix in self.chantypes):  # It's a channel
+                        self.user_input_channel_message(styled_line, timestamp, mode_symbol, channel)
+                    else:  # It's a DM
+                        self.user_input_dm_message(styled_line, timestamp, channel)
+                        await self._away_user_helper(channel)
 
                     # If there's only one item in the list, don't wait
                     if len(message_chunks) == 1 and len(lines) == 1:
@@ -3914,27 +3908,27 @@ class RudeChatClient:
                     else:
                         await asyncio.sleep(0.7)
 
-    async def _away_user_helper(self):
+    async def _away_user_helper(self, channel):
         try:
-            if self.current_channel in self.away_users_dict:
-                if self.away_users_dict.get(self.current_channel) == "":
+            if channel in self.away_users_dict:
+                if self.away_users_dict.get(channel) == "":
                     # Run the WHOIS check since the entry is an empty string
-                    await self.get_away_user_whois(self.current_channel)
+                    await self.get_away_user_whois(channel)
                     await asyncio.sleep(0.3)
                     
                     # Re-check the dictionary after the WHOIS call for an updated entry
-                    away_message = self.away_users_dict.get(self.current_channel, "")
-                    if away_message and self.current_channel not in self.away_notified:
+                    away_message = self.away_users_dict.get(channel, "")
+                    if away_message and channel not in self.away_notified:
                         self.gui.insert_text_widget(f"User Is AWAY: {away_message}\n")
-                        self.away_notified.add(self.current_channel)
+                        self.away_notified.add(channel)
                         
                 else:
                     # Directly use the existing away message
-                    if self.current_channel not in self.away_notified:
-                        away_message = self.away_users_dict[self.current_channel]
+                    if channel not in self.away_notified:
+                        away_message = self.away_users_dict[channel]
                         if away_message:
                             self.gui.insert_text_widget(f"User Is AWAY: {away_message}\n")
-                            self.away_notified.add(self.current_channel)
+                            self.away_notified.add(channel)
             else:
                 return
         except Exception as e:
@@ -3964,33 +3958,33 @@ class RudeChatClient:
         else:
             return
 
-    def user_input_channel_message(self, chunk, timestamp, mode_symbol):
+    def user_input_channel_message(self, chunk, timestamp, mode_symbol, channel):
         if self.server not in self.channel_messages:
             self.channel_messages[self.server] = {}
-        if self.current_channel not in self.channel_messages[self.server]:
-            self.channel_messages[self.server][self.current_channel] = []
+        if channel not in self.channel_messages[self.server]:
+            self.channel_messages[self.server][channel] = []
 
         if self.use_time_stamp == True:
-            self.channel_messages[self.server][self.current_channel].append(f"{timestamp}<{mode_symbol}{self.nickname}> {chunk}\n")
+            self.channel_messages[self.server][channel].append(f"{timestamp}<{mode_symbol}{self.nickname}> {chunk}\n")
         elif self.use_time_stamp == False:
-            self.channel_messages[self.server][self.current_channel].append(f"<{mode_symbol}{self.nickname}> {chunk}\n")
+            self.channel_messages[self.server][channel].append(f"<{mode_symbol}{self.nickname}> {chunk}\n")
 
         # Log the sent message using the new logging method
-        self.log_message(self.server_name, self.current_channel, self.nickname, chunk, is_sent=True)
+        self.log_message(self.server_name, channel, self.nickname, chunk, is_sent=True)
 
-    def user_input_dm_message(self, chunk, timestamp):
+    def user_input_dm_message(self, chunk, timestamp, channel):
         server_name = self.server
         if server_name not in self.channel_messages:
             self.channel_messages[server_name] = {}
         if self.current_channel not in self.channel_messages[server_name]:
-            self.channel_messages[server_name][self.current_channel] = []
+            self.channel_messages[server_name][channel] = []
         if self.use_time_stamp == True:
-            self.channel_messages[server_name][self.current_channel].append(f"{timestamp}<{self.nickname}> {chunk}\n")
+            self.channel_messages[server_name][channel].append(f"{timestamp}<{self.nickname}> {chunk}\n")
         elif self.use_time_stamp == False:
-            self.channel_messages[server_name][self.current_channel].append(f"<{self.nickname}> {chunk}\n")
+            self.channel_messages[server_name][channel].append(f"<{self.nickname}> {chunk}\n")
 
         # Log the sent message using the new logging method
-        self.log_message(self.server_name, self.current_channel, self.nickname, chunk, is_sent=True)
+        self.log_message(self.server_name, channel, self.nickname, chunk, is_sent=True)
 
     def query_msg_handler(self, user, chunk, timestamp):
         server_name = self.server
@@ -4006,7 +4000,7 @@ class RudeChatClient:
         # Log the sent message using the new logging method
         self.log_message(self.server_name, user, self.nickname, chunk, is_sent=True)
 
-    async def handle_user_input(self, user_input):
+    async def handle_user_input(self, user_input, timestamp):
         if not user_input:
             return
         if self.use_auto_away:
@@ -4023,6 +4017,7 @@ class RudeChatClient:
             processed_input = escaped_input
 
         if self.current_channel:
+            channel = self.current_channel
             # Split the input into lines
             lines = processed_input.splitlines()
             
@@ -4036,7 +4031,7 @@ class RudeChatClient:
                 message_chunks = [processed_input]
             
             # Send message chunks (green text is applied within send_message_chunks)
-            await self.send_message_chunks(message_chunks)
+            await self.send_message_chunks(message_chunks, channel, timestamp)
         else:
             self.gui.insert_text_widget(f"No channel selected. Use /join to join a channel.\n")
 
