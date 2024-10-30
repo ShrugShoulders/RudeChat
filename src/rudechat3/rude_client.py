@@ -4312,23 +4312,26 @@ class RudeChatClient:
             self.channel_messages[server_name][channel].append(formatted_message)
 
     async def handle_cowsay_command(self, args):
-        user_mode = self.get_user_mode(self.nickname, self.current_channel)
-        mode_symbol = self.get_mode_symbol(user_mode) if user_mode else ''
+        try:
+            user_mode = self.get_user_mode(self.nickname, self.current_channel)
+            mode_symbol = self.get_mode_symbol(user_mode) if user_mode else ''
 
-        if len(args) > 1:
-            file_name_arg = args[1]
-            # Construct the potential file path using the absolute path
-            potential_path = os.path.join(self.script_directory, "Fortune Lists", f"{file_name_arg}.txt")
+            if len(args) > 1:
+                file_name_arg = args[1]
+                # Construct the potential file path using the absolute path
+                potential_path = os.path.join(self.script_directory, "Fortune Lists", f"{file_name_arg}.txt")
 
-            # Check if the provided argument corresponds to a valid fortune file
-            if os.path.exists(potential_path):
-                await self.fortune_cowsay(file_name_arg, mode_symbol)
+                # Check if the provided argument corresponds to a valid fortune file
+                if os.path.exists(potential_path):
+                    await self.fortune_cowsay(mode_symbol, file_name_arg)
+                else:
+                    # If not a valid file name, consider the rest of the arguments as a custom message
+                    custom_message = ' '.join(args[1:])
+                    await self.cowsay_custom_message(custom_message, mode_symbol)
             else:
-                # If not a valid file name, consider the rest of the arguments as a custom message
-                custom_message = ' '.join(args[1:])
-                await self.cowsay_custom_message(custom_message, mode_symbol)
-        else:
-            await self.fortune_cowsay(mode_symbol)
+                await self.fortune_cowsay(mode_symbol)
+        except Exception as e:
+            logging.error(f"Error in Cowsay command: {e}")
 
     def cowsay(self, message):
         """Formats the given message in a 'cowsay' format."""
