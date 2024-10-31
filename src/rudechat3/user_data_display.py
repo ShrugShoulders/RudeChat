@@ -1,9 +1,10 @@
 import tkinter as tk
 
 class RudeToolTip:
-    def __init__(self, widget):
+    def __init__(self, widget, gui):
         self.widget = widget
         self.tooltip_window = None
+        self.gui = gui
 
     def show_tooltip(self, text, x, y):
         # Destroy previous tooltip to ensure it updates
@@ -19,7 +20,7 @@ class RudeToolTip:
         self.tooltip_window.wm_geometry(f"+{x}+{y}")
 
         # Add tooltip label with wrap and alignment
-        label = tk.Label(self.tooltip_window, text=text, background="lightyellow", borderwidth=1, relief="solid", justify='left', wraplength=200)
+        label = tk.Label(self.tooltip_window, text=text, foreground=self.gui.main_fg_color, background=self.gui.master_bg, borderwidth=1, relief="solid", justify='left', wraplength=200)
         label.pack()
 
     def hide_tooltip(self):

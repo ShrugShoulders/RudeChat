@@ -115,7 +115,7 @@ class RudeGui:
         self.user_listbox.bind("<Button-3>", self.show_user_list_menu)
         self.user_listbox.bind("<Motion>", self.on_hover)
         self.user_listbox.bind("<Leave>", self.on_leave)
-        self.usertooltip = RudeToolTip(self.user_listbox)
+        self.usertooltip = RudeToolTip(self.user_listbox, self)
 
         # Channel frame
         self.channel_frame = tk.Frame(self.list_frame, bg="black")
