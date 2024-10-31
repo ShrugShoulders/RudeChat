@@ -1203,7 +1203,7 @@ class RudeGui:
         self.tooltip.wm_geometry(f"+{x}+{y}")
         
         # Specify the wraplength in pixels (e.g., 200 pixels)
-        label = tk.Label(self.tooltip, text=self.current_topic.get(), justify='left', wraplength=800)
+        label = tk.Label(self.tooltip, text=self.current_topic.get(), foreground=self.main_fg_color, background=self.master_bg, justify='left', wraplength=800)
         label.pack()
 
     def hide_topic_tooltip(self, event):
