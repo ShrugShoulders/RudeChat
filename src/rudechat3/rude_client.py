@@ -1241,6 +1241,10 @@ class RudeChatClient:
                             if cleaned_user not in self.who_user_data:
                                 await asyncio.sleep(10)
                                 await self.send_who(cleaned_user)
+            except asyncio.CancelledError:
+                self.loop_running = False
+                logging.info("Exiting request_who_for_missing_users loop.")
+                break
             except Exception as e:
                 logging.error(f"Error in request_who_for_missing_users: {e}")
 
@@ -1624,9 +1628,9 @@ class RudeChatClient:
                 self.save_message(self.server, target, sender, message, mode_symbol, is_sent=False)
                 user_mention = self.is_it_a_mention(message)
                 if not user_mention:
-                    await self.trigger_beep_notification(channel_name=sender, message_content=f"Message From {sender}")
                     self.highlight_channel_if_not_current(target, sender, user_mention)
                 elif user_mention:
+                    await self.trigger_beep_notification(channel_name=sender, message_content=f"Message From {sender}")
                     self.highlight_channel_if_not_current(target, sender, user_mention)
 
             else:
@@ -1662,18 +1666,18 @@ class RudeChatClient:
                     self.save_message(self.server, target, sender, message, mode_symbol, is_sent=False)
                     user_mention = self.is_it_a_mention(message)
                     if not user_mention:
-                        await self.trigger_beep_notification(channel_name=sender, message_content=f"Message From {sender}")
                         self.highlight_channel_if_not_current(target, sender, user_mention)
                     elif user_mention:
+                        await self.trigger_beep_notification(channel_name=sender, message_content=f"Message From {sender}")
                         self.highlight_channel_if_not_current(target, sender, user_mention)
 
                 elif sender != self.current_channel and self.server_name in self.gui.popped_out_channels and sender not in self.gui.popped_out_channels[self.server_name]:
                     self.save_message(self.server, target, sender, message, mode_symbol, is_sent=False)
                     user_mention = self.is_it_a_mention(message)
                     if not user_mention:
-                        await self.trigger_beep_notification(channel_name=sender, message_content=f"Message From {sender}")
                         self.highlight_channel_if_not_current(target, sender, user_mention)
                     elif user_mention:
+                        await self.trigger_beep_notification(channel_name=sender, message_content=f"Message From {sender}")
                         self.highlight_channel_if_not_current(target, sender, user_mention)
 
                 else:
