@@ -5,6 +5,7 @@ from rudechat3.rude_auto_away import AutoAway
 from rudechat3.rude_friends import RudeFriends
 from rudechat3.shared_imports import *
 from rudechat3.rude_logger import configure_logging
+from rudechat3.rude_mock import RudeMock
 
 class RudeChatClient:
     def __init__(self, text_widget, server_text_widget, entry_widget, master, gui):
@@ -3854,10 +3855,39 @@ class RudeChatClient:
             case "logs" | "fortunes" | "macros" | "swhois":
                 self.show_file_folder(primary_command)
 
+            case "mock":
+                await self.mocker(args)
+
             case None:
                 await self.handle_user_input(user_input, timestamp)
 
         return True
+
+    async def mocker(self, args):
+        try:            
+            if self.use_time_stamp:
+                timestamp = datetime.datetime.now().strftime('[%H:%M:%S]')
+            else:
+                timestamp = ""
+            
+            user_mode = self.get_user_mode(self.nickname, self.current_channel)
+            
+            mode_symbol = self.get_mode_symbol(user_mode) if user_mode else ''
+
+            user_input = ' '.join(args[1:])
+            genmock = RudeMock(user_input)
+            
+            mock_em = genmock.generate_mock()
+
+            await self.send_message(f"PRIVMSG {self.current_channel} :{mock_em}")
+            await self.append_to_channel_history(self.current_channel, mock_em, mode_symbol, is_action=False)
+
+            self.gui.insert_text_widget(f"{timestamp} <{mode_symbol}{self.nickname}> {mock_em}\n")
+
+            self.gui.highlight_nickname()
+        
+        except Exception as e:
+            logging.error(f"Error in mocker: {e}")
 
     async def broadcaster(self, args):
         if len(args) > 2:
@@ -3866,7 +3896,10 @@ class RudeChatClient:
 
             for channel in channels:
                 if channel.startswith(tuple(self.chantypes)):
-                    timestamp = datetime.datetime.now().strftime('[%H:%M:%S]')
+                    if self.use_time_stamp:
+                        timestamp = datetime.datetime.now().strftime('[%H:%M:%S]')
+                    else:
+                        timestamp = ""
                     user_mode = self.get_user_mode(self.nickname, channel)
                     mode_symbol = self.get_mode_symbol(user_mode) if user_mode else ''
                     await self.append_to_channel_history(channel, message, mode_symbol, is_action=False)
@@ -4685,6 +4718,7 @@ class RudeChatClient:
                 "/mac <macro> - sends a chosen macro to a channel /mac - shows available macros",
                 "/macros - Shows the macros folder",
                 "/fortunes - Shows the fortunes folder",
+                "/mock <string> - uses mocking such as: tHiS Is a StRiNg.",
                 "Macros: To add a macro, save a .txt file with your chosen macro and add it to the Art folder within your installation directory.",
                 "Fortune Lists: dadjoke(jokes your dad makes), yomama(YO MAMA SO FAT), therules(Ferengi Rules of Acquisition)",
                 "Add your own fortune lists to the Fortune List folder within your installation directory.",
