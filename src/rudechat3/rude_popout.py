@@ -84,7 +84,7 @@ class RudePopOut:
         self.user_listbox.bind("<Button-3>", self.show_user_list_menu)
         self.user_listbox.bind("<Motion>", self.on_hover)
         self.user_listbox.bind("<Leave>", self.on_leave)
-        self.usertooltip = RudeToolTip(self.user_listbox)
+        self.usertooltip = RudeToolTip(self.user_listbox, self)
 
         # Entry widget for message input
         self.entry = tk.Entry(self.frame)
@@ -126,6 +126,7 @@ class RudePopOut:
         config.read(config_file)
 
         # Load colors from the [GUI] and [WIDGETS] sections
+        self.master_bg = config.get('GUI', 'master_color', fallback='black')
         self.main_fg_color = config.get('GUI', 'main_fg_color')
         self.main_bg_color = config.get('GUI', 'main_bg_color')
         self.widgets_fg_color = config.get('WIDGETS', 'entry_fg')
