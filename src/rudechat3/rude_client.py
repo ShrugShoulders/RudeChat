@@ -28,9 +28,10 @@ class RudeChatClient:
         self.detached_channels = []
         self.mode_keys = []
         self.mode_values = []
-        self.away_users_dict = {}
+        self.dm_list = []
         self.cap_who_for_chan = []
         self.away_servers = []
+        self.away_users_dict = {}
         self.motd_dict = {}
         self.channel_messages = {}
         self.channel_users = {}
@@ -1657,6 +1658,8 @@ class RudeChatClient:
                     self.joined_channels.append(sender)
                     self.gui.channel_lists[self.server] = self.joined_channels
                     self.update_gui_channel_list()
+                    if sender not in self.dm_list:
+                        self.dm_list.append(sender)
 
                 if sender.startswith("*status"):
                     self.save_message(self.server, target, sender, message, mode_symbol, is_sent=False)
@@ -1865,6 +1868,9 @@ class RudeChatClient:
             friends_here = self.friends.friend_online(channel, user_info)
             if friends_here is not None:
                 self.gui.insert_text_widget(f"{friends_here}\n")
+                if user_info not in self.friends.online_friends:
+                    self.gui.trigger_desktop_notification(user_info, message_content="is Online!")
+                    self.friends.online_friends.append(user_info)
 
             if self.show_full_hostmask == True:
                 join_message = f"\x0312(→)\x0F {user_mask} has joined channel {channel}\n"
@@ -2008,6 +2014,10 @@ class RudeChatClient:
                     current_modes.pop(user_info, None)
                     if user_info in self.away_users_dict:
                         del self.away_users_dict[user_info]
+                    if user_info in self.dm_list and user_info == self.current_channel:
+                        self.gui.insert_text_widget(quit_message)
+                    if user_info in self.friends.online_friends:
+                        self.friends.online_friends.remove(user_info)
                     self.update_user_listbox(channel)
 
         except Exception as e:
@@ -3396,9 +3406,13 @@ class RudeChatClient:
 
     def open_dm(self, nickname):
         # Add the DM to the channel list
-        self.joined_channels.append(nickname)
+        if nickname not in self.joined_channels:
+            self.joined_channels.append(nickname)
         if nickname not in self.cap_who_for_chan:
             self.cap_who_for_chan.append(nickname)
+        if nickname not in self.dm_list:
+            self.dm_list.append(nickname)
+
         self.gui.channel_lists[self.server] = self.joined_channels
         self.update_gui_channel_list()
         self.gui.insert_text_widget(f"Opened DM with {nickname}.\n")
@@ -3407,13 +3421,13 @@ class RudeChatClient:
         # Remove the DM from the list of joined channels
         if nickname in self.joined_channels:
             self.joined_channels.remove(nickname)
-
         if nickname in self.cap_who_for_chan:
             self.cap_who_for_chan.remove(nickname)
-
         # Remove the DM's entry from the highlighted_channels dictionary
         if self.server_name in self.highlighted_channels:
             self.highlighted_channels[self.server_name].pop(nickname, None)
+        if nickname in self.dm_list:
+            self.dm_list.remove(nickname)
 
         # Update the GUI's list of channels
         self.update_gui_channel_list()

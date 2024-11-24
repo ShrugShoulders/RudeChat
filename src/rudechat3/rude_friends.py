@@ -4,6 +4,7 @@ import os
 class RudeFriends:
     def __init__(self):
         self.friend_list = []
+        self.online_friends = []
         self.script_directory = os.path.dirname(os.path.abspath(__file__))
 
         self.load_friend_list()
