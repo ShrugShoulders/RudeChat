@@ -1172,6 +1172,7 @@ class RudeGui:
         if selected_user_index:
             selected_user = self.user_listbox.get(selected_user_index)
             cleaned_nickname = selected_user.lstrip(modes_to_strip)
+            self.irc_client.whois_user_request = True
             self.irc_client.loop.create_task(self.irc_client.whois(cleaned_nickname))
 
     def reset_nick_colors(self):
