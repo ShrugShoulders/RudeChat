@@ -1528,17 +1528,18 @@ class RudeChatClient:
             return message
 
     async def handle_privmsg(self, tokens, znc_privmsg=False):
+        sender_hostmask = str(tokens.hostmask)
+        if self.should_ignore_sender(sender_hostmask):
+            return
+
         timestamp = datetime.datetime.now().strftime('[%H:%M:%S] ')
         sender = tokens.hostmask.nickname
         target = tokens.params[0]
         message = tokens.params[1]
 
-        sender_hostmask = str(tokens.hostmask)
         user_mode = self.get_user_mode(sender, target)
         mode_symbol = self.get_mode_symbol(user_mode) if user_mode else ''
         gmessage = self.green_texter(message)
-        if self.should_ignore_sender(sender_hostmask):
-            return
 
         if self.is_ctcp_command(message):
             await self.handle_ctcp(tokens)
@@ -1553,7 +1554,10 @@ class RudeChatClient:
         await self.notify_user_if_mentioned(gmessage, target, sender, timestamp)
 
     def should_ignore_sender(self, sender_hostmask):
-        return any(fnmatch.fnmatch(sender_hostmask, ignored) for ignored in self.ignore_list)
+        for ignored in self.ignore_list:
+            if fnmatch.fnmatch(sender_hostmask, ignored):
+                return True
+        return False
 
     async def notify_user_if_mentioned(self, message, target, sender, timestamp):
         # Compile a regex pattern to match the exact nickname
@@ -1869,7 +1873,7 @@ class RudeChatClient:
             if friends_here is not None:
                 self.gui.insert_text_widget(f"{friends_here}\n")
                 if user_info not in self.friends.online_friends:
-                    self.gui.trigger_desktop_notification(user_info, message_content="is Online!")
+                    #self.gui.trigger_desktop_notification(user_info, message_content="is Online!")
                     self.friends.online_friends.append(user_info)
 
             if self.show_full_hostmask == True:
@@ -3405,7 +3409,7 @@ class RudeChatClient:
                 self.gui.insert_text_widget(f"No open private message with {nickname}.\n")
 
     def open_dm(self, nickname):
-        # Add the DM to the channel list
+        # Add the DM to the appropriate lists
         if nickname not in self.joined_channels:
             self.joined_channels.append(nickname)
         if nickname not in self.cap_who_for_chan:
@@ -3418,12 +3422,11 @@ class RudeChatClient:
         self.gui.insert_text_widget(f"Opened DM with {nickname}.\n")
 
     def close_dm(self, nickname):
-        # Remove the DM from the list of joined channels
+        # Remove the DM from the appropriate lists & dictionaries.
         if nickname in self.joined_channels:
             self.joined_channels.remove(nickname)
         if nickname in self.cap_who_for_chan:
             self.cap_who_for_chan.remove(nickname)
-        # Remove the DM's entry from the highlighted_channels dictionary
         if self.server_name in self.highlighted_channels:
             self.highlighted_channels[self.server_name].pop(nickname, None)
         if nickname in self.dm_list:
