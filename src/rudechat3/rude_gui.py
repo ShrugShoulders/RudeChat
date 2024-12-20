@@ -815,7 +815,7 @@ class RudeGui:
         if platform.system() == "Darwin":  # macOS
             self.entry_widget.bind("<Button-2>", self.show_input_menu)
         else:  # Windows and Linux
-            self.entry_widget.bind("<Button-3>", self.show_input_menu)
+            self.channel_listbox.bind("<Button-3>", self.show_input_menu)
 
     def insert_irc_color(self, color_code):
         """
@@ -877,9 +877,9 @@ class RudeGui:
         self.message_menu.add_command(label="GUI Config", command=self.open_gui_config_window)
         
         if platform.system() == "Darwin":  # macOS
-            self.channel_listbox.bind("<Button-2>", self.show_message_menu)
+            self.text_widget.bind("<Button-2>", self.show_message_menu)
         else:  # Windows and Linux
-            self.channel_listbox.bind("<Button-3>", self.show_message_menu)
+            self.text_widget.bind("<Button-3>", self.show_message_menu)
 
     def open_color_selector(self):
         root = tk.Toplevel(self.master)  # Use Toplevel instead of Tk for a new window
