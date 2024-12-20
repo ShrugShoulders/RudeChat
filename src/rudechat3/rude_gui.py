@@ -113,6 +113,10 @@ class RudeGui:
         self.user_listbox.grid(row=1, column=0, sticky='nsew')
         self.user_scrollbar.grid(row=1, column=1, sticky='ns')
         self.user_listbox.bind("<Button-3>", self.show_user_list_menu)
+        if platform.system() == "Darwin":  # macOS
+            self.user_listbox.bind("<Button-2>", self.show_user_list_menu)
+        else:  # Windows and Linux
+            self.user_listbox.bind("<Button-3>", self.show_user_list_menu)
         self.user_listbox.bind("<Motion>", self.on_hover)
         self.user_listbox.bind("<Leave>", self.on_leave)
         self.usertooltip = RudeToolTip(self.user_listbox, self)
@@ -146,7 +150,10 @@ class RudeGui:
         self.channel_listbox.grid(row=3, column=0, sticky='nsew')  # Adjust row to display channel_listbox
         self.channel_scrollbar.grid(row=3, column=1, sticky='ns')
         self.channel_listbox.bind('<ButtonRelease-1>', self.on_channel_click)
-        self.channel_listbox.bind("<Button-3>", self.show_channel_list_menu)
+        if platform.system() == "Darwin":  # macOS
+            self.channel_listbox.bind("<Button-2>", self.show_channel_list_menu)
+        else:  # Windows and Linux
+            self.channel_listbox.bind("<Button-3>", self.show_channel_list_menu)
         self.master.bind("<Alt-KeyPress>", self._switch_to_index)
         self.master.bind("<Alt-s>", self.cycle_servers)
 

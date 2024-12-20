@@ -82,6 +82,10 @@ class RudePopOut:
         self.user_listbox.config(yscrollcommand=self.user_scrollbar.set)
         self.user_scrollbar.grid(row=1, column=1, sticky='ns')
         self.user_listbox.bind("<Button-3>", self.show_user_list_menu)
+        if platform.system() == "Darwin":  # macOS
+            self.user_listbox.bind("<Button-2>", self.show_user_list_menu)
+        else:  # Windows and Linux
+            self.user_listbox.bind("<Button-3>", self.show_user_list_menu)
         self.user_listbox.bind("<Motion>", self.on_hover)
         self.user_listbox.bind("<Leave>", self.on_leave)
         self.usertooltip = RudeToolTip(self.user_listbox, self)
