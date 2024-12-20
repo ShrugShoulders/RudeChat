@@ -112,7 +112,6 @@ class RudeGui:
         self.user_listbox.config(yscrollcommand=self.user_scrollbar.set)
         self.user_listbox.grid(row=1, column=0, sticky='nsew')
         self.user_scrollbar.grid(row=1, column=1, sticky='ns')
-        self.user_listbox.bind("<Button-3>", self.show_user_list_menu)
         if platform.system() == "Darwin":  # macOS
             self.user_listbox.bind("<Button-2>", self.show_user_list_menu)
         else:  # Windows and Linux
@@ -813,7 +812,10 @@ class RudeGui:
 
         self.input_menu.add_cascade(label="Text Format", menu=text_format_menu)
 
-        self.entry_widget.bind("<Button-3>", self.show_input_menu)
+        if platform.system() == "Darwin":  # macOS
+            self.entry_widget.bind("<Button-2>", self.show_input_menu)
+        else:  # Windows and Linux
+            self.entry_widget.bind("<Button-3>", self.show_input_menu)
 
     def insert_irc_color(self, color_code):
         """
@@ -874,7 +876,10 @@ class RudeGui:
         self.message_menu.add_command(label="Server Config", command=self.open_client_config_window)
         self.message_menu.add_command(label="GUI Config", command=self.open_gui_config_window)
         
-        self.text_widget.bind("<Button-3>", self.show_message_menu)
+        if platform.system() == "Darwin":  # macOS
+            self.channel_listbox.bind("<Button-2>", self.show_message_menu)
+        else:  # Windows and Linux
+            self.channel_listbox.bind("<Button-3>", self.show_message_menu)
 
     def open_color_selector(self):
         root = tk.Toplevel(self.master)  # Use Toplevel instead of Tk for a new window
@@ -975,7 +980,10 @@ class RudeGui:
         self.server_menu.add_command(label="Copy", command=self.copy_text_server)
         self.server_menu.add_command(label="Clear", command=self.clear_server_widget)
 
-        self.server_text_widget.bind("<Button-3>", self.show_server_menu)
+        if platform.system() == "Darwin":  # macOS
+            self.server_text_widget.bind("<Button-2>", self.show_server_menu)
+        else:  # Windows and Linux
+            self.server_text_widget.bind("<Button-3>", self.show_server_menu)
 
     def show_server_menu(self, event):
         try:
