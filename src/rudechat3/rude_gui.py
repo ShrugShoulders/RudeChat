@@ -815,7 +815,7 @@ class RudeGui:
         if platform.system() == "Darwin":  # macOS
             self.entry_widget.bind("<Button-2>", self.show_input_menu)
         else:  # Windows and Linux
-            self.channel_listbox.bind("<Button-3>", self.show_input_menu)
+            self.entry_widget.bind("<Button-3>", self.show_input_menu)
 
     def insert_irc_color(self, color_code):
         """
