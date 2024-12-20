@@ -860,7 +860,10 @@ class RudeGui:
             self.input_menu.tk_popup(event.x_root, event.y_root)
             self.master.bind("<Motion>", self.check_input_mouse_position)
         finally:
-            self.input_menu.grab_release()
+            try:
+                self.input_menu.grab_release()
+            except Exception as e:
+                logging.error(f"Exception in show_input_menu: {e}")
 
     def init_message_menu(self):
         """
@@ -946,7 +949,10 @@ class RudeGui:
             # Bind the <Motion> event to a function that checks if the mouse is over the menu
             self.master.bind("<Motion>", self.check_message_mouse_position)
         finally:
-            self.message_menu.grab_release()
+            try:
+                self.message_menu.grab_release()
+            except Exception as e:
+                logging.error(f"Exception in show_message_menu: {e}")
 
     def check_mouse_position(self, event, menu):
         try:
@@ -989,7 +995,10 @@ class RudeGui:
         try:
             self.server_menu.tk_popup(event.x_root, event.y_root)
         finally:
-            self.server_menu.grab_release()
+            try:
+                self.server_menu.grab_release()
+            except Exception as e:
+                logging.error(f"Exception in show_server_menu: {e}")
 
     def open_popout_query_from_menu(self):
         modes_to_strip = ''.join(self.irc_client.mode_values)
