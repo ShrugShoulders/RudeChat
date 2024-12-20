@@ -266,15 +266,20 @@ class RudePopOut:
 
     def show_message_menu(self, event):
         try:
-            # Open the popup menu
-            self.message_menu.tk_popup(event.x_root, event.y_root)
-            # Bind the <Motion> event to a function that checks if the mouse is over the menu
+            try:
+                # Open the popup menu
+                self.message_menu.tk_popup(event.x_root, event.y_root)
+            except Exception as e:
+                logging.error(f"Exception in tk_popup: {e}")
+                return  # Exit the function if the popup fails
+            
             self.root.bind("<Motion>", self.check_message_mouse_position)
         finally:
             try:
+                # Ensure the grab is always released
                 self.message_menu.grab_release()
             except Exception as e:
-                logging.error(f"Exception in show_message_menu.popout: {e}")
+                logging.error(f"Exception in show_message_menu.grab_release: {e}")
 
     def copy_text_message(self):
         self.text_widget.event_generate("<<Copy>>")
@@ -938,13 +943,20 @@ class RudePopOut:
 
     def show_input_menu(self, event):
         try:
-            self.input_menu.tk_popup(event.x_root, event.y_root)
+            try:
+                # Open the popup menu
+                self.input_menu.tk_popup(event.x_root, event.y_root)
+            except Exception as e:
+                logging.error(f"Exception in tk_popup: {e}")
+                return  # Exit the function if the popup fails
+            
             self.root.bind("<Motion>", self.check_input_mouse_position)
         finally:
             try:
+                # Ensure the grab is always released
                 self.input_menu.grab_release()
             except Exception as e:
-                logging.error(f"Exception in show_input_menu.popout: {e}")
+                logging.error(f"Exception in show_input_menu.grab_release: {e}")
 
     def check_mouse_position(self, event, menu):
         try:
