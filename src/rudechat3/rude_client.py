@@ -1490,24 +1490,19 @@ class RudeChatClient:
         """
         try:
             if sys.platform.startswith("linux"):
-                # Check if paplay is available
-                if self.custom_sounds:
-                    if shutil.which("paplay"):
-                        # Linux-specific notification sound using paplay
-                        sound_path = os.path.join(self.script_directory, "Sounds", "Notification4.wav")
-                        os.system(f"paplay {sound_path}")
-                elif not self.custom_sounds:
-                    # System bell beep
-                    os.system("echo -e '\a'")
+                self.loop.create_task(self.linux_trigger_sound())
+
             elif sys.platform == "darwin":
                 # macOS-specific notification sound using afplay
-                os.system("afplay /System/Library/Sounds/Ping.aiff")
+                self.loop.create_task(self.mac_trigger_sound())
+
             elif sys.platform == "win32":
                 # Windows-specific notification using winsound
                 import winsound
                 duration = 75  # milliseconds
                 frequency = 1200  # Hz
                 winsound.Beep(frequency, duration)
+
             else:
                 # For other platforms, print a message
                 if self.log_on:
@@ -1516,6 +1511,20 @@ class RudeChatClient:
             await self.gui.trigger_desktop_notification(channel_name, message_content=message_content)
         except Exception as e:
             logging.error(f"Error triggering desktop notification: {e}")
+
+    async def mac_trigger_sound(self):
+        os.system("afplay /System/Library/Sounds/Ping.aiff")
+
+    async def linux_trigger_sound(self):
+        # Check if paplay is available
+        if self.custom_sounds:
+            if shutil.which("paplay"):
+                # Linux-specific notification sound using paplay
+                sound_path = os.path.join(self.script_directory, "Sounds", "Notification4.wav")
+                os.system(f"paplay {sound_path}")
+        elif not self.custom_sounds:
+            # System bell beep
+            os.system("echo -e '\a'")
 
     def green_texter(self, message):
         arrow_symbols = ['>', '»', '→', '⇒', '↣', '➜', '➤', '➡', '➝', '➞', '➟', '➠', '->', '=>']
@@ -1873,7 +1882,11 @@ class RudeChatClient:
             if friends_here is not None:
                 self.gui.insert_text_widget(f"{friends_here}\n")
                 if user_info not in self.friends.online_friends:
-                    #self.gui.trigger_desktop_notification(user_info, message_content="is Online!")
+                    try:
+                        self.loop.create_task(self.gui.trigger_desktop_notification(channel_name=user_info, message_content="is Online!"))
+                    except Exception as e:
+                        logging.error(f"Exception Caught in handle_join.trigger_desktop_notification: {e}")
+                        
                     self.friends.online_friends.append(user_info)
 
             if self.show_full_hostmask == True:
