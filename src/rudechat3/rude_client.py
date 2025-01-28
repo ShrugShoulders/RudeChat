@@ -92,7 +92,7 @@ class RudeChatClient:
         self.use_colors = config.getboolean('IRC', 'use_irc_colors', fallback=False)
         self.display_user_modes = config.getboolean('IRC', 'display_user_modes', fallback=True)
         self.use_auto_away = config.getboolean('IRC', 'use_auto_away', fallback=True)
-
+        self.use_emojis = config.getboolean('IRC', 'use_emojis', fallback=True)
         self.mention_note_color = config.get('IRC', 'mention_note_color', fallback='red')
         self.activity_note_color = config.get('IRC', 'activity_note_color', fallback='green')
         self.use_time_stamp = config.getboolean('IRC', 'use_time_stamp', fallback=True)
@@ -138,6 +138,7 @@ class RudeChatClient:
         self.green_text = config.getboolean('IRC', 'green_text', fallback=True)
         self.use_auto_away = config.getboolean('IRC', 'use_auto_away', fallback=True)
         self.auto_join_invite = config.getboolean('IRC', 'auto_join_invite', fallback=True)
+        self.use_emojis = config.getboolean('IRC', 'use_emojis', fallback=True)
         self.log_on = config.getboolean('IRC', 'log_on', fallback=False)
         self.watcher.reload_config()
         self.gui.update_nick_channel_label()
@@ -1039,7 +1040,7 @@ class RudeChatClient:
     async def reconnect(self, config_file):
         disconnected_server = self.grab_server_name(config_file)
         MAX_RETRIES = 5
-        RETRY_DELAY = 245 if not self.znc_connection else 5
+        RETRY_DELAY = 15 if not self.znc_connection else 5
         retries = 0
         self.add_server_message(f"****Resetting State\n")
         await self.reset_state()
@@ -1536,6 +1537,80 @@ class RudeChatClient:
         else:
             return message
 
+    def replace_emojis(self, message):
+        """
+        Replace emoji aliases (e.g., :smile:) and common symbols (e.g., :) ) with Unicode emojis.
+        """
+        if self.use_emojis:
+            # Map common symbols to their Unicode equivalents
+            symbol_to_emoji = {
+                r"(?<!\w):\)": "🙂",  # Smiley face
+                r"(?<!\w):-\)": "🙂",
+                r"(?<!\w):D": "😃",  # Big grin
+                r"(?<!\w):-D": "😃",
+                r"(?<!\w):\(": "☹️",  # Sad face
+                r"(?<!\w):-\(": "☹️",
+                r"(?<!\w):'\(": "😢",  # Crying
+                r"(?<!\w);\)": "😉",  # Wink
+                r"(?<!\w);-\)": "😉",
+                r"(?<!\w):P": "😛",  # Tongue out
+                r"(?<!\w):-P": "😛",
+                r"(?<!\w);P": "😜",  # Cheeky tongue out
+                r"(?<!\w);-P": "😜",
+                r"(?<!\w):O": "😮",  # Surprised face
+                r"(?<!\w):-O": "😮",
+                r"(?<!\w):o": "😮",
+                r"(?<!\w):-o": "😮",
+                r"(?<!\w):\|": "😐",  # Neutral face
+                r"(?<!\w):-\|": "😐",
+                r"(?<!\w):/": "😕",  # Confused face
+                r"(?<!\w):-/": "😕",
+                r"(?<!\w):\*": "😘",  # Kiss
+                r"(?<!\w):-\*": "😘",
+                r"(?<!\w)<3": "❤️",  # Heart
+                r"(?<!\w)</3": "💔",  # Broken heart
+                r"(?<!\w):@": "😡",  # Angry face
+                r"(?<!\w):-@": "😡",
+                r"(?<!\w)D:": "😧",  # Horrified face
+                r"(?<!\w)DX": "😱",  # Screaming face
+                r"(?<!\w)xD": "😆",  # Laughing face
+                r"(?<!\w)XD": "😆",
+                r"(?<!\w):\$": "😳",  # Embarrassed
+                r"(?<!\w):-\$": "😳",
+                r"(?<!\w)O:\)": "😇",  # Angel
+                r"(?<!\w)O:-\)": "😇",
+                r"(?<!\w)>\(:": "😠",  # Angry
+                r"(?<!\w)>:-\(": "😠",
+                r"(?<!\w)8\)": "😎",  # Cool face
+                r"(?<!\w)8-\)": "😎",
+                r"(?<!\w)B\)": "😎",
+                r"(?<!\w)B-\)": "😎",
+                r"(?<!\w):S": "😖",  # Frustrated
+                r"(?<!\w):-S": "😖",
+                r"(?<!\w):X": "🤐",  # Zipped mouth
+                r"(?<!\w):-X": "🤐",
+                r"(?<!\w)>\:D": "😈",  # Mischievous
+                r"(?<!\w)>\:3": "😈",
+                r"(?<!\w):3": "😺",  # Cat smile
+                r"(?<!\w):\^\)": "😏",  # Smug face
+                r"(?<!\w):'D": "😂",  # Laughing with tears
+                r"(?<!\w)D':": "😓",  # Sad but surprised
+                r"(?<!\w):v": "😋",  # Yum face
+                r"(?<!\w):\^P": "😜",  # Playful tongue
+            }
+
+            # Replace common symbols using regex
+            for symbol_pattern, emoji_char in symbol_to_emoji.items():
+                message = re.sub(symbol_pattern, emoji_char, message)
+
+            # Replace emoji aliases using the emoji library
+            message = emoji.emojize(message, language="alias")
+
+            return message
+
+        else:
+            return message
+
     async def handle_privmsg(self, tokens, znc_privmsg=False):
         sender_hostmask = str(tokens.hostmask)
         if self.should_ignore_sender(sender_hostmask):
@@ -1548,7 +1623,12 @@ class RudeChatClient:
 
         user_mode = self.get_user_mode(sender, target)
         mode_symbol = self.get_mode_symbol(user_mode) if user_mode else ''
-        gmessage = self.green_texter(message)
+
+        # Replace emojis in the message
+        message_with_emojis = self.replace_emojis(message)
+
+        # Process green text
+        gmessage = self.green_texter(message_with_emojis)
 
         if self.is_ctcp_command(message):
             await self.handle_ctcp(tokens)
@@ -3269,7 +3349,7 @@ class RudeChatClient:
 
         self.add_server_message(data)
 
-    async def command_433(self, tokens):
+    async def command_433(self, tokens): #Nickname Alrady In Use
         source = tokens.source
         current_nick = tokens.params[0]
         user = tokens.params[1]
@@ -3969,7 +4049,8 @@ class RudeChatClient:
             for line in lines:
                 if line:  # Skip empty lines
                     # Apply green text formatting here for each line
-                    styled_line = self.green_texter(line)
+                    eline = self.replace_emojis(line)
+                    styled_line = self.green_texter(eline)
 
                     # Send the styled line as a message
                     await self.send_message(f'PRIVMSG {channel} :{styled_line}')

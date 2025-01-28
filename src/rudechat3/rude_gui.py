@@ -263,6 +263,20 @@ class RudeGui:
         self.hidden_windows()
         self.highlight_nickname()
         self.highlight_away_users()
+        self.emoji_select()
+
+    def emoji_select(self):
+        if platform.system() == "Darwin":  # macOS
+            self.emoji_type = "Apple Color Emoji"
+        elif platform.system() == "Linux":
+            # Check for the Noto Color Emoji font, a common default on Linux
+            self.emoji_type = "Noto Color Emoji"
+        elif platform.system() == "Windows":
+            # Use Segoe UI Emoji for Windows
+            self.emoji_type = "Segoe UI Emoji"
+        else:
+            # Fallback for unknown systems
+            self.emoji_type = "Arial"  # A generic font as a last resort
 
     def read_config(self):
         config_file = os.path.join(self.script_directory, 'gui_config.ini')
@@ -1240,6 +1254,7 @@ class RudeGui:
         try:
             self.trim_text_widget()
             urls = self.find_urls(message)
+            emojis = self.find_emojis(message)
 
             # Set the Text widget state to NORMAL before inserting and configuring tags
             self.text_widget.config(state=tk.NORMAL)
@@ -1249,6 +1264,7 @@ class RudeGui:
 
             # Start tagging URLs using the non-blocking approach
             self.tag_urls(urls)
+            self.tag_emojis(emojis, message)
         except Exception as e:
             logging.error(f"Exception in insert_text {e}")
 
@@ -1266,6 +1282,25 @@ class RudeGui:
 
             # Insert the formatted text with the current tag
             self.text_widget.insert(tk.END, text, (tag_name,))
+
+    def tag_emojis(self, emojis, message):
+        for emoji_char in emojis:
+            # Create a unique tag for each emoji
+            tag_name = f"emoji_{emoji_char}"
+            if tag_name not in self.tag_cache:
+                # Configure tag for emoji with larger font and color
+                self.text_widget.tag_configure(tag_name, font=(self.emoji_type, self.font_size + 5), foreground=self.main_fg_color)
+                self.tag_cache[tag_name] = {}
+
+            # Find and tag all occurrences of the emoji
+            start_idx = "1.0"
+            while True:
+                start_idx = self.text_widget.search(emoji_char, start_idx, tk.END)
+                if not start_idx:
+                    break
+                end_idx = f"{start_idx}+{len(emoji_char)}c"
+                self.text_widget.tag_add(tag_name, start_idx, end_idx)
+                start_idx = end_idx
 
     def configure_tag_based_on_attributes(self, attributes):
         # This method configures tag based on attributes efficiently
@@ -1318,6 +1353,10 @@ class RudeGui:
     def find_urls(self, text):
         # Use the precompiled regex pattern to find URLs
         return self.url_pattern.findall(text)
+
+    def find_emojis(self, text):
+        # Detect emojis in the text
+        return [char for char in text if char in emoji.EMOJI_DATA]
 
     def open_url(self, event, url):
         webbrowser.open(url)

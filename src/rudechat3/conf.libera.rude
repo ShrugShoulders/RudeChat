@@ -33,4 +33,5 @@ green_text = False
 auto_away_minutes = 30
 use_auto_away = True
 auto_join_invite = True
+use_emojis = True
 log_on = False
