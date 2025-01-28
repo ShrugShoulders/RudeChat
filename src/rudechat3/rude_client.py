@@ -31,6 +31,7 @@ class RudeChatClient:
         self.dm_list = []
         self.cap_who_for_chan = []
         self.away_servers = []
+        self.ping_threads = []
         self.away_users_dict = {}
         self.motd_dict = {}
         self.channel_messages = {}
@@ -1131,6 +1132,18 @@ class RudeChatClient:
                 logging.error(f"Unhandled exception in keep_alive: {e}")
                 continue
 
+    async def thread_killer(self):
+        while self.loop_running:
+            try:
+                await asyncio.sleep(90)
+                self.wait_for_threads()
+            except asyncio.CancelledError:
+                self.loop_running = False
+                logging.info("Exiting auto_save loop.")
+                break
+            except Exception as e:
+                logging.error(f"Error in thread_killer: {e}")
+
     async def auto_save(self):
         while self.loop_running:
             try:
@@ -1490,42 +1503,59 @@ class RudeChatClient:
         You've been pinged! Plays a beep or noise on mention.
         """
         try:
+            thread = None
             if sys.platform.startswith("linux"):
-                self.loop.create_task(self.linux_trigger_sound())
+                thread = threading.Thread(target=self.linux_trigger_sound)
 
             elif sys.platform == "darwin":
                 # macOS-specific notification sound using afplay
-                self.loop.create_task(self.mac_trigger_sound())
+                thread = threading.Thread(target=self.mac_trigger_sound)
 
             elif sys.platform == "win32":
                 # Windows-specific notification using winsound
-                import winsound
-                duration = 75  # milliseconds
-                frequency = 1200  # Hz
-                winsound.Beep(frequency, duration)
+                thread = threading.Thread(target=self.win_trigger_sound)
 
-            else:
-                # For other platforms, print a message
-                if self.log_on:
-                    logging.info("Beep notification not supported on this platform.")
+            if thread:
+                thread.start()
+                self.ping_threads.append(thread)
 
+            # Trigger desktop notification
             await self.gui.trigger_desktop_notification(channel_name, message_content=message_content)
         except Exception as e:
             logging.error(f"Error triggering desktop notification: {e}")
 
-    async def mac_trigger_sound(self):
+    def wait_for_threads(self):
+        """Wait for all threads to finish."""
+        if self.ping_threads:
+            for thread in list(self.ping_threads):
+                # Check if the thread is already stopped
+                if "stopped" in str(thread):
+                    thread.join()
+                    self.ping_threads.remove(thread)
+                else:
+                    return
+        else:
+            return
+
+    def mac_trigger_sound(self):
         os.system("afplay /System/Library/Sounds/Ping.aiff")
 
-    async def linux_trigger_sound(self):
-        # Check if paplay is available
+    def linux_trigger_sound(self):
         if self.custom_sounds:
             if shutil.which("paplay"):
-                # Linux-specific notification sound using paplay
                 sound_path = os.path.join(self.script_directory, "Sounds", "Notification4.wav")
                 os.system(f"paplay {sound_path}")
-        elif not self.custom_sounds:
-            # System bell beep
+        else:
             os.system("echo -e '\a'")
+
+    def win_trigger_sound(self):
+        try:
+            import winsound
+            duration = 75  # milliseconds
+            frequency = 1200  # Hz
+            winsound.Beep(frequency, duration)
+        except Exception as e:
+            logging.error(f"Error triggering Windows beep sound: {e}")
 
     def green_texter(self, message):
         arrow_symbols = ['>', '»', '→', '⇒', '↣', '➜', '➤', '➡', '➝', '➞', '➟', '➠', '->', '=>']

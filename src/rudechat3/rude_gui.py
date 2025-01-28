@@ -1604,12 +1604,17 @@ class RudeGui:
         try:
             irc_client.tasks["el_worker"] = asyncio.create_task(irc_client.the_worker(), name="la_worker")
         except Exception as e:
-            logging.error(f"Error starting the_worker task: {e}")
+            logging.error(f"Error starting the_worker task: {e}") #thread_killer
 
         try:
             irc_client.tasks["who_missing_users"] = asyncio.create_task(irc_client.request_who_for_missing_users(), name="who_missing")
         except Exception as e:
             logging.error(f"Error starting request_who_for_missing_users task: {e}")
+
+        try:
+            irc_client.tasks["thread_killer"] = asyncio.create_task(irc_client.thread_killer(), name="thread_killer")
+        except Exception as e:
+            logging.error(f"Error starting thread_killer task: {e}")
 
         if self.log_on:
             logging.info("Finished Creating Client Tasks: auto_who, auto_away, handle_incoming_message, auto_trim, auto_save, & keep_alive")
