@@ -3723,7 +3723,7 @@ class RudeChatClient:
 
     async def command_parser(self, user_input):
         args = user_input[1:].split() if user_input.startswith('/') else []
-        primary_command = args[0] if args else None
+        primary_command = args[0].lower() if args else None
 
         timestamp = datetime.datetime.now().strftime('[%H:%M:%S] ')
 
