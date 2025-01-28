@@ -77,6 +77,7 @@ class RudeGui:
         self.last_selected_index = None
         self.previous_server_index = None
         self.iconed = False
+        self.target_user_info = None
         self.url_pattern = re.compile(r'(\w+://[^\s()<>]*\([^\s()<>]*\)[^\s()<>]*(?<![.,;!?])|www\.[^\s()<>]*\([^\s()<>]*\)[^\s()<>]*(?<![.,;!?])|\w+://[^\s()<>]+(?<![.,;!?])|www\.[^\s()<>]+(?<![.,;!?]))')
 
         # Server and Topic Frame
@@ -452,6 +453,9 @@ class RudeGui:
             username = self.user_listbox.get(index)
             modes_to_strip = ''.join(self.irc_client.mode_values)
             cleaned_nickname = username.lstrip(modes_to_strip)
+
+            if cleaned_nickname == self.target_user_info:
+                return
             
             # Retrieve WHO data if it exists
             if cleaned_nickname in self.irc_client.who_user_data:
@@ -465,15 +469,18 @@ class RudeGui:
                 
                 # Show the tooltip at mouse position
                 self.usertooltip.show_tooltip(tooltip_text, event.x, event.y)
+                self.target_user_info = cleaned_nickname
             else:
                 # Hide tooltip if there is no WHO data for this user
                 self.usertooltip.hide_tooltip()
+                self.target_user_info = None
 
         except Exception as e:
             logging.error(f"Error Showing User tooltip: {e}")
 
     def on_leave(self, event):
         self.usertooltip.hide_tooltip()
+        self.target_user_info = None
 
     def select_short_all_text(self, event):
         try:
