@@ -58,6 +58,18 @@ class RudeGui:
             '96': '#bcbcbc', '97': '#e2e2e2', '98': '#ffffff'
         }
 
+        self.emojis = [
+            "😀", "😂", "😍", "😎", "😭", "😡", "🥺", "😳", "😘", "😧", "😇", "😖", "🤐", "👍", "👎", "🤔", "😈", "😺", "😱",
+            "🎉", "🔥", "✨", "💥", "💯", "💀", "❤️", "💔", "💌", "🌸", "💐", "🍀", "🌈", "☀️", "🌙", "⭐", "🌍", "🌎",
+            "🌏", "🏆", "🥇", "🎁", "🕶️", "🎸", "🎤", "🎧", "🎮", "🕹️", "🏁", "🚀", "🛸", "🌪️", "🦄", "🍎", "🍉", "🍓",
+            "🍍", "🥑", "🍣", "🍕", "🍔", "🌮", "🌯", "🍿", "🍩", "🍪", "🥧", "🍰", "🍒", "🍇", "🍓", "🥥", "🥝", "🍑", "🍒",
+            "🍺", "🍻", "🍷", "🍸", "🍹", "🥂", "🍾", "🥃", "🍺", "🍷", "🍻", "🍾", "🥂", "🥃", "🧃", "🍽️", "🥄", "🍴", "🥢",
+            "👑", "💎", "👒", "👗", "👠", "👞", "🕴️", "🧥", "👚", "🧢", "👚", "👛", "👜", "💄", "💍", "🎩", "👢", "🦸‍♀️", "🦸‍♂️",
+            "💃", "🕺", "🤷‍♀️", "🤷‍♂️", "🙆‍♀️", "🙆‍♂️", "🙋‍♀️", "🙋‍♂️", "🤰", "🤱", "🧑‍🍼", "👨‍🍼", "👩‍🍼", "🦷", "🐱",
+            "🐶", "🐰", "🐹", "🐷", "🐴", "🦄", "🐮", "🐨", "🦊", "🐯", "🐼", "🐵", "🦁", "🐒", "🦓", "🐸", "🦋", "🦋", "🐦",
+            "🐝", "🐞", "🐛", "🦗", "🦠", "🐍", "🐢", "🦎", "🐳", "🐋", "🐟", "🐠", "🦈", "🐬", "🐙", "🐚", "🦑", "🦐", "🦞", "🦪"
+        ]
+
         # Main frame
         self.frame = tk.Frame(self.master, bg="black")
         self.frame.grid(row=1, column=0, columnspan=2, sticky="nsew")
@@ -833,10 +845,73 @@ class RudeGui:
 
         self.input_menu.add_cascade(label="Text Format", menu=text_format_menu)
 
+        # Emoji menu
+        self.input_menu.add_command(label="Emoji", command=self.show_emoji_grid)
+
         if platform.system() == "Darwin":  # macOS
             self.entry_widget.bind("<Button-2>", self.show_input_menu)
         else:  # Windows and Linux
             self.entry_widget.bind("<Button-3>", self.show_input_menu)
+
+    def show_emoji_grid(self):
+        """
+        Displays a grid of emojis in a popup window.
+        """
+        emoji_window = tk.Toplevel(self.master)
+        emoji_window.title("Select Emoji")
+        emoji_window.configure(bg=self.master_bg)
+        emoji_window.resizable(True, True)
+        emoji_font = (self.emoji_type, 11)
+
+        # Estimate button dimensions in pixels based on font size and Tkinter scaling
+        button_width_px = 40
+        button_height_px = 40
+        padding_px = 10
+
+        # Grid dimensions
+        cols = 15  # Number of columns
+        rows = -(-len(self.emojis) // cols)  # Calculate rows (ceiling division)
+
+        # Correct window size calculations
+        window_width = cols * (button_width_px + padding_px) + padding_px + 370
+        window_height = rows * (button_height_px + padding_px) + padding_px - 50
+
+        # Set the window size dynamically
+        emoji_window.geometry(f"{window_width}x{window_height}")
+
+        # Frame to hold the emoji buttons
+        emoji_frame = tk.Frame(emoji_window)
+        emoji_frame.pack(padx=padding_px, pady=padding_px)
+        emoji_frame.configure(bg=self.master_bg)
+
+        # Create emoji buttons in a grid
+        for i, emoji_char in enumerate(self.emojis):
+            button = tk.Button(
+                emoji_frame,
+                text=emoji_char,
+                width=2,
+                height=1,
+                font=emoji_font,
+                bg=self.master_bg,
+                fg=self.main_fg_color,
+                command=lambda em=emoji_char: self.insert_emoji(em)
+            )
+            button.grid(row=i // cols, column=i % cols, padx=padding_px // 2, pady=padding_px // 2)
+
+        # Add a close button below the grid
+        close_button = tk.Button(
+            emoji_window,
+            text="Close",
+            command=emoji_window.destroy,
+            font=("Arial", 12, "bold"),
+            bg=self.master_bg,
+            fg=self.main_fg_color
+        )
+        close_button.pack(pady=padding_px)
+
+    def insert_emoji(self, emoji_char):
+        """Inserts selected emoji into the entry widget."""
+        self.entry_widget.insert("insert", emoji_char)
 
     def insert_irc_color(self, color_code):
         """
