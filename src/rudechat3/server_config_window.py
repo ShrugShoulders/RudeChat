@@ -49,6 +49,7 @@ class ServerConfigWindow:
             'use_auto_away': 'Use Auto Away?',
             'auto_join_invite': 'Auto Join On Invite?',
             'log_on': 'Turn Client Debug Logging On',
+            'use_emojis': 'Turn Emoji filters on/off',
         }
 
         self.read_config()
