@@ -444,10 +444,14 @@ class RudeGui:
 
     def start_tray_icon(self):
         """Start the tray icon in a separate thread."""
-        self.stop_tray_event = threading.Event()  # Event to stop the tray icon thread
-        tray_thread = threading.Thread(target=self.create_tray_icon)
-        tray_thread.daemon = True  # Make it a daemon thread so it will exit with the program
-        tray_thread.start()
+        if platform.system() == "Darwin":
+            self.to_tray = False
+            return
+        else:
+            self.stop_tray_event = threading.Event()  # Event to stop the tray icon thread
+            tray_thread = threading.Thread(target=self.create_tray_icon)
+            tray_thread.daemon = True  # Make it a daemon thread so it will exit with the program
+            tray_thread.start()
 
     def minimize_to_tray(self):
         """Minimize the window to the system tray."""
@@ -898,7 +902,7 @@ class RudeGui:
             )
             button.grid(row=i // cols, column=i % cols, padx=padding_px // 2, pady=padding_px // 2)
 
-        # Add a close button below the grid
+        # Close Button
         close_button = tk.Button(
             emoji_window,
             text="Close",
