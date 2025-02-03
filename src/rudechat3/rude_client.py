@@ -1620,13 +1620,28 @@ class RudeChatClient:
                 r"(?<!\w):X": "🤐",  # Zipped mouth
                 r"(?<!\w):-X": "🤐",
                 r"(?<!\w)>\:D": "😈",  # Mischievous
-                r"(?<!\w)>\:3": "😈",
+                r"(?<!\w)>\:\)": "😈",
                 r"(?<!\w):3": "😺",  # Cat smile
+                r"(?<!\w);3": "😸",
+                r"(?<!\w)>\:3": "😼",
+                r"(?<!\w):3": "😺",   # Cat smile
+                r"(?<!\w);3": "😸",   # Grinning cat with smiling eyes
+                r"(?<!\w)>\:3": "😼",  # Smirking cat
+                r"(?<!\w)=\^_\^=": "😸",
+                r"(?<!\w)=\^o\^=": "😹",  # Laughing cat with tears
+                r"(?<!\w):\*3": "😻",  # Loving cat with heart eyes
+                r"(?<!\w)D:3": "🙀",  # Shocked/weary cat
+                r"(?<!\w)T_T": "😿",  # Crying cat
+                r"(?<!\w)>:T": "😾",  # Angry/pouting cat
+                r"(?<!\w)\(=｀ェ´=\)": "😾",  # Another angry cat
+                r"(?<!\w)\(=；ω；=\)": "😿",  # Crying cat face
                 r"(?<!\w):\^\)": "😏",  # Smug face
                 r"(?<!\w):'D": "😂",  # Laughing with tears
                 r"(?<!\w)D':": "😓",  # Sad but surprised
-                r"(?<!\w):v": "😋",  # Yum face
-                r"(?<!\w):\^P": "😜",  # Playful tongue
+                r"(?<!\w):p": "😋",  # Yum face
+                r"(?<!\w);P": "😜",  # Playful tongue
+                r"(?<!\w);p": "😜",
+                r"(?<!\w):P": "😋",
             }
 
             # Replace common symbols using regex

@@ -15,8 +15,10 @@ from rudechat3.user_data_display import RudeToolTip
 class RudeGui:
     def __init__(self, master):
         self.master = master
+        self.app_size = "1100x900"
+        self.set_screen_size()
         self.master.title("RudeChat")
-        self.master.geometry("1100x900")
+        self.master.geometry(self.app_size)
         self.master.configure(bg="black")
         self.script_directory = os.path.dirname(os.path.abspath(__file__))
         if sys.platform.startswith('win'):
@@ -131,7 +133,7 @@ class RudeGui:
             self.user_listbox.bind("<Button-3>", self.show_user_list_menu)
         self.user_listbox.bind("<Motion>", self.on_hover)
         self.user_listbox.bind("<Leave>", self.on_leave)
-        self.usertooltip = RudeToolTip(self.user_listbox, self)
+        self.usertooltip = RudeToolTip(self.user_listbox, self, self.app_size)
 
         # Channel frame
         self.channel_frame = tk.Frame(self.list_frame, bg="black")
@@ -231,6 +233,26 @@ class RudeGui:
         configure_logging()
         if self.log_on:
             logging.info(f"GUI has completed __init__")
+
+    def set_screen_size(self):
+        width, height = pyautogui.size()
+        screen_size = f"{width}x{height}"
+
+        if screen_size == "3840x2160":  # 4K UHD
+            self.app_size = "2200x1800"
+        elif screen_size == "1920x1080":  # Full HD
+            self.app_size = "1600x900"
+        elif screen_size == "2560x1440":  # QHD
+            self.app_size = "1920x1080"
+        elif screen_size == "1366x768":  # Common budget laptop
+            self.app_size = "1280x720"
+        elif screen_size == "2560x1600":  # MacBook Retina
+            self.app_size = "2000x1500"
+        elif screen_size == "3440x1440":  # Ultra-wide
+            self.app_size = "3000x1200"
+        else:
+            self.app_size = "1100x900"
+        return
 
     def hidden_windows(self):
         if not self.show_server_window:

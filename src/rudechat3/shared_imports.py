@@ -30,6 +30,7 @@ import pytz
 import threading
 import pystray
 import emoji
+import pyautogui
 from PIL import Image
 from tzlocal import get_localzone
 from typing import List, Tuple, NamedTuple
