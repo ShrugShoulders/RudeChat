@@ -1574,6 +1574,10 @@ class RudeChatClient:
         if self.use_emojis:
             # Map common symbols to their Unicode equivalents
             symbol_to_emoji = {
+                r"(?<!\w)>\:D": "😈",  # Mischievous
+                r"(?<!\w)>\:\)": "😈",
+                r"(?<!\w)>:\(": "😠",  # Angry
+                r"(?<!\w)>:-\(": "😠",
                 r"(?<!\w):\)": "🙂",  # Smiley face
                 r"(?<!\w):-\)": "🙂",
                 r"(?<!\w):D": "😃",  # Big grin
@@ -1583,6 +1587,8 @@ class RudeChatClient:
                 r"(?<!\w):'\(": "😢",  # Crying
                 r"(?<!\w);\)": "😉",  # Wink
                 r"(?<!\w);-\)": "😉",
+                r"(?<!\w):p": "😋",  # Yum face
+                r"(?<!\w);p": "😜",
                 r"(?<!\w):P": "😛",  # Tongue out
                 r"(?<!\w):-P": "😛",
                 r"(?<!\w);P": "😜",  # Cheeky tongue out
@@ -1609,8 +1615,6 @@ class RudeChatClient:
                 r"(?<!\w):-\$": "😳",
                 r"(?<!\w)O:\)": "😇",  # Angel
                 r"(?<!\w)O:-\)": "😇",
-                r"(?<!\w)>:\(": "😠",  # Angry
-                r"(?<!\w)>:-\(": "😠",
                 r"(?<!\w)8\)": "😎",  # Cool face
                 r"(?<!\w)8-\)": "😎",
                 r"(?<!\w)B\)": "😎",
@@ -1619,29 +1623,20 @@ class RudeChatClient:
                 r"(?<!\w):-S": "😖",
                 r"(?<!\w):X": "🤐",  # Zipped mouth
                 r"(?<!\w):-X": "🤐",
-                r"(?<!\w)>\:D": "😈",  # Mischievous
-                r"(?<!\w)>\:\)": "😈",
+                r"(?<!\w)>\:3": "😼",
                 r"(?<!\w):3": "😺",  # Cat smile
                 r"(?<!\w);3": "😸",
-                r"(?<!\w)>\:3": "😼",
-                r"(?<!\w):3": "😺",   # Cat smile
-                r"(?<!\w);3": "😸",   # Grinning cat with smiling eyes
-                r"(?<!\w)>\:3": "😼",  # Smirking cat
                 r"(?<!\w)=\^_\^=": "😸",
-                r"(?<!\w)=\^o\^=": "😹",  # Laughing cat with tears
+                r"(?<!\w)X3": "😹",  # Laughing cat with tears
                 r"(?<!\w):\*3": "😻",  # Loving cat with heart eyes
                 r"(?<!\w)D:3": "🙀",  # Shocked/weary cat
-                r"(?<!\w)T_T": "😿",  # Crying cat
-                r"(?<!\w)>:T": "😾",  # Angry/pouting cat
+                r"(?<!\w)3:": "😿",  # Crying cat
+                r"(?<!\w)3:<": "😾",  # Angry/pouting cat
                 r"(?<!\w)\(=｀ェ´=\)": "😾",  # Another angry cat
                 r"(?<!\w)\(=；ω；=\)": "😿",  # Crying cat face
                 r"(?<!\w):\^\)": "😏",  # Smug face
                 r"(?<!\w):'D": "😂",  # Laughing with tears
                 r"(?<!\w)D':": "😓",  # Sad but surprised
-                r"(?<!\w):p": "😋",  # Yum face
-                r"(?<!\w);P": "😜",  # Playful tongue
-                r"(?<!\w);p": "😜",
-                r"(?<!\w):P": "😋",
             }
 
             # Replace common symbols using regex
@@ -1654,6 +1649,7 @@ class RudeChatClient:
             return message
 
         else:
+            message = emoji.emojize(message, language="alias")
             return message
 
     async def handle_privmsg(self, tokens, znc_privmsg=False):
