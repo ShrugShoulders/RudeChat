@@ -2002,7 +2002,7 @@ class RudeGui:
                 self.update_nick_channel_label()
 
                 # Update topic label
-                current_topic = self.channel_topics.get(self.irc_client.server, {}).get(channel_name, "N/A")
+                current_topic = self.channel_topics.get(self.irc_client.server_name, {}).get(channel_name, "N/A")
                 self.current_topic.set(f"{current_topic}")
 
                 # Display the last messages for the current channel

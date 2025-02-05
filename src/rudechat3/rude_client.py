@@ -2921,10 +2921,10 @@ class RudeChatClient:
                 # RPL_TOPIC (numeric 332) - Topic for the channel is being sent
                 topic = tokens.params[2]
                 # Check if the server entry exists in the dictionary
-                if self.server not in self.gui.channel_topics:
-                    self.gui.channel_topics[self.server] = {}
+                if self.server_name not in self.gui.channel_topics:
+                    self.gui.channel_topics[self.server_name] = {}
                 # Set the topic for the channel under the server entry
-                self.gui.channel_topics[self.server][channel_name] = topic
+                self.gui.channel_topics[self.server_name][channel_name] = topic
                 if channel_name == self.current_channel:
                     self.gui.current_topic.set(f"{topic}")
             except Exception as e:
@@ -2945,9 +2945,9 @@ class RudeChatClient:
                 message = f"Topic has been changed to: {topic}\n"
 
                 # Check if the server entry exists in the dictionary
-                if self.server not in self.gui.channel_topics:
-                    self.gui.channel_topics[self.server] = {}
-                self.gui.channel_topics[self.server][channel_name] = topic
+                if self.server_name not in self.gui.channel_topics:
+                    self.gui.channel_topics[self.server_name] = {}
+                self.gui.channel_topics[self.server_name][channel_name] = topic
 
                 # Add TOPIC CHANGED message to channel history & Display message 
                 if self.server not in self.channel_messages:
