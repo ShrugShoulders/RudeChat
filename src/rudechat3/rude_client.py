@@ -1436,7 +1436,7 @@ class RudeChatClient:
 
     def trim_messages(self):
         for server, channels in self.channel_messages.items():
-            # Trim the message history for remaining channels to the last 250 messages
+            # Trim the message history for remaining channels to the last 1000 messages
             for channel, messages in channels.items():
                 channels[channel] = messages[-1000:]
 

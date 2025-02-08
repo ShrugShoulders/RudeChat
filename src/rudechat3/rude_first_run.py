@@ -6,6 +6,7 @@ class FirstRun:
     def __init__(self):
         self.first_run_detect = self.load_first_run()
         self.script_directory = os.path.dirname(os.path.abspath(__file__))
+        self.window_size = "600x400"
         self.read_config()
 
     def load_first_run(self):
@@ -48,8 +49,31 @@ class FirstRun:
         except Exception as e:
             print(f"An error occurred while updating the first run file: {str(e)}")
 
+    def set_screen_size(self):
+        width, height = pyautogui.size()
+        screen_size = f"{width}x{height}"
+
+        # Determine window size based on screen resolution
+        if screen_size == "3840x2160":  # 4K UHD
+            self.window_size = "1650x1200"
+        elif screen_size == "1920x1080":  # Full HD
+            self.window_size = "1200x800" 
+        elif screen_size == "2560x1440":  # QHD
+            self.window_size = "1600x900" 
+        elif screen_size == "1366x768":  # Common budget laptop
+            self.window_size = "1024x600"
+        elif screen_size == "2560x1600":  # MacBook Retina
+            self.window_size = "1440x900" 
+        elif screen_size == "3440x1440":  # Ultra-wide
+            self.window_size = "2000x1000" 
+        else:
+            self.window_size = "800x600"  # Default fallback window size
+
+        return self.window_size
+
     def open_client_config_window(self):
         script_directory = os.path.dirname(os.path.abspath(__file__))
+        self.set_screen_size()
         def after_config_window_close():
             self.update_first_run()
             self.first_run_detect = 1
@@ -64,6 +88,7 @@ class FirstRun:
 
         root = tk.Tk()
         root.title("Rude Server configuration: FIRST RUN")
+        root.geometry(self.window_size)
 
         files = os.listdir(script_directory)
         config_files = [f for f in files if f.startswith("conf.") and f.endswith(".rude")]

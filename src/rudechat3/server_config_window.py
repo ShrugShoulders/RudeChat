@@ -98,9 +98,6 @@ class ServerConfigWindow:
         self.entries = {}
         self.create_config_widgets()
 
-        # Set the window size
-        self.parent.geometry("600x400")  # Set the window size to 600x400
-
     def create_config_widgets(self):
         for section in self.config.sections():
             section_frame = tk.LabelFrame(self.scrollable_frame, text=section, bg=self.frame_bg_color, fg=self.fg_color)

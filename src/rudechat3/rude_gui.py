@@ -16,6 +16,8 @@ class RudeGui:
     def __init__(self, master):
         self.master = master
         self.app_size = "1100x900"
+        self.config_window_size = "400x300"
+        self.colour_selector_size = "450x900"
         self.set_screen_size()
         self.master.title("RudeChat")
         self.master.geometry(self.app_size)
@@ -232,8 +234,47 @@ class RudeGui:
         self.entry_widget.bind("<Control-s>", lambda event: self.insert_text_format("\x1E"))  # Strike through
         self.entry_widget.bind("<Control-slash>", lambda event: self.insert_text_format("\x16"))  # Inverse
         configure_logging()
+        self.set_scrollbar_size()
         if self.log_on:
             logging.info(f"GUI has completed __init__")
+
+    def set_scrollbar_size(self):
+        if self.app_size == "2200x1800":
+            self.text_widget.vbar.config(width=20)
+            self.channel_scrollbar.config(width=20)
+            self.user_scrollbar.config(width=20)
+            self.server_scrollbar.config(width=20)
+        elif self.app_size == "1600x900":
+            self.text_widget.vbar.config(width=15)
+            self.channel_scrollbar.config(width=15)
+            self.user_scrollbar.config(width=15)
+            self.server_scrollbar.config(width=20)
+        elif self.app_size == "1920x1080":
+            self.text_widget.vbar.config(width=18)
+            self.channel_scrollbar.config(width=18)
+            self.user_scrollbar.config(width=18)
+            self.server_scrollbar.config(width=18)
+        elif self.app_size == "2000x1500":
+            self.text_widget.vbar.config(width=17)
+            self.channel_scrollbar.config(width=17)
+            self.user_scrollbar.config(width=17)
+            self.server_scrollbar.config(width=17)
+        elif self.app_size == "1280x720":
+            self.text_widget.vbar.config(width=12)
+            self.channel_scrollbar.config(width=12)
+            self.user_scrollbar.config(width=12)
+            self.server_scrollbar.config(width=12)
+        elif self.app_size == "3000x1200":
+            self.text_widget.vbar.config(width=22)
+            self.channel_scrollbar.config(width=22)
+            self.user_scrollbar.config(width=22)
+            self.server_scrollbar.config(width=22)
+
+        else:
+            self.text_widget.vbar.config(width=14)
+            self.channel_scrollbar.config(width=14)
+            self.user_scrollbar.config(width=14)
+            self.server_scrollbar.config(width=14)
 
     def set_screen_size(self):
         width, height = pyautogui.size()
@@ -241,18 +282,33 @@ class RudeGui:
 
         if screen_size == "3840x2160":  # 4K UHD
             self.app_size = "2200x1800"
+            self.config_window_size = "1650x1400"
+            self.colour_selector_size = "520x900"
         elif screen_size == "1920x1080":  # Full HD
             self.app_size = "1600x900"
+            self.config_window_size = "1200x800"
+            self.colour_selector_size = "450x900"
         elif screen_size == "2560x1440":  # QHD
             self.app_size = "1920x1080"
+            self.config_window_size = "1600x900"
+            self.colour_selector_size = "450x900"
         elif screen_size == "1366x768":  # Common budget laptop
             self.app_size = "1280x720"
+            self.config_window_size = "1024x600"
+            self.colour_selector_size = "450x900"
         elif screen_size == "2560x1600":  # MacBook Retina
             self.app_size = "2000x1500"
+            self.config_window_size = "1440x900"
+            self.colour_selector_size = "450x900"
         elif screen_size == "3440x1440":  # Ultra-wide
             self.app_size = "3000x1200"
+            self.config_window_size = "2000x1000"
+            self.colour_selector_size = "450x900"
         else:
             self.app_size = "1100x900"
+            self.config_window_size = "800x600"
+            self.colour_selector_size = "450x900"
+
         return
 
     def hidden_windows(self):
@@ -406,6 +462,10 @@ class RudeGui:
 
     def on_scroll(self, *args):
         """Detect if the user has scrolled to the top."""
+        if self.irc_client.current_channel is None:
+            self.text_widget.yview(*args)
+            return
+
         if self.text_widget.yview()[0] == 0.0:  # Check if at the top
             lines = self.text_widget.get("1.0", tk.END).split("\n")
             num_lines = len(lines)
@@ -1023,7 +1083,7 @@ class RudeGui:
     def open_color_selector(self):
         root = tk.Toplevel(self.master)  # Use Toplevel instead of Tk for a new window
         app = RudeColours(root)
-        root.geometry("400x300")  # Set the initial size of the window
+        root.geometry(self.colour_selector_size)  # Set the initial size of the window
         root.transient(self.master)  # Set the main window as the transient master
         root.mainloop()
 
@@ -1045,6 +1105,7 @@ class RudeGui:
 
         root = tk.Tk()
         root.title("Rude Server configuration")
+        root.geometry(self.config_window_size)
 
         files = os.listdir(self.script_directory)
         config_files = [f for f in files if f.startswith("conf.") and f.endswith(".rude")]
@@ -1373,7 +1434,7 @@ class RudeGui:
         self.tooltip = None
 
     def trim_text_widget(self):
-        """Trim the text widget to only hold a maximum of 500 lines."""
+        """Trim the text widget to only hold a maximum of 1000 lines."""
         lines = self.text_widget.get("1.0", tk.END).split("\n")
         if len(lines) > 1000:
             self.text_widget.config(state=tk.NORMAL)  # Enable text widget editing

@@ -21,7 +21,6 @@ class RudeColours:
             with open(self.colors_json_path, "r") as file:
                 self.color_options = json.load(file)
         except FileNotFoundError:
-            # If the file doesn't exist, create an empty color_options dictionary
             self.color_options = {}
 
     def save_color_options(self):
@@ -29,8 +28,16 @@ class RudeColours:
             json.dump(self.color_options, file, indent=2)
 
     def create_widgets(self):
+        # Create a search entry widget
+        self.search_label = tk.Label(self.root, text="Search Nickname:")
+        self.search_label.pack(pady=5)
+
+        self.search_entry = tk.Entry(self.root, width=30)
+        self.search_entry.pack(pady=5)
+        self.search_entry.bind("<KeyRelease>", self.filter_list)
+
         # Create a scroll bar
-        scrollbar = tk.Scrollbar(self.root)
+        scrollbar = tk.Scrollbar(self.root, width=12)
         scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
 
         self.listbox = tk.Listbox(self.root, selectmode=tk.SINGLE, yscrollcommand=scrollbar.set)
@@ -39,11 +46,31 @@ class RudeColours:
         # Attach the scroll bar to the listbox
         scrollbar.config(command=self.listbox.yview)
 
-        for key, value in self.color_options.items():
-            self.listbox.insert(tk.END, f"{key}: {value}")
+        # Insert the initial list of color options
+        self.update_listbox()
 
         add_button = tk.Button(self.root, text="Add/Edit Color Option", command=self.add_edit_color_option)
         add_button.pack(pady=10)
+
+    def update_listbox(self, filtered_options=None):
+        # Clear the listbox and insert new items
+        self.listbox.delete(0, tk.END)
+        
+        # If filtered options are provided, use them; otherwise, use all options
+        color_options_to_display = filtered_options if filtered_options else self.color_options
+        
+        for key, value in color_options_to_display.items():
+            self.listbox.insert(tk.END, f"{key}: {value}")
+
+    def filter_list(self, event):
+        # Get the search query
+        query = self.search_entry.get().lower()
+        
+        # Filter the color options by the search query
+        filtered_options = {key: value for key, value in self.color_options.items() if query in key.lower()}
+        
+        # Update the listbox with filtered results
+        self.update_listbox(filtered_options)
 
     def add_edit_color_option(self):
         selected_index = self.listbox.curselection()
@@ -90,9 +117,7 @@ class RudeColours:
                 self.save_color_options()
 
                 # Update the listbox
-                self.listbox.delete(0, tk.END)
-                for key, value in self.color_options.items():
-                    self.listbox.insert(tk.END, f"{key}: {value}")
+                self.update_listbox()
 
                 messagebox.showinfo("Success", f"Color option removed for {selected_key}!")
 
@@ -112,9 +137,7 @@ class RudeColours:
                 self.save_color_options()
 
                 # Update the listbox
-                self.listbox.delete(0, tk.END)
-                for key, value in self.color_options.items():
-                    self.listbox.insert(tk.END, f"{key}: {value}")
+                self.update_listbox()
 
                 messagebox.showinfo("Success", f"Color option updated for {selected_key or new_key}!")
 
