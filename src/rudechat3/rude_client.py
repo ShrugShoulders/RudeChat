@@ -430,7 +430,7 @@ class RudeChatClient:
         count_366 = 0
         got_topic = 0
         last_366_time = None
-        TIMEOUT_SECONDS = 0.2
+        TIMEOUT_SECONDS = 0.23
         MAX_WAIT_TIME = 60
         PRIVMSGTOKENS = []
         NAMESTOKENS = []
@@ -1436,9 +1436,9 @@ class RudeChatClient:
 
     def trim_messages(self):
         for server, channels in self.channel_messages.items():
-            # Trim the message history for remaining channels to the last 125 messages
+            # Trim the message history for remaining channels to the last 250 messages
             for channel, messages in channels.items():
-                channels[channel] = messages[-125:]
+                channels[channel] = messages[-1000:]
 
     def remove_bang_channels(self):
         try:
@@ -4911,11 +4911,17 @@ class RudeChatClient:
         self.server_name = server_name
         self.gui.update_nick_channel_label()
 
-    def display_last_messages(self, channel, num=125, server_name=None):
-        if server_name:
-            messages = self.channel_messages.get(server_name, {}).get(channel, [])
-        for message in messages[-num:]:
-            self.gui.insert_text_widget(message)
+    def display_last_messages(self, channel=None, num=150, server_name=None):
+        if server_name is not None and channel is not None:
+            try:
+                messages = self.channel_messages[server_name][channel]  # Direct lookup
+            except Exception as e:
+                logging.error(f"Exception on dictionary lookup display_last_messages: {e}")
+                messages = []
+            for message in messages[-num:]:
+                self.gui.insert_text_widget(message)
+        else:
+            logging.info(f"display_last_messages: given server_name \'{server_name}\' or given channel \'{channel}\' is None")
 
     def display_server_motd(self, server_name=None):
         if server_name:

@@ -109,6 +109,7 @@ class RudeGui:
         # Main text widget
         self.text_widget = ScrolledText(self.frame, wrap='word', cursor="arrow")
         self.text_widget.grid(row=0, column=0, sticky="nsew")
+        self.text_widget.vbar.config(command=self.on_scroll)
         self.show_startup_art()
 
         # List frames
@@ -402,6 +403,19 @@ class RudeGui:
             self.tab_complete_terminator = ":"
             if self.log_on:
                 logging.error("GUI Fallbacks hit.")
+
+    def on_scroll(self, *args):
+        """Detect if the user has scrolled to the top."""
+        if self.text_widget.yview()[0] == 0.0:  # Check if at the top
+            lines = self.text_widget.get("1.0", tk.END).split("\n")
+            num_lines = len(lines)
+            add_num = num_lines + 100
+            self.clear_text_widget()
+            self.irc_client.display_last_messages(self.irc_client.current_channel, add_num, self.irc_client.server)
+            self.highlight_nickname()
+            self.text_widget.after(10, lambda: self.text_widget.yview_moveto(0.5))
+
+        self.text_widget.yview(*args)
 
     def create_tray_icon(self):
         """Create the system tray icon and menu."""
@@ -1358,6 +1372,14 @@ class RudeGui:
             self.tooltip.destroy()
         self.tooltip = None
 
+    def trim_text_widget(self):
+        """Trim the text widget to only hold a maximum of 500 lines."""
+        lines = self.text_widget.get("1.0", tk.END).split("\n")
+        if len(lines) > 1000:
+            self.text_widget.config(state=tk.NORMAL)  # Enable text widget editing
+            self.text_widget.delete("1.0", f"{len(lines) - 1000}.0")  # Delete excess lines
+            self.text_widget.config(state=tk.DISABLED)  # Disable text widget editing
+
     def insert_text_widget(self, message):
         try:
             self.trim_text_widget()
@@ -1431,6 +1453,12 @@ class RudeGui:
             tag_config['background'] = hex_background
         return tag_config
 
+    def on_url_enter(self, event):
+        self.text_widget.config(cursor="hand2")
+
+    def on_url_leave(self, event):
+        self.text_widget.config(cursor="arrow")
+
     def tag_urls(self, urls, index=0):
         if index < len(urls):
             url = urls[index]
@@ -1449,6 +1477,8 @@ class RudeGui:
                 end_idx = f"{start_idx}+{len(url)}c"
                 self.text_widget.tag_add(tag_name, start_idx, end_idx)
                 self.text_widget.tag_bind(tag_name, "<Button-1>", lambda event, url=url: self.open_url(event, url))
+                self.text_widget.tag_bind(tag_name, "<Enter>", self.on_url_enter)
+                self.text_widget.tag_bind(tag_name, "<Leave>", self.on_url_leave)
                 start_idx = end_idx
 
             # Schedule the next URL tagging
@@ -1969,14 +1999,6 @@ class RudeGui:
                 server_highlighted_channels = self.irc_client.highlighted_channels[self.irc_client.server_name]
                 if clicked_channel in server_highlighted_channels:
                     del server_highlighted_channels[clicked_channel]
-
-    def trim_text_widget(self):
-        """Trim the text widget to only hold a maximum of 120 lines."""
-        lines = self.text_widget.get("1.0", tk.END).split("\n")
-        if len(lines) > 125:
-            self.text_widget.config(state=tk.NORMAL)  # Enable text widget editing
-            self.text_widget.delete("1.0", f"{len(lines) - 125}.0")  # Delete excess lines
-            self.text_widget.config(state=tk.DISABLED)  # Disable text widget editing
 
     def switch_channel(self, channel_name):
         try:
