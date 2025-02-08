@@ -2010,6 +2010,12 @@ class RudeChatClient:
                         
                     self.friends.online_friends.append(user_info)
 
+            # If the user joining is the client's user, return
+            if user_info == self.nickname:
+                if self.znc_connection:
+                    self.join_znc_channel(tokens)
+                return
+
             if self.show_full_hostmask == True:
                 join_message = f"\x0312(→)\x0F {user_mask} has joined channel {channel}\n"
             elif self.show_full_hostmask == False:
@@ -2032,12 +2038,6 @@ class RudeChatClient:
             if self.server_name in self.gui.popped_out_channels and channel in self.gui.popped_out_channels[self.server_name]:
                 if self.show_join_part_quit_nick:
                     self.pipe_mode_to_pop_out(join_message, channel)
-
-            # If the user joining is the client's user, return
-            if user_info == self.nickname:
-                if self.znc_connection:
-                    self.join_znc_channel(tokens)
-                return
 
             # Check if the user is not already in the channel_users list for the channel
             if user_info not in self.channel_users.get(channel, []):
