@@ -63,15 +63,15 @@ class RudeGui:
         }
 
         self.emojis = [
-            "😀", "😂", "😍", "😎", "😭", "😡", "🥺", "😳", "😘", "😧", "😇", "😖", "🤐", "👍", "👎", "🤔", "😈", "😺", "😱",
+            "😀", "😂", "😍", "😎", "😭", "😡", "🥺", "😳", "😘", "😧", "😇", "😖", "🤐", "👍", "👎", "🤔", "😈", "😺",
             "🎉", "🔥", "✨", "💥", "💯", "💀", "❤️", "💔", "💌", "🌸", "💐", "🍀", "🌈", "☀️", "🌙", "⭐", "🌍", "🌎",
             "🌏", "🏆", "🥇", "🎁", "🕶️", "🎸", "🎤", "🎧", "🎮", "🕹️", "🏁", "🚀", "🛸", "🌪️", "🦄", "🍎", "🍉", "🍓",
-            "🍍", "🥑", "🍣", "🍕", "🍔", "🌮", "🌯", "🍿", "🍩", "🍪", "🥧", "🍰", "🍒", "🍇", "🍓", "🥥", "🥝", "🍑", "🍒",
-            "🍺", "🍻", "🍷", "🍸", "🍹", "🥂", "🍾", "🥃", "🍺", "🍷", "🍻", "🍾", "🥂", "🥃", "🧃", "🍽️", "🥄", "🍴", "🥢",
+            "🍍", "🥑", "🍣", "🍕", "🍔", "🌮", "🌯", "🍿", "🍩", "🍪", "🥧", "🍰", "🍒", "🍇", "🍓", "🥥", "🥝", "🍑",
+            "🍺", "🍻", "🍷", "🍸", "🍹", "🥂", "🍾", "🥃", "🍺", "🍷", "🍻", "🍾", "🥂", "🥃", "🧃", "🍽️", "🥄", "🍴",
             "👑", "💎", "👒", "👗", "👠", "👞", "🕴️", "🧥", "👚", "🧢", "👚", "👛", "👜", "💄", "💍", "🎩", "👢", "🦸",
-            "💃", "🕺", "🤷‍", "🙆", "🙋", "🤰", "🤱", "🧑‍🍼", "👨‍🍼", "👩‍🍼", "🦷", "🐱",
-            "🐶", "🐰", "🐹", "🐷", "🐴", "🦄", "🐮", "🐨", "🦊", "🐯", "🐼", "🐵", "🦁", "🐒", "🦓", "🐸", "🦋", "🦋", "🐦",
-            "🐝", "🐞", "🐛", "🦗", "🦠", "🐍", "🐢", "🦎", "🐳", "🐋", "🐟", "🐠", "🦈", "🐬", "🐙", "🐚", "🦑", "🦐", "🦞", "🦪"
+            "💃", "🕺", "🤷‍", "🙆", "🙋", "🤰", "🤱", "🧑‍🍼", "👨‍🍼", "👩‍🍼", "🦷", "🐱", "🦪", "😱", "🍒", "🥢", "🐦", "🦞",
+            "🐶", "🐰", "🐹", "🐷", "🐴", "🦄", "🐮", "🐨", "🦊", "🐯", "🐼", "🐵", "🦁", "🐒", "🦓", "🐸", "🦋", "🦋",
+            "🐝", "🐞", "🐛", "🦗", "🦠", "🐍", "🐢", "🦎", "🐳", "🐋", "🐟", "🐠", "🦈", "🐬", "🐙", "🐚", "🦑", "🦐",
         ]
 
         # Main frame
@@ -461,15 +461,26 @@ class RudeGui:
                 logging.error("GUI Fallbacks hit.")
 
     def on_scroll(self, *args):
-        """Detect if the user has scrolled to the top."""
-        lines = self.text_widget.get("1.0", tk.END).split("\n")
-
-        if self.irc_client.current_channel is None or len(lines) > 999:
+        """Detect if the user has scrolled to the top & loads additional stored messages."""
+        try:
+            # Current stored messages in the text widget.
+            lines = self.text_widget.get("1.0", tk.END).split("\n") 
+            num_lines = len(lines)
+            # Current stored messages in the channel_messages Dictionary. 
+            messages = self.irc_client.channel_messages[self.irc_client.server][self.irc_client.current_channel] 
+            message_index = len(messages)
+        except Exception as e:
+            logging.error(f"Error setting on_scroll variables: {e}")
             self.text_widget.yview(*args)
             return
 
-        if self.text_widget.yview()[0] == 0.0:  # Check if at the top
-            num_lines = len(lines)
+        # Checks if current_channel is None or if the number of lines in the Text Widget is greater/equal to the number of lines stored within the channel_messages Dictionary. 
+        if self.irc_client.current_channel is None or num_lines >= message_index: 
+            self.text_widget.yview(*args)
+            return
+
+        # Check if scroll bar is at the top and load more messages.
+        if self.text_widget.yview()[0] == 0.0:  
             add_num = num_lines + 100
             self.clear_text_widget()
             self.irc_client.display_last_messages(self.irc_client.current_channel, add_num, self.irc_client.server)
