@@ -88,7 +88,7 @@ class RudePopOut:
             self.user_listbox.bind("<Button-3>", self.show_user_list_menu)
         self.user_listbox.bind("<Motion>", self.on_hover)
         self.user_listbox.bind("<Leave>", self.on_leave)
-        self.usertooltip = RudeToolTip(self.user_listbox, self)
+        self.usertooltip = RudeToolTip(self.user_listbox, self, self.main_app.app_size)
 
         # Entry widget for message input
         self.entry = tk.Entry(self.frame)
