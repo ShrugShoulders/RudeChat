@@ -44,4 +44,8 @@ setup(
             'rudechat=rudechat3.main:main',
         ],
     },
+    # MacOS specific (Build using `python3 setup.py py2app` in root directory)
+    app=["src/rudechat3/main.py"],
+    options={'py2app': {'excludes': ['rubicon']}},
+    setup_requires=['py2app']
 )
