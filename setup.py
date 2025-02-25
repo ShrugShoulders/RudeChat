@@ -1,12 +1,26 @@
 from setuptools import setup, find_packages
 
+VERSION = '3.1.4'
+
 APP = ['src/rudechat3/main.py']
 DATA_FILES = []
-OPTIONS = {'iconfile': '/Users/bash/Developer/RudeChat/src/rudechat3/rude.icns', 'excludes': ['rubicon']}
+OPTIONS = {
+    'iconfile': 'src/rudechat3/rude.icns', 
+    'excludes': ['rubicon'],
+    'plist': {
+        'CFBundleName': 'RudeChat',
+        'CFBundleDisplayName': 'RudeChat',
+        'CFBundleGetInfoString': 'RudeChat',
+        'CFBundleIdentifier': 'io.github.ShrugShoulders.rudechat',
+        'CFBundleVersion': VERSION,
+        'CFBundleShortVersionString': VERSION,
+        'CFBundleIconFile': 'rude.icns',
+    }
+}
 
 setup(
     name="RudeChat",
-    version="3.1.4",
+    version=VERSION,
     description="RudeChat is a Python IRC client designed to be fast, portable, and fun.",
     author="Irish",
     packages=find_packages(where="src"),
