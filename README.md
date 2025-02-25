@@ -1,29 +1,44 @@
 # RudeChat IRC Client: For Fun & Reasons.
-## Installation    
-To install on Linux:
+## How to Install
+### Windows (Installer)
+Download the installer. Windows installs to `%LOCALAPPDATA%\Programs\RudeChat3`.
+### Linux (Binary)
+- Download the binary and extract (recommended for Debian/Ubuntu users).
+- CD to the extracted directory and use `./rudechat`.
 
-        Download the Stand Alone and extract.(recommended for Debain/Ubuntu users.)
-        In your Terminal cd to the folder where you extracted the package.
-        Using ./rudechat3 will open rudechat. 
-        or
-        Clone the repo, cd into its cloned directory, and use pip to install. 
-        Command: 'pip install -r requirements.txt .'
-        Once pip has completed you can then run rudechat in your terminal. 
-        Command: 'rudechat'
+### Linux (Build from Source)
+- Clone the repo.
+- CD to the cloned directory and use the below command to install RudeChat. 
 
-Main Stand Alone files found in: 
+```sh
+pip install -r requirements.txt .
+```
+- use `rudechat`.
 
-        /_internal/rudechat3/
+### MacOS (Build from Source)
 
-Pip Install Directory: 
+- Clone the repo.
 
-        /home/username/.local/lib/python3.12/site-packages/rudechat3/
+- CD to the cloned directory and use the below command to download RudeChat's requirements.
 
-To install on Windows Download the installer.
 
-Windows installs to: 
+```sh
+# NOT USING HOMEBREW
+pip3 install -r requirements.txt
 
-        %LOCALAPPDATA%\Programs\RudeChat3
+# USING HOMEBREW (might have some unexpected side effects)
+pip3 install -r requirements.txt --break-system-packages
+```
+
+- Use the below command to build the MacOS App.
+
+```sh
+python3 setup.py py2app
+```
+
+- If the command finishes with `Done!`, you'll find your Mac App in the `dist` folder. If not, [tell us we fucked up.](https://github.com/ShrugShoulders/RudeChat/issues)
+
+## Cool Tips
 
 It is suggested that you use: https://github.com/source-foundry/Hack as your font.
 
@@ -33,7 +48,7 @@ RudeChat assumes conf.server_name.rude is available and configed properly:
 
 For assistance find me on irc.libera.chat/##rudechat
 
-### Server Config Example:
+## Server Config Example:
 
 file name: conf.libera.rude(config files should follow conf.server_name.rude naming)
 
@@ -69,7 +84,7 @@ file name: conf.libera.rude(config files should follow conf.server_name.rude nam
         auto_join_invite = True # This will auto-join on invite to a channel. 
         log_on = False # Logs everything in the client including incoming data, etc. 
 
-### GUI Config Example:
+## GUI Config Example:
 
 file name: gui_config.ini
 
