@@ -1,5 +1,9 @@
 from setuptools import setup, find_packages
 
+APP = ['src/rudechat3/main.py']
+DATA_FILES = []
+OPTIONS = {'iconfile': '/Users/bash/Developer/RudeChat/src/rudechat3/rude.icns', 'excludes': ['rubicon']}
+
 setup(
     name="RudeChat",
     version="3.1.4",
@@ -45,7 +49,8 @@ setup(
         ],
     },
     # MacOS specific (Build using `python3 setup.py py2app` in root directory)
-    app=["src/rudechat3/main.py"],
-    options={'py2app': {'excludes': ['rubicon']}},
+    app=APP,
+	data_files=DATA_FILES,
+    options={'py2app': OPTIONS},
     setup_requires=['py2app']
 )
