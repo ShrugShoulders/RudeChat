@@ -132,6 +132,7 @@ class RudeGui:
         self.user_scrollbar.grid(row=1, column=1, sticky='ns')
         if platform.system() == "Darwin":  # macOS
             self.user_listbox.bind("<Button-2>", self.show_user_list_menu)
+            self.user_listbox.bind("<Button-3>", self.show_user_list_menu)
         else:  # Windows and Linux
             self.user_listbox.bind("<Button-3>", self.show_user_list_menu)
         self.user_listbox.bind("<Motion>", self.on_hover)
@@ -169,6 +170,7 @@ class RudeGui:
         self.channel_listbox.bind('<ButtonRelease-1>', self.on_channel_click)
         if platform.system() == "Darwin":  # macOS
             self.channel_listbox.bind("<Button-2>", self.show_channel_list_menu)
+            self.channel_listbox.bind("<Button-3>", self.show_user_list_menu)
         else:  # Windows and Linux
             self.channel_listbox.bind("<Button-3>", self.show_channel_list_menu)
         self.master.bind("<Alt-KeyPress>", self._switch_to_index)
@@ -962,6 +964,7 @@ class RudeGui:
 
         if platform.system() == "Darwin":  # macOS
             self.entry_widget.bind("<Button-2>", self.show_input_menu)
+            self.entry_widget.bind("<Button-3>", self.show_input_menu)
         else:  # Windows and Linux
             self.entry_widget.bind("<Button-3>", self.show_input_menu)
 
@@ -1089,6 +1092,7 @@ class RudeGui:
         
         if platform.system() == "Darwin":  # macOS
             self.text_widget.bind("<Button-2>", self.show_message_menu)
+            self.text_widget.bind("<Button-3>", self.show_message_menu)
         else:  # Windows and Linux
             self.text_widget.bind("<Button-3>", self.show_message_menu)
 
@@ -1197,6 +1201,7 @@ class RudeGui:
 
         if platform.system() == "Darwin":  # macOS
             self.server_text_widget.bind("<Button-2>", self.show_server_menu)
+            self.server_text_widget.bind("<Button-3>", self.show_server_menu)
         else:  # Windows and Linux
             self.server_text_widget.bind("<Button-3>", self.show_server_menu)
 
@@ -1447,11 +1452,12 @@ class RudeGui:
 
     def trim_text_widget(self):
         """Trim the text widget to only hold a maximum of 1000 lines."""
-        lines = self.text_widget.get("1.0", tk.END).split("\n")
-        if len(lines) > 1000:
-            self.text_widget.config(state=tk.NORMAL)  # Enable text widget editing
-            self.text_widget.delete("1.0", f"{len(lines) - 1000}.0")  # Delete excess lines
-            self.text_widget.config(state=tk.DISABLED)  # Disable text widget editing
+        line_count = int(self.text_widget.index("end-1c").split('.')[0])  # Get total line count
+        if line_count > 1000:
+            excess_lines = line_count - 1000
+            self.text_widget.config(state=tk.NORMAL)  # Enable editing
+            self.text_widget.delete("1.0", f"{excess_lines}.0")  # Delete only excess lines
+            self.text_widget.config(state=tk.DISABLED)  # Disable editing
 
     def insert_text_widget(self, message):
         try:

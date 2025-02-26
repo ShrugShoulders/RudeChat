@@ -2923,6 +2923,7 @@ class RudeChatClient:
                 self.gui.channel_topics[self.server_name][channel_name] = topic
                 if channel_name == self.current_channel:
                     self.gui.current_topic.set(f"{topic}")
+                    self.gui.insert_text_widget(f"Topic: {topic}\n")
             except Exception as e:
                 logging.error(f"Error in handle_topic command 332: {e}")
 
@@ -2930,6 +2931,8 @@ class RudeChatClient:
             try:
                 # RPL_TOPICWHOTIME (numeric 333) - Who set the topic and when
                 who_set = tokens.params[2]
+                if channel_name == self.current_channel:
+                    self.gui.insert_text_widget(f"Topic Set By: {who_set}\n")
             except Exception as e:
                 logging.error(f"Error in handle_topic command 333: {e}")
 
