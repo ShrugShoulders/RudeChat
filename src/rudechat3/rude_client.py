@@ -1038,6 +1038,12 @@ class RudeChatClient:
             server = split_config[-1].split(".")
             return server[1]
 
+    def replace_dms_in_gui(self):
+        replaced_dms = self.dm_list + self.joined_channels
+        self.joined_channels = replaced_dms
+        self.gui.channel_lists[self.server] = self.joined_channels
+        self.update_gui_channel_list()
+
     async def reconnect(self, config_file):
         disconnected_server = self.grab_server_name(config_file)
         MAX_RETRIES = 5
@@ -1057,6 +1063,7 @@ class RudeChatClient:
 
                 self.add_server_message("****Attempt Connection\n")
                 await self.connect(config_file)
+                self.replace_dms_in_gui()
                 self.loop_running = True
                 self.add_server_message(f"****Connected: {self.loop_running}\n")
                 self.gui.select_first_server()
