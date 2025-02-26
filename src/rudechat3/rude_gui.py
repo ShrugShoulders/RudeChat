@@ -284,7 +284,7 @@ class RudeGui:
 
         if screen_size == "3840x2160":  # 4K UHD
             self.app_size = "2200x1800"
-            self.config_window_size = "1650x1400"
+            self.config_window_size = "1650x1200"
             self.colour_selector_size = "520x900"
         elif screen_size == "1920x1080":  # Full HD
             self.app_size = "1600x900"
@@ -299,12 +299,12 @@ class RudeGui:
             self.config_window_size = "1024x600"
             self.colour_selector_size = "450x900"
         elif screen_size == "2560x1600":  # MacBook Retina
-            self.app_size = "2000x1500"
+            self.app_size = "1900x800"
             self.config_window_size = "1440x900"
             self.colour_selector_size = "450x900"
         elif screen_size == "3440x1440":  # Ultra-wide
             self.app_size = "3000x1200"
-            self.config_window_size = "2000x1000"
+            self.config_window_size = "2000x900"
             self.colour_selector_size = "450x900"
         else:
             self.app_size = "1100x900"
