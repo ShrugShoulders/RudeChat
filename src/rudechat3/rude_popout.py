@@ -139,7 +139,7 @@ class RudePopOut:
         self.button_bg_color = config.get('WIDGETS', 'entry_bg')
         self.user_nickname_color = config.get('GUI', 'main_nickname_color', fallback='#39ff14')
         self.generate_nickname_colors = config.getboolean('GUI', 'generate_nickname_colors', fallback=True)
-        self.font_family = config.get('GUI', 'family', fallback='Hack')
+        self.font_family = config.get('GUI', 'family', fallback='Courier')
         self.font_size = config.getint('GUI', 'size', fallback=10)
         self.input_fg = config.get('WIDGETS', 'entry_fg', fallback='#C0FFEE')
         self.input_bg = config.get('WIDGETS', 'entry_bg', fallback='black')
