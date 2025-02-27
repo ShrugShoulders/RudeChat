@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 VERSION = '3.1.4'
 
-APP = ['src/rudechat3/main.py']
+APP = ['src/rudechat3/__main__.py']
 DATA_FILES = []
 OPTIONS = {
     'iconfile': 'src/rudechat3/rude.icns', 
@@ -25,7 +25,7 @@ setup(
     author="Irish",
     packages=find_packages(where="src"),
     package_dir={"": "src"},
-    scripts=["src/rudechat3/main.py"],
+    scripts=["src/rudechat3/__main__.py"],
     install_requires=[
         'pytz',
         'asyncio',

@@ -4,7 +4,7 @@
 block_cipher = None
 
 a = Analysis(
-    ['src/rudechat3/main.py'],
+    ['src/rudechat3/__main__.py'],
     pathex=['src'],
     binaries=[],
     datas=[
