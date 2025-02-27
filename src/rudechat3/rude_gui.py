@@ -894,7 +894,7 @@ class RudeGui:
 
     def save_nickname_colors(self):
         clean_nicks = clean_nicknames(self.nickname_colors)
-        nickname_colors_path = os.path.join(self.script_directory, 'nickname_colours.json')
+        nickname_colors_path = os.path.join(self.config_directory, 'nickname_colours.json')
 
         try:
             with open(nickname_colors_path, 'w') as file:
