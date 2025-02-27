@@ -6,7 +6,7 @@ def CopyConfigs():
     source_file = os.path.join(G_SCRIPT_DIR, 'gui_config.ini')
     destination_file = os.path.join(G_CONFIG_DIR, 'gui_config.ini')
 
-    if os.path.exists(source_file):
+    if not (os.path.exists(destination_file)):
         shutil.copy(source_file, destination_file)
 
     # Check for .rudeserver files
