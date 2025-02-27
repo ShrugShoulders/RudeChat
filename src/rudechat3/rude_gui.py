@@ -383,7 +383,7 @@ class RudeGui:
             self.user_nickname_color = config.get('GUI', 'main_nickname_color', fallback='#39ff14')
             self.generate_nickname_colors = config.getboolean('GUI', 'generate_nickname_colors', fallback=True)
             self.master_bg = config.get('GUI', 'master_color', fallback='black')
-            self.font_family = config.get('GUI', 'family', fallback='Hack')
+            self.font_family = config.get('GUI', 'family', fallback='Courier')
             self.font_size = config.getint('GUI', 'size', fallback=10)
             self.main_fg_color = config.get('GUI', 'main_fg_color', fallback='#C0FFEE')
             self.main_bg_color = config.get('GUI', 'main_bg_color', fallback='black')
@@ -393,9 +393,9 @@ class RudeGui:
             self.user_font_size = config.getint('GUI', 'user_font_size', fallback=10)
             self.channel_font_size = config.getint('GUI', 'channel_font_size', fallback=10)
             self.server_font_size = config.getint('GUI', 'server_font_size', fallback=10)
-            self.list_boxs_font_family = config.get('GUI', 'list_boxs_font_family', fallback='Hack') 
+            self.list_boxs_font_family = config.get('GUI', 'list_boxs_font_family', fallback='Courier') 
             self.topic_label_font_size = config.getint('GUI', 'topic_label_font_size', fallback=10)
-            self.topic_label_font_family = config.get('GUI', 'topic_label_font_family', fallback='Hack')
+            self.topic_label_font_family = config.get('GUI', 'topic_label_font_family', fallback='Courier')
             self.to_tray = config.getboolean('GUI', 'minimize_to_tray', fallback=True)
             self.log_on = config.getboolean('GUI', 'turn_logging_on', fallback=False)
 
@@ -430,7 +430,7 @@ class RudeGui:
             self.user_nickname_color = '#39ff14'
             self.generate_nickname_colors = True
             self.master_bg = 'black'
-            self.font_family = 'Hack'
+            self.font_family = 'Courier'
             self.font_size = 10
             self.main_fg_color = '#C0FFEE'
             self.main_bg_color = 'black'
