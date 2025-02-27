@@ -7,13 +7,13 @@ from rudechat3.global_variables import *
 class FirstRun:
     def __init__(self):
         self.first_run_detect = self.load_first_run()
-        self.script_directory = G_SCRIPT_DIR
+        self.config_directory = G_CONFIG_DIR
         self.window_size = "600x400"
         self.read_config()
 
     def load_first_run(self):
-        script_directory = G_SCRIPT_DIR
-        file_path = os.path.join(script_directory, "first_run.txt")
+        config_directory = G_CONFIG_DIR
+        file_path = os.path.join(config_directory, "first_run.txt")
         try:
             with open(file_path, 'r') as file:
                 content = file.read().strip()
@@ -30,7 +30,7 @@ class FirstRun:
             return 0
 
     def read_config(self):
-        config_file = os.path.join(self.script_directory, 'gui_config.ini')
+        config_file = os.path.join(self.config_directory, 'gui_config.ini')
 
         if os.path.exists(config_file):
             color_config = configparser.ConfigParser()
@@ -40,8 +40,8 @@ class FirstRun:
             self.fg_color = color_config.get('GUI', 'main_fg_color', fallback='#C0FFEE')
 
     def update_first_run(self):
-        script_directory = G_SCRIPT_DIR
-        file_path = os.path.join(script_directory, "first_run.txt")
+        config_directory = G_CONFIG_DIR
+        file_path = os.path.join(config_directory, "first_run.txt")
         """
         Updates the first run file to indicate that the first run setup is complete.
         """
@@ -74,7 +74,7 @@ class FirstRun:
         return self.window_size
 
     def open_client_config_window(self):
-        script_directory = G_SCRIPT_DIR
+        config_directory = G_CONFIG_DIR
         self.set_screen_size()
         def after_config_window_close():
             self.update_first_run()
@@ -92,7 +92,7 @@ class FirstRun:
         root.title("Rude Server configuration: FIRST RUN")
         root.geometry(self.window_size)
 
-        files = os.listdir(script_directory)
+        files = os.listdir(config_directory)
         config_files = [f for f in files if f.endswith(".rudeserver")]
         config_files.sort()
 
@@ -101,11 +101,11 @@ class FirstRun:
             root.destroy()
             return
 
-        config_window = ServerConfigWindow(root, os.path.join(script_directory, config_files[0]), on_config_window_close)
+        config_window = ServerConfigWindow(root, os.path.join(config_directory, config_files[0]), on_config_window_close)
 
         def on_config_change(event):
             selected_config_file = selected_config_file_var.get()
-            config_window.config_file = os.path.join(script_directory, selected_config_file)
+            config_window.config_file = os.path.join(config_directory, selected_config_file)
             config_window.config.read(config_window.config_file)
             config_window.create_widgets()
 

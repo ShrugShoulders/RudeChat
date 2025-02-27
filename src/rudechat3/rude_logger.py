@@ -5,10 +5,10 @@ from rudechat3.global_variables import *
 
 def configure_logging():
     # Get the script directory
-    script_directory = G_SCRIPT_DIR
+    config_directory = G_CONFIG_DIR
         
     # Log file path within the script directory
-    log_file = os.path.join(script_directory, 'RudeChat3.log')
+    log_file = os.path.join(config_directory, 'RudeChat3.log')
         
     # Configure logging only if not already configured
     if not logging.getLogger().hasHandlers():

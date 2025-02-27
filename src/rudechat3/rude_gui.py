@@ -25,6 +25,7 @@ class RudeGui:
         self.master.geometry(self.app_size)
         self.master.configure(bg="black")
         self.script_directory = G_SCRIPT_DIR
+        self.config_directory = G_CONFIG_DIR
         if sys.platform.startswith('win'):
             icon_path = os.path.join(self.script_directory, "rude.ico")
             self.master.iconbitmap(icon_path)
@@ -375,7 +376,7 @@ class RudeGui:
             self.emoji_type = "Arial"  # A generic font as a last resort
 
     def read_config(self):
-        config_file = os.path.join(self.script_directory, 'gui_config.ini')
+        config_file = os.path.join(self.config_directory, 'gui_config.ini')
 
         if os.path.exists(config_file):
             config = configparser.ConfigParser()
@@ -713,7 +714,7 @@ class RudeGui:
             self.tray_icon.stop()
 
     def open_gui_config_window(self):
-        config_file = os.path.join(self.script_directory, 'gui_config.ini')
+        config_file = os.path.join(self.config_directory, 'gui_config.ini')
         config_window = GuiConfigWindow(config_file)
         config_window.root.wait_window()
         self.read_config()
@@ -1125,7 +1126,7 @@ class RudeGui:
         root.title("Rude Server configuration")
         root.geometry(self.config_window_size)
 
-        files = os.listdir(self.script_directory)
+        files = os.listdir(self.config_directory)
         config_files = [f for f in files if f.endswith(".rudeserver")]
         config_files.sort()
 
@@ -1134,11 +1135,11 @@ class RudeGui:
             root.destroy()
             return
 
-        config_window = ServerConfigWindow(root, os.path.join(self.script_directory, config_files[0]), on_config_window_close)
+        config_window = ServerConfigWindow(root, os.path.join(self.config_directory, config_files[0]), on_config_window_close)
 
         def on_config_change(event):
             selected_config_file = selected_config_file_var.get()
-            config_window.config_file = os.path.join(self.script_directory, selected_config_file)
+            config_window.config_file = os.path.join(self.config_directory, selected_config_file)
             config_window.config.read(config_window.config_file)
             config_window.create_widgets()
 

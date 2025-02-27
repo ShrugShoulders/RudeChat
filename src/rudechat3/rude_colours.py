@@ -12,8 +12,8 @@ class RudeColours:
         self.root.title("Colour Options Editor")
 
         self.color_options = {}
-        self.script_directory = G_SCRIPT_DIR
-        self.colors_json_path = os.path.join(self.script_directory, "nickname_colours.json")
+        self.config_directory = G_CONFIG_DIR
+        self.colors_json_path = os.path.join(self.config_directory, "nickname_colours.json")
         self.load_color_options()
 
         self.create_widgets()

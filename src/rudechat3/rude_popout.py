@@ -28,6 +28,7 @@ class RudePopOut:
         self.nick_name = nick_name
         self.main_app = main_app
         self.script_directory = G_SCRIPT_DIR
+        self.config_directory = G_CONFIG_DIR
         self.modes_to_strip = ''.join(self.irc_client.mode_values)
 
         # Load configuration from gui_config.ini
@@ -128,7 +129,7 @@ class RudePopOut:
     def load_configuration(self):
         # Load configuration from gui_config.ini
         config = configparser.ConfigParser()
-        config_file = os.path.join(self.script_directory, 'gui_config.ini')
+        config_file = os.path.join(self.config_directory, 'gui_config.ini')
         config.read(config_file)
 
         # Load colors from the [GUI] and [WIDGETS] sections
@@ -716,9 +717,9 @@ class RudePopOut:
                 log_line += f'           <{sender if is_sent else self.nick_name}> {line}\n'
 
         # Determine script directory
-        script_directory = G_SCRIPT_DIR
+        config_directory = G_CONFIG_DIR
 
-        logs_directory = os.path.join(script_directory, 'Logs')
+        logs_directory = os.path.join(config_directory, 'Logs')
 
         try:
             if channel == self.nick_name:
@@ -1065,7 +1066,7 @@ class RudePopOut:
         """
         Show a system desktop notification.
         """
-        script_directory = G_SCRIPT_DIR
+        config_directory = G_CONFIG_DIR
 
         # Check if the application window is the active window
         if self.is_app_focused():  # If the app is focused, return early
@@ -1082,7 +1083,7 @@ class RudePopOut:
             else:
                 message = f"You've been pinged in {channel_name}!"
 
-        icon_path = os.path.join(script_directory, "rude.ico")
+        icon_path = os.path.join(config_directory, "rude.ico")
 
         try:
             if platform.system() == "Linux":
