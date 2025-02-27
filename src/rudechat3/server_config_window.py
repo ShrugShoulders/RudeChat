@@ -135,7 +135,7 @@ class ServerConfigWindow:
             script_directory = G_SCRIPT_DIR
 
             # Generate new configuration file path in the script directory using server_name
-            new_config_file = os.path.join(script_directory, f"conf.{server_name.lower()}.rude")
+            new_config_file = os.path.join(script_directory, f"{server_name.lower()}.rudeserver")
 
             with open(new_config_file, 'w') as configfile:
                 new_config.write(configfile)

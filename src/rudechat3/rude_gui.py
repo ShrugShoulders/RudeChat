@@ -1126,7 +1126,7 @@ class RudeGui:
         root.geometry(self.config_window_size)
 
         files = os.listdir(self.script_directory)
-        config_files = [f for f in files if f.startswith("conf.") and f.endswith(".rude")]
+        config_files = [f for f in files if f.endswith(".rudeserver")]
         config_files.sort()
 
         if not config_files:
@@ -1152,7 +1152,7 @@ class RudeGui:
         save_button = tk.Button(root, text="Apply", command=config_window.save_config, bg=self.main_bg_color, fg=self.main_fg_color)
         save_button.pack(pady=10)
 
-        instruction_label = tk.Label(root, text="To create a new config file simply change the data in the fields, then edit the file name in the file selection above Apply, configuration files must follow conf.exampleserver.rude format.", bg=self.main_bg_color, fg=self.main_fg_color, wraplength=180)
+        instruction_label = tk.Label(root, text="To create a new config file simply change the data in the fields, then edit the file name in the file selection above Apply, configuration files must follow exampleserver.rudeserver format.", bg=self.main_bg_color, fg=self.main_fg_color, wraplength=180)
         instruction_label.pack()
 
         root.mainloop()

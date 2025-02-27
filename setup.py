@@ -28,7 +28,7 @@ setup(
             "Sounds/*",
             "Fortune Lists/*",
             "Splash/*",
-            "*.rude",
+            "*.rudeserver",
             "*.ini",
             "nickname_colours.json",
             "rude.ico",

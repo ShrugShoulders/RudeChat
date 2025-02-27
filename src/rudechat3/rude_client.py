@@ -3646,7 +3646,7 @@ class RudeChatClient:
         self.gui.insert_text_widget(f"Sent NOTICE to {target}: {message}\n")
 
     async def connect_to_specific_server(self, server_name):
-        config_file = f"conf.{server_name}.rude"
+        config_file = f"{server_name}.rudeserver"
         config_path = os.path.join(self.script_directory, config_file)
         check_server = self.gui.server_checker(server_name)
         data = f"Config file '{config_file}' not found."

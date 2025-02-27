@@ -143,8 +143,8 @@ def main():
     remove_directory(DEST_DIR)
     remove_directory(BACKUP_DIR)
     
-    # Backup .rude and .ini files
-    backup_files(PYTHON_LIB_DIR, BACKUP_DIR, '.rude')
+    # Backup .rudeserver and .ini files
+    backup_files(PYTHON_LIB_DIR, BACKUP_DIR, '.rudeserver')
     backup_files(PYTHON_LIB_DIR, BACKUP_DIR, '.ini')
     backup_files(PYTHON_LIB_DIR, BACKUP_DIR, '.json')
     backup_files(PYTHON_LIB_DIR, BACKUP_DIR, None, specific_files)
@@ -158,11 +158,11 @@ def main():
     # Restore .ini files to the Python lib directory
     restore_files(PYTHON_LIB_DIR, BACKUP_DIR, '.ini')
     
-    # Update .rude files
-    update_files_with_rude(PYTHON_LIB_DIR, BACKUP_DIR, '.rude', merge_ini_files, special_merge_file)
+    # Update .rudeserver files
+    update_files_with_rude(PYTHON_LIB_DIR, BACKUP_DIR, '.rudeserver', merge_ini_files, special_merge_file)
     
-    # Restore .rude files to the Python lib directory
-    restore_files(PYTHON_LIB_DIR, BACKUP_DIR, '.rude')
+    # Restore .rudeserver files to the Python lib directory
+    restore_files(PYTHON_LIB_DIR, BACKUP_DIR, '.rudeserver')
     restore_files(PYTHON_LIB_DIR, BACKUP_DIR, '.json', specific_files)
 
     remove_directory(DEST_DIR)
