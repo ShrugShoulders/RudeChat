@@ -6,3 +6,5 @@ dist/*
 src/build/*
 build/*
 *.egg-info/
+src/rudechat3/RudeChat3.log
+src/rudechat3/friend_list.txt
