@@ -44,13 +44,13 @@ It is suggested that you use: https://github.com/source-foundry/Hack as your fon
 
 Right click anywhere to open and edit the config.
 
-RudeChat assumes conf.server_name.rude is available and configed properly:
+RudeChat assumes server_name.rudeserver is available and configed properly:
 
 For assistance find me on irc.libera.chat/##rudechat
 
 ## Server Config Example:
 
-file name: conf.libera.rude(config files should follow conf.server_name.rude naming)
+file name: libera.rudeserver (config files should have the .rudeserver extension)
 
         [IRC]
         server_name = Libera # This is the server name. 

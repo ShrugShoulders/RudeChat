@@ -1,12 +1,14 @@
 #!/usr/bin/env python
 from rudechat3.shared_imports import *
+from rudechat3.global_variables import *
+
 
 class ChannelListWindow(tk.Toplevel):
     def __init__(self, client, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.title("Channel List")
         self.geometry("800x400")
-        self.script_directory = os.path.dirname(os.path.abspath(__file__))
+        self.config_directory = G_CONFIG_DIR
         self.client = client
         self.is_destroyed = False  # To check if the window has been destroyed
         self.sort_order = "ascending"  # Default sort order for users
@@ -37,7 +39,7 @@ class ChannelListWindow(tk.Toplevel):
     def load_configuration(self):
         # Load configuration from gui_config.ini
         config = configparser.ConfigParser()
-        config_file = os.path.join(self.script_directory, 'gui_config.ini')
+        config_file = os.path.join(self.config_directory, 'gui_config.ini')
         config.read(config_file)
 
         # Load colors

@@ -2,13 +2,15 @@ import tkinter as tk
 from tkinter import ttk, messagebox
 import configparser
 import os
+from rudechat3.global_variables import *
+
 
 class ServerConfigWindow:
     def __init__(self, parent, config_file, close_callback):
         self.parent = parent
         self.config_file = config_file
         self.close_callback = close_callback
-        self.script_directory = os.path.dirname(os.path.abspath(__file__))
+        self.config_directory = G_CONFIG_DIR
 
         self.config = configparser.ConfigParser()
         self.config.read(config_file)
@@ -56,7 +58,7 @@ class ServerConfigWindow:
         self.create_widgets()
 
     def read_config(self):
-        config_file = os.path.join(self.script_directory, 'gui_config.ini')
+        config_file = os.path.join(self.config_directory, 'gui_config.ini')
 
         if os.path.exists(config_file):
             color_config = configparser.ConfigParser()
@@ -130,10 +132,10 @@ class ServerConfigWindow:
             server_name = new_config.get('IRC', 'server_name')
 
             # Determine the script directory
-            script_directory = os.path.dirname(os.path.abspath(__file__))
+            config_directory = G_CONFIG_DIR
 
             # Generate new configuration file path in the script directory using server_name
-            new_config_file = os.path.join(script_directory, f"conf.{server_name.lower()}.rude")
+            new_config_file = os.path.join(config_directory, f"{server_name.lower()}.rudeserver")
 
             with open(new_config_file, 'w') as configfile:
                 new_config.write(configfile)
