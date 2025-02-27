@@ -138,7 +138,7 @@ def main():
     BACKUP_DIR = os.path.join(HOME, "Documents", "backup_rudechat_files")
     PYTHON_LIB_DIR = os.path.join(HOME, ".local", "lib", "python3.12", "site-packages", "rudechat3")
     specific_files = ['filtered_channels.txt', 'ignore_list.txt', 'first_run.txt', 'friend_list.txt']
-    special_merge_file = os.path.join(PYTHON_LIB_DIR, 'conf.libera.rude')
+    special_merge_file = os.path.join(PYTHON_LIB_DIR, 'libera.rudeserver')
 
     remove_directory(DEST_DIR)
     remove_directory(BACKUP_DIR)
