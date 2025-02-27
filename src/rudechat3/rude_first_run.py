@@ -1,16 +1,18 @@
 from rudechat3.shared_imports import *
 from rudechat3.server_config_window import ServerConfigWindow
+from rudechat3.global_variables import *
+
 
 
 class FirstRun:
     def __init__(self):
         self.first_run_detect = self.load_first_run()
-        self.script_directory = os.path.dirname(os.path.abspath(__file__))
+        self.script_directory = G_SCRIPT_DIR
         self.window_size = "600x400"
         self.read_config()
 
     def load_first_run(self):
-        script_directory = os.path.dirname(os.path.abspath(__file__))
+        script_directory = G_SCRIPT_DIR
         file_path = os.path.join(script_directory, "first_run.txt")
         try:
             with open(file_path, 'r') as file:
@@ -38,7 +40,7 @@ class FirstRun:
             self.fg_color = color_config.get('GUI', 'main_fg_color', fallback='#C0FFEE')
 
     def update_first_run(self):
-        script_directory = os.path.dirname(os.path.abspath(__file__))
+        script_directory = G_SCRIPT_DIR
         file_path = os.path.join(script_directory, "first_run.txt")
         """
         Updates the first run file to indicate that the first run setup is complete.
@@ -72,7 +74,7 @@ class FirstRun:
         return self.window_size
 
     def open_client_config_window(self):
-        script_directory = os.path.dirname(os.path.abspath(__file__))
+        script_directory = G_SCRIPT_DIR
         self.set_screen_size()
         def after_config_window_close():
             self.update_first_run()

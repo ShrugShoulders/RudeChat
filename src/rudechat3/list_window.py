@@ -1,12 +1,14 @@
 #!/usr/bin/env python
 from rudechat3.shared_imports import *
+from rudechat3.global_variables import *
+
 
 class ChannelListWindow(tk.Toplevel):
     def __init__(self, client, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.title("Channel List")
         self.geometry("800x400")
-        self.script_directory = os.path.dirname(os.path.abspath(__file__))
+        self.script_directory = G_SCRIPT_DIR
         self.client = client
         self.is_destroyed = False  # To check if the window has been destroyed
         self.sort_order = "ascending"  # Default sort order for users

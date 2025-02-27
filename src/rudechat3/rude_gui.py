@@ -10,6 +10,8 @@ from rudechat3.rude_dragndrop import DragDropListbox
 from rudechat3.nick_cleaner import clean_nicknames
 from rudechat3.rude_logger import configure_logging
 from rudechat3.user_data_display import RudeToolTip
+from rudechat3.global_variables import *
+
 
 
 class RudeGui:
@@ -22,7 +24,7 @@ class RudeGui:
         self.master.title("RudeChat")
         self.master.geometry(self.app_size)
         self.master.configure(bg="black")
-        self.script_directory = os.path.dirname(os.path.abspath(__file__))
+        self.script_directory = G_SCRIPT_DIR
         if sys.platform.startswith('win'):
             icon_path = os.path.join(self.script_directory, "rude.ico")
             self.master.iconbitmap(icon_path)

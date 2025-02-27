@@ -1,7 +1,9 @@
 from rudechat3.shared_imports import *
+from rudechat3.global_variables import *
+
 
 async def initialize_clients(app):
-    script_directory = os.path.dirname(os.path.abspath(__file__))
+    script_directory = G_SCRIPT_DIR
 
     # Construct absolute paths for conf.*.rude files
     config_files = [os.path.join(script_directory, f) for f in os.listdir(script_directory) if f.startswith("conf.") and f.endswith(".rude")]

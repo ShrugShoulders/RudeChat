@@ -1,13 +1,15 @@
 import tkinter as tk
 import configparser
 import os
+from rudechat3.global_variables import *
+
 
 class GuiConfigWindow:
     def __init__(self, config_file):
         self.config_file = config_file
         self.root = tk.Tk()
         self.root.title("Rude GUI Configuration")
-        self.script_directory = os.path.dirname(os.path.abspath(__file__))
+        self.script_directory = G_SCRIPT_DIR
         self.read_config()
 
         # Create main container frame

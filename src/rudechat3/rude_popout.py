@@ -17,6 +17,8 @@ from rudechat3.format_decoder import Attribute, decoder
 from rudechat3.rude_pronouns import replace_pronouns
 from rudechat3.rude_logger import configure_logging
 from rudechat3.user_data_display import RudeToolTip
+from rudechat3.global_variables import *
+
 
 class RudePopOut:
     def __init__(self, root, selected_channel, irc_client, nick_name, main_app):
@@ -25,7 +27,7 @@ class RudePopOut:
         self.irc_client = irc_client
         self.nick_name = nick_name
         self.main_app = main_app
-        self.script_directory = os.path.dirname(os.path.abspath(__file__))
+        self.script_directory = G_SCRIPT_DIR
         self.modes_to_strip = ''.join(self.irc_client.mode_values)
 
         # Load configuration from gui_config.ini
@@ -714,7 +716,7 @@ class RudePopOut:
                 log_line += f'           <{sender if is_sent else self.nick_name}> {line}\n'
 
         # Determine script directory
-        script_directory = os.path.dirname(os.path.abspath(__file__))
+        script_directory = G_SCRIPT_DIR
 
         logs_directory = os.path.join(script_directory, 'Logs')
 
@@ -1063,7 +1065,7 @@ class RudePopOut:
         """
         Show a system desktop notification.
         """
-        script_directory = os.path.dirname(os.path.abspath(__file__))
+        script_directory = G_SCRIPT_DIR
 
         # Check if the application window is the active window
         if self.is_app_focused():  # If the app is focused, return early

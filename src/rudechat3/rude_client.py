@@ -6,6 +6,8 @@ from rudechat3.rude_friends import RudeFriends
 from rudechat3.shared_imports import *
 from rudechat3.rude_logger import configure_logging
 from rudechat3.rude_mock import RudeMock
+from rudechat3.global_variables import *
+
 
 class RudeChatClient:
     def __init__(self, text_widget, server_text_widget, entry_widget, master, gui):
@@ -14,7 +16,7 @@ class RudeChatClient:
         self.entry_widget = entry_widget
         self.server_text_widget = server_text_widget
         self.gui = gui
-        self.script_directory = os.path.dirname(os.path.abspath(__file__))
+        self.script_directory = G_SCRIPT_DIR
         self.nicknamelen = 0
         self.chan_limit = 0
         self.channellen = 0

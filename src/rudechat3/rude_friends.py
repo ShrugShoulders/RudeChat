@@ -1,11 +1,13 @@
 import os
+from rudechat3.global_variables import *
+
 
 
 class RudeFriends:
     def __init__(self):
         self.friend_list = []
         self.online_friends = []
-        self.script_directory = os.path.dirname(os.path.abspath(__file__))
+        self.script_directory = G_SCRIPT_DIR
 
         self.load_friend_list()
 

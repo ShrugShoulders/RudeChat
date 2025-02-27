@@ -3,6 +3,8 @@ import os
 import tkinter as tk
 from tkinter import messagebox, simpledialog, colorchooser
 from tkcolorpicker import askcolor
+from rudechat3.global_variables import *
+
 
 class RudeColours:
     def __init__(self, root):
@@ -10,7 +12,7 @@ class RudeColours:
         self.root.title("Colour Options Editor")
 
         self.color_options = {}
-        self.script_directory = os.path.dirname(os.path.abspath(__file__))
+        self.script_directory = G_SCRIPT_DIR
         self.colors_json_path = os.path.join(self.script_directory, "nickname_colours.json")
         self.load_color_options()
 

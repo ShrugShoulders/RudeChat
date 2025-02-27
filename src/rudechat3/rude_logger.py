@@ -1,9 +1,11 @@
 import os
 import logging
+from rudechat3.global_variables import *
+
 
 def configure_logging():
     # Get the script directory
-    script_directory = os.path.dirname(os.path.abspath(__file__))
+    script_directory = G_SCRIPT_DIR
         
     # Log file path within the script directory
     log_file = os.path.join(script_directory, 'RudeChat3.log')
