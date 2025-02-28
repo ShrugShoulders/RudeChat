@@ -559,6 +559,7 @@ class RudeGui:
             return
         else:
             try:
+                import pystray
                 self.stop_tray_event = threading.Event()  # Event to stop the tray icon thread
                 tray_thread = threading.Thread(target=self.create_tray_icon)
                 tray_thread.daemon = True  # Make it a daemon thread so it will exit with the program
