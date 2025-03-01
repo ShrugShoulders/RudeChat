@@ -2,7 +2,7 @@
 server_name = Libera
 nickname = Rude
 server = irc.libera.chat
-auto_join_channels = ##rudechat
+auto_join_channels = #rudechat
 use_auto_join = True
 auto_rejoin = True
 use_nickserv_auth = False
@@ -19,7 +19,7 @@ use_time_stamp = True
 show_hostmask = True
 show_join_part_quit_nick = True
 use_beep_noise = True
-auto_whois = True
+auto_whois = False
 custom_sounds = False
 use_logging = True
 znc_connection = False

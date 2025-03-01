@@ -13,7 +13,6 @@ from rudechat3.user_data_display import RudeToolTip
 from rudechat3.global_variables import *
 
 
-
 class RudeGui:
     def __init__(self, master):
         self.master = master
@@ -552,8 +551,10 @@ class RudeGui:
             logging.error(f"Tray icon not supported: {e}")
             if platform.system() == "Linux":
                 messagebox.showwarning("Tray Icon", "System tray not supported on this environment.")
+                return
             elif platform.system() == "Windows":
                 messagebox.showerror("Error", f"Failed to create tray icon: {e}")
+                return
 
     def start_tray_icon(self):
         """Start the tray icon in a separate thread."""
@@ -561,10 +562,15 @@ class RudeGui:
             self.to_tray = False
             return
         else:
-            self.stop_tray_event = threading.Event()  # Event to stop the tray icon thread
-            tray_thread = threading.Thread(target=self.create_tray_icon)
-            tray_thread.daemon = True  # Make it a daemon thread so it will exit with the program
-            tray_thread.start()
+            try:
+                self.stop_tray_event = threading.Event()  # Event to stop the tray icon thread
+                tray_thread = threading.Thread(target=self.create_tray_icon)
+                tray_thread.daemon = True  # Make it a daemon thread so it will exit with the program
+                tray_thread.start()
+            except Exception as e:
+                logging.error(f"Error starting tray icon: {e}")
+                self.to_tray = False
+                return
 
     def minimize_to_tray(self):
         """Minimize the window to the system tray."""

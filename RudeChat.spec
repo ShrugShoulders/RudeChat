@@ -18,9 +18,10 @@ a = Analysis(
         ('src/rudechat3/Art/*', 'rudechat3/Art'),
         ('src/rudechat3/Sounds/*', 'rudechat3/Sounds'),
         ('src/rudechat3/Splash/*', 'rudechat3/Splash'),
-        ('src/rudechat3/Fortune Lists/*', 'rudechat3/Fortune Lists')
+        ('src/rudechat3/Fortune Lists/*', 'rudechat3/Fortune Lists'),
+        ('/home/irish/.local/lib/python3.13/site-packages/emoji/unicode_codes/emoji.json', 'emoji/unicode_codes')
     ],
-    hiddenimports=['plyer.platforms', 'plyer.platforms.linux', 'plyer.platforms.linux.notification'],
+    hiddenimports=['plyer.platforms', 'plyer.platforms.linux', 'plyer.platforms.linux.notification', 'emoji'],
     hookspath=[],
     runtime_hooks=[],
     excludes=[],
