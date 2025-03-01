@@ -4,7 +4,7 @@
 block_cipher = None
 
 a = Analysis(
-    ['src/rudechat3/main.py'],
+    ['src/rudechat3/__main__.py'],
     pathex=['src'],
     binaries=[],
     datas=[
@@ -14,7 +14,7 @@ a = Analysis(
         ('src/rudechat3/*.json', 'rudechat3'),
         ('src/rudechat3/*.ico', 'rudechat3'),
         ('src/rudechat3/*.png', 'rudechat3'),
-        ('src/rudechat3/conf.libera.rude', 'rudechat3'),
+        ('src/rudechat3/libera.rudeserver', 'rudechat3'),
         ('src/rudechat3/Art/*', 'rudechat3/Art'),
         ('src/rudechat3/Sounds/*', 'rudechat3/Sounds'),
         ('src/rudechat3/Splash/*', 'rudechat3/Splash'),

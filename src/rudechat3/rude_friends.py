@@ -1,11 +1,13 @@
 import os
+from rudechat3.global_variables import *
+
 
 
 class RudeFriends:
     def __init__(self):
         self.friend_list = []
         self.online_friends = []
-        self.script_directory = os.path.dirname(os.path.abspath(__file__))
+        
 
         self.load_friend_list()
 
@@ -14,7 +16,7 @@ class RudeFriends:
         Save Friend list!
         """
         # Construct the full path for the friend_list.txt
-        file_path = os.path.join(self.script_directory, 'friend_list.txt')
+        file_path = os.path.join(G_CONFIG_DIR, 'friend_list.txt')
 
         with open(file_path, "w", encoding='utf-8') as f:
             for user in self.friend_list:
@@ -25,7 +27,7 @@ class RudeFriends:
         Load Friend list!
         """
         # Construct the full path for the friend_list.txt
-        file_path = os.path.join(self.script_directory, 'friend_list.txt')
+        file_path = os.path.join(G_CONFIG_DIR, 'friend_list.txt')
 
         if os.path.exists(file_path):
             with open(file_path, "r", encoding='utf-8') as f:

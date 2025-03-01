@@ -10,10 +10,7 @@ from rudechat3.rude_dragndrop import DragDropListbox
 from rudechat3.nick_cleaner import clean_nicknames
 from rudechat3.rude_logger import configure_logging
 from rudechat3.user_data_display import RudeToolTip
-try:
-    import pystray
-except Exception as e:
-    logging.error(f"error importing pystray: {e}")
+from rudechat3.global_variables import *
 
 
 class RudeGui:
@@ -26,12 +23,13 @@ class RudeGui:
         self.master.title("RudeChat")
         self.master.geometry(self.app_size)
         self.master.configure(bg="black")
-        self.script_directory = os.path.dirname(os.path.abspath(__file__))
+        
+        
         if sys.platform.startswith('win'):
-            icon_path = os.path.join(self.script_directory, "rude.ico")
+            icon_path = os.path.join(G_SOURCE_DIR, "rude.ico")
             self.master.iconbitmap(icon_path)
         else:
-            icon_path = os.path.join(self.script_directory, "rude.png")
+            icon_path = os.path.join(G_SOURCE_DIR, "rude.png")
             img = PhotoImage(file=icon_path)
             self.master.iconphoto(True, img)
 
@@ -377,7 +375,7 @@ class RudeGui:
             self.emoji_type = "Arial"  # A generic font as a last resort
 
     def read_config(self):
-        config_file = os.path.join(self.script_directory, 'gui_config.ini')
+        config_file = os.path.join(G_CONFIG_DIR, 'gui_config.ini')
 
         if os.path.exists(config_file):
             config = configparser.ConfigParser()
@@ -387,7 +385,7 @@ class RudeGui:
             self.user_nickname_color = config.get('GUI', 'main_nickname_color', fallback='#39ff14')
             self.generate_nickname_colors = config.getboolean('GUI', 'generate_nickname_colors', fallback=True)
             self.master_bg = config.get('GUI', 'master_color', fallback='black')
-            self.font_family = config.get('GUI', 'family', fallback='Hack')
+            self.font_family = config.get('GUI', 'family', fallback='Courier')
             self.font_size = config.getint('GUI', 'size', fallback=10)
             self.main_fg_color = config.get('GUI', 'main_fg_color', fallback='#C0FFEE')
             self.main_bg_color = config.get('GUI', 'main_bg_color', fallback='black')
@@ -397,9 +395,9 @@ class RudeGui:
             self.user_font_size = config.getint('GUI', 'user_font_size', fallback=10)
             self.channel_font_size = config.getint('GUI', 'channel_font_size', fallback=10)
             self.server_font_size = config.getint('GUI', 'server_font_size', fallback=10)
-            self.list_boxs_font_family = config.get('GUI', 'list_boxs_font_family', fallback='Hack') 
+            self.list_boxs_font_family = config.get('GUI', 'list_boxs_font_family', fallback='Courier') 
             self.topic_label_font_size = config.getint('GUI', 'topic_label_font_size', fallback=10)
-            self.topic_label_font_family = config.get('GUI', 'topic_label_font_family', fallback='Hack')
+            self.topic_label_font_family = config.get('GUI', 'topic_label_font_family', fallback='Courier')
             self.to_tray = config.getboolean('GUI', 'minimize_to_tray', fallback=True)
             self.log_on = config.getboolean('GUI', 'turn_logging_on', fallback=False)
 
@@ -434,7 +432,7 @@ class RudeGui:
             self.user_nickname_color = '#39ff14'
             self.generate_nickname_colors = True
             self.master_bg = 'black'
-            self.font_family = 'Hack'
+            self.font_family = 'Courier'
             self.font_size = 10
             self.main_fg_color = '#C0FFEE'
             self.main_bg_color = 'black'
@@ -528,7 +526,7 @@ class RudeGui:
             # Ensure the tray icon isn't already created
             if not hasattr(self, 'tray_icon') or self.tray_icon is None:
                 # Attempt to create the tray icon
-                icon_path = os.path.join(self.script_directory, "rude_tray_icon.png")
+                icon_path = os.path.join(G_SOURCE_DIR, "rude_tray_icon.png")
                 image = Image.open(icon_path).convert("RGBA")
 
                 # Create the menu for the tray icon
@@ -722,14 +720,14 @@ class RudeGui:
             self.tray_icon.stop()
 
     def open_gui_config_window(self):
-        config_file = os.path.join(self.script_directory, 'gui_config.ini')
+        config_file = os.path.join(G_CONFIG_DIR, 'gui_config.ini')
         config_window = GuiConfigWindow(config_file)
         config_window.root.wait_window()
         self.read_config()
         self.apply_settings()
 
     def show_startup_art(self):
-        splash_directory = os.path.join(self.script_directory, "Splash")
+        splash_directory = os.path.join(G_SOURCE_DIR, "Splash")
 
         try:
             # List all .txt files in the Splash directory
@@ -884,7 +882,7 @@ class RudeGui:
         self.update_nick_channel_label()
 
     def load_nickname_colors(self):
-        nickname_colors_path = os.path.join(self.script_directory, 'nickname_colours.json')
+        nickname_colors_path = os.path.join(G_SOURCE_DIR, 'nickname_colours.json')
 
         try:
             with open(nickname_colors_path, 'r') as file:
@@ -902,7 +900,7 @@ class RudeGui:
 
     def save_nickname_colors(self):
         clean_nicks = clean_nicknames(self.nickname_colors)
-        nickname_colors_path = os.path.join(self.script_directory, 'nickname_colours.json')
+        nickname_colors_path = os.path.join(G_CONFIG_DIR, 'nickname_colours.json')
 
         try:
             with open(nickname_colors_path, 'w') as file:
@@ -1134,8 +1132,8 @@ class RudeGui:
         root.title("Rude Server configuration")
         root.geometry(self.config_window_size)
 
-        files = os.listdir(self.script_directory)
-        config_files = [f for f in files if f.startswith("conf.") and f.endswith(".rude")]
+        files = os.listdir(G_CONFIG_DIR)
+        config_files = [f for f in files if f.endswith(".rudeserver")]
         config_files.sort()
 
         if not config_files:
@@ -1143,11 +1141,11 @@ class RudeGui:
             root.destroy()
             return
 
-        config_window = ServerConfigWindow(root, os.path.join(self.script_directory, config_files[0]), on_config_window_close)
+        config_window = ServerConfigWindow(root, os.path.join(G_CONFIG_DIR, config_files[0]), on_config_window_close)
 
         def on_config_change(event):
             selected_config_file = selected_config_file_var.get()
-            config_window.config_file = os.path.join(self.script_directory, selected_config_file)
+            config_window.config_file = os.path.join(G_CONFIG_DIR, selected_config_file)
             config_window.config.read(config_window.config_file)
             config_window.create_widgets()
 
@@ -1161,7 +1159,7 @@ class RudeGui:
         save_button = tk.Button(root, text="Apply", command=config_window.save_config, bg=self.main_bg_color, fg=self.main_fg_color)
         save_button.pack(pady=10)
 
-        instruction_label = tk.Label(root, text="To create a new config file simply change the data in the fields, then edit the file name in the file selection above Apply, configuration files must follow conf.exampleserver.rude format.", bg=self.main_bg_color, fg=self.main_fg_color, wraplength=180)
+        instruction_label = tk.Label(root, text="To create a new config file simply change the data in the fields, then edit the file name in the file selection above Apply, configuration files must follow exampleserver.rudeserver format.", bg=self.main_bg_color, fg=self.main_fg_color, wraplength=180)
         instruction_label.pack()
 
         root.mainloop()
@@ -2277,7 +2275,7 @@ class RudeGui:
             else:
                 message = f"You've been pinged in {channel_name}!"
 
-        icon_path = os.path.join(self.script_directory, "rude.ico")
+        icon_path = os.path.join(G_SOURCE_DIR, "rude.ico")
 
         try:
             if platform.system() == "Linux":

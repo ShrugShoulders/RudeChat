@@ -16,6 +16,8 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
+# Import Config Copy Function
+from rudechat3.copy_configs import CopyConfigs
 # Import First Run Configs
 from rudechat3.rude_first_run import FirstRun
 # Import GUI
@@ -26,12 +28,14 @@ from rudechat3.rude_client import RudeChatClient
 from rudechat3.init_clients import initialize_clients
 # Everything else.
 from rudechat3.shared_imports import *
+# Global variables
+from rudechat3.global_variables import *
 
 def main():
+    CopyConfigs()
     first_run = FirstRun()
     if first_run.first_run_detect == 0:
         first_run.open_client_config_window()
-
         root = tk.Tk()
         app = RudeGui(root)
 

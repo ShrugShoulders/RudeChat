@@ -1,13 +1,31 @@
 from setuptools import setup, find_packages
 
+VERSION = '3.1.4'
+
+APP = ['src/rudechat3/__main__.py']
+DATA_FILES = []
+OPTIONS = {
+    'iconfile': 'src/rudechat3/rude.icns', 
+    'excludes': ['rubicon'],
+    'plist': {
+        'CFBundleName': 'RudeChat',
+        'CFBundleDisplayName': 'RudeChat',
+        'CFBundleGetInfoString': 'RudeChat',
+        'CFBundleIdentifier': 'io.github.ShrugShoulders.rudechat',
+        'CFBundleVersion': VERSION,
+        'CFBundleShortVersionString': VERSION,
+        'CFBundleIconFile': 'rude.icns',
+    }
+}
+
 setup(
     name="RudeChat",
-    version="3.1.4",
+    version=VERSION,
     description="RudeChat is a Python IRC client designed to be fast, portable, and fun.",
     author="Irish",
     packages=find_packages(where="src"),
     package_dir={"": "src"},
-    scripts=["src/rudechat3/main.py"],
+    scripts=["src/rudechat3/__main__.py"],
     install_requires=[
         'pytz',
         'asyncio',
@@ -28,7 +46,7 @@ setup(
             "Sounds/*",
             "Fortune Lists/*",
             "Splash/*",
-            "*.rude",
+            "*.rudeserver",
             "*.ini",
             "nickname_colours.json",
             "rude.ico",
@@ -44,4 +62,9 @@ setup(
             'rudechat=rudechat3.main:main',
         ],
     },
+    # MacOS specific (Build using `python3 setup.py py2app` in root directory)
+    app=APP,
+	data_files=DATA_FILES,
+    options={'py2app': OPTIONS},
+    setup_requires=['py2app']
 )

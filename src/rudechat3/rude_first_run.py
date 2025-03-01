@@ -1,17 +1,19 @@
 from rudechat3.shared_imports import *
 from rudechat3.server_config_window import ServerConfigWindow
+from rudechat3.global_variables import *
+
 
 
 class FirstRun:
     def __init__(self):
         self.first_run_detect = self.load_first_run()
-        self.script_directory = os.path.dirname(os.path.abspath(__file__))
+        
         self.window_size = "600x400"
         self.read_config()
 
     def load_first_run(self):
-        script_directory = os.path.dirname(os.path.abspath(__file__))
-        file_path = os.path.join(script_directory, "first_run.txt")
+        config_directory = G_CONFIG_DIR
+        file_path = os.path.join(config_directory, "first_run.txt")
         try:
             with open(file_path, 'r') as file:
                 content = file.read().strip()
@@ -28,7 +30,7 @@ class FirstRun:
             return 0
 
     def read_config(self):
-        config_file = os.path.join(self.script_directory, 'gui_config.ini')
+        config_file = os.path.join(G_CONFIG_DIR, 'gui_config.ini')
 
         if os.path.exists(config_file):
             color_config = configparser.ConfigParser()
@@ -38,8 +40,8 @@ class FirstRun:
             self.fg_color = color_config.get('GUI', 'main_fg_color', fallback='#C0FFEE')
 
     def update_first_run(self):
-        script_directory = os.path.dirname(os.path.abspath(__file__))
-        file_path = os.path.join(script_directory, "first_run.txt")
+        config_directory = G_CONFIG_DIR
+        file_path = os.path.join(config_directory, "first_run.txt")
         """
         Updates the first run file to indicate that the first run setup is complete.
         """
@@ -72,7 +74,7 @@ class FirstRun:
         return self.window_size
 
     def open_client_config_window(self):
-        script_directory = os.path.dirname(os.path.abspath(__file__))
+        config_directory = G_CONFIG_DIR
         self.set_screen_size()
         def after_config_window_close():
             self.update_first_run()
@@ -90,8 +92,8 @@ class FirstRun:
         root.title("Rude Server configuration: FIRST RUN")
         root.geometry(self.window_size)
 
-        files = os.listdir(script_directory)
-        config_files = [f for f in files if f.startswith("conf.") and f.endswith(".rude")]
+        files = os.listdir(config_directory)
+        config_files = [f for f in files if f.endswith(".rudeserver")]
         config_files.sort()
 
         if not config_files:
@@ -99,11 +101,11 @@ class FirstRun:
             root.destroy()
             return
 
-        config_window = ServerConfigWindow(root, os.path.join(script_directory, config_files[0]), on_config_window_close)
+        config_window = ServerConfigWindow(root, os.path.join(config_directory, config_files[0]), on_config_window_close)
 
         def on_config_change(event):
             selected_config_file = selected_config_file_var.get()
-            config_window.config_file = os.path.join(script_directory, selected_config_file)
+            config_window.config_file = os.path.join(config_directory, selected_config_file)
             config_window.config.read(config_window.config_file)
             config_window.create_widgets()
 
@@ -116,7 +118,7 @@ class FirstRun:
         save_button = tk.Button(root, text="Start Client", command=config_window.save_config, bg=self.bg_color, fg=self.fg_color)
         save_button.pack(pady=10)
 
-        instruction_label = tk.Label(root, text="Welcome to RudeChat First Run Config: To create a new config file simply change the data in the fields, then edit the file name in the file selection above, configuration files must follow conf.exampleserver.rude format.", bg=self.bg_color, fg=self.fg_color, wraplength=180)
+        instruction_label = tk.Label(root, text="Welcome to RudeChat First Run Config: To create a new config file simply change the data in the fields, then edit the file name in the file selection above, configuration files must follow exampleserver.rudeserver format.", bg=self.bg_color, fg=self.fg_color, wraplength=180)
         instruction_label.pack()
 
         root.mainloop()
