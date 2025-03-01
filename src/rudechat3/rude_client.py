@@ -1244,9 +1244,18 @@ class RudeChatClient:
 
     async def request_who_for_all_channels(self):
         await asyncio.sleep(4)
-        while self.loop_running:
+        if self.auto_whois:
+            while self.loop_running:
+                for channel in self.joined_channels:
+                    await self.send_who(channel)
+                    self.gui.highlight_away_users()
+                    self.cap_who_for_chan.append(channel)
+                    await asyncio.sleep(9)
+                    self.gui.highlight_who_channels()
+                self.who_for_chan_complete = True
+                break
+        else:
             for channel in self.joined_channels:
-                await self.send_who(channel)
                 self.gui.highlight_away_users()
                 self.cap_who_for_chan.append(channel)
                 await asyncio.sleep(9)
