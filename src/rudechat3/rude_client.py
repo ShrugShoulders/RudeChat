@@ -155,20 +155,23 @@ class RudeChatClient:
                 user_details['status'] = away_status  # Update the status with away message
 
     async def whois_worker(self):
-        while True:
-            try:
-                for nickname in list(self.away_users_dict.keys()):
-                    away_message = self.away_users_dict.get(nickname, "")
-                    
-                    if not away_message:
-                        if self.log_on:
-                            logging.info(f"Sending WHOIS for {nickname}")
-                        await self.whois(nickname)
-                        await asyncio.sleep(2)
-                break
-            except RuntimeError:
-                logging.error("whois_worker Error: dictionary changed size during iteration. Retrying...")
-                await asyncio.sleep(1)
+        if self.auto_whois:
+            while True:
+                try:
+                    for nickname in list(self.away_users_dict.keys()):
+                        away_message = self.away_users_dict.get(nickname, "")
+                        
+                        if not away_message:
+                            if self.log_on:
+                                logging.info(f"Sending WHOIS for {nickname}")
+                            await self.whois(nickname)
+                            await asyncio.sleep(5)
+                    break
+                except RuntimeError:
+                    logging.error("whois_worker Error: dictionary changed size during iteration. Retrying...")
+                    await asyncio.sleep(1)
+        else:
+            return
 
     async def send_who(self, target):
         if self.account_notify:
