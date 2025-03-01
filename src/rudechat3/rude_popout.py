@@ -27,8 +27,8 @@ class RudePopOut:
         self.irc_client = irc_client
         self.nick_name = nick_name
         self.main_app = main_app
-        self.script_directory = G_SCRIPT_DIR
-        self.config_directory = G_CONFIG_DIR
+        
+        
         self.modes_to_strip = ''.join(self.irc_client.mode_values)
 
         # Load configuration from gui_config.ini
@@ -129,7 +129,7 @@ class RudePopOut:
     def load_configuration(self):
         # Load configuration from gui_config.ini
         config = configparser.ConfigParser()
-        config_file = os.path.join(self.config_directory, 'gui_config.ini')
+        config_file = os.path.join(G_CONFIG_DIR, 'gui_config.ini')
         config.read(config_file)
 
         # Load colors from the [GUI] and [WIDGETS] sections

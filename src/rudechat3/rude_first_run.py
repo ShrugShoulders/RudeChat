@@ -7,7 +7,7 @@ from rudechat3.global_variables import *
 class FirstRun:
     def __init__(self):
         self.first_run_detect = self.load_first_run()
-        self.config_directory = G_CONFIG_DIR
+        
         self.window_size = "600x400"
         self.read_config()
 
@@ -30,7 +30,7 @@ class FirstRun:
             return 0
 
     def read_config(self):
-        config_file = os.path.join(self.config_directory, 'gui_config.ini')
+        config_file = os.path.join(G_CONFIG_DIR, 'gui_config.ini')
 
         if os.path.exists(config_file):
             color_config = configparser.ConfigParser()

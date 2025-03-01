@@ -8,7 +8,7 @@ class ChannelListWindow(tk.Toplevel):
         super().__init__(*args, **kwargs)
         self.title("Channel List")
         self.geometry("800x400")
-        self.config_directory = G_CONFIG_DIR
+        
         self.client = client
         self.is_destroyed = False  # To check if the window has been destroyed
         self.sort_order = "ascending"  # Default sort order for users
@@ -39,7 +39,7 @@ class ChannelListWindow(tk.Toplevel):
     def load_configuration(self):
         # Load configuration from gui_config.ini
         config = configparser.ConfigParser()
-        config_file = os.path.join(self.config_directory, 'gui_config.ini')
+        config_file = os.path.join(G_CONFIG_DIR, 'gui_config.ini')
         config.read(config_file)
 
         # Load colors
