@@ -1,4 +1,5 @@
 import os
+import sys
 import shutil
 import subprocess
 import configparser
@@ -136,7 +137,8 @@ def main():
     REPO_URL = "https://github.com/ShrugShoulders/RudeChat"
     DEST_DIR = os.path.join(HOME, "Documents", "RudeChatUpdate")
     BACKUP_DIR = os.path.join(HOME, "Documents", "backup_rudechat_files")
-    PYTHON_LIB_DIR = os.path.join(HOME, ".local", "lib", "python3.13", "site-packages", "rudechat3")
+    PYTHON_VERSION = f"{sys.version_info.major}.{sys.version_info.minor}"
+    PYTHON_LIB_DIR = os.path.join(HOME, ".local", "lib", f"python{PYTHON_VERSION}", "site-packages", "rudechat3")
     specific_files = ['filtered_channels.txt', 'ignore_list.txt', 'first_run.txt', 'friend_list.txt']
     special_merge_file = os.path.join(PYTHON_LIB_DIR, 'conf.libera.rude')
 
