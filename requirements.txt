@@ -9,5 +9,4 @@ tkcolorpicker
 pillow
 pystray
 emoji
-pyautogui
 py2app

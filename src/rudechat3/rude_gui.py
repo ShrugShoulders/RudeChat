@@ -285,7 +285,8 @@ class RudeGui:
             self.server_scrollbar.config(width=14)
 
     def set_screen_size(self):
-        width, height = pyautogui.size()
+        width = self.master.winfo_screenwidth()
+        height =self.master.winfo_screenheight()
         screen_size = f"{width}x{height}"
 
         if screen_size == "3840x2160":  # 4K UHD
