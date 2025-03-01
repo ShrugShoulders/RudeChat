@@ -1244,18 +1244,9 @@ class RudeChatClient:
 
     async def request_who_for_all_channels(self):
         await asyncio.sleep(4)
-        if self.auto_whois:
-            while self.loop_running:
-                for channel in self.joined_channels:
-                    await self.send_who(channel)
-                    self.gui.highlight_away_users()
-                    self.cap_who_for_chan.append(channel)
-                    await asyncio.sleep(9)
-                    self.gui.highlight_who_channels()
-                self.who_for_chan_complete = True
-                break
-        else:
+        while self.loop_running:
             for channel in self.joined_channels:
+                await self.send_who(channel)
                 self.gui.highlight_away_users()
                 self.cap_who_for_chan.append(channel)
                 await asyncio.sleep(9)
@@ -1265,26 +1256,23 @@ class RudeChatClient:
 
     async def request_who_for_missing_users(self):
         modes_to_strip = ''.join(self.mode_values)
-        if self.auto_whois:
-            while self.loop_running:
-                try:
-                    await asyncio.sleep(600)
-                    for channel in self.joined_channels:
-                        users = self.channel_users.get(channel, [])
-                        if users:
-                            for user in users:
-                                cleaned_user = user.lstrip(modes_to_strip)
-                                if cleaned_user not in self.who_user_data:
-                                    await asyncio.sleep(10)
-                                    await self.send_who(cleaned_user)
-                except asyncio.CancelledError:
-                    self.loop_running = False
-                    logging.info("Exiting request_who_for_missing_users loop.")
-                    break
-                except Exception as e:
-                    logging.error(f"Error in request_who_for_missing_users: {e}")
-        else:
-            return
+        while self.loop_running:
+            try:
+                await asyncio.sleep(600)
+                for channel in self.joined_channels:
+                    users = self.channel_users.get(channel, [])
+                    if users:
+                        for user in users:
+                            cleaned_user = user.lstrip(modes_to_strip)
+                            if cleaned_user not in self.who_user_data:
+                                await asyncio.sleep(10)
+                                await self.send_who(cleaned_user)
+            except asyncio.CancelledError:
+                self.loop_running = False
+                logging.info("Exiting request_who_for_missing_users loop.")
+                break
+            except Exception as e:
+                logging.error(f"Error in request_who_for_missing_users: {e}")
 
     def handle_server_message(self, line):
         data = line + "\n"
