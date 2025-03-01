@@ -24,13 +24,13 @@ class RudeGui:
         self.master.title("RudeChat")
         self.master.geometry(self.app_size)
         self.master.configure(bg="black")
-        self.script_directory = G_SCRIPT_DIR
-        self.config_directory = G_CONFIG_DIR
+        
+        
         if sys.platform.startswith('win'):
-            icon_path = os.path.join(self.script_directory, "rude.ico")
+            icon_path = os.path.join(G_SOURCE_DIR, "rude.ico")
             self.master.iconbitmap(icon_path)
         else:
-            icon_path = os.path.join(self.script_directory, "rude.png")
+            icon_path = os.path.join(G_SOURCE_DIR, "rude.png")
             img = PhotoImage(file=icon_path)
             self.master.iconphoto(True, img)
 
@@ -376,7 +376,7 @@ class RudeGui:
             self.emoji_type = "Arial"  # A generic font as a last resort
 
     def read_config(self):
-        config_file = os.path.join(self.config_directory, 'gui_config.ini')
+        config_file = os.path.join(G_CONFIG_DIR, 'gui_config.ini')
 
         if os.path.exists(config_file):
             config = configparser.ConfigParser()
@@ -527,7 +527,7 @@ class RudeGui:
             # Ensure the tray icon isn't already created
             if not hasattr(self, 'tray_icon') or self.tray_icon is None:
                 # Attempt to create the tray icon
-                icon_path = os.path.join(self.script_directory, "rude_tray_icon.png")
+                icon_path = os.path.join(G_SOURCE_DIR, "rude_tray_icon.png")
                 image = Image.open(icon_path).convert("RGBA")
 
                 # Create the menu for the tray icon
@@ -720,14 +720,14 @@ class RudeGui:
             self.tray_icon.stop()
 
     def open_gui_config_window(self):
-        config_file = os.path.join(self.config_directory, 'gui_config.ini')
+        config_file = os.path.join(G_CONFIG_DIR, 'gui_config.ini')
         config_window = GuiConfigWindow(config_file)
         config_window.root.wait_window()
         self.read_config()
         self.apply_settings()
 
     def show_startup_art(self):
-        splash_directory = os.path.join(self.script_directory, "Splash")
+        splash_directory = os.path.join(G_SOURCE_DIR, "Splash")
 
         try:
             # List all .txt files in the Splash directory
@@ -882,7 +882,7 @@ class RudeGui:
         self.update_nick_channel_label()
 
     def load_nickname_colors(self):
-        nickname_colors_path = os.path.join(self.script_directory, 'nickname_colours.json')
+        nickname_colors_path = os.path.join(G_SOURCE_DIR, 'nickname_colours.json')
 
         try:
             with open(nickname_colors_path, 'r') as file:
@@ -900,7 +900,7 @@ class RudeGui:
 
     def save_nickname_colors(self):
         clean_nicks = clean_nicknames(self.nickname_colors)
-        nickname_colors_path = os.path.join(self.config_directory, 'nickname_colours.json')
+        nickname_colors_path = os.path.join(G_CONFIG_DIR, 'nickname_colours.json')
 
         try:
             with open(nickname_colors_path, 'w') as file:
@@ -1132,7 +1132,7 @@ class RudeGui:
         root.title("Rude Server configuration")
         root.geometry(self.config_window_size)
 
-        files = os.listdir(self.config_directory)
+        files = os.listdir(G_CONFIG_DIR)
         config_files = [f for f in files if f.endswith(".rudeserver")]
         config_files.sort()
 
@@ -1141,11 +1141,11 @@ class RudeGui:
             root.destroy()
             return
 
-        config_window = ServerConfigWindow(root, os.path.join(self.config_directory, config_files[0]), on_config_window_close)
+        config_window = ServerConfigWindow(root, os.path.join(G_CONFIG_DIR, config_files[0]), on_config_window_close)
 
         def on_config_change(event):
             selected_config_file = selected_config_file_var.get()
-            config_window.config_file = os.path.join(self.config_directory, selected_config_file)
+            config_window.config_file = os.path.join(G_CONFIG_DIR, selected_config_file)
             config_window.config.read(config_window.config_file)
             config_window.create_widgets()
 
@@ -2275,7 +2275,7 @@ class RudeGui:
             else:
                 message = f"You've been pinged in {channel_name}!"
 
-        icon_path = os.path.join(self.script_directory, "rude.ico")
+        icon_path = os.path.join(G_SOURCE_DIR, "rude.ico")
 
         try:
             if platform.system() == "Linux":

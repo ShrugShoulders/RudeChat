@@ -10,7 +10,7 @@ class ServerConfigWindow:
         self.parent = parent
         self.config_file = config_file
         self.close_callback = close_callback
-        self.config_directory = G_CONFIG_DIR
+        
 
         self.config = configparser.ConfigParser()
         self.config.read(config_file)
@@ -58,7 +58,7 @@ class ServerConfigWindow:
         self.create_widgets()
 
     def read_config(self):
-        config_file = os.path.join(self.config_directory, 'gui_config.ini')
+        config_file = os.path.join(G_CONFIG_DIR, 'gui_config.ini')
 
         if os.path.exists(config_file):
             color_config = configparser.ConfigParser()

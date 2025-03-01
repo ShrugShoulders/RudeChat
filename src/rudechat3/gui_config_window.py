@@ -9,7 +9,6 @@ class GuiConfigWindow:
         self.config_file = config_file
         self.root = tk.Tk()
         self.root.title("Rude GUI Configuration")
-        self.script_directory = G_CONFIG_DIR
         self.read_config()
 
         # Create main container frame
@@ -35,7 +34,7 @@ class GuiConfigWindow:
         apply_button.pack(pady=10)
 
     def read_config(self):
-        config_file = os.path.join(self.script_directory, 'gui_config.ini')
+        config_file = os.path.join(G_CONFIG_DIR, 'gui_config.ini')
 
         if os.path.exists(config_file):
             color_config = configparser.ConfigParser()
