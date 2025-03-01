@@ -3719,14 +3719,16 @@ class RudeChatClient:
     def show_file_folder(self, primary_command):
         if primary_command == "logs":
             folder = "Logs"
+            folder_path = os.path.join(G_CONFIG_DIR, folder)
         elif primary_command == "macros":
             folder = "Art"
+            folder_path = os.path.join(G_SOURCE_DIR, folder)
         elif primary_command == "fortunes":
             folder = "Fortune Lists"
+            folder_path = os.path.join(G_SOURCE_DIR, folder)
         elif primary_command == "swhois":
             folder = "whois"
-
-        folder_path = os.path.join(G_SOURCE_DIR, folder)
+            folder_path = os.path.join(G_SOURCE_DIR, folder)
 
         # Check if the fortune list directory exists, if not error out.
         if not os.path.exists(folder_path):
