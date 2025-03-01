@@ -28,7 +28,6 @@ import shutil
 import webbrowser
 import pytz
 import threading
-import pystray
 import emoji
 import pyautogui
 from PIL import Image
