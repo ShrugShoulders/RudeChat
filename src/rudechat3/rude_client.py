@@ -1265,23 +1265,26 @@ class RudeChatClient:
 
     async def request_who_for_missing_users(self):
         modes_to_strip = ''.join(self.mode_values)
-        while self.loop_running:
-            try:
-                await asyncio.sleep(600)
-                for channel in self.joined_channels:
-                    users = self.channel_users.get(channel, [])
-                    if users:
-                        for user in users:
-                            cleaned_user = user.lstrip(modes_to_strip)
-                            if cleaned_user not in self.who_user_data:
-                                await asyncio.sleep(10)
-                                await self.send_who(cleaned_user)
-            except asyncio.CancelledError:
-                self.loop_running = False
-                logging.info("Exiting request_who_for_missing_users loop.")
-                break
-            except Exception as e:
-                logging.error(f"Error in request_who_for_missing_users: {e}")
+        if self.auto_whois:
+            while self.loop_running:
+                try:
+                    await asyncio.sleep(600)
+                    for channel in self.joined_channels:
+                        users = self.channel_users.get(channel, [])
+                        if users:
+                            for user in users:
+                                cleaned_user = user.lstrip(modes_to_strip)
+                                if cleaned_user not in self.who_user_data:
+                                    await asyncio.sleep(10)
+                                    await self.send_who(cleaned_user)
+                except asyncio.CancelledError:
+                    self.loop_running = False
+                    logging.info("Exiting request_who_for_missing_users loop.")
+                    break
+                except Exception as e:
+                    logging.error(f"Error in request_who_for_missing_users: {e}")
+        else:
+            return
 
     def handle_server_message(self, line):
         data = line + "\n"
