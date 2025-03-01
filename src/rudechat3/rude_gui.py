@@ -11,6 +11,10 @@ from rudechat3.nick_cleaner import clean_nicknames
 from rudechat3.rude_logger import configure_logging
 from rudechat3.user_data_display import RudeToolTip
 from rudechat3.global_variables import *
+try:
+    import pystray
+except Exception as e:
+    logging.error(f"Unable to import pystray: {e}")
 
 
 class RudeGui:
@@ -882,7 +886,7 @@ class RudeGui:
         self.update_nick_channel_label()
 
     def load_nickname_colors(self):
-        nickname_colors_path = os.path.join(G_SOURCE_DIR, 'nickname_colours.json')
+        nickname_colors_path = os.path.join(G_CONFIG_DIR, 'nickname_colours.json')
 
         try:
             with open(nickname_colors_path, 'r') as file:
