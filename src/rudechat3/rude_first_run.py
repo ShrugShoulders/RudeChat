@@ -51,9 +51,16 @@ class FirstRun:
         except Exception as e:
             print(f"An error occurred while updating the first run file: {str(e)}")
 
-    def set_screen_size(self):
-        width, height = pyautogui.size()
-        screen_size = f"{width}x{height}"
+    def set_screen_size(self, root):
+        try:
+            width = root.winfo_screenwidth()
+            height = root.winfo_screenheight()
+            screen_size = f"{width}x{height}"
+        except Exception as e:
+            logging.error(f"Unable to get screen size: {e} Using default variables.")
+            self.app_size = "1100x900"
+            self.config_window_size = "800x600"
+            self.colour_selector_size = "450x900"
 
         # Determine window size based on screen resolution
         if screen_size == "3840x2160":  # 4K UHD
@@ -75,7 +82,7 @@ class FirstRun:
 
     def open_client_config_window(self):
         config_directory = G_CONFIG_DIR
-        self.set_screen_size()
+        
         def after_config_window_close():
             self.update_first_run()
             self.first_run_detect = 1
@@ -89,6 +96,7 @@ class FirstRun:
             return
 
         root = tk.Tk()
+        self.set_screen_size(root)
         root.title("Rude Server configuration: FIRST RUN")
         root.geometry(self.window_size)
 

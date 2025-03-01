@@ -285,9 +285,15 @@ class RudeGui:
             self.server_scrollbar.config(width=14)
 
     def set_screen_size(self):
-        width = self.master.winfo_screenwidth()
-        height =self.master.winfo_screenheight()
-        screen_size = f"{width}x{height}"
+        try:
+            width = self.master.winfo_screenwidth()
+            height =self.master.winfo_screenheight()
+            screen_size = f"{width}x{height}"
+        except Exception as e:
+            logging.error(f"Unable to get screen size: {e} Using default variables.")
+            self.app_size = "1100x900"
+            self.config_window_size = "800x600"
+            self.colour_selector_size = "450x900"
 
         if screen_size == "3840x2160":  # 4K UHD
             self.app_size = "2200x1800"

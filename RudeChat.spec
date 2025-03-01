@@ -9,9 +9,7 @@ a = Analysis(
     binaries=[],
     datas=[
         ('src/rudechat3/*.py', 'rudechat3'),
-        ('src/rudechat3/*.txt', 'rudechat3'),
         ('src/rudechat3/*.ini', 'rudechat3'),
-        ('src/rudechat3/*.json', 'rudechat3'),
         ('src/rudechat3/*.ico', 'rudechat3'),
         ('src/rudechat3/*.png', 'rudechat3'),
         ('src/rudechat3/libera.rudeserver', 'rudechat3'),
