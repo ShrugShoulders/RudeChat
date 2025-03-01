@@ -30,10 +30,6 @@ import pytz
 import threading
 import emoji
 import pyautogui
-try:
-    import pystray
-except Exception as e:
-    logging.error(f"error importing pystray: {e}")
 from PIL import Image
 from tzlocal import get_localzone
 from typing import List, Tuple, NamedTuple

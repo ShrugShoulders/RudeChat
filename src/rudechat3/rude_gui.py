@@ -10,6 +10,10 @@ from rudechat3.rude_dragndrop import DragDropListbox
 from rudechat3.nick_cleaner import clean_nicknames
 from rudechat3.rude_logger import configure_logging
 from rudechat3.user_data_display import RudeToolTip
+try:
+    import pystray
+except Exception as e:
+    logging.error(f"error importing pystray: {e}")
 
 
 class RudeGui:
