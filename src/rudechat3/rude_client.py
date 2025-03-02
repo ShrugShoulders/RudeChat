@@ -4455,7 +4455,7 @@ class RudeChatClient:
 
     async def save_dm_list(self):
         # Construct the full path for the ignore_list.txt
-        file_path = os.path.join(G_CONFIG_DIR, 'open_dms.txt')
+        file_path = os.path.join(G_CONFIG_DIR, f'{self.server_name}_open_dms.txt')
         
         async with aiofiles.open(file_path, mode="w", encoding='utf-8') as f:
             for user in self.dm_list:
@@ -4475,11 +4475,14 @@ class RudeChatClient:
 
     def load_dm_list(self):
         # Construct the full path for the ignore_list.txt
-        file_path = os.path.join(G_CONFIG_DIR, 'open_dms.txt')
+        file_path = os.path.join(G_CONFIG_DIR, f'{self.server_name}_open_dms.txt')
         
         if os.path.exists(file_path):
             with open(file_path, "r", encoding='utf-8') as f:
                 self.dm_list = [line.strip() for line in f.readlines()]
+                for nickname in self.dm_list:
+                    if nickname not in self.cap_who_for_chan:
+                        self.cap_who_for_chan.append(nickname)
         else:
             # If the file doesn't exist, create it
             with open(file_path, "w", encoding='utf-8') as f:
