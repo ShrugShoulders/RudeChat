@@ -15,9 +15,6 @@ pip install -r requirements.txt .
 ```
 - use `rudechat`.
 
-### MacOS (Binary)
-- Download the binary and run it. (You may need to approve it in Privacy & Security settings.)
-
 ### MacOS (Build from Source)
 
 - Clone the repo.
