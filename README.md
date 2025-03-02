@@ -2,9 +2,11 @@
 ## How to Install
 ### Windows (Installer)
 Download the installer. Windows installs to `%LOCALAPPDATA%\Programs\RudeChat3`.
-### Linux (Binary)
-- Download the binary and extract (recommended for Debian/Ubuntu users).
+### Linux (Binary/.deb)
+- Download the binary and extract (recommended for Fedora Users).
 - CD to the extracted directory and use `./rudechat`.
+- Download the .deb & use your debians package manager to install.
+- If you used dpkg you will need to manually install some deps. 
 
 ### Linux (Build from Source)
 - Clone the repo.
@@ -36,7 +38,7 @@ pip3 install -r requirements.txt --break-system-packages
 python3 setup.py py2app
 ```
 
-- If the command finishes with `Done!`, you'll find your Mac App in the `dist` folder. If not, [tell us we fucked up.](https://github.com/ShrugShoulders/RudeChat/issues)
+- If the command finishes with `Done!`, you'll find your Mac App in the `dist` folder. If not, [tell us we messed up.](https://github.com/ShrugShoulders/RudeChat/issues)
 
 ## Cool Tips
 
