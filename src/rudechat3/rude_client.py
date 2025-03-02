@@ -16,8 +16,6 @@ class RudeChatClient:
         self.entry_widget = entry_widget
         self.server_text_widget = server_text_widget
         self.gui = gui
-        
-        
         self.nicknamelen = 0
         self.chan_limit = 0
         self.channellen = 0
@@ -114,6 +112,8 @@ class RudeChatClient:
         await self.load_channel_messages()
         self.load_away_users_from_file()
         self.load_ignore_list()
+        self.load_dm_list()
+        self.replace_dms_in_gui()
         self.gui.update_nick_channel_label()
         self.config = config_file
         self.watcher = AutoAway(self.config)
@@ -1807,6 +1807,7 @@ class RudeChatClient:
                     self.update_gui_channel_list()
                     if sender not in self.dm_list:
                         self.dm_list.append(sender)
+                        await self.save_dm_list()
 
                 if sender.startswith("*status"):
                     self.save_message(self.server, target, sender, message, mode_symbol, is_sent=False)
@@ -3566,6 +3567,9 @@ class RudeChatClient:
             self.cap_who_for_chan.append(nickname)
         if nickname not in self.dm_list:
             self.dm_list.append(nickname)
+            self.loop.create_task(self.save_dm_list())
+        if nickname not in self.channel_messages[self.server]:
+            self.channel_messages[self.server][nickname] = []
 
         self.gui.channel_lists[self.server] = self.joined_channels
         self.update_gui_channel_list()
@@ -3581,6 +3585,7 @@ class RudeChatClient:
             self.highlighted_channels[self.server_name].pop(nickname, None)
         if nickname in self.dm_list:
             self.dm_list.remove(nickname)
+            self.loop.create_task(self.save_dm_list())
 
         # Update the GUI's list of channels
         self.update_gui_channel_list()
@@ -4448,6 +4453,14 @@ class RudeChatClient:
             for user in self.ignore_list:
                 await f.write(f"{user}\n")
 
+    async def save_dm_list(self):
+        # Construct the full path for the ignore_list.txt
+        file_path = os.path.join(G_CONFIG_DIR, 'open_dms.txt')
+        
+        async with aiofiles.open(file_path, mode="w", encoding='utf-8') as f:
+            for user in self.dm_list:
+                await f.write(f"{user}\n")
+
     def load_ignore_list(self):
         # Construct the full path for the ignore_list.txt
         file_path = os.path.join(G_CONFIG_DIR, 'ignore_list.txt')
@@ -4455,6 +4468,18 @@ class RudeChatClient:
         if os.path.exists(file_path):
             with open(file_path, "r", encoding='utf-8') as f:
                 self.ignore_list = [line.strip() for line in f.readlines()]
+        else:
+            # If the file doesn't exist, create it
+            with open(file_path, "w", encoding='utf-8') as f:
+                pass
+
+    def load_dm_list(self):
+        # Construct the full path for the ignore_list.txt
+        file_path = os.path.join(G_CONFIG_DIR, 'open_dms.txt')
+        
+        if os.path.exists(file_path):
+            with open(file_path, "r", encoding='utf-8') as f:
+                self.dm_list = [line.strip() for line in f.readlines()]
         else:
             # If the file doesn't exist, create it
             with open(file_path, "w", encoding='utf-8') as f:
