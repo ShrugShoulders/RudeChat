@@ -1,4 +1,5 @@
 import tkinter as tk
+from tkinter import ttk
 import configparser
 import os
 from rudechat3.global_variables import *
@@ -73,11 +74,23 @@ class GuiConfigWindow:
         label_width = max(20, len(option))  # Minimum width of 20 pixels
         label.config(width=label_width)
 
-        entry = tk.Entry(entry_frame, bg=self.entry_bg_color, fg=self.entry_fg_color)
-        entry.insert(0, default_value)
-        entry.pack(side="right", fill="x", expand=True)
+        if default_value in ["True", "False"]:
+            entry = ttk.Checkbutton(entry_frame, onvalue=True, offvalue=False, text='')
+            entry.pack(side="right") 
 
-        setattr(self, f"{section}_{option}", entry)
+            # Set the initial state based on default_value
+            if default_value == "True":
+                entry.state(['selected'])
+            else:
+                entry.state(['!alternate']) 
+
+            setattr(self, f"{section}_{option}", entry)
+
+        else:
+            entry = tk.Entry(entry_frame, bg=self.entry_bg_color, fg=self.entry_fg_color)
+            entry.insert(0, default_value)
+            entry.pack(side="right", fill="x", expand=True)
+            setattr(self, f"{section}_{option}", entry)
 
     def save_changes(self):
         config = configparser.ConfigParser()
@@ -86,7 +99,12 @@ class GuiConfigWindow:
         for section in config.sections():
             for option in config.options(section):
                 entry = getattr(self, f"{section}_{option}")
-                config.set(section, option, entry.get())
+                string_entry = str(entry).split("!")
+                if "checkbutton" in string_entry:
+                    value = 'True' if entry.instate(['selected']) else 'False'
+                    config.set(section, option, value)
+                else:
+                    config.set(section, option, entry.get())
 
         # Write the updated config back to the file
         with open(self.config_file, 'w') as configfile:

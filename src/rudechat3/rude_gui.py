@@ -297,11 +297,11 @@ class RudeGui:
 
         if screen_size == "3840x2160":  # 4K UHD
             self.app_size = "2200x1800"
-            self.config_window_size = "1650x1200"
+            self.config_window_size = "1250x1200"
             self.colour_selector_size = "520x900"
         elif screen_size == "1920x1080":  # Full HD
             self.app_size = "1600x900"
-            self.config_window_size = "1200x800"
+            self.config_window_size = "900x800"
             self.colour_selector_size = "450x900"
         elif screen_size == "2560x1440":  # QHD
             self.app_size = "1920x1080"
