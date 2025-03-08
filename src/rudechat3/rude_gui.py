@@ -560,12 +560,6 @@ class RudeGui:
         
         except Exception as e:
             logging.error(f"Tray icon not supported: {e}")
-            if platform.system() == "Linux":
-                messagebox.showwarning("Tray Icon", "System tray not supported on this environment.")
-                return
-            elif platform.system() == "Windows":
-                messagebox.showerror("Error", f"Failed to create tray icon: {e}")
-                return
 
     def start_tray_icon(self):
         """Start the tray icon in a separate thread."""
