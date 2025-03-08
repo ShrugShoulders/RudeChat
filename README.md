@@ -48,7 +48,7 @@ Right click anywhere to open and edit the config.
 
 RudeChat assumes server_name.rudeserver is available and configed properly:
 
-For assistance find me on irc.libera.chat/##rudechat
+For assistance find me on irc.libera.chat/#rudechat
 
 ## Server Config Example:
 
