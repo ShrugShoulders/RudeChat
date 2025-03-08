@@ -59,12 +59,12 @@ setup(
     },
     entry_points={
         'console_scripts': [
-            'rudechat=rudechat3.main:main',
+            'rudechat=rudechat3.__main__:main',
         ],
     },
     # MacOS specific (Build using `python3 setup.py py2app` in root directory)
     app=APP,
-	data_files=DATA_FILES,
+    data_files=DATA_FILES,
     options={'py2app': OPTIONS},
     setup_requires=['py2app']
 )
