@@ -1,9 +1,11 @@
 import tkinter as tk
-from tkinter import ttk, messagebox
+from tkinter import ttk
 import configparser
 import os
+import logging
 from rudechat3.global_variables import *
 from rudechat3.channel_expand import ChannelExp
+from rudechat3.rude_logger import configure_logging
 
 
 class ServerConfigWindow:
@@ -14,6 +16,7 @@ class ServerConfigWindow:
 
         self.config = configparser.ConfigParser()
         self.config.read(config_file)
+        self.parent.protocol("WM_DELETE_WINDOW", self.save_config)
 
         self.label_map = {
             'server_name': ['Server Name', 'string'],
@@ -53,6 +56,7 @@ class ServerConfigWindow:
             'log_on': ['Turn Client Debug Logging On', 'bool'],
             'use_emojis': ['Turn Emoji filters on/off', 'bool'],
         }
+        configure_logging()
         self.entries = {}
         self.read_config()
         self.create_widgets()
@@ -180,6 +184,6 @@ class ServerConfigWindow:
 
             self.close_callback()
         except configparser.NoOptionError as e:
-            messagebox.showerror("Error", f"Error saving configuration: Option '{e.option}' not found in section '{e.section}'.")
+            logging.error(f"Error saving configuration: Option '{e.option}' not found in section '{e.section}'.")
         except Exception as e:
-            messagebox.showerror("Error", f"Error saving configuration: {e}")
+            logging.error(f"Error saving configuration: {e}")

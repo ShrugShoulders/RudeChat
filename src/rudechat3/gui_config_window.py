@@ -33,6 +33,7 @@ class GuiConfigWindow:
         # Button to save changes
         apply_button = tk.Button(bottom_frame, text="Apply", command=self.save_changes, bg=self.bg_color, fg=self.fg_color)
         apply_button.pack(pady=10)
+        self.root.protocol("WM_DELETE_WINDOW", self.save_changes)
 
     def read_config(self):
         config_file = os.path.join(G_CONFIG_DIR, 'gui_config.ini')
