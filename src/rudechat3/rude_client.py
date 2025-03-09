@@ -126,6 +126,7 @@ class RudeChatClient:
         config.read(config_file)
         
         # Reload specific variables
+        self.auto_join_channels = config.get('IRC', 'auto_join_channels', fallback=None).split(',')
         self.mention_note_color = config.get('IRC', 'mention_note_color', fallback='red')
         self.activity_note_color = config.get('IRC', 'activity_note_color', fallback='green')
         self.use_time_stamp = config.getboolean('IRC', 'use_time_stamp', fallback=True)
@@ -146,6 +147,9 @@ class RudeChatClient:
         self.log_on = config.getboolean('IRC', 'log_on', fallback=False)
         self.watcher.reload_config()
         self.gui.update_nick_channel_label()
+        for channel in self.auto_join_channels:
+            if channel not in self.joined_channels:
+                self.loop.create_task(self.join_channel(channel))
 
     def update_away_status(self):
         for nickname, away_message in self.away_users_dict.items():
