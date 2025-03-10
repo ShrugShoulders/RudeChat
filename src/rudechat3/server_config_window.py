@@ -1,28 +1,31 @@
-import tkinter as tk
-from tkinter import ttk
-import configparser
-import os
-import logging
+from rudechat3.shared_imports import *
 from rudechat3.global_variables import *
 from rudechat3.channel_expand import ChannelExp
 from rudechat3.rude_logger import configure_logging
-
 
 class ServerConfigWindow:
     def __init__(self, parent, config_file, close_callback):
         self.parent = parent
         self.config_file = config_file
-        self.close_callback = close_callback 
+        self.close_callback = close_callback
+        self.frame = QScrollArea()
+        self.frame.setViewportMargins(-10, -10, -10, -10)
+        self.frame.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        self.frame.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.frame.setWidgetResizable(True)
+        self.frame.setFrameShape(QFrame.Shape.NoFrame)
+        self.widget = QWidget()
+        self.widget.layout = QVBoxLayout(self.widget)
+        self.frame.setWidget(self.widget)
 
         self.config = configparser.ConfigParser()
         self.config.read(config_file)
-        self.parent.protocol("WM_DELETE_WINDOW", self.save_config)
-
+        
         self.label_map = {
             'server_name': ['Server Name', 'string'],
             'nickname': ['Nickname', 'string'],
             'server': ['Server Address', 'string'],
-            'auto_join_channels': ['Auto-Join Channels', 'button'],
+            'auto_join_channels': ['Auto-Join Channels', 'string'],
             'use_nickserv_auth': ['Use NickServ Authentication', 'bool'],
             'nickserv_password': ['NickServ Password', 'string'],
             'port': ['Port', 'string'],
@@ -73,74 +76,54 @@ class ServerConfigWindow:
             self.entry_bg_color = color_config.get('GUI', 'master_color', fallback='black')
             self.entry_fg_color = color_config.get('GUI', 'main_fg_color', fallback='#C0FFEE')
             self.frame_bg_color = color_config.get('GUI', 'master_color', fallback='black')
-            self.parent.configure(bg=self.bg_color)
 
     def create_widgets(self):
-        # Configure parent window grid
-        self.parent.grid_rowconfigure(0, weight=1)
-        self.parent.grid_columnconfigure(0, weight=1)
-
-        # Create canvas and scrollbar
-        self.canvas = tk.Canvas(self.parent, bg=self.bg_color)
-        self.scrollbar = ttk.Scrollbar(self.parent, orient="vertical", command=self.canvas.yview)
-        
-        # Create a frame inside the canvas
-        self.scrollable_frame = tk.Frame(self.canvas, bg=self.frame_bg_color)
-        self.scrollable_frame.bind(
-            "<Configure>", lambda e: self.canvas.configure(scrollregion=self.canvas.bbox("all"))
-        )
-        
-        # Create a window inside the canvas
-        self.window_id = self.canvas.create_window((0, 0), window=self.scrollable_frame, anchor="nw")
-        
-        # Configure grid layout
-        self.canvas.grid(row=0, column=0, sticky="nsew")
-        self.scrollbar.grid(row=0, column=1, sticky="ns")
-        self.parent.grid_rowconfigure(0, weight=1)
-        self.parent.grid_columnconfigure(0, weight=1)
-
-        # Attach scrollbar to canvas
-        self.canvas.configure(yscrollcommand=self.scrollbar.set)
-
-        # Entries dictionary
         self.entries = {}
         self.create_config_widgets()
 
     def create_config_widgets(self):
         row_count = 0  # Track row number for grid positioning
-        button = None
 
         for section in self.config.sections():
-            section_frame = tk.LabelFrame(self.scrollable_frame, text=section, bg=self.frame_bg_color, fg=self.fg_color)
-            section_frame.grid(row=row_count, column=0, padx=10, pady=5, sticky="ew")
-            section_frame.columnconfigure(1, weight=1)  # Allow second column to expand
-            section_frame.columnconfigure(2, weight=0)
+            section_frame = QGroupBox()
+            
+            section_frame.layout = QGridLayout(section_frame)
+            section_frame.layout.setColumnStretch(0, 1)
+            section_frame.layout.setColumnStretch(1, 1)
 
             for option in self.config.options(section):
-                label_text = self.label_map.get(option, option)[0]
-                label = tk.Label(section_frame, text=label_text, bg=self.frame_bg_color, fg=self.fg_color)
-                label.grid(row=row_count, column=0, padx=5, pady=2, sticky='e')
+                label = QLabel(section_frame, text=self.label_map.get(option, option)[0])
+                label.setSizePolicy(QSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Preferred))
+                
+                label.setAlignment(Qt.AlignmentFlag.AlignRight|Qt.AlignmentFlag.AlignTrailing|Qt.AlignmentFlag.AlignVCenter)
+
+                section_frame.layout.addWidget(label, row_count, 0, 1, 1)
 
                 match self.label_map.get(option, option)[1]:
                     case 'bool':
-                        entry = ttk.Checkbutton(section_frame, onvalue=True, offvalue=False)
-                        entry.state(['selected']) if self.config.getboolean(section, option) else entry.state(['!alternate'])
-                        button = None
+                        entry = QCheckBox(section_frame)
+                        entry.setChecked(self.config.getboolean(section, option))
+                        
                     case 'string':
-                        entry = tk.Entry(section_frame, bg=self.entry_bg_color, fg=self.entry_fg_color, insertbackground="white")
-                        entry.insert(0, self.config.get(section, option))
-                        button = None
+                        entry = QLineEdit(section_frame)
+                        entry.setText(self.config.get(section, option))
+                        
                     case 'button':
-                        button = tk.Button(section_frame, text="Edit Channels", command=self.expand_channels_list, bg=self.entry_bg_color, fg=self.entry_fg_color,)
-                        entry = tk.Entry(section_frame, bg=self.entry_bg_color, fg=self.entry_fg_color, insertbackground="white")
-                        entry.insert(0, self.config.get(section, option))
-
-                entry.grid(row=row_count, column=1, padx=5, pady=2, sticky='w')
-                if button is not None:
-                    button.grid(row=row_count, column=2, padx=5, pady=2, sticky='w')
+                        button = QPushButton(section_frame, text="Edit Channels")
+                        button.clicked.connect(self.expand_channels_list)
+                        entry = button
+                    
+                section_frame.layout.addWidget(entry, row_count, 1, 1, 1)
 
                 self.entries[(section, option)] = entry
                 row_count += 1
+            try:
+                self.widget.layout.itemAt(0).widget().setParent(None)
+            except:
+                print("No widget to remove")
+
+            self.widget.layout.addWidget(section_frame)
+            
 
     def expand_channels_list(self):
         channels = self.config.get('IRC', 'auto_join_channels')
@@ -160,9 +143,9 @@ class ServerConfigWindow:
             for (section, option), entry in self.entries.items():
                 match self.label_map.get(option, option)[1]:
                     case 'bool':
-                        value = 'True' if entry.instate(['selected']) else 'False'
+                        value = str(entry.isChecked())
                     case 'string':
-                        value = entry.get()
+                        value = entry.text()
                     case 'button':
                         value = entry.get()
                 # Add the entry to the new configuration

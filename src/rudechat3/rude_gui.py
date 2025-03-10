@@ -1134,7 +1134,7 @@ class RudeGui:
             root.after(200, close_window)
 
         root = tk.Tk()
-        root.title("Rude Server configuration")
+        root.title("RudeChat: Server configuration")
         root.geometry(self.config_window_size)
 
         files = os.listdir(G_CONFIG_DIR)

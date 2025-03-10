@@ -1,3 +1,17 @@
+# Todo
+- [ ] Convert to Qt
+	- [ ] `channel_expand`
+	- [ ] `gui_config_window`
+	- [ ] `list_window`
+	- [ ] `rude_client`
+	- [ ] `rude_colours`
+	- [ ] `rude_dragndrop`
+	- [x] `rude_first_run`
+	- [ ] `rude_gui`
+	- [ ] `rude_popout`
+	- [ ] `server_config_window` (PARTIALLY COMPLETE)
+	- [ ] `user_data_display`
+
 # RudeChat IRC Client: For Fun & Reasons.
 ## How to Install
 ### Windows (Installer)

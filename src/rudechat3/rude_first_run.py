@@ -1,8 +1,6 @@
 from rudechat3.shared_imports import *
-from rudechat3.server_config_window import ServerConfigWindow
 from rudechat3.global_variables import *
-
-
+from rudechat3.server_config_window import ServerConfigWindow
 
 class FirstRun:
     def __init__(self):
@@ -51,10 +49,10 @@ class FirstRun:
         except Exception as e:
             print(f"An error occurred while updating the first run file: {str(e)}")
 
-    def set_screen_size(self, root):
+    def set_screen_size(self, screen):
         try:
-            width = root.winfo_screenwidth()
-            height = root.winfo_screenheight()
+            width = screen.size().width()
+            height = screen.size().height()
             screen_size = f"{width}x{height}"
         except Exception as e:
             logging.error(f"Unable to get screen size: {e} Using default variables.")
@@ -88,46 +86,53 @@ class FirstRun:
             self.first_run_detect = 1
 
         def close_window():
-            root.destroy()
+            self.main_window.close()
 
         def on_config_window_close():
-            root.after(100, after_config_window_close)
-            root.after(200, close_window)
+            QTimer.singleShot(100, after_config_window_close)
+            QTimer.singleShot(200, close_window)
             return
 
-        root = tk.Tk()
-        self.set_screen_size(root)
-        root.title("Rude Server configuration: FIRST RUN")
-        root.geometry(self.window_size)
+        app = QApplication()
+        self.main_window = QWidget()
+        self.main_window.setWindowTitle("RudeChat: First Run Configuration")
+        self.main_window.resize(450, 500)
 
         files = os.listdir(config_directory)
         config_files = [f for f in files if f.endswith(".rudeserver")]
         config_files.sort()
 
         if not config_files:
-            tk.messagebox.showwarning("Warning", "No configuration files found.")
-            root.destroy()
+            QMessageBox.warning(self.main_window, "Warning", "No configuration files found.")
+            self.main_window.close()
             return
 
-        config_window = ServerConfigWindow(root, os.path.join(config_directory, config_files[0]), on_config_window_close)
+        self.main_window.layout = QVBoxLayout(self.main_window)
+        self.main_window.setContentsMargins(0, 0, 0, 0)
 
-        def on_config_change(event):
-            selected_config_file = selected_config_file_var.get()
+        config_window = ServerConfigWindow(self.main_window, os.path.join(config_directory, config_files[0]), on_config_window_close)
+
+        def on_config_change():
+            selected_config_file = selected_config_file_var.currentText()
             config_window.config_file = os.path.join(config_directory, selected_config_file)
             config_window.config.read(config_window.config_file)
             config_window.create_widgets()
 
+        instruction_label = QLabel("Welcome to RudeChat's First Run Configuration. Please adjust your settings to your liking, then click Apply to start RudeChat. This will be the only time you see this menu.")
+        instruction_label.setWordWrap(True)
+        self.main_window.layout.addWidget(instruction_label)
+
         # Menu to choose configuration file
-        selected_config_file_var = tk.StringVar(root, config_files[0])
-        config_menu = ttk.Combobox(root, textvariable=selected_config_file_var, values=config_files)
-        config_menu.pack(pady=10)
-        config_menu.bind("<<ComboboxSelected>>", on_config_change)
+        selected_config_file_var = QComboBox()
+        selected_config_file_var.addItems(config_files)
+        selected_config_file_var.currentIndexChanged.connect(on_config_change)
+        self.main_window.layout.addWidget(selected_config_file_var)
 
-        save_button = tk.Button(root, text="Start Client", command=config_window.save_config, bg=self.bg_color, fg=self.fg_color)
-        save_button.pack(pady=10)
+        self.main_window.layout.addWidget(config_window.frame)
 
-        instruction_label = tk.Label(root, text="Welcome to RudeChat First Run Config: To create a new config file simply change the data in the fields, then edit the file name in the file selection above, configuration files must follow exampleserver.rudeserver format.", bg=self.bg_color, fg=self.fg_color, wraplength=180)
-        instruction_label.pack()
-
-        root.mainloop()
+        save_button = QPushButton("Start Client")
+        save_button.clicked.connect(config_window.save_config)
+        self.main_window.layout.addWidget(save_button)
+        self.main_window.show()
+        app.exec()
 
