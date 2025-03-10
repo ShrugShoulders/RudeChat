@@ -177,7 +177,11 @@
          </widget>
         </item>
         <item>
-         <widget class="QListWidget" name="server_list"/>
+         <widget class="QListWidget" name="server_list">
+          <property name="itemAlignment">
+           <set>Qt::AlignmentFlag::AlignLeading</set>
+          </property>
+         </widget>
         </item>
        </layout>
       </item>
