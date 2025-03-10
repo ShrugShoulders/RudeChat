@@ -1,5 +1,6 @@
 # Todo
 - [ ] Convert to Qt
+	- [ ] `__main__`
 	- [ ] `channel_expand`
 	- [ ] `gui_config_window`
 	- [ ] `list_window`
