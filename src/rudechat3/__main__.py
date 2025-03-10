@@ -36,23 +36,17 @@ def main():
     first_run = FirstRun()
     if first_run.first_run_detect == 0:
         first_run.open_client_config_window()
-        root = tk.Tk()
-        app = RudeGui(root)
+    app = QApplication(sys.argv)
+    
+    root = QMainWindow()
+    root.setStyleSheet
+    main = RudeGui(root)
 
-        new_loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(new_loop)
+    new_loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(new_loop)
 
-        loop = asyncio.get_event_loop()
-        loop.create_task(initialize_clients(app))
-    else:
-        root = tk.Tk()
-        app = RudeGui(root)
-
-        new_loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(new_loop)
-
-        loop = asyncio.get_event_loop()
-        loop.create_task(initialize_clients(app))
+    loop = asyncio.get_event_loop()
+    loop.create_task(initialize_clients(main))
 
     def tk_update():
         try:
@@ -63,7 +57,7 @@ def main():
             root.after(100, tk_update)
 
     root.after(100, tk_update)
-    root.mainloop()
+    app.exec()
 
 if __name__ == '__main__':
     main()

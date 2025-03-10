@@ -39,5 +39,5 @@ from tkinter import Tk, Frame, Label, Entry, Listbox, Menu, Scrollbar, StringVar
 from tkinter import simpledialog
 from threading import Thread
 
-from PySide6.QtWidgets import QApplication, QMessageBox, QVBoxLayout, QWidget, QLabel, QPushButton, QComboBox, QCheckBox, QLabel, QLineEdit, QPushButton, QScrollArea, QSizePolicy, QFrame, QGroupBox, QGridLayout
+from PySide6.QtWidgets import QApplication, QMessageBox, QVBoxLayout, QWidget, QLabel, QPushButton, QComboBox, QCheckBox, QLabel, QLineEdit, QPushButton, QScrollArea, QSizePolicy, QFrame, QGroupBox, QGridLayout, QMainWindow, QTextBrowser
 from PySide6.QtCore import QTimer, Qt
