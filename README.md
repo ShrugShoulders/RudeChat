@@ -21,10 +21,6 @@
 		- [ ] `gui_config_window`
 		- [ ] `list_window`
 		- [ ] `user_data_display`
-<<<<<<< HEAD
-=======
-	- [ ] `user_data_display`
->>>>>>> 493edd6c81f9fef54850152cb3aec9dda44c880a
 
 # RudeChat IRC Client: For Fun & Reasons.
 ## How to Install
