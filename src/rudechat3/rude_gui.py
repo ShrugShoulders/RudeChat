@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 from rudechat3.rude_client import RudeChatClient
 from rudechat3.server_config_window import ServerConfigWindow
 from rudechat3.rude_colours import RudeColours
@@ -6,10 +5,8 @@ from rudechat3.format_decoder import Attribute, decoder
 from rudechat3.gui_config_window import GuiConfigWindow
 from rudechat3.rude_popout import RudePopOut
 from rudechat3.shared_imports import *
-from rudechat3.rude_dragndrop import DragDropListbox
 from rudechat3.nick_cleaner import clean_nicknames
 from rudechat3.rude_logger import configure_logging
-from rudechat3.user_data_display import RudeToolTip
 from rudechat3.global_variables import *
 try:
     import pystray
@@ -20,22 +17,22 @@ except Exception as e:
 class RudeGui:
     def __init__(self, master):
         self.master = master
-        self.app_size = "1100x900"
-        self.config_window_size = "400x300"
-        self.colour_selector_size = "450x900"
+        self.app_size = [1100, 900]
+        self.config_window_size = [400, 300]
+        self.colour_selector_size = [450, 900]
         self.set_screen_size()
-        self.master.title("RudeChat")
-        self.master.geometry(self.app_size)
-        self.master.configure(bg="black")
+        self.master.resize(self.app_size[0], self.app_size[1])
+        # set to black
+        self.master.setStyleSheet("background-color: black;")
         
         
-        if sys.platform.startswith('win'):
-            icon_path = os.path.join(G_SOURCE_DIR, "rude.ico")
-            self.master.iconbitmap(icon_path)
-        else:
-            icon_path = os.path.join(G_SOURCE_DIR, "rude.png")
-            img = PhotoImage(file=icon_path)
-            self.master.iconphoto(True, img)
+        # if sys.platform.startswith('win'):
+        #     icon_path = os.path.join(G_SOURCE_DIR, "rude.ico")
+        #     self.master.iconbitmap(icon_path)
+        # else:
+        #     icon_path = os.path.join(G_SOURCE_DIR, "rude.png")
+        #     img = PhotoImage(file=icon_path)
+        #     self.master.iconphoto(True, img)
 
         self.read_config()
         self.start_tray_icon()
@@ -81,8 +78,14 @@ class RudeGui:
         ]
 
         # Main frame
-        self.frame = tk.Frame(self.master, bg="black")
-        self.frame.grid(row=1, column=0, columnspan=2, sticky="nsew")
+        # self.frame = tk.Frame(self.master, bg="black")
+        # self.frame.grid(row=1, column=0, columnspan=2, sticky="nsew")
+        self.central_widget = QWidget(self.master)
+        self.central_widget.layout = QHBoxLayout()
+        self.central_widget.setContentsMargins(5, 5, 5, 5)
+
+        self.content_widget = QWidget(self.central_widget)
+        self.content_widget.layout = QVBoxLayout()
 
         # Initialize other instance variables
         self.channel_lists = {}
@@ -102,107 +105,118 @@ class RudeGui:
         self.target_user_info = None
         self.url_pattern = re.compile(r'(\w+://[^\s()<>]*\([^\s()<>]*\)[^\s()<>]*(?<![.,;!?])|www\.[^\s()<>]*\([^\s()<>]*\)[^\s()<>]*(?<![.,;!?])|\w+://[^\s()<>]+(?<![.,;!?])|www\.[^\s()<>]+(?<![.,;!?]))')
 
-        # Server and Topic Frame
-        self.server_topic_frame = tk.Frame(self.master, bg="black")
-        self.server_topic_frame.grid(row=0, column=0, columnspan=2, sticky='nsew')
-
         # Topic label
-        self.current_topic = tk.StringVar(value="Topic: ")
-        self.topic_label = tk.Label(self.server_topic_frame, textvariable=self.current_topic, padx=5, pady=1)
-        self.topic_label.grid(row=1, column=0, sticky='w')
-        self.topic_label.bind("<Enter>", self.show_topic_tooltip)
-        self.topic_label.bind("<Leave>", self.hide_topic_tooltip)
-        self.tooltip = None
+        # self.current_topic = tk.StringVar(value="Topic: ")
+        # self.topic_label = tk.Label(self.server_topic_frame, textvariable=self.current_topic, padx=5, pady=1)
+        # self.topic_label.grid(row=1, column=0, sticky='w')
+        # self.topic_label.bind("<Enter>", self.show_topic_tooltip)
+        # self.topic_label.bind("<Leave>", self.hide_topic_tooltip)
+        # self.tooltip = None
+
+        self.topic_label = QLabel(self.content_widget, text="Topic: ")
+        self.content_widget.layout.addWidget(self.topic_label)
 
         # Main text widget
-        self.text_widget = ScrolledText(self.frame, wrap='word', cursor="arrow")
-        self.text_widget.grid(row=0, column=0, sticky="nsew")
-        self.text_widget.vbar.config(command=self.on_scroll)
-        self.show_startup_art()
+        # self.text_widget = ScrolledText(self.frame, wrap='word', cursor="arrow")
+        # self.text_widget.grid(row=0, column=0, sticky="nsew")
+        # self.text_widget.vbar.config(command=self.on_scroll)
+        # self.show_startup_art()
 
-        # List frames
-        self.list_frame = tk.Frame(self.frame, bg="black")
-        self.list_frame.grid(row=0, column=1, sticky="nsew")
+        self.text_widget = QTextBrowser(self.content_widget)
+        self.content_widget.layout.addWidget(self.text_widget)
 
-        # User frame
-        self.user_frame = tk.Frame(self.list_frame, bg="black")
-        self.user_frame.grid(row=0, column=0, sticky="nsew")
+        # # List frames
+        # self.list_frame = tk.Frame(self.frame, bg="black")
+        # self.list_frame.grid(row=0, column=1, sticky="nsew")
 
-        self.user_label = tk.Label(self.user_frame, text="Users(0)")
-        self.user_label.grid(row=0, column=0, sticky='ew')
+        # # User frame
+        # self.user_frame = tk.Frame(self.list_frame, bg="black")
+        # self.user_frame.grid(row=0, column=0, sticky="nsew")
 
-        self.user_listbox = tk.Listbox(self.user_frame, height=25, width=16)
-        self.user_scrollbar = tk.Scrollbar(self.user_frame, orient="vertical", command=self.user_listbox.yview)
-        self.user_listbox.config(yscrollcommand=self.user_scrollbar.set)
-        self.user_listbox.grid(row=1, column=0, sticky='nsew')
-        self.user_scrollbar.grid(row=1, column=1, sticky='ns')
-        if platform.system() == "Darwin":  # macOS
-            self.user_listbox.bind("<Button-2>", self.show_user_list_menu)
-            self.user_listbox.bind("<Button-3>", self.show_user_list_menu)
-        else:  # Windows and Linux
-            self.user_listbox.bind("<Button-3>", self.show_user_list_menu)
-        self.user_listbox.bind("<Motion>", self.on_hover)
-        self.user_listbox.bind("<Leave>", self.on_leave)
-        self.usertooltip = RudeToolTip(self.user_listbox, self, self.app_size)
+        # self.user_label = tk.Label(self.user_frame, text="Users(0)")
+        # self.user_label.grid(row=0, column=0, sticky='ew')
 
-        # Channel frame
-        self.channel_frame = tk.Frame(self.list_frame, bg="black")
-        self.channel_frame.grid(row=1, column=0, sticky="nsew")
+        # self.user_listbox = tk.Listbox(self.user_frame, height=25, width=16)
+        # self.user_scrollbar = tk.Scrollbar(self.user_frame, orient="vertical", command=self.user_listbox.yview)
+        # self.user_listbox.config(yscrollcommand=self.user_scrollbar.set)
+        # self.user_listbox.grid(row=1, column=0, sticky='nsew')
+        # self.user_scrollbar.grid(row=1, column=1, sticky='ns')
+        # if platform.system() == "Darwin":  # macOS
+        #     self.user_listbox.bind("<Button-2>", self.show_user_list_menu)
+        #     self.user_listbox.bind("<Button-3>", self.show_user_list_menu)
+        # else:  # Windows and Linux
+        #     self.user_listbox.bind("<Button-3>", self.show_user_list_menu)
+        # self.user_listbox.bind("<Motion>", self.on_hover)
+        # self.user_listbox.bind("<Leave>", self.on_leave)
+        # self.usertooltip = RudeToolTip(self.user_listbox, self, self.app_size)
 
-        # Label for Servers
-        self.servers_label = tk.Label(self.channel_frame, text="Servers")
-        self.servers_label.grid(row=0, column=0, sticky='ew')  # Make sure label is above the server_listbox
+        # # Channel frame
+        # self.channel_frame = tk.Frame(self.list_frame, bg="black")
+        # self.channel_frame.grid(row=1, column=0, sticky="nsew")
 
-        # Server selection
-        self.server_var = tk.StringVar(self.master)
-        self.server_listbox = tk.Listbox(self.channel_frame, selectmode=tk.SINGLE, width=16, height=4)
-        self.server_listbox.grid(row=1, column=0, sticky='w')  # Adjust column to display server_listbox
+        # # Label for Servers
+        # self.servers_label = tk.Label(self.channel_frame, text="Servers")
+        # self.servers_label.grid(row=0, column=0, sticky='ew')  # Make sure label is above the server_listbox
 
-        # Server listbox scrollbar
-        self.server_scrollbar = tk.Scrollbar(self.channel_frame, orient="vertical", command=self.server_listbox.yview)
-        self.server_listbox.config(yscrollcommand=self.server_scrollbar.set)
-        self.server_scrollbar.grid(row=1, column=1, sticky='ns')
+        # # Server selection
+        # self.server_var = tk.StringVar(self.master)
+        # self.server_listbox = tk.Listbox(self.channel_frame, selectmode=tk.SINGLE, width=16, height=4)
+        # self.server_listbox.grid(row=1, column=0, sticky='w')  # Adjust column to display server_listbox
 
-        self.server_listbox.bind('<<ListboxSelect>>', self.on_server_change)
+        # # Server listbox scrollbar
+        # self.server_scrollbar = tk.Scrollbar(self.channel_frame, orient="vertical", command=self.server_listbox.yview)
+        # self.server_listbox.config(yscrollcommand=self.server_scrollbar.set)
+        # self.server_scrollbar.grid(row=1, column=1, sticky='ns')
 
-        self.channel_label = tk.Label(self.channel_frame, text="Channels (0)")
-        self.channel_label.grid(row=2, column=0, sticky='ew')  # Make sure label is below the server_listbox
+        # self.server_listbox.bind('<<ListboxSelect>>', self.on_server_change)
 
-        self.channel_listbox = DragDropListbox(self.channel_frame, height=17, width=16, update_callback=self.update_joined_channels)
-        self.channel_scrollbar = tk.Scrollbar(self.channel_frame, orient="vertical", command=self.channel_listbox.yview)
-        self.channel_listbox.config(yscrollcommand=self.channel_scrollbar.set)
-        self.channel_listbox.grid(row=3, column=0, sticky='nsew')  # Adjust row to display channel_listbox
-        self.channel_scrollbar.grid(row=3, column=1, sticky='ns')
-        self.channel_listbox.bind('<ButtonRelease-1>', self.on_channel_click)
-        if platform.system() == "Darwin":  # macOS
-            self.channel_listbox.bind("<Button-2>", self.show_channel_list_menu)
-            self.channel_listbox.bind("<Button-3>", self.show_user_list_menu)
-        else:  # Windows and Linux
-            self.channel_listbox.bind("<Button-3>", self.show_channel_list_menu)
-        self.master.bind("<Alt-KeyPress>", self._switch_to_index)
-        self.master.bind("<Alt-s>", self.cycle_servers)
+        # self.channel_label = tk.Label(self.channel_frame, text="Channels (0)")
+        # self.channel_label.grid(row=2, column=0, sticky='ew')  # Make sure label is below the server_listbox
 
-        # Server frame
-        self.server_frame = tk.Frame(self.master, height=100, bg="black")
-        self.server_frame.grid(row=2, column=0, columnspan=2, sticky='ew')
+        # self.channel_listbox = DragDropListbox(self.channel_frame, height=17, width=16, update_callback=self.update_joined_channels)
+        # self.channel_scrollbar = tk.Scrollbar(self.channel_frame, orient="vertical", command=self.channel_listbox.yview)
+        # self.channel_listbox.config(yscrollcommand=self.channel_scrollbar.set)
+        # self.channel_listbox.grid(row=3, column=0, sticky='nsew')  # Adjust row to display channel_listbox
+        # self.channel_scrollbar.grid(row=3, column=1, sticky='ns')
+        # self.channel_listbox.bind('<ButtonRelease-1>', self.on_channel_click)
+        # if platform.system() == "Darwin":  # macOS
+        #     self.channel_listbox.bind("<Button-2>", self.show_channel_list_menu)
+        #     self.channel_listbox.bind("<Button-3>", self.show_user_list_menu)
+        # else:  # Windows and Linux
+        #     self.channel_listbox.bind("<Button-3>", self.show_channel_list_menu)
+        # self.master.bind("<Alt-KeyPress>", self._switch_to_index)
+        # self.master.bind("<Alt-s>", self.cycle_servers)
 
-        # Configure column to expand
-        self.server_frame.grid_columnconfigure(0, weight=1)
+        # # Server frame
+        # self.server_frame = tk.Frame(self.master, height=100, bg="black")
+        # self.server_frame.grid(row=2, column=0, columnspan=2, sticky='ew')
 
-        self.server_text_widget = ScrolledText(self.server_frame, wrap='word', height=5, cursor="arrow")
-        self.server_text_widget.grid(row=0, column=0, sticky='nsew')
+        # # Configure column to expand
+        # self.server_frame.grid_columnconfigure(0, weight=1)
+
+        # self.server_text_widget = ScrolledText(self.server_frame, wrap='word', height=5, cursor="arrow")
+        # self.server_text_widget.grid(row=0, column=0, sticky='nsew')
 
         # Entry widget
-        self.entry_widget = tk.Entry(self.master)
-        self.entry_widget.grid(row=3, column=1, sticky='ew', columnspan=1)  # Adjust column span to cover only one column
-        self.entry_widget.bind('<Tab>', self.handle_tab_complete)
-        self.entry_widget.bind('<Up>', self.handle_arrow_keys)
-        self.entry_widget.bind('<Down>', self.handle_arrow_keys)
+        # self.entry_widget = tk.Entry(self.master)
+        # self.entry_widget.grid(row=3, column=1, sticky='ew', columnspan=1)  # Adjust column span to cover only one column
+        # self.entry_widget.bind('<Tab>', self.handle_tab_complete)
+        # self.entry_widget.bind('<Up>', self.handle_arrow_keys)
+        # self.entry_widget.bind('<Down>', self.handle_arrow_keys)
+
+        self.name_and_entry_widget = QFrame(self.central_widget)
+        self.name_and_entry_widget.layout = QHBoxLayout()
+
+        self.entry_widget = QLineEdit(self.name_and_entry_widget)
+        self.name_and_entry_widget.layout.addWidget(self.entry_widget)
 
         # Label for nickname and channel
-        self.current_nick_channel = tk.StringVar(value="Nickname | #Channel" + " ▶")
-        self.nick_channel_label = tk.Label(self.master, textvariable=self.current_nick_channel, padx=5, pady=1)
-        self.nick_channel_label.grid(row=3, column=0, sticky='w')
+        # self.current_nick_channel = tk.StringVar(value="Nickname | #Channel" + " ▶")
+        # self.nick_channel_label = tk.Label(self.master, textvariable=self.current_nick_channel, padx=5, pady=1)
+        # self.nick_channel_label.grid(row=3, column=0, sticky='w')
+
+        self.nick_channel_label = QLabel(self.name_and_entry_widget, text="Nickname | #Channel" + " ▶")
+        self.name_and_entry_widget.layout.addWidget(self.nick_channel_label)
 
         # Initialize the RudeChatClient and set the GUI reference
         self.irc_client = RudeChatClient(self.text_widget, self.server_text_widget, self.entry_widget, self.master, self)
@@ -286,43 +300,43 @@ class RudeGui:
 
     def set_screen_size(self):
         try:
-            width = self.master.winfo_screenwidth()
-            height =self.master.winfo_screenheight()
+            width = self.master.screen().size().width()
+            height = self.master.screen().size().height()
             screen_size = f"{width}x{height}"
         except Exception as e:
             logging.error(f"Unable to get screen size: {e} Using default variables.")
-            self.app_size = "1100x900"
-            self.config_window_size = "800x600"
-            self.colour_selector_size = "450x900"
+            self.app_size = [1100, 900]
+            self.config_window_size = [800, 600]
+            self.colour_selector_size = [450, 900]
 
         if screen_size == "3840x2160":  # 4K UHD
-            self.app_size = "2200x1800"
-            self.config_window_size = "1250x1200"
-            self.colour_selector_size = "520x900"
+            self.app_size = [2200, 1800]
+            self.config_window_size = [1250, 1200]
+            self.colour_selector_size = [520, 900]
         elif screen_size == "1920x1080":  # Full HD
-            self.app_size = "1600x900"
-            self.config_window_size = "900x800"
-            self.colour_selector_size = "450x900"
+            self.app_size = [1600, 900]
+            self.config_window_size = [900, 800]
+            self.colour_selector_size = [450, 900]
         elif screen_size == "2560x1440":  # QHD
-            self.app_size = "1920x1080"
-            self.config_window_size = "1600x900"
-            self.colour_selector_size = "450x900"
+            self.app_size = [1920, 1080]
+            self.config_window_size = [1600, 900]
+            self.colour_selector_size = [450, 900]
         elif screen_size == "1366x768":  # Common budget laptop
-            self.app_size = "1280x720"
-            self.config_window_size = "1024x600"
-            self.colour_selector_size = "450x900"
+            self.app_size = [1280, 720]
+            self.config_window_size = [1024, 600]
+            self.colour_selector_size = [450, 900]
         elif screen_size == "2560x1600":  # MacBook Retina
-            self.app_size = "1900x800"
-            self.config_window_size = "1440x900"
-            self.colour_selector_size = "450x900"
+            self.app_size = [1900, 800]
+            self.config_window_size = [1440, 900]
+            self.colour_selector_size = [450, 900]
         elif screen_size == "3440x1440":  # Ultra-wide
-            self.app_size = "3000x1200"
-            self.config_window_size = "2000x900"
-            self.colour_selector_size = "450x900"
+            self.app_size = [3000, 1200]
+            self.config_window_size = [2000, 900]
+            self.colour_selector_size = [450, 900]
         else:
-            self.app_size = "1100x900"
-            self.config_window_size = "800x600"
-            self.colour_selector_size = "450x900"
+            self.app_size = [1100, 900]
+            self.config_window_size = [800, 600]
+            self.colour_selector_size = [450, 900]
 
         return
 

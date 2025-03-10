@@ -1,17 +1,26 @@
 # Todo
 - [ ] Convert to Qt
 	- [ ] `__main__`
-	- [ ] `gui_config_window`
-	- [ ] `list_window`
-	- [ ] `rude_client`
-	- [ ] `rude_colours`
 	- [ ] `rude_dragndrop`
 	- [x] `rude_first_run`
 	- [ ] `rude_gui`
-	- [ ] `rude_popout`
-	- [ ] `server_config_window` (PARTIALLY COMPLETE)
-		- [ ] `channel_expand`
-	- [ ] `user_data_display`
+		- [ ] Restore Sidebar
+			- [ ] Users
+				- [ ] Restore right click menu
+			- [ ] Servers
+			- [ ] Channels
+				- [ ] Restore right click menu
+			- [ ] Entry bar
+				- [ ] Restore keybindings for TAB and arrow keys
+		- [ ] `rude_client`
+			- [ ] Fix listboxes
+		- [ ] `server_config_window`
+			- [ ] `channel_expand`
+		- [ ] `rude_popout`
+		- [ ] `rude_colours`
+		- [ ] `gui_config_window`
+		- [ ] `list_window`
+		- [ ] `user_data_display`
 
 # RudeChat IRC Client: For Fun & Reasons.
 ## How to Install
