@@ -1,6 +1,6 @@
 # Todo
 - [ ] Convert to Qt
-	- [ ] `channel_expand`
+	- [ ] `__main__`
 	- [ ] `gui_config_window`
 	- [ ] `list_window`
 	- [ ] `rude_client`
@@ -10,6 +10,7 @@
 	- [ ] `rude_gui`
 	- [ ] `rude_popout`
 	- [ ] `server_config_window` (PARTIALLY COMPLETE)
+		- [ ] `channel_expand`
 	- [ ] `user_data_display`
 
 # RudeChat IRC Client: For Fun & Reasons.
