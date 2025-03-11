@@ -61,7 +61,8 @@ class RudeGui:
         # Initialise other instance variables
         self.set_misc_variables()
 
-        self.start_irc_client()
+        # Initialise client
+        self.init_client()
 
         #TODO: set up keybinds
 
@@ -105,8 +106,8 @@ class RudeGui:
             self.user_label_fg = config.get('WIDGETS', 'user_label_fg', fallback='white')
             self.away_user_fg = config.get('WIDGETS', 'away_user_fg', fallback='red')
             self.need_who_chan_fg = config.get('WIDGETS', 'need_who_chan_fg', fallback='red')
-            self.channel_listbox_fg = config.get('WIDGETS', 'channels_fg', fallback='white')
-            self.channel_listbox_bg = config.get('WIDGETS', 'channels_bg', fallback='black')
+            self.channelList_fg = config.get('WIDGETS', 'channels_fg', fallback='white')
+            self.channelList_bg = config.get('WIDGETS', 'channels_bg', fallback='black')
             self.input_fg = config.get('WIDGETS', 'entry_fg', fallback='#C0FFEE')
             self.input_bg = config.get('WIDGETS', 'entry_bg', fallback='black')
             self.input_insertbackground = config.get('WIDGETS', 'entry_insertbackground', fallback='#C0FFEE')
@@ -140,8 +141,8 @@ class RudeGui:
             self.user_listbox_bg = 'black'
             self.user_label_bg = 'black'
             self.user_label_fg = 'white'
-            self.channel_listbox_fg = 'white'
-            self.channel_listbox_bg = 'black'
+            self.channelList_fg = 'white'
+            self.channelList_bg = 'black'
             self.input_fg = '#C0FFEE'
             self.input_bg = 'black'
             self.input_insertbackground = '#C0FFEE'
@@ -188,7 +189,9 @@ class RudeGui:
         self.textInput = QHBoxLayout()
         self.textInput.setSpacing(5)
 
-        self.userChanDisplay = QLabel(self.centralWidget, text="User@channel: ")
+        self.current_nick_channel = "Nickname | #Channel" + " ▶"
+
+        self.userChanDisplay = QLabel(self.centralWidget, text=self.current_nick_channel)
         self.textInput.addWidget(self.userChanDisplay)
 
         self.inputField = QLineEdit(self.centralWidget)
@@ -294,7 +297,7 @@ class RudeGui:
         except Exception as e:
             logging.error(f"An unexpected error occurred while saving nickname colors: {e}. Unable to save nickname colors.")
 
-    def start_irc_client(self):
+    def init_client(self):
         self.irc_client = RudeChatClient(self.displayText, self.inputField, self.master, self)
         self.init_input_menu()
         self.init_message_menu()
@@ -339,3 +342,148 @@ class RudeGui:
         else:
             # Fallback for unknown systems
             self.emoji_type = "Arial"  # A generic font as a last resort
+
+    async def init_client_with_config(self, config_file, fallback_server_name):
+        irc_client = None
+        try:
+            irc_client = RudeChatClient(self.displayText, self.inputField, self.master, self)
+            if self.log_on:
+                logging.info(f"initializing client {irc_client} in progress")
+            irc_client.client_event_loops[irc_client] = asyncio.get_event_loop()  # Store a reference to the event loop
+            irc_client.tasks = {}  # Create a dictionary to store references to tasks
+        except Exception as e:
+            logging.error(f"Error initializing IRC client: {e}")
+            return  # Stop further execution if client initialization fails
+
+        try:
+            irc_client.tasks["load_ascii_art_macros"] = asyncio.create_task(irc_client.load_ascii_art_macros(), name="load_ascii_art_macros_task")
+            if self.log_on:
+                logging.info(f"Created ASCII art task")
+        except Exception as e:
+            logging.error(f"Error loading ASCII art macros: {e}")
+
+        try:
+            await irc_client.read_config(config_file)
+        except Exception as e:
+            logging.error(f"Error reading configuration from {config_file}: {e}")
+
+        try:
+            await irc_client.connect(config_file)
+        except Exception as e:
+            logging.error(f"Error connecting with configuration {config_file}: {e}")
+
+        try:
+            # Use the server_name from config, otherwise fallback
+            server_name = irc_client.server_name if irc_client.server_name else fallback_server_name
+            self.add_client(server_name, irc_client)
+        except Exception as e:
+            logging.error(f"Error adding client {server_name}: {e}")
+
+        try:
+            # Create and store references to tasks
+            irc_client.tasks["keep_alive"] = asyncio.create_task(irc_client.keep_alive(config_file), name="keep_alive_task")
+        except Exception as e:
+            logging.error(f"Error starting keep_alive task: {e}")
+
+        try:
+            irc_client.tasks["auto_save"] = asyncio.create_task(irc_client.auto_save(), name="auto_save_task")
+        except Exception as e:
+            logging.error(f"Error starting auto_save task: {e}")
+
+        try:
+            irc_client.tasks["auto_trim"] = asyncio.create_task(irc_client.auto_trim(), name="auto_trim_task")
+        except Exception as e:
+            logging.error(f"Error starting auto_trim task: {e}")
+
+        try:
+            irc_client.tasks["handle_incoming_message"] = asyncio.create_task(irc_client.handle_incoming_message(config_file), name="handle_incoming_message_task")
+        except Exception as e:
+            logging.error(f"Error starting handle_incoming_message task: {e}")
+
+        try:
+            irc_client.tasks["auto_who"] = asyncio.create_task(irc_client.request_who_for_all_channels(), name="auto_who_task")
+        except Exception as e:
+            logging.error(f"Error starting auto_who task: {e}")
+
+        try:
+            irc_client.tasks["auto_away"] = asyncio.create_task(irc_client.away_watcher(), name="auto_away_task")
+        except Exception as e:
+            logging.error(f"Error starting auto_away task: {e}")
+
+        try:
+            irc_client.tasks["auto_clean"] = asyncio.create_task(irc_client.the_cleaner(), name="auto_clean")
+        except Exception as e:
+            logging.error(f"Error starting auto_clean task: {e}")
+
+        try:
+            irc_client.tasks["away_update"] = asyncio.create_task(irc_client.away_updater(), name="away_update")
+        except Exception as e:
+            logging.error(f"Error starting away_updater task: {e}")
+
+        try:
+            irc_client.tasks["el_worker"] = asyncio.create_task(irc_client.the_worker(), name="la_worker")
+        except Exception as e:
+            logging.error(f"Error starting the_worker task: {e}") #thread_killer
+
+        try:
+            irc_client.tasks["who_missing_users"] = asyncio.create_task(irc_client.request_who_for_missing_users(), name="who_missing")
+        except Exception as e:
+            logging.error(f"Error starting request_who_for_missing_users task: {e}")
+
+        try:
+            irc_client.tasks["thread_killer"] = asyncio.create_task(irc_client.thread_killer(), name="thread_killer")
+        except Exception as e:
+            logging.error(f"Error starting thread_killer task: {e}")
+
+        if self.log_on:
+            logging.info("Finished Creating Client Tasks: auto_who, auto_away, handle_incoming_message, auto_trim, auto_save, & keep_alive")
+
+        try:
+            self.bind_return_key()
+        except Exception as e:
+            logging.error(f"Error binding return key: {e}")
+        if self.log_on:
+            logging.info("Client initializing completed.")
+
+    def bind_return_key(self):
+        loop = asyncio.get_event_loop()
+        # self.entry_widget.bind('<Return>', lambda event: loop.create_task(self.on_enter_key(event), name="on_enter_key")) TODO
+
+    def highlight_who_channels(self):
+        try:
+            # Loop through the items in the channelList
+            for index in range(self.channelList.count()):
+                # Get the channel from the listbox
+                channel = self.channelList.itemFromIndex(index)
+
+                # Check if the stripped channel is in the away_users list
+                if channel in self.irc_client.cap_who_for_chan:
+                    # Make sure the index exists in the channelList
+                    if 0 <= index < self.channelList.count():
+                        # Change the foreground color 
+                        self.channelList.itemconfig(index, {'fg': self.channelList_fg})
+                else:
+                    # Make sure the index exists in the channelList
+                    if 0 <= index < self.channelList.size():
+                        # Reset the foreground color 
+                        self.channelList.itemconfig(index, {'fg': self.need_who_chan_fg})
+        except Exception as e:
+            logging.error(f"Exception in highlight_who_channels: {e}")
+    
+    def get_mode_symbol(self, mode):
+        """Return the symbol corresponding to the IRC mode."""
+        return self.irc_client.mode_to_symbol.get(mode, '')
+
+    def get_user_mode(self, user, channel):
+        """Retrieve the user's mode for the given channel."""
+        channel_modes = self.irc_client.user_modes.get(channel, {})
+        user_modes = channel_modes.get(user, set())
+        return next(iter(user_modes), None)  # Get the first mode if available, else None
+
+    def update_nick_channel_label(self):
+        """Update the label with the current nickname and channel."""
+        nickname = self.irc_client.nickname if self.irc_client.nickname else "Nickname"
+        channel = self.irc_client.current_channel if self.irc_client.current_channel else "#Channel"
+        user_mode = self.get_user_mode(nickname, channel)
+        mode_symbol = self.get_mode_symbol(user_mode) if user_mode else ''
+        self.current_nick_channel = f"{mode_symbol}{nickname} | {channel}" + " ▷"

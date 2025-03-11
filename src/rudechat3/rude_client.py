@@ -956,7 +956,7 @@ class RudeChatClient:
     def update_gui_channel_list(self):
         try:
             # Clear existing items
-            self.gui.channel_listbox.delete(0, tk.END)
+            self.gui.channelList.clear()
 
             # Sort channels by the number of prefix characters at the beginning
             sorted_channels = sorted(
@@ -971,7 +971,7 @@ class RudeChatClient:
 
             # Insert sorted channels into the listbox
             for chan in sorted_channels:
-                self.gui.channel_listbox.insert(tk.END, chan)
+                self.gui.channelList.insert(tk.END, chan)
 
             # Update and restore the highlighted background color for all previously highlighted channels
             updated_highlighted_channels = {}
@@ -981,8 +981,8 @@ class RudeChatClient:
                     if old_index is not None:
                         # Find the new index in the current listbox
                         new_index = None
-                        for idx in range(self.gui.channel_listbox.size()):
-                            if self.gui.channel_listbox.get(idx) == channel:
+                        for idx in range(self.gui.channelList.size()):
+                            if self.gui.channelList.get(idx) == channel:
                                 new_index = idx
                                 break
 
@@ -992,14 +992,13 @@ class RudeChatClient:
 
                             # Set the background color directly based on the dictionary entry
                             bg_color = highlighted_info.get('bg', self.mention_note_color)
-                            self.gui.channel_listbox.itemconfig(new_index, {'bg': bg_color})
+                            self.gui.channelList.itemconfig(new_index, {'bg': bg_color})
 
                             # Update the dictionary with the new index
                             updated_highlighted_channels[channel] = highlighted_info
 
             # Update the highlighted_channels dictionary with the new indexes
             self.highlighted_channels[self.server_name] = updated_highlighted_channels
-            self.gui.scroll_channel_list()
             self.gui.highlight_who_channels()
         except Exception as e:
             logging.error(f"Error in update_gui_channel_list: {e}")
@@ -1441,11 +1440,11 @@ class RudeChatClient:
             else:
                 # If it's not the currently viewed channel, highlight the channel in green in the Listbox
                 if target != self.current_channel:
-                    for idx in range(self.gui.channel_listbox.size()):
-                        if self.gui.channel_listbox.get(idx) == target:
-                            current_bg = self.gui.channel_listbox.itemcget(idx, 'bg')
+                    for idx in range(self.gui.channelList.size()):
+                        if self.gui.channelList.get(idx) == target:
+                            current_bg = self.gui.channelList.itemcget(idx, 'bg')
                             if current_bg != 'red':
-                                self.gui.channel_listbox.itemconfig(idx, {'bg': self.activity_note_color})
+                                self.gui.channelList.itemconfig(idx, {'bg': self.activity_note_color})
                             break
         except Exception as e:
             logging.error(f"Exception in handle_action_ctcp: {e}")
@@ -1471,7 +1470,7 @@ class RudeChatClient:
     async def notify_user_of_mention(self, server, channel, sender, message):
         notification_msg = f"<{sender}> {message}"
 
-        # Highlight the mentioned channel in the channel_listbox if it's not selected
+        # Highlight the mentioned channel in the channelList if it's not selected
         if (channel != self.current_channel) or (sender != self.current_channel):
             self.highlight_channel(channel)
 
@@ -1488,10 +1487,10 @@ class RudeChatClient:
             if channel in self.joined_channels and self.gui.irc_client == self:
                 if channel != self.current_channel:
                     # Find and highlight the channel in the GUI listbox
-                    for idx in range(self.gui.channel_listbox.size()):
-                        if self.gui.channel_listbox.get(idx) == channel:
-                            self.gui.channel_listbox.itemconfig(idx, {'bg': self.mention_note_color})
-                            self.gui.channel_listbox.see(idx)
+                    for idx in range(self.gui.channelList.size()):
+                        if self.gui.channelList.get(idx) == channel:
+                            self.gui.channelList.itemconfig(idx, {'bg': self.mention_note_color})
+                            self.gui.channelList.see(idx)
                             break
         except Exception as e:
             logging.error(f"Exception in highlighted_channel: {e}")
@@ -1980,11 +1979,11 @@ class RudeChatClient:
         # Attempt to find the channel in the GUI listbox and highlight it
         if self.gui.irc_client == self:
             if highlighted_channel != self.current_channel:
-                for idx in range(self.gui.channel_listbox.size()):
-                    if self.gui.channel_listbox.get(idx) == highlighted_channel:
-                        current_bg = self.gui.channel_listbox.itemcget(idx, 'bg')
+                for idx in range(self.gui.channelList.size()):
+                    if self.gui.channelList.get(idx) == highlighted_channel:
+                        current_bg = self.gui.channelList.itemcget(idx, 'bg')
                         if current_bg != 'red':
-                            self.gui.channel_listbox.itemconfig(idx, {'bg': self.activity_note_color})
+                            self.gui.channelList.itemconfig(idx, {'bg': self.activity_note_color})
                         break
 
     def save_highlight(self, channel, joined_index, is_mention):
@@ -4978,8 +4977,8 @@ class RudeChatClient:
             self.gui.insert_text_widget(f"{messages}\n")
 
     def pop_out_switch(self):
-        # Get the existing channel list from the channel_listbox
-        channel_list = self.gui.channel_listbox.get(0, self.gui.channel_listbox.size())
+        # Get the existing channel list from the channelList
+        channel_list = self.gui.channelList.get(0, self.gui.channelList.size())
 
         # Pick a channel at random from the channel list
         if channel_list:
@@ -5006,11 +5005,11 @@ class RudeChatClient:
             except Exception as e:
                 logging.error(f"Error1 force_click: {e}")
 
-        listbox_size = self.gui.channel_listbox.size()
+        listbox_size = self.gui.channelList.size()
             
         # Iterate through the listbox to find the index of the current selected channel
         for i in range(listbox_size):
-            item_at_index = self.gui.channel_listbox.get(i)
+            item_at_index = self.gui.channelList.get(i)
             if self.log_on:
                 logging.info(f"item at index: {item_at_index}")
 

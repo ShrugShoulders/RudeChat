@@ -46,17 +46,18 @@ def main():
     asyncio.set_event_loop(new_loop)
 
     loop = asyncio.get_event_loop()
-    # loop.create_task(initialize_clients(main))
+    loop.create_task(initialize_clients(main))
 
-    def tk_update():
+    def qt_update():
         try:
             loop.stop()
             loop.run_forever()
         finally:
             loop.stop()
-            root.after(100, tk_update)
+            QTimer.singleShot(100, qt_update)
 
     # root.after(100, tk_update)
+    QTimer.singleShot(100, qt_update)
     root.show()
     app.exec()
 
