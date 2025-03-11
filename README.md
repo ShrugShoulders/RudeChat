@@ -1,8 +1,6 @@
 # Todo
 - [ ] Convert to Qt
 	- [ ] `__main__`
-	- [ ] `rude_dragndrop`
-	- [x] `rude_first_run`
 	- [ ] `rude_gui`
 		- [ ] Restore Sidebar
 			- [ ] Users
@@ -21,6 +19,8 @@
 		- [ ] `gui_config_window`
 		- [ ] `list_window`
 		- [ ] `user_data_display`
+	- [ ] `rude_dragndrop`
+	- [x] `rude_first_run`
 
 # RudeChat IRC Client: For Fun & Reasons.
 ## How to Install
