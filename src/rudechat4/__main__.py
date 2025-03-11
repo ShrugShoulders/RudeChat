@@ -34,10 +34,10 @@ from rudechat4.global_variables import *
 
 def main():
     CopyConfigs()
-    first_run = FirstRun()
+    app = QApplication(sys.argv)
+    first_run = FirstRun(app)
     if first_run.first_run_detect == 0:
         first_run.open_client_config_window()
-    app = QApplication(sys.argv)
     
     root = QMainWindow()
     main = RudeGui(root)

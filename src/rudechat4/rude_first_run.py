@@ -3,9 +3,10 @@ from rudechat4.global_variables import *
 from rudechat4.server_config_window import ServerConfigWindow
 
 class FirstRun:
-    def __init__(self):
+    def __init__(self, app):
         self.first_run_detect = self.load_first_run()
-        
+        self.app = app
+
         self.window_size = "600x400"
         self.read_config()
 
@@ -93,7 +94,6 @@ class FirstRun:
             QTimer.singleShot(200, close_window)
             return
 
-        app = QApplication()
         self.main_window = QWidget()
         self.main_window.setWindowTitle("RudeChat: First Run Configuration")
         self.main_window.resize(450, 500)
@@ -134,5 +134,5 @@ class FirstRun:
         save_button.clicked.connect(config_window.save_config)
         self.main_window.layout.addWidget(save_button)
         self.main_window.show()
-        app.exec()
+        self.app.exec()
 
