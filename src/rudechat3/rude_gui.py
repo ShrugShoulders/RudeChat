@@ -4,6 +4,24 @@ from rudechat3.rude_client import RudeChatClient
 from rudechat3.nick_cleaner import clean_nicknames
 from rudechat3.format_decoder import decoder
 
+class RudeTextEdit(QTextEdit):
+            def mousePressEvent(self, e):
+                if self.is_anchor_at(e.pos()):
+                    url = self.get_anchor_at(e.pos())
+                    webbrowser.open(url)
+                else:
+                    e.ignore()
+
+            def is_anchor_at(self, pos):
+                cursor = self.cursorForPosition(pos)
+                return cursor.charFormat().isAnchor()
+            
+            def get_anchor_at(self, pos):
+                cursor = self.cursorForPosition(pos)
+                char_format = cursor.charFormat()
+                if char_format.isAnchor():
+                    return char_format.anchorHref()
+
 class RudeGui:
     def __init__(self, master):
         self.master = master
@@ -182,11 +200,7 @@ class RudeGui:
         self.topicLabel = QLabel(self.centralWidget, text="Topic: ")
         self.chatArea.addWidget(self.topicLabel)
 
-        class NoCursorTextEdit(QTextEdit):
-            def mousePressEvent(self, e):
-                e.ignore()
-
-        self.displayText = NoCursorTextEdit(self.centralWidget)
+        self.displayText = RudeTextEdit(self.centralWidget)
         self.displayText.setReadOnly(True)
         self.displayText.setAcceptRichText(True)
         self.chatArea.addWidget(self.displayText)
@@ -561,6 +575,9 @@ class RudeGui:
                 tag_name = f"url_{url}"
                 self.url_cache[url] = tag_name
                 char_format = QTextCharFormat()
+                char_format.setAnchor(True)
+                char_format.setAnchorHref(url)
+                
                 char_format.setForeground(QColor("blue"))
                 char_format.setFontUnderline(True)
                 self.tag_cache[tag_name] = char_format
@@ -623,3 +640,6 @@ class RudeGui:
             self.insert_and_scroll()
         except Exception as e:
             logging.error(f"Exception in insert_text {e}")
+
+    def open_url(self, url):
+        webbrowser.open(url)
