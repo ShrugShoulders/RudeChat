@@ -1,7 +1,7 @@
-from rudechat3.shared_imports import *
-from rudechat3.global_variables import *
-from rudechat3.channel_expand import ChannelExp
-from rudechat3.rude_logger import configure_logging
+from rudechat4.shared_imports import *
+from rudechat4.global_variables import *
+from rudechat4.channel_expand import ChannelExp
+from rudechat4.rude_logger import configure_logging
 
 class ServerConfigWindow:
     def __init__(self, parent, config_file, close_callback):

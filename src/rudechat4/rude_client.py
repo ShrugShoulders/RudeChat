@@ -1,12 +1,12 @@
 #!/usr/bin/env python
-from rudechat3.list_window import ChannelListWindow
-from rudechat3.rude_pronouns import replace_pronouns
-from rudechat3.rude_auto_away import AutoAway
-from rudechat3.rude_friends import RudeFriends
-from rudechat3.shared_imports import *
-from rudechat3.rude_logger import configure_logging
-from rudechat3.rude_mock import RudeMock
-from rudechat3.global_variables import *
+from rudechat4.list_window import ChannelListWindow
+from rudechat4.rude_pronouns import replace_pronouns
+from rudechat4.rude_auto_away import AutoAway
+from rudechat4.rude_friends import RudeFriends
+from rudechat4.shared_imports import *
+from rudechat4.rude_logger import configure_logging
+from rudechat4.rude_mock import RudeMock
+from rudechat4.global_variables import *
 
 
 class RudeChatClient:
@@ -1351,11 +1351,11 @@ class RudeChatClient:
                     match ctcp_command:
                         case "VERSION" | "version":
                             if tokens.command == "PRIVMSG":
-                                await self.send_message(f'NOTICE {sender} :\x01VERSION RudeChat3.1.4\x01')
+                                await self.send_message(f'NOTICE {sender} :\x01VERSION RudeChat4.0.0\x01')
                                 self.add_server_message(f"CTCP: {sender} {target}: {ctcp_command}\n")
                         case "MOO" | "moo":
                             if tokens.command == "PRIVMSG":
-                                await self.send_message(f'NOTICE {sender} :\x01MoooOOO! Hi Cow!! RudeChat3.1.4\x01')
+                                await self.send_message(f'NOTICE {sender} :\x01MoooOOO! Hi Cow!! RudeChat4.0.0\x01')
                                 self.add_server_message(f"CTCP: {sender} {target}: {ctcp_command}\n")
                         case "PING" | "ping":
                             if tokens.command == "PRIVMSG":
@@ -1364,7 +1364,7 @@ class RudeChatClient:
                                 self.add_server_message(f"CTCP: {sender} {target}: {ctcp_command}\n")
                         case "FINGER" | "finger":
                             if tokens.command == "PRIVMSG":
-                                await self.send_message(f'NOTICE {sender} :\x01FINGER: {self.nickname} {self.server_name} RudeChat3.1.4\x01')
+                                await self.send_message(f'NOTICE {sender} :\x01FINGER: {self.nickname} {self.server_name} RudeChat4.0.0\x01')
                                 self.add_server_message(f"CTCP: {sender} {target}: {ctcp_command}\n")
                         case "CLIENTINFO" | "clientinfo":
                             if tokens.command == "PRIVMSG":
@@ -3759,7 +3759,7 @@ class RudeChatClient:
     async def spec_quit(self):
         self.gui.save_nickname_colors()
         self.remove_bang_channels()
-        await self.send_message(f"QUIT :RudeChat3")
+        await self.send_message(f"QUIT :RudeChat4")
         self.loop_running = False
         await self.stop_async_loop()
         return False 

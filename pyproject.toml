@@ -4,10 +4,11 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "RudeChat"
-version = "3.1.4"
+version = "4.0.0"
 description = "RudeChat is a Python IRC client designed to be fast, portable, and fun."
 authors = [
-    { name = "Irish" }
+    { name = "Irish" },
+	{ name = "Bash Elliott" }
 ]
 license = { text = "GNU General Public License v3 (GPLv3)" }
 classifiers = [
@@ -20,11 +21,11 @@ classifiers = [
 homepage = "https://github.com/ShrugShoulders/RudeChat"
 
 [tool.setuptools]
-packages = ["rudechat3"]
+packages = ["rudechat4"]
 package-dir = {"" = "src"}
 
 [tool.setuptools.package-data]
-"rudechat3" = [
+"rudechat4" = [
     "Art/*",
     "Sounds/*",
     "Fortune Lists/*",
@@ -41,4 +42,4 @@ package-dir = {"" = "src"}
 ]
 
 [project.scripts]
-rudechat = "rudechat3.__main__:main"
+rudechat = "rudechat4.__main__:main"

@@ -1,5 +1,5 @@
-from rudechat3.shared_imports import *
-from rudechat3.global_variables import *
+from rudechat4.shared_imports import *
+from rudechat4.global_variables import *
 
 
 async def initialize_clients(app):

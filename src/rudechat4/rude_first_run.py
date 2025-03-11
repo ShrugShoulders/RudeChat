@@ -1,6 +1,6 @@
-from rudechat3.shared_imports import *
-from rudechat3.global_variables import *
-from rudechat3.server_config_window import ServerConfigWindow
+from rudechat4.shared_imports import *
+from rudechat4.global_variables import *
+from rudechat4.server_config_window import ServerConfigWindow
 
 class FirstRun:
     def __init__(self):

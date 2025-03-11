@@ -25,7 +25,7 @@
 # RudeChat IRC Client: For Fun & Reasons.
 ## How to Install
 ### Windows (Installer)
-Download the installer. Windows installs to `%LOCALAPPDATA%\Programs\RudeChat3`.
+Download the installer. Windows installs to `%LOCALAPPDATA%\Programs\RudeChat4`.
 ### Linux (Binary/.deb)
 - Download the binary and extract (recommended for Fedora Users).
 - CD to the extracted directory and use `./rudechat`.

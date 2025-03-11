@@ -1,16 +1,16 @@
 #!/usr/bin/env python
-from rudechat3.rude_client import RudeChatClient
-from rudechat3.server_config_window import ServerConfigWindow
-from rudechat3.rude_colours import RudeColours
-from rudechat3.format_decoder import Attribute, decoder
-from rudechat3.gui_config_window import GuiConfigWindow
-from rudechat3.rude_popout import RudePopOut
-from rudechat3.shared_imports import *
-from rudechat3.rude_dragndrop import DragDropListbox
-from rudechat3.nick_cleaner import clean_nicknames
-from rudechat3.rude_logger import configure_logging
-from rudechat3.user_data_display import RudeToolTip
-from rudechat3.global_variables import *
+from rudechat4.rude_client import RudeChatClient
+from rudechat4.server_config_window import ServerConfigWindow
+from rudechat4.rude_colours import RudeColours
+from rudechat4.format_decoder import Attribute, decoder
+from rudechat4.gui_config_window import GuiConfigWindow
+from rudechat4.rude_popout import RudePopOut
+from rudechat4.shared_imports import *
+from rudechat4.rude_dragndrop import DragDropListbox
+from rudechat4.nick_cleaner import clean_nicknames
+from rudechat4.rude_logger import configure_logging
+from rudechat4.user_data_display import RudeToolTip
+from rudechat4.global_variables import *
 try:
     import pystray
 except Exception as e:
@@ -1614,7 +1614,7 @@ class RudeGui:
         try:       
             for irc_client in self.clients.values():
                 await irc_client.save_channel_messages()
-                quit_cmd = f'QUIT :{quit_message}' if quit_message else 'QUIT :RudeChat3 https://github.com/ShrugShoulders/RudeChat'
+                quit_cmd = f'QUIT :{quit_message}' if quit_message else 'QUIT :RudeChat4 https://github.com/ShrugShoulders/RudeChat'
                 await self.irc_client.send_message(quit_cmd)
         except Exception as e:
             logging.error(f"Exception in send_quit_to_all_clients: {e}")

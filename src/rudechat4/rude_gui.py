@@ -1,8 +1,8 @@
-from rudechat3.shared_imports import *
-from rudechat3.global_variables import *
-from rudechat3.rude_client import RudeChatClient
-from rudechat3.nick_cleaner import clean_nicknames
-from rudechat3.format_decoder import decoder
+from rudechat4.shared_imports import *
+from rudechat4.global_variables import *
+from rudechat4.rude_client import RudeChatClient
+from rudechat4.nick_cleaner import clean_nicknames
+from rudechat4.format_decoder import decoder
 
 class RudeTextEdit(QTextEdit):
     def mousePressEvent(self, e):

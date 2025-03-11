@@ -1,4 +1,4 @@
-from rudechat3.rude_logger import configure_logging
+from rudechat4.rude_logger import configure_logging
 import logging
 
 class RudeMock:

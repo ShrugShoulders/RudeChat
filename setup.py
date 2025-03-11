@@ -2,12 +2,12 @@ from setuptools import setup, find_packages
 import platform
 
 if platform.system() == "Darwin":
-    VERSION = '3.1.4'
+    VERSION = '4.0.0'
 
-    APP = ['src/rudechat3/__main__.py']
+    APP = ['src/rudechat4/__main__.py']
     DATA_FILES = []
     OPTIONS = {
-        'iconfile': 'src/rudechat3/rude.icns', 
+        'iconfile': 'src/rudechat4/rude.icns', 
         'excludes': ['rubicon'],
         'plist': {
             'CFBundleName': 'RudeChat',
@@ -24,10 +24,10 @@ if platform.system() == "Darwin":
         name="RudeChat",
         version=VERSION,
         description="RudeChat is a Python IRC client designed to be fast, portable, and fun.",
-        author="Irish",
+        author="Irish, Bash Elliott",
         packages=find_packages(where="src"),
         package_dir={"": "src"},
-        scripts=["src/rudechat3/__main__.py"],
+        scripts=["src/rudechat4/__main__.py"],
         install_requires=[
             'pytz',
             'asyncio',
@@ -40,6 +40,7 @@ if platform.system() == "Darwin":
             'pillow',
             'pystray',
             'emoji',
+            'PySide6'
         ],
         classifiers=[
             "Programming Language :: Python :: 3",
@@ -47,7 +48,7 @@ if platform.system() == "Darwin":
             "Operating System :: OS Independent",
         ],
         package_data={
-            "rudechat3": [
+            "rudechat4": [
                 "Art/*",
                 "Sounds/*",
                 "Fortune Lists/*",
@@ -65,7 +66,7 @@ if platform.system() == "Darwin":
         },
         entry_points={
             'console_scripts': [
-                'rudechat=rudechat3.__main__:main',
+                'rudechat=rudechat4.__main__:main',
             ],
         },
         # MacOS specific (Build using `python3 setup.py py2app` in root directory)
@@ -78,12 +79,12 @@ if platform.system() == "Darwin":
 else:
     setup(
         name="RudeChat",
-        version="3.1.4",
+        version="4.0.0",
         description="RudeChat is a Python IRC client designed to be fast, portable, and fun.",
-        author="Irish",
+        author="Irish, Bash Elliott",
         packages=find_packages(where="src"),
         package_dir={"": "src"},
-        scripts=["src/rudechat3/__main__.py"],
+        scripts=["src/rudechat4/__main__.py"],
         install_requires=[
             'pytz',
             'asyncio',
@@ -96,6 +97,7 @@ else:
             'pillow',
             'pystray',
             'emoji',
+            'PySide6'
         ],
         classifiers=[
             "Programming Language :: Python :: 3",
@@ -104,7 +106,7 @@ else:
         ],
      
         package_data={
-            "rudechat3": [
+            "rudechat4": [
                 "Art/*",
                 "Sounds/*",
                 "Fortune Lists/*",
@@ -123,7 +125,7 @@ else:
      
         entry_points={
             'console_scripts': [
-                'rudechat=rudechat3.__main__:main',
+                'rudechat=rudechat4.__main__:main',
             ],
         },
     )

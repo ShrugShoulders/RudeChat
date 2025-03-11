@@ -17,20 +17,20 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
 # Import Config Copy Function
-from rudechat3.copy_configs import CopyConfigs
+from rudechat4.copy_configs import CopyConfigs
 # Import First Run Configs
-from rudechat3.rude_first_run import FirstRun
+from rudechat4.rude_first_run import FirstRun
 # Import GUI
-# from rudechat3.rude_gui import RudeGui
-from rudechat3.rude_gui import RudeGui
+# from rudechat4.rude_gui import RudeGui
+from rudechat4.rude_gui import RudeGui
 # Import Client
-from rudechat3.rude_client import RudeChatClient
+from rudechat4.rude_client import RudeChatClient
 # Import Initializer
-from rudechat3.init_clients import initialize_clients
+from rudechat4.init_clients import initialize_clients
 # Everything else.
-from rudechat3.shared_imports import *
+from rudechat4.shared_imports import *
 # Global variables
-from rudechat3.global_variables import *
+from rudechat4.global_variables import *
 
 def main():
     CopyConfigs()

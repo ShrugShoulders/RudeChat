@@ -1,22 +1,22 @@
-# rudechat3.spec
+# rudechat4.spec
 # -*- mode: python ; coding: utf-8 -*-
 
 block_cipher = None
 
 a = Analysis(
-    ['src/rudechat3/__main__.py'],
+    ['src/rudechat4/__main__.py'],
     pathex=['src'],
     binaries=[],
     datas=[
-        ('src/rudechat3/*.py', 'rudechat3'),
-        ('src/rudechat3/*.ini', 'rudechat3'),
-        ('src/rudechat3/*.ico', 'rudechat3'),
-        ('src/rudechat3/*.png', 'rudechat3'),
-        ('src/rudechat3/libera.rudeserver', 'rudechat3'),
-        ('src/rudechat3/Art/*', 'rudechat3/Art'),
-        ('src/rudechat3/Sounds/*', 'rudechat3/Sounds'),
-        ('src/rudechat3/Splash/*', 'rudechat3/Splash'),
-        ('src/rudechat3/Fortune Lists/*', 'rudechat3/Fortune Lists'),
+        ('src/rudechat4/*.py', 'rudechat4'),
+        ('src/rudechat4/*.ini', 'rudechat4'),
+        ('src/rudechat4/*.ico', 'rudechat4'),
+        ('src/rudechat4/*.png', 'rudechat4'),
+        ('src/rudechat4/libera.rudeserver', 'rudechat4'),
+        ('src/rudechat4/Art/*', 'rudechat4/Art'),
+        ('src/rudechat4/Sounds/*', 'rudechat4/Sounds'),
+        ('src/rudechat4/Splash/*', 'rudechat4/Splash'),
+        ('src/rudechat4/Fortune Lists/*', 'rudechat4/Fortune Lists'),
         ('/home/irish/.local/lib/python3.13/site-packages/emoji/unicode_codes/emoji.json', 'emoji/unicode_codes')
     ],
     hiddenimports=['plyer.platforms', 'plyer.platforms.linux', 'plyer.platforms.linux.notification', 'emoji'],
@@ -36,7 +36,7 @@ exe = EXE(
     a.scripts,
     [],
     exclude_binaries=True,
-    name='rudechat3',
+    name='rudechat4',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
@@ -44,7 +44,7 @@ exe = EXE(
     upx_exclude=[],
     runtime_tmpdir=None,
     console=False,
-    icon='src/rudechat3/rude.ico'
+    icon='src/rudechat4/rude.ico'
 )
 
 coll = COLLECT(
@@ -55,5 +55,5 @@ coll = COLLECT(
     strip=False,
     upx=True,
     upx_exclude=[],
-    name='rudechat3',
+    name='rudechat4',
 )

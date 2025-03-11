@@ -13,11 +13,11 @@ import logging
 from plyer import notification as plyer_notification
 from threading import Thread
 from tkinter import scrolledtext, Listbox, Scrollbar, Tk, Frame, Label, Entry, Listbox, Menu, Scrollbar, StringVar, PhotoImage 
-from rudechat3.format_decoder import Attribute, decoder
-from rudechat3.rude_pronouns import replace_pronouns
-from rudechat3.rude_logger import configure_logging
-from rudechat3.user_data_display import RudeToolTip
-from rudechat3.global_variables import *
+from rudechat4.format_decoder import Attribute, decoder
+from rudechat4.rude_pronouns import replace_pronouns
+from rudechat4.rude_logger import configure_logging
+from rudechat4.user_data_display import RudeToolTip
+from rudechat4.global_variables import *
 
 
 class RudePopOut:

@@ -1,5 +1,5 @@
 import os
-from rudechat3.global_variables import *
+from rudechat4.global_variables import *
 
 
 

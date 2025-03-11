@@ -3,7 +3,7 @@ import os
 import tkinter as tk
 from tkinter import messagebox, simpledialog, colorchooser
 from tkcolorpicker import askcolor
-from rudechat3.global_variables import *
+from rudechat4.global_variables import *
 
 
 class RudeColours:

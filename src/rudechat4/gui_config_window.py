@@ -2,7 +2,7 @@ import tkinter as tk
 from tkinter import ttk
 import configparser
 import os
-from rudechat3.global_variables import *
+from rudechat4.global_variables import *
 
 
 class GuiConfigWindow:
