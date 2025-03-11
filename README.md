@@ -1,17 +1,17 @@
 # Todo
 - [ ] Convert to Qt
-	- [ ] `__main__`
+	- [x] `__main__`
 	- [ ] `rude_gui`
 		- [ ] Restore Sidebar
-			- [ ] Users
+			- [x] Users
 				- [ ] Restore right click menu
-			- [ ] Servers
-			- [ ] Channels
+			- [x] Servers
+			- [x] Channels
 				- [ ] Restore right click menu
-			- [ ] Entry bar
+			- [x] Entry bar
 				- [ ] Restore keybindings for TAB and arrow keys
 		- [ ] `rude_client`
-			- [ ] Fix listboxes
+			- [x] Fix listboxes
 		- [ ] `server_config_window`
 			- [ ] `channel_expand`
 		- [ ] `rude_popout`
