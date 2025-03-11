@@ -266,8 +266,8 @@ class RudeGui:
 
         self.serverList = QListWidget(self.centralWidget)
         self.serverList.setResizeMode(QListView.ResizeMode.Adjust)
+        self.serverList.itemClicked.connect(self.on_server_change)
         self.serverList.setItemAlignment(Qt.AlignmentFlag.AlignLeading)
-        self.serverList.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
         self.serversSelector.addWidget(self.serverList)
 
         self.sidebar.addLayout(self.serversSelector)
@@ -759,7 +759,8 @@ class RudeGui:
 
             # If there's a previous server, reset its background color to black
             if self.previous_server_index is not None:
-                self.serverList.itemconfig(self.previous_server_index, {'bg': self.server_list_bg, 'fg': self.server_list_fg})
+                self.serverList.item(self.previous_server_index).setBackground(QColor(self.server_list_bg))
+                self.serverList.item(self.previous_server_index).setForeground(QColor(self.server_list_fg))
 
             # Get the selected server from the listbox
             selected_server = self.serverList.item(selected_server_index)

@@ -4555,7 +4555,7 @@ class RudeChatClient:
             if len(args) > 1:
                 file_name_arg = args[1]
                 # Construct the potential file path using the absolute path
-                potential_path = os.path.join(G_CONFIG_DIR, "Fortune Lists", f"{file_name_arg}.txt")
+                potential_path = os.path.join(G_SOURCE_DIR, "Fortune Lists", f"{file_name_arg}.txt")
 
                 # Check if the provided argument corresponds to a valid fortune file
                 if os.path.exists(potential_path):
@@ -4627,7 +4627,7 @@ class RudeChatClient:
         return textwrap.fill(text, width)
 
     def get_fortune_file(self, file_name=None):
-        fortune_directory = os.path.join(G_CONFIG_DIR, "Fortune Lists")
+        fortune_directory = os.path.join(G_SOURCE_DIR, "Fortune Lists")
         
         if file_name:
             return os.path.join(fortune_directory, file_name + ".txt")
@@ -4748,7 +4748,7 @@ class RudeChatClient:
             self.gui.insert_text_widget("No channel selected. Use /join to join a channel.\n")
 
     async def refresh_user_list_for_current_channel(self):
-        self.gui.clear_userList()
+        self.gui.clear_user_list()
         if self.current_channel:
             await self.send_message(f'NAMES {self.current_channel}')
         else:
