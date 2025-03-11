@@ -2,6 +2,7 @@ from rudechat3.shared_imports import *
 from rudechat3.global_variables import *
 from rudechat3.rude_client import RudeChatClient
 from rudechat3.nick_cleaner import clean_nicknames
+from rudechat3.format_decoder import decoder
 
 class RudeGui:
     def __init__(self, master):
@@ -56,7 +57,7 @@ class RudeGui:
         ]
 
         # Initialise layout
-        self.initLayout()
+        self.init_layout()
 
         # Initialise other instance variables
         self.set_misc_variables()
@@ -165,7 +166,7 @@ class RudeGui:
     def start_tray_icon(self):
         pass #TODO
 
-    def initLayout(self):
+    def init_layout(self):
         self.centralWidget = QWidget(self.master)
         self.centralWidget.setWindowTitle("RudeChat")
 
@@ -181,7 +182,13 @@ class RudeGui:
         self.topicLabel = QLabel(self.centralWidget, text="Topic: ")
         self.chatArea.addWidget(self.topicLabel)
 
-        self.displayText = QTextBrowser(self.centralWidget)
+        class NoCursorTextEdit(QTextEdit):
+            def mousePressEvent(self, e):
+                e.ignore()
+
+        self.displayText = NoCursorTextEdit(self.centralWidget)
+        self.displayText.setReadOnly(True)
+        self.displayText.setAcceptRichText(True)
         self.chatArea.addWidget(self.displayText)
 
         self.mainSection.addLayout(self.chatArea)
@@ -218,7 +225,7 @@ class RudeGui:
 
         self.serversSelector = QVBoxLayout()
 
-        self.serversLabel = QLabel(self.centralWidget, text="Users (0)")
+        self.serversLabel = QLabel(self.centralWidget, text="Servers")
         self.serversSelector.addWidget(self.serversLabel)
 
         self.serverList = QListWidget(self.centralWidget)
@@ -230,7 +237,7 @@ class RudeGui:
         
         self.channelsSelector = QVBoxLayout()
 
-        self.channelsLabel = QLabel(self.centralWidget, text="Users (0)")
+        self.channelsLabel = QLabel(self.centralWidget, text="Channels (0)")
         self.channelsSelector.addWidget(self.channelsLabel)
 
         self.channelList = QListWidget(self.centralWidget)
@@ -487,3 +494,132 @@ class RudeGui:
         user_mode = self.get_user_mode(nickname, channel)
         mode_symbol = self.get_mode_symbol(user_mode) if user_mode else ''
         self.current_nick_channel = f"{mode_symbol}{nickname} | {channel}" + " ▷"
+
+    def trim_text_widget(self):
+        """Trim the text widget to only hold a maximum of 1000 lines."""
+        line_count = self.displayText.document().blockCount()  # Get total line count
+        if line_count > 1000:
+            excess_lines = line_count - 1000
+            cursor = self.displayText.textCursor()
+            cursor.movePosition(QTextCursor.Start)
+            for _ in range(excess_lines):
+                cursor.select(QTextCursor.BlockUnderCursor)
+                cursor.removeSelectedText()
+                cursor.deleteChar()
+
+    def find_urls(self, text):
+        # Use the precompiled regex pattern to find URLs
+        return self.url_pattern.findall(text)
+
+    def find_emojis(self, text):
+        # Detect emojis in the text
+        return [char for char in text if char in emoji.EMOJI_DATA]
+    
+    def configure_tag_based_on_attributes(self, attributes):
+        # This method configures tag based on attributes efficiently
+        tag_config = QTextCharFormat()
+        tag_config.setFontFamily(self.font_family)
+        tag_config.setFontPointSize(self.font_size)
+        if any(attr.bold for attr in attributes):
+            tag_config.setFontWeight(2)
+        if any(attr.italic for attr in attributes):
+            tag_config.setFontItalic(True)
+        if any(attr.underline for attr in attributes):
+            tag_config.setFontUnderline(True)
+        if any(attr.strikethrough for attr in attributes):
+            tag_config.setFontStrikeOut(True)
+        if attributes and attributes[0].colour != 0:
+            irc_color_code = f"{attributes[0].colour:02d}"
+            hex_color = self.irc_colors.get(irc_color_code, 'white')
+            tag_config.setForeground(QColor().setNamedColor(hex_color))
+        if attributes and attributes[0].background != 1:
+            irc_background_code = f"{attributes[0].background:02d}"
+            hex_background = self.irc_colors.get(irc_background_code, 'black')
+            tag_config.setBackground(QColor().setNamedColor(hex_background))
+        return tag_config
+
+    def tag_text(self, formatted_text):
+        cursor = self.displayText.textCursor()
+        for text, attributes in formatted_text:
+            # Create a tag name based on the attributes
+            tag_name = "_".join(str(attr) for attr in attributes)
+
+            char_format = self.configure_tag_based_on_attributes(attributes)
+
+            # Insert the formatted text with the current tag
+            cursor.insertText(text, char_format)
+
+    def insert_and_scroll(self):
+        self.displayText.moveCursor(QTextCursor.MoveOperation.End)
+
+    def tag_urls(self, urls, index=0):
+        if index < len(urls):
+            url = urls[index]
+            if url in self.url_cache:
+                tag_name = self.url_cache[url]
+            else:
+                tag_name = f"url_{url}"
+                self.url_cache[url] = tag_name
+                char_format = QTextCharFormat()
+                char_format.setForeground(QColor("blue"))
+                char_format.setFontUnderline(True)
+                self.tag_cache[tag_name] = char_format
+
+            cursor = self.displayText.textCursor()
+            cursor = self.displayText.document().find(url, 0)
+            while not cursor.isNull():
+                cursor.mergeCharFormat(char_format)
+                cursor = self.displayText.document().find(url, cursor)
+
+            cursor = self.displayText.textCursor()
+            cursor.movePosition(QTextCursor.Start)
+            while self.displayText.find(url):
+                cursor.mergeCharFormat(self.tag_cache[tag_name])
+                cursor.setCharFormat(self.tag_cache[tag_name])
+                cursor.insertText(url, self.tag_cache[tag_name])
+                cursor.setPosition(cursor.position() + len(url))
+
+            # Schedule the next URL tagging
+            QTimer.singleShot(1, lambda: self.tag_urls(urls, index + 1))
+        else:
+            self.insert_and_scroll()
+
+    def tag_emojis(self, emojis, message):
+        cursor = self.displayText.textCursor()
+        for emoji_char in emojis:
+            # Create a unique tag for each emoji
+            tag_name = f"emoji_{emoji_char}"
+            if tag_name not in self.tag_cache:
+                # Configure format for emoji with larger font and color
+                char_format = QTextCharFormat()
+                char_format.setFontPointSize(self.font_size + 5)
+                char_format.setForeground(QColor(self.main_fg_color))
+                char_format.setFontFamily(self.emoji_type)
+                self.tag_cache[tag_name] = char_format
+
+            # Find and tag all occurrences of the emoji
+            start_idx = 0
+            while True:
+                start_idx = message.find(emoji_char, start_idx)
+                if start_idx == -1:
+                    break
+                cursor.setPosition(start_idx)
+                cursor.movePosition(QTextCursor.Right, QTextCursor.KeepAnchor, len(emoji_char))
+                cursor.setCharFormat(self.tag_cache[tag_name])
+                start_idx += len(emoji_char)
+
+    def insert_text_widget(self, message):
+        try:
+            self.trim_text_widget()
+            urls = self.find_urls(message)
+            emojis = self.find_emojis(message)
+
+            formatted_text = decoder(message)
+            self.tag_text(formatted_text)
+
+            # Start tagging URLs using the non-blocking approach
+            self.tag_urls(urls)
+            self.tag_emojis(emojis, message)
+            self.insert_and_scroll()
+        except Exception as e:
+            logging.error(f"Exception in insert_text {e}")
