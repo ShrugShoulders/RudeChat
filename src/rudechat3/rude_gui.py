@@ -5,22 +5,23 @@ from rudechat3.nick_cleaner import clean_nicknames
 from rudechat3.format_decoder import decoder
 
 class RudeTextEdit(QTextEdit):
-            def mousePressEvent(self, e):
-                if self.is_anchor_at(e.pos()):
-                    url = self.get_anchor_at(e.pos())
-                    webbrowser.open(url)
-                else:
-                    e.ignore()
+    def mousePressEvent(self, e):
+        if self.is_anchor_at(e.pos()):
+            url = self.get_anchor_at(e.pos())
+            webbrowser.open(url)
+        else:
+            e.ignore()
 
-            def is_anchor_at(self, pos):
-                cursor = self.cursorForPosition(pos)
-                return cursor.charFormat().isAnchor()
-            
-            def get_anchor_at(self, pos):
-                cursor = self.cursorForPosition(pos)
-                char_format = cursor.charFormat()
-                if char_format.isAnchor():
-                    return char_format.anchorHref()
+    def is_anchor_at(self, pos):
+        cursor = self.cursorForPosition(pos)
+        return cursor.charFormat().isAnchor()
+    
+    def get_anchor_at(self, pos):
+        cursor = self.cursorForPosition(pos)
+        char_format = cursor.charFormat()
+        if char_format.isAnchor():
+            return char_format.anchorHref()
+
 
 class RudeGui:
     def __init__(self, master):
@@ -132,8 +133,8 @@ class RudeGui:
             self.input_insertbackground = config.get('WIDGETS', 'entry_insertbackground', fallback='#C0FFEE')
             self.input_label_bg = config.get('WIDGETS', 'entry_label_bg', fallback='black')
             self.input_label_fg = config.get('WIDGETS', 'entry_label_fg', fallback='#C0FFEE')
-            self.server_list_bg = config.get('WIDGETS', 'server_listbox_bg', fallback='black')
-            self.server_list_fg = config.get('WIDGETS', 'server_listbox_fg', fallback='white')
+            self.server_list_bg = config.get('WIDGETS', 'serverList_bg', fallback='black')
+            self.server_list_fg = config.get('WIDGETS', 'serverList_fg', fallback='white')
             self.channel_label_bg = config.get('WIDGETS', 'channel_label_bg', fallback='black')
             self.channel_label_fg = config.get('WIDGETS', 'channel_label_fg', fallback='white')
             self.servers_label_bg = config.get('WIDGETS', 'servers_label_bg', fallback='black')
@@ -197,7 +198,10 @@ class RudeGui:
         self.chatArea = QVBoxLayout()
         self.chatArea.setSpacing(5)
 
-        self.topicLabel = QLabel(self.centralWidget, text="Topic: ")
+        self.current_topic = "Topic: "
+
+        self.topicLabel = QLabel(self.centralWidget, text=self.current_topic)
+        self.topicLabel.setWordWrap(True)
         self.chatArea.addWidget(self.topicLabel)
 
         self.displayText = RudeTextEdit(self.centralWidget)
@@ -216,6 +220,7 @@ class RudeGui:
         self.textInput.addWidget(self.userChanDisplay)
 
         self.inputField = QLineEdit(self.centralWidget)
+        self.inputField.returnPressed.connect(self.on_enter_key)
         self.textInput.addWidget(self.inputField)
 
         self.mainSection.addLayout(self.textInput)
@@ -239,12 +244,15 @@ class RudeGui:
 
         self.serversSelector = QVBoxLayout()
 
+        self.server_var = ""
+
         self.serversLabel = QLabel(self.centralWidget, text="Servers")
         self.serversSelector.addWidget(self.serversLabel)
 
         self.serverList = QListWidget(self.centralWidget)
         self.serverList.setResizeMode(QListView.ResizeMode.Adjust)
         self.serverList.setItemAlignment(Qt.AlignmentFlag.AlignLeading)
+        self.serverList.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
         self.serversSelector.addWidget(self.serverList)
 
         self.sidebar.addLayout(self.serversSelector)
@@ -255,7 +263,8 @@ class RudeGui:
         self.channelsSelector.addWidget(self.channelsLabel)
 
         self.channelList = QListWidget(self.centralWidget)
-        self.channelList.setResizeMode(QListView.ResizeMode.Adjust)
+        self.channelList.setResizeMode(QListView.ResizeMode.Adjust) 
+        self.channelList.itemClicked.connect(self.on_channel_click)
         self.channelList.setItemAlignment(Qt.AlignmentFlag.AlignLeading)
         self.channelsSelector.addWidget(self.channelList)
 
@@ -475,19 +484,19 @@ class RudeGui:
             # Loop through the items in the channelList
             for index in range(self.channelList.count()):
                 # Get the channel from the listbox
-                channel = self.channelList.itemFromIndex(index)
+                channel = self.channelList.item(index)
 
                 # Check if the stripped channel is in the away_users list
                 if channel in self.irc_client.cap_who_for_chan:
                     # Make sure the index exists in the channelList
                     if 0 <= index < self.channelList.count():
                         # Change the foreground color 
-                        self.channelList.itemconfig(index, {'fg': self.channelList_fg})
+                        channel.setForeground(QColor(self.channelList_fg))
                 else:
                     # Make sure the index exists in the channelList
-                    if 0 <= index < self.channelList.size():
+                    if 0 <= index < self.channelList.count():
                         # Reset the foreground color 
-                        self.channelList.itemconfig(index, {'fg': self.need_who_chan_fg})
+                        channel.setForeground(QColor(self.need_who_chan_fg))
         except Exception as e:
             logging.error(f"Exception in highlight_who_channels: {e}")
     
@@ -507,7 +516,7 @@ class RudeGui:
         channel = self.irc_client.current_channel if self.irc_client.current_channel else "#Channel"
         user_mode = self.get_user_mode(nickname, channel)
         mode_symbol = self.get_mode_symbol(user_mode) if user_mode else ''
-        self.current_nick_channel = f"{mode_symbol}{nickname} | {channel}" + " ▷"
+        self.userChanDisplay.setText( f"{mode_symbol}{nickname} | {channel}" + " ▷" )
 
     def trim_text_widget(self):
         """Trim the text widget to only hold a maximum of 1000 lines."""
@@ -545,11 +554,11 @@ class RudeGui:
         if attributes and attributes[0].colour != 0:
             irc_color_code = f"{attributes[0].colour:02d}"
             hex_color = self.irc_colors.get(irc_color_code, 'white')
-            tag_config.setForeground(QColor().setNamedColor(hex_color))
+            tag_config.setForeground(QColor(hex_color))
         if attributes and attributes[0].background != 1:
             irc_background_code = f"{attributes[0].background:02d}"
             hex_background = self.irc_colors.get(irc_background_code, 'black')
-            tag_config.setBackground(QColor().setNamedColor(hex_background))
+            tag_config.setBackground(QColor(hex_background))
         return tag_config
 
     def tag_text(self, formatted_text):
@@ -582,19 +591,19 @@ class RudeGui:
                 char_format.setFontUnderline(True)
                 self.tag_cache[tag_name] = char_format
 
-            cursor = self.displayText.textCursor()
-            cursor = self.displayText.document().find(url, 0)
-            while not cursor.isNull():
-                cursor.mergeCharFormat(char_format)
-                cursor = self.displayText.document().find(url, cursor)
+                cursor = self.displayText.textCursor()
+                cursor = self.displayText.document().find(url, 0)
+                while not cursor.isNull():
+                    cursor.mergeCharFormat(char_format)
+                    cursor = self.displayText.document().find(url, cursor)
 
-            cursor = self.displayText.textCursor()
-            cursor.movePosition(QTextCursor.Start)
-            while self.displayText.find(url):
-                cursor.mergeCharFormat(self.tag_cache[tag_name])
-                cursor.setCharFormat(self.tag_cache[tag_name])
-                cursor.insertText(url, self.tag_cache[tag_name])
-                cursor.setPosition(cursor.position() + len(url))
+                cursor = self.displayText.textCursor()
+                cursor.movePosition(QTextCursor.Start)
+                while self.displayText.find(url):
+                    cursor.mergeCharFormat(self.tag_cache[tag_name])
+                    cursor.setCharFormat(self.tag_cache[tag_name])
+                    cursor.insertText(url, self.tag_cache[tag_name])
+                    cursor.setPosition(cursor.position() + len(url))
 
             # Schedule the next URL tagging
             QTimer.singleShot(1, lambda: self.tag_urls(urls, index + 1))
@@ -625,8 +634,11 @@ class RudeGui:
                 cursor.setCharFormat(self.tag_cache[tag_name])
                 start_idx += len(emoji_char)
 
+    def clear_text_widget(self):
+        self.displayText.clear()
+
     def insert_text_widget(self, message):
-        try:
+        # try:
             self.trim_text_widget()
             urls = self.find_urls(message)
             emojis = self.find_emojis(message)
@@ -638,8 +650,259 @@ class RudeGui:
             self.tag_urls(urls)
             self.tag_emojis(emojis, message)
             self.insert_and_scroll()
-        except Exception as e:
-            logging.error(f"Exception in insert_text {e}")
+        # except Exception as e:
+            # logging.error(f"Exception in insert_text {e}")
 
     def open_url(self, url):
         webbrowser.open(url)
+
+    def escape_color_codes(self, line):
+        # Escape color codes in the string
+        escaped_line = re.sub(r'\\x([0-9a-fA-F]{2})', lambda match: bytes.fromhex(match.group(1)).decode('utf-8'), line)
+        
+        return escaped_line
+
+    def show_startup_art(self):
+        splash_directory = os.path.join(G_SOURCE_DIR, "Splash")
+
+        try:
+            # List all .txt files in the Splash directory
+            txt_files = [f for f in os.listdir(splash_directory) if f.endswith(".txt")]
+
+            if not txt_files:
+                raise FileNotFoundError("No .txt files found in the Splash directory")
+
+            # Choose a random .txt file
+            random_art_file = random.choice(txt_files)
+            art_path = os.path.join(splash_directory, random_art_file)
+
+            with open(art_path, "r", encoding='utf-8') as art_file:
+                art_content = art_file.read()
+
+                # Escape color codes in the art content
+                escaped_art_content = self.escape_color_codes(art_content)
+
+                self.insert_text_widget(escaped_art_content)
+        except FileNotFoundError as e:
+            logging.error(f"Error displaying startup art: {e}")
+
+    def add_client(self, server_name, irc_client):
+        self.clients[server_name] = irc_client # Store clients here.
+
+        # Get the current list of servers from the Listbox
+        current_servers = [self.serverList.item(i) for i in range (self.serverList.count())]
+
+        # Add the new server_name to the list if it's not already there
+        if not any(server.text().startswith(server_name) for server in current_servers):
+            current_servers.append(QListWidgetItem(str(server_name)))
+
+        # Update the Listbox with the new list of servers
+        self.serverList.clear()  # Clear the existing items
+        for server in current_servers:
+            self.serverList.addItem(server)
+
+        self.server_var = server_name  # Set the current server
+        self.serverList.setCurrentRow(0)
+        self.channel_lists[server_name] = irc_client.joined_channels
+
+    def clear_topic_label(self):
+        self.topicLabel.setText("Topic: ")
+
+    def clear_user_list(self):
+        self.userList.clear()
+
+    def update_users_label(self):
+        if self.irc_client.server_name in self.irc_client.away_servers:
+            away_text = f"You're Away"
+            self.usersLabel.setText(away_text)
+            self.usersLabel.setStyleSheet("color: red;")
+        else:
+            user_num = len(self.irc_client.channel_users.get(self.irc_client.current_channel, []))
+            
+            if user_num == 0:
+                user_num = self.userList.count()
+
+            back_text = f"Users ({user_num})"
+            self.usersLabel.setText(back_text)
+            self.usersLabel.setStyleSheet(f"color: {self.user_label_fg}")
+            
+            if self.irc_client.server_name in self.irc_client.away_servers:
+                self.irc_client.away_servers.remove(self.irc_client.server_name)
+
+    def update_channel_label(self):
+        channel_num = len(self.irc_client.joined_channels)
+        label_text = f"Channels ({channel_num})"
+        self.channelsLabel.setText(label_text)
+
+    def on_server_change(self, event):
+        # Get the index of the currently selected server
+        selected_server_index_tuple = [self.serverList.currentIndex().row()]
+
+        # If there's a selected server
+        if selected_server_index_tuple:
+            selected_server_index = selected_server_index_tuple[0]  # Extract the integer index
+
+            # If there's a previous server, reset its background color to black
+            if self.previous_server_index is not None:
+                self.serverList.itemconfig(self.previous_server_index, {'bg': self.server_list_bg, 'fg': self.server_list_fg})
+
+            # Get the selected server from the listbox
+            selected_server = self.serverList.item(selected_server_index)
+            clean_name = selected_server.text().split(" ")
+            actual_server = clean_name[0]
+
+            # Update the current server in the IRC client
+            self.irc_client.current_server = actual_server
+            self.irc_client = self.clients.get(actual_server, None)
+
+            # If the IRC client exists
+            if self.irc_client:
+                # Set the server name in the RudeChatClient instance
+                self.irc_client.set_server_name(actual_server)
+
+                # Set the currently selected channel to None
+                self.irc_client.current_channel = None
+
+                # Set the GUI reference and update the GUI components
+                self.irc_client.set_gui(self)
+                self.irc_client.update_gui_channel_list()
+
+                # Clear Widgets
+                self.clear_topic_label()
+                self.clear_user_list()
+                self.clear_text_widget()
+
+                # Display the MOTD if available
+                self.show_startup_art()
+                self.irc_client.display_server_motd(actual_server)
+                self.update_users_label()
+                self.highlight_nickname()
+                self.highlight_who_channels()
+                self.update_channel_label()
+
+                # Set the background color of the selected server to blue
+                selected_server.setBackground(QColor(self.selected_list_server))
+                selected_server.setForeground(QColor(self.server_list_fg))
+
+                # Store the foreground and background colors for the selected server
+                self.server_colors[selected_server_index] = {'fg': self.server_list_fg, 'bg': self.selected_list_server}
+                
+                if self.previous_server_index is not None:
+                    if self.previous_server_index != selected_server_index:
+                        # Check if the previous server color is not a mention or activity highlight before updating
+                        prev_bg = self.server_colors[self.previous_server_index].get('bg', '')
+                        if prev_bg not in [self.irc_client.activity_note_color, self.irc_client.mention_note_color]:
+                            self.server_colors[self.previous_server_index] = {'bg': self.server_list_bg, 'fg': self.server_list_fg}
+
+            for server_index, colors in self.server_colors.items():
+                # Get the stored foreground and background colors
+                fg_color = colors.get('fg', self.server_list_fg)
+                bg_color = colors.get('bg', self.server_list_bg)
+
+                # Apply the stored colors to each server in the listbox
+                self.serverList.item(server_index).setForeground(QColor(fg_color))
+                self.serverList.item(server_index).setBackground(QColor(bg_color))
+
+            # Update the previous_server_index to the currently selected server index
+            self.previous_server_index = selected_server_index
+
+    def on_channel_click(self):
+        # Set background of currently selected channel back to default
+        current_selected_channel = self.irc_client.current_channel
+        if current_selected_channel:
+            for i in range(self.channelList.count()):
+                if self.channelList.item(i).text() == current_selected_channel:
+                    self.channelList.item(i).setBackground(QColor(self.channelList_bg))
+                    break
+
+        # Get index of clicked item
+        clicked_index = self.channelList.currentRow()
+        clicked_channel = self.channelList.item(clicked_index)
+        self.switch_channel(clicked_channel.text())
+
+        # Turn background blue
+        self.channelList.item(clicked_index).setBackground(QColor(self.channel_select_color))
+        self.highlight_nickname()
+        self.highlight_away_users()
+        self.update_users_label()
+
+        # Remove the clicked channel from highlighted_channels dictionary
+        if self.irc_client.server_name in self.irc_client.highlighted_channels:
+            server_highlighted_channels = self.irc_client.highlighted_channels[self.irc_client.server_name]
+            if clicked_channel.text() in server_highlighted_channels:
+                del server_highlighted_channels[clicked_channel.text()]
+
+    def switch_channel(self, channel_name):
+        try:
+            server = self.irc_client.server  # Assume the server is saved in the irc_client object
+        except AttributeError as e:
+            logging.error(f"AttributeError in switch_channel: server assignment {e}")
+            return
+
+        # Clear the text window
+        self.displayText.clear()
+
+        # Print the current channel topics dictionary
+
+        is_channel = any(channel_name.startswith(prefix) for prefix in self.irc_client.chantypes)
+
+        if is_channel:
+            # It's a channel
+            if server in self.irc_client.channel_messages:
+
+                self.irc_client.current_channel = channel_name
+                self.update_nick_channel_label()
+
+                # Update topic label
+                current_topic = self.channel_topics.get(self.irc_client.server_name, {}).get(channel_name, "N/A")
+                self.topicLabel.setText(f"Topic: {current_topic}")
+
+                # Display the last messages for the current channel
+                self.irc_client.display_last_messages(channel_name, server_name=server)
+                self.highlight_nickname()
+
+                self.irc_client.update_gui_user_list(channel_name)
+                self.insert_and_scroll()
+
+            else:
+                self.insert_text_widget(f"Not a member of channel {channel_name}\n")
+
+        else:
+            self.clear_user_list()
+            # Set current channel to the DM
+            nickname = self.irc_client.nickname
+            self.irc_client.current_channel = channel_name
+            self.userList.addItem(nickname)
+            self.userList.addItem(channel_name)
+            self.update_nick_channel_label()
+
+            # Display the last messages for the current DM
+            self.irc_client.display_last_messages(channel_name, server_name=server)
+            self.insert_and_scroll()
+            self.highlight_nickname()
+
+            # No topic for DMs
+            self.topicLabel.setText(f"{channel_name}")
+
+    async def on_enter_key(self):
+        print("woo")
+        try:
+            user_input = self.inputField.text()
+
+            # Save the entered message to entry_history
+            if user_input:
+                self.entry_history.append(user_input)
+
+                # Limit the entry_history to the last 10 messages
+                if len(self.entry_history) > 10:
+                    self.entry_history.pop(0)
+
+                # Reset history_index to the end of entry_history
+                self.history_index = len(self.entry_history)
+
+            self.entry_widget.delete(0, tk.END)
+            await self.irc_client.command_parser(user_input)
+            if hasattr(self, 'text_widget') and self.text_widget.winfo_exists():
+                self.text_widget.see(tk.END)
+        except Exception as e:
+            pass
