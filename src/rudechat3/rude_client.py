@@ -2412,9 +2412,9 @@ class RudeChatClient:
         # Only update the user listbox if the channel is the currently selected channel
         if channel == self.current_channel and self.gui.irc_client == self and self.server_name in self.gui.popped_out_channels and channel not in self.gui.popped_out_channels[self.server_name]:
             # Update the Tkinter Listbox to reflect the current users in the channel
-            self.gui.userList.delete(0, tk.END)  # Clear existing items
+            self.gui.userList.clear()  # Clear existing items
             for user in unique_users:
-                self.gui.userList.insert(tk.END, user)
+                self.gui.userList.addItem(user)
             self.gui.highlight_away_users()
             self.gui.update_users_label()
         # except Exception as e:
@@ -2974,8 +2974,8 @@ class RudeChatClient:
 
                 # Set the topic for the channel under the server entry
                 if channel_name == self.current_channel and self.gui.irc_client == self:
-                    self.gui.current_topic.set(f"{topic}")
-                    self.gui.insert_text_widget(f"{message}")
+                    self.gui.topicLabel.setText(f"Topic: {topic}")
+                    self.gui.insert_text_widget(f"Topic: {message}")
             except Exception as e:
                 logging.error(f"Error in handle_topic command TOPIC: {e}")
 
@@ -3951,7 +3951,6 @@ class RudeChatClient:
                 self.gui.quit_clients_with_message(quit_message)
                 self.loop_running = False
                 await self.stop_async_loop()
-                self.gui.close_all_popouts()
                 self.gui.remove_tray_icon()
                 self.gui.destroy_client()
                 return False

@@ -183,7 +183,20 @@ class RudeGui:
                 logging.error("GUI Fallbacks hit.")
 
     def start_tray_icon(self):
-        pass #TODO
+        """Start the tray icon in a separate thread."""
+        if platform.system() == "Darwin":
+            self.to_tray = False
+            return
+        else:
+            try:
+                self.stop_tray_event = threading.Event()  # Event to stop the tray icon thread
+                tray_thread = threading.Thread(target=self.create_tray_icon)
+                tray_thread.daemon = True  # Make it a daemon thread so it will exit with the program
+                tray_thread.start()
+            except Exception as e:
+                logging.error(f"Error starting tray icon: {e}")
+                self.to_tray = False
+                return
 
     def init_layout(self):
         self.centralWidget = QWidget(self.master)
@@ -220,7 +233,9 @@ class RudeGui:
         self.textInput.addWidget(self.userChanDisplay)
 
         self.inputField = QLineEdit(self.centralWidget)
-        self.inputField.returnPressed.connect(self.on_enter_key)
+        
+        QTimer.singleShot(0, self.bind_return_key)
+
         self.textInput.addWidget(self.inputField)
 
         self.mainSection.addLayout(self.textInput)
@@ -469,7 +484,7 @@ class RudeGui:
             logging.info("Finished Creating Client Tasks: auto_who, auto_away, handle_incoming_message, auto_trim, auto_save, & keep_alive")
 
         try:
-            self.bind_return_key()
+            self.bind_return_key
         except Exception as e:
             logging.error(f"Error binding return key: {e}")
         if self.log_on:
@@ -885,7 +900,6 @@ class RudeGui:
             self.topicLabel.setText(f"{channel_name}")
 
     async def on_enter_key(self):
-        print("woo")
         try:
             user_input = self.inputField.text()
 
@@ -900,9 +914,105 @@ class RudeGui:
                 # Reset history_index to the end of entry_history
                 self.history_index = len(self.entry_history)
 
-            self.entry_widget.delete(0, tk.END)
+            self.inputField.clear()
             await self.irc_client.command_parser(user_input)
-            if hasattr(self, 'text_widget') and self.text_widget.winfo_exists():
-                self.text_widget.see(tk.END)
         except Exception as e:
-            pass
+            print(e)
+        
+    def bind_return_key(self):
+        loop = asyncio.get_event_loop()
+        self.inputField.returnPressed.connect(lambda: loop.create_task(self.on_enter_key(), name="on_enter_key"))
+
+    def quit_clients_with_message(self, quit_message):
+        if self.log_on:
+            logging.info("Attempting to Quit Clients With Message")
+
+        try:
+            for server_name, irc_client in self.clients.items():
+                # Assign the client reference
+                client = irc_client
+
+                if self.log_on:
+                    logging.info(f"Client {client} quit attempt")
+
+                loop = client.loop
+
+                if self.log_on:
+                    logging.info(f"Current Loop: {loop}")
+
+                loop.create_task(client.send_quit(quit_message), name="quit_client_task")
+
+                if self.log_on:
+                    logging.info(f"Sending QUIT to client: {client}")
+                    logging.info(f"Quit Message: {quit_message}")
+
+        except Exception as e:
+            logging.error(f"Error in quit_clients: {e}")
+
+    def quit_clients(self):
+        if self.log_on:
+            logging.info("Attempting to Quit Clients")
+
+        try:
+            for server_name, irc_client in self.clients.items():
+                # Assign the client reference
+                client = irc_client
+
+                if self.log_on:
+                    logging.info(f"Client {client} quit attempt")
+
+                loop = client.loop
+
+                if self.log_on:
+                    logging.info(f"Current Loop: {loop}")
+
+                loop.create_task(client.spec_quit(), name="quit_client_task")
+
+                if self.log_on:
+                    logging.info(f"Sending QUIT to client: {client}")
+
+        except Exception as e:
+            logging.error(f"Error in quit_clients: {e}")
+
+    def minimize_to_tray(self):
+        """Minimize the window to the system tray."""
+        if not self.to_tray:
+            self.client_shutdown()
+            return
+        else:
+            self.master.hide()  # Hide the window
+            self.iconed = True
+    
+    def client_shutdown(self):
+        if self.log_on:
+            logging.info(f"Attempting Client Shutdown.")
+
+        try:
+            # Shutdown the clients
+            self.quit_clients()
+        except Exception as e:
+            logging.error(f"Error quitting Clients: {e}")
+
+        try:
+            # Stop and remove the tray icon
+            self.remove_tray_icon()
+        except Exception as e:
+            logging.error(f"Error Removing Tray Icon: {e}")
+
+        try:
+            # Destroy the GUI
+            self.destroy_client()
+        except Exception as e:
+            logging.error(f"Error destroying clients: {e}")
+
+    def destroy_client(self):
+        try:
+            self.master.destroy(True)
+            sys.exit()
+        except Exception as e:
+            logging.error(f"Error When Destroying Client: {e}")
+
+    def remove_tray_icon(self):
+        if hasattr(self, 'tray_icon'):
+            self.stop_tray_event.set()
+            # self.tray_icon.stop()
