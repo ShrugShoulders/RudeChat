@@ -10,9 +10,8 @@ from rudechat3.global_variables import *
 
 
 class RudeChatClient:
-    def __init__(self, text_widget, server_text_widget, entry_widget, master, gui):
+    def __init__(self, server_text_widget, entry_widget, master, gui):
         self.master = master
-        self.text_widget = text_widget
         self.entry_widget = entry_widget
         self.server_text_widget = server_text_widget
         self.gui = gui

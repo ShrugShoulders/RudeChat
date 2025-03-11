@@ -21,6 +21,7 @@ from rudechat3.copy_configs import CopyConfigs
 # Import First Run Configs
 from rudechat3.rude_first_run import FirstRun
 # Import GUI
+# from rudechat3.rude_gui import RudeGui
 from rudechat3.rude_gui import RudeGui
 # Import Client
 from rudechat3.rude_client import RudeChatClient
@@ -39,14 +40,13 @@ def main():
     app = QApplication(sys.argv)
     
     root = QMainWindow()
-    root.setStyleSheet
     main = RudeGui(root)
 
     new_loop = asyncio.new_event_loop()
     asyncio.set_event_loop(new_loop)
 
     loop = asyncio.get_event_loop()
-    loop.create_task(initialize_clients(main))
+    # loop.create_task(initialize_clients(main))
 
     def tk_update():
         try:
@@ -56,7 +56,8 @@ def main():
             loop.stop()
             root.after(100, tk_update)
 
-    root.after(100, tk_update)
+    # root.after(100, tk_update)
+    root.show()
     app.exec()
 
 if __name__ == '__main__':
