@@ -23,8 +23,9 @@ class RudeTextEdit(QTextEdit):
             return char_format.anchorHref()
 
 
-class RudeGui:
+class RudeGui(QWidget):
     def __init__(self, master):
+        super().__init__()
         self.master = master
         self.app_size = [800, 600]
         self.set_screen_size()
@@ -84,7 +85,57 @@ class RudeGui:
         # Initialise client
         self.init_client()
 
+        self.master.clear_chat_window = self.clear_chat_window
+        self.master.reload_macros = self.reload_macros
+
+        self.master.open_color_selector = self.open_color_selector
+        self.master.save_nickname_colors = self.save_nickname_colors
+        self.master.reset_nick_colors = self.reset_nick_colors
+
+        self.master.open_client_config_window = self.open_client_config_window
+        self.master.open_gui_config_window = self.open_gui_config_window
+
+        self.master.chat_clear_chat_action.triggered.disconnect()
+        self.master.chat_reload_macros_action.triggered.disconnect()
+        self.master.colors_color_selector_action.triggered.disconnect()
+        self.master.colors_save_colors_action.triggered.disconnect()
+        self.master.colors_reset_colors_action.triggered.disconnect()
+        self.master.config_edit_servers_action.triggered.disconnect()
+        self.master.config_edit_gui_action.triggered.disconnect()
+
+        self.master.chat_clear_chat_action.triggered.connect(self.clear_chat_window)
+        self.master.chat_reload_macros_action.triggered.connect(self.reload_macros)
+        self.master.colors_color_selector_action.triggered.connect(self.open_color_selector)
+        self.master.colors_save_colors_action.triggered.connect(self.save_nickname_colors)
+        self.master.colors_reset_colors_action.triggered.connect(self.reset_nick_colors)
+        self.master.config_edit_servers_action.triggered.connect(self.open_client_config_window)
+        self.master.config_edit_gui_action.triggered.connect(self.open_gui_config_window)
+
         #TODO: set up keybinds
+
+    def clear_chat_window(self):
+        print("clear_chat_window")
+        pass #TODO
+
+    def reload_macros(self):
+        print("reload_macros")
+        pass #TODO
+
+    def open_color_selector(self):
+        print("open_color_selector")
+        pass #TODO
+
+    def reset_nick_colors(self):
+        print("reset_nick_colors")
+        pass #TODO
+
+    def open_client_config_window(self):
+        print("open_client_config_window")
+        pass #TODO
+
+    def open_gui_config_window(self):
+        print("open_gui_config_window")
+        pass #TODO
 
     def set_screen_size(self):
         pass #TODO
@@ -199,11 +250,7 @@ class RudeGui:
                 return
 
     def init_layout(self):
-        self.centralWidget = QWidget(self.master)
-        self.centralWidget.setWindowTitle("RudeChat")
-
-        self.frame = QHBoxLayout(self.centralWidget)
-        self.frame.setContentsMargins(5, 5, 5, 5)
+        self.setLayout(QHBoxLayout(self))
 
         self.mainSection = QVBoxLayout()
         self.mainSection.setSpacing(5)
@@ -213,11 +260,11 @@ class RudeGui:
 
         self.current_topic = "Topic: "
 
-        self.topicLabel = QLabel(self.centralWidget, text=self.current_topic)
+        self.topicLabel = QLabel(self, text=self.current_topic)
         self.topicLabel.setWordWrap(True)
         self.chatArea.addWidget(self.topicLabel)
 
-        self.displayText = RudeTextEdit(self.centralWidget)
+        self.displayText = RudeTextEdit(self)
         self.displayText.setReadOnly(True)
         self.displayText.setAcceptRichText(True)
         self.chatArea.addWidget(self.displayText)
@@ -229,10 +276,10 @@ class RudeGui:
 
         self.current_nick_channel = "Nickname | #Channel" + " ▶"
 
-        self.userChanDisplay = QLabel(self.centralWidget, text=self.current_nick_channel)
+        self.userChanDisplay = QLabel(self, text=self.current_nick_channel)
         self.textInput.addWidget(self.userChanDisplay)
 
-        self.inputField = QLineEdit(self.centralWidget)
+        self.inputField = QLineEdit(self)
         
         QTimer.singleShot(0, self.bind_return_key)
 
@@ -240,17 +287,17 @@ class RudeGui:
 
         self.mainSection.addLayout(self.textInput)
 
-        self.frame.addLayout(self.mainSection)
+        self.layout().addLayout(self.mainSection)
 
         self.sidebar = QVBoxLayout()
         self.sidebar.setSpacing(5)
 
         self.usersSelector = QVBoxLayout()
 
-        self.usersLabel = QLabel(self.centralWidget, text="Users (0)")
+        self.usersLabel = QLabel(self, text="Users (0)")
         self.usersSelector.addWidget(self.usersLabel)
 
-        self.userList = QListWidget(self.centralWidget)
+        self.userList = QListWidget(self)
         self.userList.setResizeMode(QListView.ResizeMode.Adjust)
         self.userList.setItemAlignment(Qt.AlignmentFlag.AlignLeading)
         self.usersSelector.addWidget(self.userList)
@@ -261,10 +308,10 @@ class RudeGui:
 
         self.server_var = ""
 
-        self.serversLabel = QLabel(self.centralWidget, text="Servers")
+        self.serversLabel = QLabel(self, text="Servers")
         self.serversSelector.addWidget(self.serversLabel)
 
-        self.serverList = QListWidget(self.centralWidget)
+        self.serverList = QListWidget(self)
         self.serverList.setResizeMode(QListView.ResizeMode.Adjust)
         self.serverList.itemClicked.connect(self.on_server_change)
         self.serverList.setItemAlignment(Qt.AlignmentFlag.AlignLeading)
@@ -274,10 +321,10 @@ class RudeGui:
         
         self.channelsSelector = QVBoxLayout()
 
-        self.channelsLabel = QLabel(self.centralWidget, text="Channels (0)")
+        self.channelsLabel = QLabel(self, text="Channels (0)")
         self.channelsSelector.addWidget(self.channelsLabel)
 
-        self.channelList = QListWidget(self.centralWidget)
+        self.channelList = QListWidget(self)
         self.channelList.setResizeMode(QListView.ResizeMode.Adjust) 
         self.channelList.itemClicked.connect(self.on_channel_click)
         self.channelList.setItemAlignment(Qt.AlignmentFlag.AlignLeading)
@@ -289,13 +336,10 @@ class RudeGui:
         self.sidebar.setStretch(1, 1)
         self.sidebar.setStretch(2, 2)
 
-        self.frame.addLayout(self.sidebar)
+        self.layout().addLayout(self.sidebar)
 
-        self.frame.setStretch(0, 5)
-        self.frame.setStretch(1, 1)
-
-        # After all is said and done, make this the main widget
-        self.master.setCentralWidget(self.centralWidget)
+        self.layout().setStretch(0, 5)
+        self.layout().setStretch(1, 1)
 
     def set_misc_variables(self):
         self.channel_lists = {}

@@ -42,3 +42,6 @@ from threading import Thread
 from PySide6.QtWidgets import QApplication, QMessageBox, QVBoxLayout, QWidget, QLabel, QPushButton, QComboBox, QCheckBox, QLabel, QLineEdit, QPushButton, QScrollArea, QSizePolicy, QFrame, QGroupBox, QGridLayout, QMainWindow, QTextEdit, QHBoxLayout, QListWidget, QListView, QAbstractItemView, QListWidgetItem
 from PySide6.QtCore import QTimer, Qt
 from PySide6.QtGui import QTextCursor, QTextCharFormat, QColor, QTextFormat
+
+if platform.system() == "Darwin":
+    from objc import lookUpClass
