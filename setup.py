@@ -21,10 +21,6 @@ if platform.system() == "Darwin":
     }
 
     setup(
-        name="RudeChat",
-        version=VERSION,
-        description="RudeChat is a Python IRC client designed to be fast, portable, and fun.",
-        author="Irish, Bash Elliott",
         packages=find_packages(where="src"),
         package_dir={"": "src"},
         scripts=["src/rudechat4/__main__.py"],
@@ -78,10 +74,6 @@ if platform.system() == "Darwin":
 
 else:
     setup(
-        name="RudeChat",
-        version="4.0.0",
-        description="RudeChat is a Python IRC client designed to be fast, portable, and fun.",
-        author="Irish, Bash Elliott",
         packages=find_packages(where="src"),
         package_dir={"": "src"},
         scripts=["src/rudechat4/__main__.py"],

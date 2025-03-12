@@ -5,10 +5,10 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "RudeChat"
 version = "4.0.0"
-description = "RudeChat is a Python IRC client designed to be fast, portable, and fun."
+description = "Python IRC client designed to be fast, portable, and fun."
 authors = [
     { name = "Irish" },
-	{ name = "Bash Elliott" }
+	{ name = "Bash Elliott", email="rackodo.business@gmail.com" }
 ]
 license = { text = "GNU General Public License v3 (GPLv3)" }
 classifiers = [
