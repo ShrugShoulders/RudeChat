@@ -117,17 +117,29 @@ class FirstRun:
             config_window.config.read(config_window.config_file)
             config_window.create_widgets()
 
+        # Configure grid layout for root window
+        root.columnconfigure(0, weight=1)
+
         # Menu to choose configuration file
         selected_config_file_var = tk.StringVar(root, config_files[0])
         config_menu = ttk.Combobox(root, textvariable=selected_config_file_var, values=config_files)
-        config_menu.pack(pady=10)
+        config_menu.grid(row=2, column=0, padx=10, pady=10, sticky="ew")
+
         config_menu.bind("<<ComboboxSelected>>", on_config_change)
 
-        save_button = tk.Button(root, text="Start Client", command=config_window.save_config, bg=self.bg_color, fg=self.fg_color)
-        save_button.pack(pady=10)
+        # Save button
+        save_button = tk.Button(root, text="Apply", command=config_window.save_config, bg=self.bg_color, fg=self.fg_color)
+        save_button.grid(row=1, column=0, padx=10, pady=10, sticky="ew")
 
-        instruction_label = tk.Label(root, text="Welcome to RudeChat First Run Config: To create a new config file simply change the data in the fields, then edit the file name in the file selection above, configuration files must follow exampleserver.rudeserver format.", bg=self.bg_color, fg=self.fg_color, wraplength=180)
-        instruction_label.pack()
+        # Instruction label
+        instruction_label = tk.Label(
+            root,
+            text="To create a new config file, change the data in the fields, then edit the file name in the file selection above.\nConfiguration files must follow exampleserver.rudeserver format.",
+            bg=self.bg_color,
+            fg=self.fg_color,
+            wraplength=1250
+        )
+        instruction_label.grid(row=3, column=0, padx=10, pady=10, sticky="ew")
 
+        # Start main loop
         root.mainloop()
-
