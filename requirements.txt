@@ -10,4 +10,4 @@ pillow
 pystray
 emoji
 py2app
-PySide6
+PyQt6

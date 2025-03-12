@@ -36,7 +36,7 @@ if platform.system() == "Darwin":
             'pillow',
             'pystray',
             'emoji',
-            'PySide6'
+            'PyQt6'
         ],
         classifiers=[
             "Programming Language :: Python :: 3",
@@ -89,7 +89,7 @@ else:
             'pillow',
             'pystray',
             'emoji',
-            'PySide6'
+            'PyQt6'
         ],
         classifiers=[
             "Programming Language :: Python :: 3",
