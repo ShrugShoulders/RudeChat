@@ -7,6 +7,7 @@ from rudechat4.shared_imports import *
 from rudechat4.rude_logger import configure_logging
 from rudechat4.rude_mock import RudeMock
 from rudechat4.global_variables import *
+import logging
 
 
 class RudeChatClient:
@@ -954,54 +955,61 @@ class RudeChatClient:
             self.gui.insert_text_widget(f"To \x02REATTACH\x0F simply issue a normal /join \x02{channel}\x0F\n")
 
     def update_gui_channel_list(self):
+        # Clear existing items
+        self.gui.channelList.clear()
+
+        # Sort channels by the number of prefix characters at the beginning
+        sorted_channels = sorted(
+            (
+                chan
+                for chan in self.joined_channels
+                if self.server_name in self.gui.popped_out_channels
+                   and chan not in self.gui.popped_out_channels[self.server_name]
+            ),
+            key=lambda chan: len(chan) - len(chan.lstrip(''.join(self.chantypes)))
+        )
+
+        # Insert sorted channels into the listbox
         try:
-            # Clear existing items
-            self.gui.channelList.clear()
-
-            # Sort channels by the number of prefix characters at the beginning
-            sorted_channels = sorted(
-                (
-                    chan
-                    for chan in self.joined_channels
-                    if self.server_name in self.gui.popped_out_channels
-                       and chan not in self.gui.popped_out_channels[self.server_name]
-                ),
-                key=lambda chan: len(chan) - len(chan.lstrip(''.join(self.chantypes)))
-            )
-
-            # Insert sorted channels into the listbox
             for chan in sorted_channels:
                 self.gui.channelList.addItem(chan)
+        except Exception as e:
+            logging.error(f"Error1 in update_gui_channel_list: {e}")
 
-            # Update and restore the highlighted background color for all previously highlighted channels
-            updated_highlighted_channels = {}
-            for channel, highlighted_info in self.highlighted_channels.get(self.server_name, {}).items():
-                if highlighted_info is not None:
-                    old_index = highlighted_info.get('index')
-                    if old_index is not None:
-                        # Find the new index in the current listbox
-                        new_index = None
-                        for idx in range(self.gui.channelList.size()):
-                            if self.gui.channelList.get(idx) == channel:
+        # Update and restore the highlighted background color for all previously highlighted channels
+        updated_highlighted_channels = {}
+        for channel, highlighted_info in self.highlighted_channels.get(self.server_name, {}).items():
+            if highlighted_info is not None:
+                old_index = highlighted_info.get('index')
+                if old_index is not None:
+                    # Find the new index in the current listbox
+                    new_index = None
+                    try:
+                        for idx in range(self.gui.channelList.count()):
+                            if self.gui.channelList.item(idx).text() == channel:
                                 new_index = idx
                                 break
+                    except Exception as e:
+                        logging.error(f"Error2 in update_gui_channel_list: {e}")
 
-                        if new_index is not None:
-                            # Update the index in the highlighted info
-                            highlighted_info['index'] = new_index
+                    if new_index is not None:
+                        # Update the index in the highlighted info
+                        highlighted_info['index'] = new_index
 
-                            # Set the background color directly based on the dictionary entry
+                        # Set the background color directly based on the dictionary entry
+                        try:
                             bg_color = highlighted_info.get('bg', self.mention_note_color)
-                            self.gui.channelList.itemconfig(new_index, {'bg': bg_color})
+                            color = QColor(bg_color)  # Convert string to QColor
+                            self.gui.channelList.item(new_index).setBackground(color)
+                        except Exception as e:
+                            logging.error(f"Error3 in update_gui_channel_list: {e}")
 
-                            # Update the dictionary with the new index
-                            updated_highlighted_channels[channel] = highlighted_info
+                        # Update the dictionary with the new index
+                        updated_highlighted_channels[channel] = highlighted_info
 
-            # Update the highlighted_channels dictionary with the new indexes
-            self.highlighted_channels[self.server_name] = updated_highlighted_channels
-            self.gui.highlight_who_channels()
-        except Exception as e:
-            logging.error(f"Error in update_gui_channel_list: {e}")
+        # Update the highlighted_channels dictionary with the new indexes
+        self.highlighted_channels[self.server_name] = updated_highlighted_channels
+        self.gui.highlight_who_channels()
 
     def update_gui_user_list(self, channel):
         self.gui.userList.clear()
@@ -1859,43 +1867,52 @@ class RudeChatClient:
 
     async def handle_channel_message(self, sender, target, message, timestamp, mode_symbol, znc_privmsg):
         if znc_privmsg:
-            if self.server not in self.channel_messages:
-                self.channel_messages[self.server] = {}
-            if target not in self.channel_messages[self.server]:
-                self.channel_messages[self.server][target] = []
-            self.save_message(self.server, target, sender, message, mode_symbol, is_sent=False)
-            self.log_message(self.server_name, target, sender, message, is_sent=False)
-            user_mention = self.is_it_a_mention(message)
-            if not user_mention:
-                self.highlight_channel_if_not_current(target, sender, user_mention)
-            elif user_mention:
-                self.highlight_channel_if_not_current(target, sender, user_mention)
+            try:
+                if self.server not in self.channel_messages:
+                    self.channel_messages[self.server] = {}
+                if target not in self.channel_messages[self.server]:
+                    self.channel_messages[self.server][target] = []
+                self.save_message(self.server, target, sender, message, mode_symbol, is_sent=False)
+                self.log_message(self.server_name, target, sender, message, is_sent=False)
+                user_mention = self.is_it_a_mention(message)
+                if not user_mention:
+                    self.highlight_channel_if_not_current(target, sender, user_mention)
+                elif user_mention:
+                    self.highlight_channel_if_not_current(target, sender, user_mention)
+            except Exception as e:
+                logging.error(f"Error1 in handle_channel_message: {e}")
 
         elif target != self.current_channel and self.server_name in self.gui.popped_out_channels and target not in self.gui.popped_out_channels[self.server_name]:
-            if self.server not in self.channel_messages:
-                self.channel_messages[self.server] = {}
-            if target not in self.channel_messages[self.server]:
-                self.channel_messages[self.server][target] = []
-            self.save_message(self.server, target, sender, message, mode_symbol, is_sent=False)
-            self.log_message(self.server_name, target, sender, message, is_sent=False)
-            user_mention = self.is_it_a_mention(message)
-            if not user_mention:
-                self.highlight_channel_if_not_current(target, sender, user_mention)
-            elif user_mention:
-                self.highlight_channel_if_not_current(target, sender, user_mention)
+            try:
+                if self.server not in self.channel_messages:
+                    self.channel_messages[self.server] = {}
+                if target not in self.channel_messages[self.server]:
+                    self.channel_messages[self.server][target] = []
+                self.save_message(self.server, target, sender, message, mode_symbol, is_sent=False)
+                self.log_message(self.server_name, target, sender, message, is_sent=False)
+                user_mention = self.is_it_a_mention(message)
+                if not user_mention:
+                    self.highlight_channel_if_not_current(target, sender, user_mention)
+                elif user_mention:
+                    self.highlight_channel_if_not_current(target, sender, user_mention)
+            except Exception as e:
+                logging.error(f"Error2 in handle_channel_message: {e}")
 
         else:
-            if self.server not in self.channel_messages:
-                self.channel_messages[self.server] = {}
-            if target not in self.channel_messages[self.server] and target != self.nickname:
-                self.channel_messages[self.server][target] = []
-            self.save_message(self.server, target, sender, message, mode_symbol, is_sent=False)
-            self.log_message(self.server_name, target, sender, message, is_sent=False)
+            try:
+                if self.server not in self.channel_messages:
+                    self.channel_messages[self.server] = {}
+                if target not in self.channel_messages[self.server] and target != self.nickname:
+                    self.channel_messages[self.server][target] = []
+                self.save_message(self.server, target, sender, message, mode_symbol, is_sent=False)
+                self.log_message(self.server_name, target, sender, message, is_sent=False)
 
-            if self.server_name in self.gui.popped_out_channels and target not in self.gui.popped_out_channels[self.server_name]:
-                self.display_message(timestamp, sender, message, target, mode_symbol, is_direct=False)
-            else:
-                await self.pip_to_pop_out(timestamp, sender, message, target, mode_symbol)
+                if self.server_name in self.gui.popped_out_channels and target not in self.gui.popped_out_channels[self.server_name]:
+                    self.display_message(timestamp, sender, message, target, mode_symbol, is_direct=False)
+                else:
+                    await self.pip_to_pop_out(timestamp, sender, message, target, mode_symbol)
+            except Exception as e:
+                logging.error(f"Error3 in handle_channel_message: {e}")
 
     def save_message(self, server, target, sender, message, mode_symbol, is_sent):
         timestamp = datetime.datetime.now().strftime('[%H:%M:%S] ')
@@ -1976,15 +1993,18 @@ class RudeChatClient:
             self.save_highlight(highlighted_channel, channel_idx, is_mention=True)
 
     def _highlight_channel_by_name(self, highlighted_channel, joined_idx):
-        # Attempt to find the channel in the GUI listbox and highlight it
-        if self.gui.irc_client == self:
-            if highlighted_channel != self.current_channel:
-                for idx in range(self.gui.channelList.size()):
-                    if self.gui.channelList.get(idx) == highlighted_channel:
-                        current_bg = self.gui.channelList.itemcget(idx, 'bg')
-                        if current_bg != 'red':
-                            self.gui.channelList.itemconfig(idx, {'bg': self.activity_note_color})
-                        break
+        try:
+            # Attempt to find the channel in the GUI listbox and highlight it
+            if self.gui.irc_client == self:
+                if highlighted_channel != self.current_channel:
+                    for idx in range(self.gui.channelList.count()):  # Fix 1
+                        if self.gui.channelList.item(idx).text() == highlighted_channel:  # Fix 2
+                            current_bg = self.gui.channelList.item(idx).background().color().name()  # Fix 3
+                            if current_bg != '#ff0000':  # 'red' as hex
+                                self.gui.channelList.item(idx).setBackground(QColor(self.activity_note_color))  # Fix 3
+                            break
+        except Exception as e:
+            logging.error(f"Error0 in _highlight_channel_by_name: {e}")
 
     def save_highlight(self, channel, joined_index, is_mention):
         # Initialize highlighted_channels for server_name if not already done
@@ -2903,22 +2923,25 @@ class RudeChatClient:
                 logging.error(f"Error in handle_names_list command 366: {e}")
 
     def handle_pong(self, tokens):
-        pong_server = tokens.params[-1]  # Assumes the server name is the last parameter
-        current_time = time.time()
-        data = f"PONG from {pong_server}\n"
-        if pong_server.startswith('irc'):
-            pass
-        elif self.znc_connection and '.' in pong_server:
-            pass
-        else:
-            self.add_server_message(data)
+        try:
+            pong_server = tokens.params[-1]  # Assumes the server name is the last parameter
+            current_time = time.time()
+            data = f"PONG from {pong_server}\n"
+            if pong_server.startswith('irc'):
+                pass
+            elif self.znc_connection and '.' in pong_server:
+                pass
+            else:
+                self.add_server_message(data)
 
-        if self.ping_start_time is not None:
-            ping_time = current_time - self.ping_start_time
-            ping_time_formatted = "{:.3f}".format(ping_time).lstrip('0') + "ms"
-            self.gui.update_ping_label(self.server_name, ping_time_formatted)
+            if self.ping_start_time is not None:
+                ping_time = current_time - self.ping_start_time
+                ping_time_formatted = "{:.3f}".format(ping_time).lstrip('0') + "ms"
+                #self.gui.update_ping_label(self.server_name, ping_time_formatted)
 
-        self.ping_start_time = None
+            self.ping_start_time = None
+        except Exception as e:
+            logging.error(f"Error in handle_pong: {e}")
 
     def handle_error(self, tokens):
         error_message = ' '.join(tokens.params) if tokens.params else 'Unknown error'
