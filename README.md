@@ -1,4 +1,5 @@
 # Todo
+**Tasks Complete: (7/22 - 31%)**
 - [ ] Convert to Qt
 	- [x] `__main__`
 	- [ ] `rude_gui`
