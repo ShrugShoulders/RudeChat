@@ -1495,13 +1495,13 @@ class RudeChatClient:
             if channel in self.joined_channels and self.gui.irc_client == self:
                 if channel != self.current_channel:
                     # Find and highlight the channel in the GUI listbox
-                    for idx in range(self.gui.channelList.size()):
-                        if self.gui.channelList.get(idx) == channel:
-                            self.gui.channelList.itemconfig(idx, {'bg': self.mention_note_color})
-                            self.gui.channelList.see(idx)
+                    for idx in range(self.gui.channelList.count()):  # Fix 1
+                        if self.gui.channelList.item(idx).text() == channel:  # Fix 2
+                            self.gui.channelList.item(idx).setBackground(QColor(self.mention_note_color))  # Fix 3
+                            self.gui.channelList.scrollToItem(self.gui.channelList.item(idx))  # Fix for .see()
                             break
         except Exception as e:
-            logging.error(f"Exception in highlighted_channel: {e}")
+            logging.error(f"Exception in highlight_channel: {e}")
 
     def highlight_server(self, server_activity=False, is_mention=False):
         try:
@@ -1543,7 +1543,7 @@ class RudeChatClient:
                 self.ping_threads.append(thread)
 
             # Trigger desktop notification
-            await self.gui.trigger_desktop_notification(channel_name, message_content=message_content)
+            #await self.gui.trigger_desktop_notification(channel_name, message_content=message_content)
         except Exception as e:
             logging.error(f"Error triggering desktop notification: {e}")
 
@@ -2040,7 +2040,8 @@ class RudeChatClient:
                 self.gui.insert_text_widget(f"{friends_here}\n")
                 if user_info not in self.friends.online_friends:
                     try:
-                        self.loop.create_task(self.gui.trigger_desktop_notification(channel_name=user_info, message_content="is Online!"))
+                        pass
+                        #self.loop.create_task(self.gui.trigger_desktop_notification(channel_name=user_info, message_content="is Online!"))
                     except Exception as e:
                         logging.error(f"Exception Caught in handle_join.trigger_desktop_notification: {e}")
                         
