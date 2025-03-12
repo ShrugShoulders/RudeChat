@@ -757,7 +757,7 @@ class RudeGui:
 
             back_text = f"Users ({user_num})"
             self.usersLabel.setText(back_text)
-            self.usersLabel.setStyleSheet(f"color: {self.user_label_fg}")
+            self.usersLabel.setStyleSheet(f"color: initial")
             
             if self.irc_client.server_name in self.irc_client.away_servers:
                 self.irc_client.away_servers.remove(self.irc_client.server_name)
