@@ -1448,11 +1448,12 @@ class RudeChatClient:
             else:
                 # If it's not the currently viewed channel, highlight the channel in green in the Listbox
                 if target != self.current_channel:
-                    for idx in range(self.gui.channelList.size()):
-                        if self.gui.channelList.get(idx) == target:
-                            current_bg = self.gui.channelList.itemcget(idx, 'bg')
-                            if current_bg != 'red':
-                                self.gui.channelList.itemconfig(idx, {'bg': self.activity_note_color})
+                    for idx in range(self.gui.channelList.count()):
+                        if self.gui.channelList.item(idx).text() == target:
+                            current_bg = self.gui.channelList.item(idx).background().color().name()
+
+                            if current_bg != "#ff0000":
+                                self.gui.channelList.item(idx).setBackground(QColor(self.activity_note_color))
                             break
         except Exception as e:
             logging.error(f"Exception in handle_action_ctcp: {e}")
@@ -1495,10 +1496,10 @@ class RudeChatClient:
             if channel in self.joined_channels and self.gui.irc_client == self:
                 if channel != self.current_channel:
                     # Find and highlight the channel in the GUI listbox
-                    for idx in range(self.gui.channelList.count()):  # Fix 1
-                        if self.gui.channelList.item(idx).text() == channel:  # Fix 2
-                            self.gui.channelList.item(idx).setBackground(QColor(self.mention_note_color))  # Fix 3
-                            self.gui.channelList.scrollToItem(self.gui.channelList.item(idx))  # Fix for .see()
+                    for idx in range(self.gui.channelList.count()):
+                        if self.gui.channelList.item(idx).text() == channel:
+                            self.gui.channelList.item(idx).setBackground(QColor(self.mention_note_color))
+                            self.gui.channelList.scrollToItem(self.gui.channelList.item(idx))
                             break
         except Exception as e:
             logging.error(f"Exception in highlight_channel: {e}")
@@ -1997,11 +1998,11 @@ class RudeChatClient:
             # Attempt to find the channel in the GUI listbox and highlight it
             if self.gui.irc_client == self:
                 if highlighted_channel != self.current_channel:
-                    for idx in range(self.gui.channelList.count()):  # Fix 1
-                        if self.gui.channelList.item(idx).text() == highlighted_channel:  # Fix 2
-                            current_bg = self.gui.channelList.item(idx).background().color().name()  # Fix 3
-                            if current_bg != '#ff0000':  # 'red' as hex
-                                self.gui.channelList.item(idx).setBackground(QColor(self.activity_note_color))  # Fix 3
+                    for idx in range(self.gui.channelList.count()): 
+                        if self.gui.channelList.item(idx).text() == highlighted_channel:
+                            current_bg = self.gui.channelList.item(idx).background().color().name()
+                            if current_bg != '#ff0000':
+                                self.gui.channelList.item(idx).setBackground(QColor(self.activity_note_color))
                             break
         except Exception as e:
             logging.error(f"Error0 in _highlight_channel_by_name: {e}")
