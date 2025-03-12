@@ -348,6 +348,7 @@ class RudeGui:
         self.init_message_menu()
         self.init_server_menu()
         self.apply_settings()
+        self.show_startup_art()
         # self.master.protocol("WM_DELETE_WINDOW", self.minimize_to_tray) TODO
 
     def init_input_menu(self):
