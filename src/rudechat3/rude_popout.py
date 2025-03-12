@@ -114,6 +114,7 @@ class RudePopOut:
         self.tab_complete_index = 0
         self.last_tab_time = 0
         self.tab_completion_timer = None
+        self.target_user_info = None
         self.tab_complete_terminator = ":"
 
         self.init_input_menu()
@@ -161,6 +162,9 @@ class RudePopOut:
             username = self.user_listbox.get(index)
             modes_to_strip = ''.join(self.irc_client.mode_values)
             cleaned_nickname = username.lstrip(modes_to_strip)
+
+            if cleaned_nickname == self.target_user_info:
+                return
             
             # Retrieve WHO data if it exists
             if cleaned_nickname in self.irc_client.who_user_data:
@@ -174,9 +178,11 @@ class RudePopOut:
                 
                 # Show the tooltip at mouse position
                 self.usertooltip.show_tooltip(tooltip_text, event.x, event.y)
+                self.target_user_info = cleaned_nickname
             else:
                 # Hide tooltip if there is no WHO data for this user
                 self.usertooltip.hide_tooltip()
+                self.target_user_info = None
 
         except Exception as e:
             logging.error(f"Error Showing User tooltip: {e}")
