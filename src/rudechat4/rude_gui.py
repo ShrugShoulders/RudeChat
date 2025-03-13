@@ -590,6 +590,11 @@ class RudeGui(QWidget):
                 cursor.removeSelectedText()
                 cursor.deleteChar()
 
+    def find_nicks_in_brackets(self, text):
+        # Match a space followed by '<', then the nickname inside <>, and then a space after '>'
+        nick_matches = list(re.finditer(r"<([^<>]+)>", text))
+        return nick_matches
+
     def find_urls(self, text):
         # Use the precompiled regex pattern to find URLs
         return self.url_pattern.findall(text)
@@ -672,7 +677,7 @@ class RudeGui(QWidget):
                         cursor = self.displayText.document().find(url, cursor)
 
                     cursor = self.displayText.textCursor()
-                    cursor.movePosition(QTextCursor.Start)
+                    cursor.movePosition(QTextCursor.MoveOperation.Start) 
                     while self.displayText.find(url):
                         cursor.mergeCharFormat(self.tag_cache[tag_name])
                         cursor.setCharFormat(self.tag_cache[tag_name])
@@ -707,7 +712,7 @@ class RudeGui(QWidget):
                     if start_idx == -1:
                         break
                     cursor.setPosition(start_idx)
-                    cursor.movePosition(QTextCursor.Right, QTextCursor.KeepAnchor, len(emoji_char))
+                    cursor.movePosition(QTextCursor.MoveOperation.NextCharacter, QTextCursor.MoveMode.KeepAnchor, len(emoji_char))
                     cursor.setCharFormat(self.tag_cache[tag_name])
                     start_idx += len(emoji_char)
         except Exception as e:
@@ -716,21 +721,102 @@ class RudeGui(QWidget):
     def clear_text_widget(self):
         self.displayText.clear()
 
+    def generate_random_color(self):
+        while True:
+            # Generate random values for each channel
+            r = random.randint(50, 255)
+            g = random.randint(50, 255)
+            b = random.randint(50, 255)
+            
+            # Ensure the difference between the maximum and minimum channel values is above a threshold
+            if max(r, g, b) - min(r, g, b) > 50:  # 50 is the threshold, you can adjust this value as needed
+                return "#{:02x}{:02x}{:02x}".format(r, g, b)
+
+    def highlight_nicknames(self):
+        """Highlight the user's nickname and other nicknames in text."""
+        user_nickname = self.irc_client.nickname
+
+        # Search and apply color to nicknames inside '<>'
+        cursor = self.displayText.textCursor()
+        text_length = len(self.displayText.toPlainText())  # Get the text length
+        start_position = 0
+
+        while start_position < text_length:
+            # Search for the next nickname enclosed in '<>'
+            start_position = self.displayText.toPlainText().find('<', start_position)
+            if start_position == -1:
+                break  # No more '<' found, exit loop
+
+            end_position = self.displayText.toPlainText().find('>', start_position)
+            if end_position == -1:
+                break  # No more '>' found, exit loop
+
+            # Extract the nickname enclosed by < and >
+            nickname_with_brackets = self.displayText.toPlainText()[start_position:end_position + 1]
+            nickname = nickname_with_brackets.strip('<>')
+
+            # Validate the nickname (example: it should match alphanumeric or specific pattern)
+            if not self.is_valid_nickname(nickname_with_brackets):
+                # If the nickname is not valid, continue searching
+                start_position = end_position + 1
+                continue
+
+            # Check if the nickname has an associated color
+            if f"<{nickname}>" in self.nickname_colors:
+                nickname_color = self.nickname_colors[f"<{nickname}>"]
+            else:
+                # If no color, generate a new color or use default
+                if self.generate_nickname_colors:
+                    nickname_color = self.generate_random_color()
+                else:
+                    nickname_color = self.main_fg_color
+
+                # Cache the color for the nickname
+                self.nickname_colors[f"<{nickname}>"] = nickname_color
+
+            # Apply color formatting to the found nickname
+            format_nick = QTextCharFormat()
+            format_nick.setForeground(QColor(nickname_color))
+
+            # Move the cursor to the start of the nickname and apply formatting
+            text_to_validate = self.displayText.toPlainText()[start_position:end_position + 1]
+            print(text_to_validate)
+            cursor.setPosition(start_position)
+            cursor.setPosition(end_position + 1, QTextCursor.MoveMode.KeepAnchor)
+            cursor.setCharFormat(format_nick)
+
+            # Update the start position to continue searching after the current nickname
+            start_position = end_position + 1
+
+            # Move to the next position after the formatted nickname
+            cursor.setPosition(start_position)
+
+    def is_valid_nickname(self, nickname):
+        """Validate the nickname format using regex."""
+        # The regex matches text inside '<>' and ensures there are no nested '<>' characters.
+        pattern = r"<([^<>]+)>"
+        
+        # Search for the nickname in the input string using the regex
+        match = re.fullmatch(pattern, nickname)
+        
+        # If there's a match, the nickname is valid; otherwise, it's invalid
+        return bool(match)
+
     def insert_text_widget(self, message):
-        # try:
-            self.trim_text_widget()
-            urls = self.find_urls(message)
-            emojis = self.find_emojis(message)
+        self.trim_text_widget()
+        urls = self.find_urls(message)
+        emojis = self.find_emojis(message)
 
-            formatted_text = decoder(message)
-            self.tag_text(formatted_text)
+        formatted_text = decoder(message)
 
-            # Start tagging URLs using the non-blocking approach
-            self.tag_urls(urls)
-            self.tag_emojis(emojis, message)
-            self.insert_and_scroll()
-        # except Exception as e:
-            # logging.error(f"Exception in insert_text {e}")
+        # Then apply other formatting
+        self.tag_text(formatted_text)
+
+        # Start tagging URLs using the non-blocking approach
+        self.tag_urls(urls)
+        self.tag_emojis(emojis, message)
+        self.highlight_nicknames()
+        self.insert_and_scroll()
 
     def open_url(self, url):
         webbrowser.open(url)
