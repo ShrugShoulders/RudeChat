@@ -738,69 +738,55 @@ class RudeGui(QWidget):
 
         # Search and apply color to nicknames inside '<>'
         cursor = self.displayText.textCursor()
-        text_length = len(self.displayText.toPlainText())  # Get the text length
-        start_position = 0
-
-        while start_position < text_length:
-            # Search for the next nickname enclosed in '<>'
-            start_position = self.displayText.toPlainText().find('<', start_position)
-            if start_position == -1:
-                break  # No more '<' found, exit loop
-
-            end_position = self.displayText.toPlainText().find('>', start_position)
+        text = self.displayText.toPlainText()
+        
+        # Find the first occurrence of '<'
+        start_position = text.find('<')
+        while start_position != -1:
+            # Find the corresponding '>'
+            end_position = text.find('>', start_position)
             if end_position == -1:
-                break  # No more '>' found, exit loop
+                break
 
-            # Extract the nickname enclosed by < and >
-            nickname_with_brackets = self.displayText.toPlainText()[start_position:end_position + 1]
+            # Extract the nickname
+            nickname_with_brackets = text[start_position:end_position + 1]
             nickname = nickname_with_brackets.strip('<>')
 
-            # Validate the nickname (example: it should match alphanumeric or specific pattern)
-            if not self.is_valid_nickname(nickname_with_brackets):
-                # If the nickname is not valid, continue searching
-                start_position = end_position + 1
-                continue
-
-            # Check if the nickname has an associated color
-            if f"<{nickname}>" in self.nickname_colors:
-                nickname_color = self.nickname_colors[f"<{nickname}>"]
-            else:
-                # If no color, generate a new color or use default
-                if self.generate_nickname_colors:
-                    nickname_color = self.generate_random_color()
-                else:
-                    nickname_color = self.main_fg_color
-
-                # Cache the color for the nickname
-                self.nickname_colors[f"<{nickname}>"] = nickname_color
-
             # Apply color formatting to the found nickname
-            format_nick = QTextCharFormat()
-            format_nick.setForeground(QColor(nickname_color))
+            self.apply_nickname_format(start_position, end_position + 1, nickname)
 
-            # Move the cursor to the start of the nickname and apply formatting
-            text_to_validate = self.displayText.toPlainText()[start_position:end_position + 1]
-            print(text_to_validate)
-            cursor.setPosition(start_position)
-            cursor.setPosition(end_position + 1, QTextCursor.MoveMode.KeepAnchor)
-            cursor.setCharFormat(format_nick)
+            # Continue searching after the current nickname
+            start_position = text.find('<', end_position + 1)
 
-            # Update the start position to continue searching after the current nickname
-            start_position = end_position + 1
+    def apply_nickname_format(self, start_position, end_position, nickname):
+        """Apply color formatting to the nickname."""
+        cursor = self.displayText.textCursor()
 
-            # Move to the next position after the formatted nickname
-            cursor.setPosition(start_position)
+        # Check if the nickname has an associated color
+        if f"<{nickname}>" in self.nickname_colors:
+            nickname_color = self.nickname_colors[f"<{nickname}>"]
+        else:
+            # If no color, generate a new color or use default
+            if self.generate_nickname_colors:
+                nickname_color = self.generate_random_color()
+            else:
+                nickname_color = self.main_fg_color
 
-    def is_valid_nickname(self, nickname):
-        """Validate the nickname format using regex."""
-        # The regex matches text inside '<>' and ensures there are no nested '<>' characters.
-        pattern = r"<([^<>]+)>"
-        
-        # Search for the nickname in the input string using the regex
-        match = re.fullmatch(pattern, nickname)
-        
-        # If there's a match, the nickname is valid; otherwise, it's invalid
-        return bool(match)
+            # Cache the color for the nickname
+            self.nickname_colors[f"<{nickname}>"] = nickname_color
+
+        # Apply the color formatting
+        format_nick = QTextCharFormat()
+        format_nick.setForeground(QColor(nickname_color))
+
+        # Adjust positions by 3 to correct the offset
+        start_position += 3
+        end_position += 3
+
+        # Make sure to include the '>' character by adjusting the end_position
+        cursor.setPosition(start_position)
+        cursor.setPosition(end_position, QTextCursor.MoveMode.KeepAnchor)
+        cursor.setCharFormat(format_nick)
 
     def insert_text_widget(self, message):
         self.trim_text_widget()
