@@ -176,7 +176,29 @@ class RudeGui(QWidget):
         pass #TODO
 
     def set_screen_size(self):
-        pass #TODO
+        try:
+            width = self.screen().size().width()
+            height =self.screen().size().height
+            screen_size = f"{width}x{height}"
+        except Exception as e:
+            print("guh")
+            logging.error(f"Unable to get screen size: {e} Using default variables.")
+            self.app_size = [800, 600]
+
+        if screen_size == "3840x2160":  # 4K UHD
+            self.app_size = [2200, 1800]
+        elif screen_size == "1920x1080":  # Full HD
+            self.app_size = [1600, 900]
+        elif screen_size == "2560x1440":  # QHD
+            self.app_size = [1920, 1080]
+        elif screen_size == "1366x768":  # Common budget laptop
+            self.app_size = [1280, 720]
+        elif screen_size == "2560, 1600":  # MacBook Retina
+            self.app_size = [1900, 800]
+        elif screen_size == "3440x1440":  # Ultra-wide
+            self.app_size = [3000, 1200]
+        else:
+            self.app_size = [800, 600]
 
     def set_icon(self):
         pass #TODO
