@@ -358,7 +358,7 @@ class RudeGui(QWidget):
         self.usersSelector.addWidget(self.usersLabel)
 
         self.userList = QListWidget(self)
-        self.userList.setResizeMode(QListView.ResizeMode.Adjust)
+        self.userList.setSizeAdjustPolicy(QAbstractScrollArea.SizeAdjustPolicy.AdjustToContents)
         self.userList.setItemAlignment(Qt.AlignmentFlag.AlignLeading)
         self.usersSelector.addWidget(self.userList)
 
@@ -372,7 +372,7 @@ class RudeGui(QWidget):
         self.serversSelector.addWidget(self.serversLabel)
 
         self.serverList = QListWidget(self)
-        self.serverList.setResizeMode(QListView.ResizeMode.Adjust)
+        self.serverList.setSizeAdjustPolicy(QAbstractScrollArea.SizeAdjustPolicy.AdjustToContents)
         self.serverList.itemClicked.connect(self.on_server_change)
         self.serverList.setItemAlignment(Qt.AlignmentFlag.AlignLeading)
         self.serversSelector.addWidget(self.serverList)
@@ -385,10 +385,17 @@ class RudeGui(QWidget):
         self.channelsSelector.addWidget(self.channelsLabel)
 
         self.channelList = QListWidget(self)
-        self.channelList.setResizeMode(QListView.ResizeMode.Adjust) 
+        self.channelList.setSizeAdjustPolicy(QAbstractScrollArea.SizeAdjustPolicy.AdjustToContents)
         self.channelList.itemClicked.connect(self.on_channel_click)
         self.channelList.setItemAlignment(Qt.AlignmentFlag.AlignLeading)
         self.channelsSelector.addWidget(self.channelList)
+        
+        self.usersLabel.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Preferred)
+        self.userList.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Expanding)
+        self.serversLabel.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Preferred)
+        self.serverList.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Expanding)
+        self.channelsLabel.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Preferred)
+        self.channelList.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Expanding)
 
         self.sidebar.addLayout(self.channelsSelector)
 
@@ -397,9 +404,6 @@ class RudeGui(QWidget):
         self.sidebar.setStretch(2, 2)
 
         self.layout().addLayout(self.sidebar)
-
-        self.layout().setStretch(0, 5)
-        self.layout().setStretch(1, 1)
 
     def set_misc_variables(self):
         self.channel_lists = {}
