@@ -417,6 +417,32 @@ class RudeGui(QWidget):
     def highlight_away_users(self):
         pass #TODO
 
+    def send_away_to_clients(self, away_message=None):
+        if self.log_on:
+            logging.info("Attempting AWAY with message")
+
+        try:
+            for server_name, irc_client in self.clients.items():
+                # Assign the client reference
+                client = irc_client
+
+                if self.log_on:
+                    logging.info(f"Client {client} AWAY attempt")
+
+                loop = client.loop
+
+                if self.log_on:
+                    logging.info(f"Current Loop: {loop}")
+
+                loop.create_task(client.send_away_notification(away_message), name="away_client_task")
+
+                if self.log_on:
+                    logging.info(f"Sending AWAY to client: {client}")
+                    logging.info(f"AWAY Message: {away_message}")
+
+        except Exception as e:
+            logging.error(f"Error in send_away_to_clients: {e}")
+
     def emoji_select(self):
         if platform.system() == "Darwin":  # macOS
             self.emoji_type = "Apple Color Emoji"
@@ -851,7 +877,7 @@ class RudeGui(QWidget):
 
             back_text = f"Users ({user_num})"
             self.usersLabel.setText(back_text)
-            self.usersLabel.setStyleSheet(f"color: initial")
+            self.usersLabel.setStyleSheet(f"color: white")
             
             if self.irc_client.server_name in self.irc_client.away_servers:
                 self.irc_client.away_servers.remove(self.irc_client.server_name)
