@@ -6,7 +6,7 @@
 		- [ ] Restore Sidebar
 			- [x] Users
 				- [ ] Restore right click menu
-                                - [ ] Restore AWAY user display color change
+				- [ ] Restore AWAY user display color change
 			- [x] Servers
 			- [x] Channels
 				- [ ] Restore right click menu
@@ -21,8 +21,8 @@
 		- [ ] `gui_config_window`
 		- [ ] `list_window`
 		- [ ] `user_data_display`
-                - [x] `highlight_nicknames`
-                        - [ ] Restore main user nickname highlight
+			- [x] `highlight_nicknames`
+				- [ ] Restore main user nickname highlight
 	- [ ] `rude_dragndrop`
 	- [x] `rude_first_run`
 
