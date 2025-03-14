@@ -1,39 +1,42 @@
 # Todo
+- [x] Complete / Has base function
+- [ ] Needs to be done / all child goals need to be completed
+
 **Tasks Complete: (8/25 - 31%)**
 - [ ] Convert to Qt
 	- [x] `__main__`
-	- [-] `rude_gui`
-		- [-] Menubar
+	- [ ] `rude_gui`
+		- [x] Menubar
 			- [x] Chat
 				- [x] Clear Chat
-				- [x] Reload Macros
-			- [-] Colors
+				- [x] Reset Macros
+			- [x] Color
 				- [ ] Color selector
 				- [x] Save Colors
 				- [ ] Reset Colors
-			- [-] Config
-				- [x] Edit servers...
+			- [x] Config
+				- [x] Edit Servers...
 				- [ ] Edit GUI
-		- [-] Restore Sidebar
-			- [-] Users
+		- [x] Restore Sidebar
+			- [x] Users
 				- [ ] Restore right click menu
 				- [ ] Restore AWAY user display color change
 			- [x] Servers
-			- [-] Channels
+			- [x] Channels
 				- [ ] Restore right click menu
-			- [-] Entry bar
+			- [x] Entry bar
 				- [ ] Restore keybindings for TAB and arrow keys
-		- [-] `rude_client`
-			- [x] Fix listboxes
-		- [-] `server_config_window`
-			- [ ] `channel_expand`
-		- [ ] `rude_popout`
-		- [ ] `rude_colours`
-		- [ ] `gui_config_window`
-		- [ ] `list_window`
-		- [ ] `user_data_display`
-			- [x] `highlight_nicknames`
-				- [ ] Restore main user nickname highlight
+	- [x] `rude_client`
+		- [x] Fix listboxes
+	- [x] `server_config_window`
+		- [ ] `channel_expand`
+	- [ ] `rude_popout`
+	- [ ] `rude_colours`
+	- [ ] `gui_config_window`
+	- [ ] `list_window`
+	- [ ] `user_data_display`
+		- [x] `highlight_nicknames`
+			- [ ] Restore main user nickname highlight
 	- [ ] `rude_dragndrop`
 	- [x] `rude_first_run`
 
