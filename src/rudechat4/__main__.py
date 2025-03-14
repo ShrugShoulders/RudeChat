@@ -35,16 +35,6 @@ from rudechat4.global_variables import *
 if platform.system() == "Darwin":
     from objc import lookUpClass
 
-def clear_chat_window(): pass 
-def reload_macros(): pass 
-
-def open_color_selector(): pass 
-def save_nickname_colors(): pass 
-def reset_nick_colors(): pass 
-
-def open_client_config_window(): pass 
-def open_gui_config_window(): pass 
-
 class Window(QMainWindow):
     def __init__(self):
         super().__init__()
@@ -76,9 +66,6 @@ class Window(QMainWindow):
         NSApp = lookUpClass("NSApplication").sharedApplication()
         NSApp.orderFrontStandardAboutPanel_(None)
 
-    def placeholder(self):
-        print("Not inited yet.")
-
 def main():
     CopyConfigs()
     app = QApplication(sys.argv)
@@ -89,14 +76,14 @@ def main():
         first_run.open_client_config_window()
     
     root = Window()
-    main = RudeGui(root)
-    root.setCentralWidget(main)
+    gui = RudeGui(root)
+    root.setCentralWidget(gui)
 
     new_loop = asyncio.new_event_loop()
     asyncio.set_event_loop(new_loop)
 
     loop = asyncio.get_event_loop()
-    loop.create_task(initialize_clients(main))
+    loop.create_task(initialize_clients(gui))
 
     def qt_update():
         try:
@@ -112,4 +99,4 @@ def main():
     app.exec()
 
 if __name__ == '__main__':
-    main()
+    sys.exit(main())

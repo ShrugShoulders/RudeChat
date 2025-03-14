@@ -145,6 +145,7 @@ class RudeChatClient:
         self.auto_join_invite = config.getboolean('IRC', 'auto_join_invite', fallback=True)
         self.use_emojis = config.getboolean('IRC', 'use_emojis', fallback=True)
         self.log_on = config.getboolean('IRC', 'log_on', fallback=False)
+        self.watcher = AutoAway(self.config)
         self.watcher.reload_config()
         self.gui.update_nick_channel_label()
         for channel in self.auto_join_channels:
