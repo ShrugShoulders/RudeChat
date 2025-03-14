@@ -84,25 +84,7 @@ class RudeGui(QWidget):
 
         # Initialise client
         self.init_client()
-
-        self.master.clear_chat_window = self.clear_chat_window
-        self.master.reload_macros = self.reload_macros
-
-        self.master.open_color_selector = self.open_color_selector
-        self.master.save_nickname_colors = self.save_nickname_colors
-        self.master.reset_nick_colors = self.reset_nick_colors
-
-        self.master.open_client_config_window = self.open_client_config_window
-        self.master.open_gui_config_window = self.open_gui_config_window
-
-        self.master.chat_clear_chat_action.triggered.disconnect()
-        self.master.chat_reload_macros_action.triggered.disconnect()
-        self.master.colors_color_selector_action.triggered.disconnect()
-        self.master.colors_save_colors_action.triggered.disconnect()
-        self.master.colors_reset_colors_action.triggered.disconnect()
-        self.master.config_edit_servers_action.triggered.disconnect()
-        self.master.config_edit_gui_action.triggered.disconnect()
-
+        
         self.master.chat_clear_chat_action.triggered.connect(self.clear_chat_window)
         self.master.chat_reload_macros_action.triggered.connect(self.reload_macros)
         self.master.colors_color_selector_action.triggered.connect(self.open_color_selector)
@@ -114,8 +96,11 @@ class RudeGui(QWidget):
         #TODO: set up keybinds
 
     def clear_chat_window(self):
-        print("clear_chat_window")
-        pass #TODO
+        current_channel = self.irc_client.current_channel
+
+        if current_channel:
+            self.text_widget.clear()
+            self.irc_client.channel_messages[self.irc_client.server][current_channel] = []
 
     def reload_macros(self):
         print("reload_macros")
@@ -264,10 +249,10 @@ class RudeGui(QWidget):
         self.topicLabel.setWordWrap(True)
         self.chatArea.addWidget(self.topicLabel)
 
-        self.displayText = RudeTextEdit(self)
-        self.displayText.setReadOnly(True)
-        self.displayText.setAcceptRichText(True)
-        self.chatArea.addWidget(self.displayText)
+        self.text_widget = RudeTextEdit(self)
+        self.text_widget.setReadOnly(True)
+        self.text_widget.setAcceptRichText(True)
+        self.chatArea.addWidget(self.text_widget)
 
         self.mainSection.addLayout(self.chatArea)
 
@@ -387,7 +372,7 @@ class RudeGui(QWidget):
             logging.error(f"An unexpected error occurred while saving nickname colors: {e}. Unable to save nickname colors.")
 
     def init_client(self):
-        self.irc_client = RudeChatClient(self.displayText, self.inputField, self.master, self)
+        self.irc_client = RudeChatClient(self.text_widget, self.inputField, self.master, self)
         self.init_input_menu()
         self.init_message_menu()
         self.init_server_menu()
@@ -459,7 +444,7 @@ class RudeGui(QWidget):
     async def init_client_with_config(self, config_file, fallback_server_name):
         irc_client = None
         try:
-            irc_client = RudeChatClient(self.displayText, self.inputField, self.master, self)
+            irc_client = RudeChatClient(self.text_widget, self.inputField, self.master, self)
             if self.log_on:
                 logging.info(f"initializing client {irc_client} in progress")
             irc_client.client_event_loops[irc_client] = asyncio.get_event_loop()  # Store a reference to the event loop
@@ -603,10 +588,10 @@ class RudeGui(QWidget):
 
     def trim_text_widget(self):
         """Trim the text widget to only hold a maximum of 1000 lines."""
-        line_count = self.displayText.document().blockCount()  # Get total line count
+        line_count = self.text_widget.document().blockCount()  # Get total line count
         if line_count > 1000:
             excess_lines = line_count - 1000
-            cursor = self.displayText.textCursor()
+            cursor = self.text_widget.textCursor()
             cursor.movePosition(QTextCursor.Start)
             for _ in range(excess_lines):
                 cursor.select(QTextCursor.BlockUnderCursor)
@@ -649,7 +634,7 @@ class RudeGui(QWidget):
             logging.error(f"Error in configure_tag_based_on_attributes: {e}")
 
     def tag_text(self, formatted_text):
-        cursor = self.displayText.textCursor()
+        cursor = self.text_widget.textCursor()
         for text, attributes in formatted_text:
             # Create a tag name based on the attributes
             tag_name = "_".join(str(attr) for attr in attributes)
@@ -663,7 +648,7 @@ class RudeGui(QWidget):
                 logging.error(f"Error in tag_text: {e}")
 
     def insert_and_scroll(self):
-        self.displayText.moveCursor(QTextCursor.MoveOperation.End)
+        self.text_widget.moveCursor(QTextCursor.MoveOperation.End)
 
     def tag_urls(self, urls, index=0):
         if index < len(urls):
@@ -685,19 +670,19 @@ class RudeGui(QWidget):
                     char_format.setFontUnderline(True)
                     self.tag_cache[tag_name] = char_format
 
-                    cursor = self.displayText.textCursor()
-                    cursor = self.displayText.document().find(url, 0)
+                    cursor = self.text_widget.textCursor()
+                    cursor = self.text_widget.document().find(url, 0)
                 except Exception as e:
                     logging.error(f"Error2 in tag_urls: {e}")
 
                 try:
                     while not cursor.isNull():
                         cursor.mergeCharFormat(char_format)
-                        cursor = self.displayText.document().find(url, cursor)
+                        cursor = self.text_widget.document().find(url, cursor)
 
-                    cursor = self.displayText.textCursor()
+                    cursor = self.text_widget.textCursor()
                     cursor.movePosition(QTextCursor.MoveOperation.Start) 
-                    while self.displayText.find(url):
+                    while self.text_widget.find(url):
                         cursor.mergeCharFormat(self.tag_cache[tag_name])
                         cursor.setCharFormat(self.tag_cache[tag_name])
                         cursor.insertText(url, self.tag_cache[tag_name])
@@ -711,7 +696,7 @@ class RudeGui(QWidget):
             self.insert_and_scroll()
 
     def clear_text_widget(self):
-        self.displayText.clear()
+        self.text_widget.clear()
 
     def generate_random_color(self):
         while True:
@@ -736,8 +721,8 @@ class RudeGui(QWidget):
         try:
             user_nickname = self.irc_client.nickname
 
-            cursor = self.displayText.textCursor()
-            text = self.displayText.toPlainText()
+            cursor = self.text_widget.textCursor()
+            text = self.text_widget.toPlainText()
 
             start_position = text.find('<')
             while start_position != -1:
@@ -757,7 +742,7 @@ class RudeGui(QWidget):
     def apply_nickname_format(self, text, start_position, end_position, nickname):
         """Apply color formatting to the nickname with emoji offset correction."""
         try:
-            cursor = self.displayText.textCursor()
+            cursor = self.text_widget.textCursor()
 
             if f"<{nickname}>" in self.nickname_colors:
                 nickname_color = self.nickname_colors[f"<{nickname}>"]
@@ -994,7 +979,7 @@ class RudeGui(QWidget):
             return
 
         # Clear the text window
-        self.displayText.clear()
+        self.text_widget.clear()
 
         # Print the current channel topics dictionary
 

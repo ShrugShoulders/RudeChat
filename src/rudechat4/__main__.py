@@ -61,23 +61,16 @@ class Window(QMainWindow):
 
         self.chat_menu = menu_bar.addMenu("Chat")
         self.chat_clear_chat_action = self.chat_menu.addAction("Clear Chat")
-        self.chat_clear_chat_action.triggered.connect(self.placeholder)
         self.chat_reload_macros_action = self.chat_menu.addAction("Reload Macros")
-        self.chat_reload_macros_action.triggered.connect(self.placeholder)
 
         self.colors_menu = menu_bar.addMenu("Colors")
         self.colors_color_selector_action = self.colors_menu.addAction("Color Selector")
-        self.colors_color_selector_action.triggered.connect(self.placeholder)
         self.colors_save_colors_action = self.colors_menu.addAction("Save Colors")
-        self.colors_save_colors_action.triggered.connect(self.placeholder)
         self.colors_reset_colors_action = self.colors_menu.addAction("Reset Colors")
-        self.colors_reset_colors_action.triggered.connect(self.placeholder)
 
         self.config_menu = menu_bar.addMenu("Config")
         self.config_edit_servers_action = self.config_menu.addAction("Edit Servers...")
-        self.config_edit_servers_action.triggered.connect(self.placeholder)
         self.config_edit_gui_action = self.config_menu.addAction("Edit GUI")
-        self.config_edit_gui_action.triggered.connect(self.placeholder)
 
     def show_mac_about_panel(self):
         NSApp = lookUpClass("NSApplication").sharedApplication()
