@@ -103,8 +103,8 @@ class RudeGui(QWidget):
             self.irc_client.channel_messages[self.irc_client.server][current_channel] = []
 
     def reload_macros(self):
-        print("reload_macros")
-        pass #TODO
+        loop = asyncio.get_event_loop()
+        loop.create_task(self.irc_client.update_available_macros())
 
     def open_color_selector(self):
         print("open_color_selector")
