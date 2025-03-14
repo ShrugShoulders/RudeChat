@@ -231,8 +231,8 @@ class RudeGui(QWidget):
         self.message_bar.addWidget(self.id_label)
 
         self.text_field = QLineEdit(self)
+        self.text_field.setFrame(False)
         QTimer.singleShot(0, self.bind_return_key)
-
         self.message_bar.addWidget(self.text_field)
 
         self.main_section.addLayout(self.message_bar)
@@ -285,6 +285,12 @@ class RudeGui(QWidget):
         self.channel_selector.addWidget(self.channel_selector_list)
 
         self.sidebar.addLayout(self.channel_selector)
+
+        self.upload_button = QToolButton(self, text="Upload File")
+        self.upload_button.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed) 
+        self.upload_button.setEnabled(False)
+        QTimer.singleShot(0, self.bind_upload_button)
+        self.sidebar.addWidget(self.upload_button)
 
         self.sidebar.setStretch(0, 2)
         self.sidebar.setStretch(1, 1)
@@ -345,6 +351,10 @@ class RudeGui(QWidget):
     def bind_return_key(self):
         loop = asyncio.get_event_loop()
         self.text_field.returnPressed.connect(lambda: loop.create_task(self.on_enter_key(), name="on_enter_key"))
+
+    def bind_upload_button(self):
+        loop = asyncio.get_event_loop()
+        self.upload_button.clicked.connect(lambda: loop.create_task(self.irc_client.handle_upload(), name="handle_upload"))
 
     # Tray Icon Management
     def create_tray_icon(self): pass #TODO
@@ -921,7 +931,7 @@ class RudeGui(QWidget):
             await self.irc_client.command_parser(user_input)
         except Exception as e:
             print(e)
- 
+
     # Text & Formatting
     def insert_text_widget(self, message):
         self.trim_text_widget()

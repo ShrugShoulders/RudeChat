@@ -561,6 +561,7 @@ class RudeChatClient:
                         self.gui.insert_text_widget(f'Connected to the server: {self.server}:{self.port}\n')
                         received_001 = True
                         self.gui.insert_and_scroll()
+                        self.gui.upload_button.setEnabled(True)
                     case "002" | "003" | "004":
                         if self.znc_connection:
                             reset_timer("")
@@ -5041,3 +5042,34 @@ class RudeChatClient:
                 except Exception as e:
                     logging.error(f"Error2 force_click: {e}")
                 break
+
+    async def handle_upload(self):
+        filename = QFileDialog().getOpenFileName(self.gui, 'Open File')
+        typing = magic.from_file(filename[0], mime=True).split('/')
+        
+        match typing[0]:
+            case "text":
+                f = open(filename[0], "r")
+                outcome = requests.post(
+                    url="https://bpa.st/api/v1/paste",
+                    json={
+                        "expiry": "1day",
+                        "files": [
+                            {
+                                "lexer": "autodetect",
+                                "content": f.read()
+                            }
+                        ]
+                    }
+                )
+
+                match outcome.status_code:
+                    case 200:
+                        asyncio.get_event_loop().create_task(self.command_parser("RudeChat Upload: " + outcome.json()["link"]))
+                    case _:
+                        QMessageBox.warning(self.gui, "Upload Error", str(outcome.json()["message"]))
+                return
+            case _:
+                QMessageBox.warning(self.gui, "Upload Error", "Not a supported filetype.")
+                return
+        return
