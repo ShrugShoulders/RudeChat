@@ -1,6 +1,7 @@
 from rudechat4.shared_imports import *
 from rudechat4.global_variables import *
 from rudechat4.rude_client import RudeChatClient
+from rudechat4.server_config_window import ServerConfigWindow
 from rudechat4.nick_cleaner import clean_nicknames
 from rudechat4.format_decoder import decoder
 
@@ -115,8 +116,60 @@ class RudeGui(QWidget):
         pass #TODO
 
     def open_client_config_window(self):
-        print("open_client_config_window")
-        pass #TODO
+        def after_config_window_close():
+            # Reload configuration after the configuration window is closed
+            self.irc_client.reload_config(config_window.config_file)
+
+        def close_window():
+            self.main_window.close()
+
+        def on_config_window_close():
+            QTimer.singleShot(100, after_config_window_close)
+            QTimer.singleShot(200, close_window)
+            return
+
+        self.main_window = QWidget()
+        self.main_window.setWindowTitle("Rude Server configuration")
+        self.main_window.resize(450, 500)
+
+        files = os.listdir(G_CONFIG_DIR)
+        config_files = [f for f in files if f.endswith(".rudeserver")]
+        config_files.sort()
+
+        if not config_files:
+            QMessageBox.warning(self.main_window, "Warning", "No configuration files found.")
+            self.main_window.close()
+            return
+
+        self.main_window.layout = QVBoxLayout(self.main_window)
+        self.main_window.setContentsMargins(0, 0, 0, 0)
+
+        config_window = ServerConfigWindow(self.main_window, os.path.join(G_CONFIG_DIR, config_files[0]), on_config_window_close)
+
+        def on_config_change(event):
+            selected_config_file = selected_config_file_var.get()
+            config_window.config_file = os.path.join(G_CONFIG_DIR, selected_config_file)
+            config_window.config.read(config_window.config_file)
+            config_window.create_widgets()
+
+        # Instruction label
+        instruction_label = QLabel("To create a new config file, change the data in the fields, then edit the file name in the file selection above.\nConfiguration files must follow exampleserver.rudeserver format.")
+        instruction_label.setWordWrap(True)
+        self.main_window.layout.addWidget(instruction_label)
+
+        # Menu to choose configuration file
+        selected_config_file_var = QComboBox()
+        selected_config_file_var.addItems(config_files)
+        selected_config_file_var.currentIndexChanged.connect(on_config_change)
+        self.main_window.layout.addWidget(selected_config_file_var)
+
+        self.main_window.layout.addWidget(config_window.frame)
+
+        save_button = QPushButton("Apply")
+        save_button.clicked.connect(config_window.save_config)
+        self.main_window.layout.addWidget(save_button)
+
+        self.main_window.show()
 
     def open_gui_config_window(self):
         print("open_gui_config_window")

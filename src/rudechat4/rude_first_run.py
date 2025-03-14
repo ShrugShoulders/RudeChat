@@ -11,8 +11,7 @@ class FirstRun:
         self.read_config()
 
     def load_first_run(self):
-        config_directory = G_CONFIG_DIR
-        file_path = os.path.join(config_directory, "first_run.txt")
+        file_path = os.path.join(G_CONFIG_DIR, "first_run.txt")
         try:
             with open(file_path, 'r') as file:
                 content = file.read().strip()
@@ -39,8 +38,7 @@ class FirstRun:
             self.fg_color = color_config.get('GUI', 'main_fg_color', fallback='#C0FFEE')
 
     def update_first_run(self):
-        config_directory = G_CONFIG_DIR
-        file_path = os.path.join(config_directory, "first_run.txt")
+        file_path = os.path.join(G_CONFIG_DIR, "first_run.txt")
         """
         Updates the first run file to indicate that the first run setup is complete.
         """
@@ -80,8 +78,6 @@ class FirstRun:
         return self.window_size
 
     def open_client_config_window(self):
-        config_directory = G_CONFIG_DIR
-        
         def after_config_window_close():
             self.update_first_run()
             self.first_run_detect = 1
@@ -98,7 +94,7 @@ class FirstRun:
         self.main_window.setWindowTitle("RudeChat: First Run Configuration")
         self.main_window.resize(450, 500)
 
-        files = os.listdir(config_directory)
+        files = os.listdir(G_CONFIG_DIR)
         config_files = [f for f in files if f.endswith(".rudeserver")]
         config_files.sort()
 
@@ -110,11 +106,11 @@ class FirstRun:
         self.main_window.layout = QVBoxLayout(self.main_window)
         self.main_window.setContentsMargins(0, 0, 0, 0)
 
-        config_window = ServerConfigWindow(self.main_window, os.path.join(config_directory, config_files[0]), on_config_window_close)
+        config_window = ServerConfigWindow(self.main_window, os.path.join(G_CONFIG_DIR, config_files[0]), on_config_window_close)
 
         def on_config_change():
             selected_config_file = selected_config_file_var.currentText()
-            config_window.config_file = os.path.join(config_directory, selected_config_file)
+            config_window.config_file = os.path.join(G_CONFIG_DIR, selected_config_file)
             config_window.config.read(config_window.config_file)
             config_window.create_widgets()
 

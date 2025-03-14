@@ -10,8 +10,8 @@ class ServerConfigWindow:
         self.close_callback = close_callback
         self.frame = QScrollArea()
         self.frame.setViewportMargins(-10, -10, -10, -10)
-        self.frame.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
-        self.frame.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.frame.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        self.frame.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.frame.setWidgetResizable(True)
         self.frame.setFrameShape(QFrame.Shape.NoFrame)
         self.widget = QWidget()
