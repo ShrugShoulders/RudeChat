@@ -406,15 +406,12 @@ class RudeGui(QWidget):
 
     def apply_settings(self):
         self.hidden_windows()
-        self.highlight_nickname()
+        self.highlight_nicknames()
         self.highlight_away_users()
         self.emoji_select()
         pass #TODO
 
     def hidden_windows(self):
-        pass #TODO
-
-    def highlight_nickname(self):
         pass #TODO
 
     def highlight_away_users(self):
@@ -732,61 +729,73 @@ class RudeGui(QWidget):
             if max(r, g, b) - min(r, g, b) > 50:  # 50 is the threshold, you can adjust this value as needed
                 return "#{:02x}{:02x}{:02x}".format(r, g, b)
 
+    def is_emoji(self, char):
+        return char in emoji.EMOJI_DATA
+
     def highlight_nicknames(self):
         """Highlight the user's nickname and other nicknames in text."""
-        user_nickname = self.irc_client.nickname
+        try:
+            user_nickname = self.irc_client.nickname
 
-        # Search and apply color to nicknames inside '<>'
-        cursor = self.displayText.textCursor()
-        text = self.displayText.toPlainText()
-        
-        # Find the first occurrence of '<'
-        start_position = text.find('<')
-        while start_position != -1:
-            # Find the corresponding '>'
-            end_position = text.find('>', start_position)
-            if end_position == -1:
-                break
+            cursor = self.displayText.textCursor()
+            text = self.displayText.toPlainText()
 
-            # Extract the nickname
-            nickname_with_brackets = text[start_position:end_position + 1]
-            nickname = nickname_with_brackets.strip('<>')
+            start_position = text.find('<')
+            while start_position != -1:
+                end_position = text.find('>', start_position)
+                if end_position == -1:
+                    break
 
-            # Apply color formatting to the found nickname
-            self.apply_nickname_format(start_position, end_position + 1, nickname)
+                nickname_with_brackets = text[start_position:end_position + 1]
+                nickname = nickname_with_brackets.strip('<>')
 
-            # Continue searching after the current nickname
-            start_position = text.find('<', end_position + 1)
+                self.apply_nickname_format(text, start_position, end_position + 1, nickname)
 
-    def apply_nickname_format(self, start_position, end_position, nickname):
-        """Apply color formatting to the nickname."""
-        cursor = self.displayText.textCursor()
+                start_position = text.find('<', end_position + 1)
+        except Exception as e:
+            logging.error(f"Error in highlight_nicknames: {e}")
 
-        # Check if the nickname has an associated color
-        if f"<{nickname}>" in self.nickname_colors:
-            nickname_color = self.nickname_colors[f"<{nickname}>"]
-        else:
-            # If no color, generate a new color or use default
-            if self.generate_nickname_colors:
-                nickname_color = self.generate_random_color()
+    def apply_nickname_format(self, text, start_position, end_position, nickname):
+        """Apply color formatting to the nickname with emoji offset correction."""
+        try:
+            cursor = self.displayText.textCursor()
+
+            if f"<{nickname}>" in self.nickname_colors:
+                nickname_color = self.nickname_colors[f"<{nickname}>"]
             else:
-                nickname_color = self.main_fg_color
+                if self.generate_nickname_colors:
+                    nickname_color = self.generate_random_color()
+                else:
+                    nickname_color = self.main_fg_color
 
-            # Cache the color for the nickname
-            self.nickname_colors[f"<{nickname}>"] = nickname_color
+                self.nickname_colors[f"<{nickname}>"] = nickname_color
 
-        # Apply the color formatting
-        format_nick = QTextCharFormat()
-        format_nick.setForeground(QColor(nickname_color))
+            format_nick = QTextCharFormat()
+            format_nick.setFontFamily(self.font_family)
+            format_nick.setFontPointSize(self.font_size)
+            format_nick.setForeground(QColor(nickname_color))
 
-        # Adjust positions by 3 to correct the offset
-        start_position += 3
-        end_position += 3
+            # Calculate emoji offset
+            emoji_offset_start = 0
+            for i in range(start_position):
+                if self.is_emoji(text[i]):
+                    emoji_offset_start += 1
 
-        # Make sure to include the '>' character by adjusting the end_position
-        cursor.setPosition(start_position)
-        cursor.setPosition(end_position, QTextCursor.MoveMode.KeepAnchor)
-        cursor.setCharFormat(format_nick)
+            emoji_offset_end = 0
+            for i in range(end_position):
+                if self.is_emoji(text[i]):
+                    emoji_offset_end += 1
+
+            # Adjust start and end positions with the calculated offset
+            adjusted_start = start_position + emoji_offset_start
+            adjusted_end = end_position + emoji_offset_end
+
+            # Apply the color formatting
+            cursor.setPosition(adjusted_start)
+            cursor.setPosition(adjusted_end, QTextCursor.MoveMode.KeepAnchor)
+            cursor.setCharFormat(format_nick)
+        except Exception as e:
+            logging.error(f"Error in apply_nickname_format: {e}")
 
     def insert_text_widget(self, message):
         self.trim_text_widget()
@@ -801,7 +810,6 @@ class RudeGui(QWidget):
         # Start tagging URLs using the non-blocking approach
         self.tag_urls(urls)
         self.tag_emojis(emojis, message)
-        self.highlight_nicknames()
         self.insert_and_scroll()
 
     def open_url(self, url):
@@ -927,7 +935,7 @@ class RudeGui(QWidget):
                 self.show_startup_art()
                 self.irc_client.display_server_motd(actual_server)
                 self.update_users_label()
-                self.highlight_nickname()
+                self.highlight_nicknames()
                 self.highlight_who_channels()
                 self.update_channel_label()
 
@@ -973,7 +981,7 @@ class RudeGui(QWidget):
 
         # Turn background blue
         self.channelList.item(clicked_index).setBackground(QColor(self.channel_select_color))
-        self.highlight_nickname()
+        self.highlight_nicknames()
         self.highlight_away_users()
         self.update_users_label()
 
@@ -1010,7 +1018,7 @@ class RudeGui(QWidget):
 
                 # Display the last messages for the current channel
                 self.irc_client.display_last_messages(channel_name, server_name=server)
-                self.highlight_nickname()
+                self.highlight_nicknames()
 
                 self.irc_client.update_gui_user_list(channel_name)
                 self.insert_and_scroll()
@@ -1030,7 +1038,7 @@ class RudeGui(QWidget):
             # Display the last messages for the current DM
             self.irc_client.display_last_messages(channel_name, server_name=server)
             self.insert_and_scroll()
-            self.highlight_nickname()
+            self.highlight_nicknames()
 
             # No topic for DMs
             self.topicLabel.setText(f"{channel_name}")
