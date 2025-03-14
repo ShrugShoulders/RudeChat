@@ -11,6 +11,4 @@ pystray
 emoji
 py2app
 PyQt6
-python-magic
 requests
-libmagic
