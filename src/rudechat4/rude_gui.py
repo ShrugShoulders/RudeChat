@@ -787,8 +787,15 @@ class RudeGui(QWidget):
                     emoji_offset_end += 1
 
             # Adjust start and end positions with the calculated offset
-            adjusted_start = start_position + emoji_offset_start
-            adjusted_end = end_position + emoji_offset_end
+            if platform.system() == "Darwin":
+                adjusted_start = start_position + emoji_offset_start
+                adjusted_end = end_position + emoji_offset_end
+            elif platform.system() == "Linux":
+                adjusted_start = start_position + emoji_offset_start - 1
+                adjusted_end = end_position + emoji_offset_end - 1
+            elif platform.system() == "Windows":
+                adjusted_start = start_position + emoji_offset_start
+                adjusted_end = end_position + emoji_offset_end
 
             # Apply the color formatting
             cursor.setPosition(adjusted_start)
