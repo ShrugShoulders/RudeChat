@@ -743,7 +743,7 @@ class RudeChatClient:
                     await insert_processing_symbols(PRIVMSGTOKENS)
                     return
                 else:
-                    gui.insert_text_widget("\nMaximum sync time exceeded\n")
+                    self.gui.insert_text_widget("\nMaximum sync time exceeded\n")
                     return
 
     async def handle_cap(self, tokens):
