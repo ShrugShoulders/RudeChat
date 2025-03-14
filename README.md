@@ -2,19 +2,30 @@
 **Tasks Complete: (8/25 - 31%)**
 - [ ] Convert to Qt
 	- [x] `__main__`
-	- [ ] `rude_gui`
-		- [ ] Restore Sidebar
-			- [x] Users
+	- [-] `rude_gui`
+		- [-] Menubar
+			- [x] Chat
+				- [x] Clear Chat
+				- [x] Reload Macros
+			- [-] Colors
+				- [ ] Color selector
+				- [x] Save Colors
+				- [ ] Reset Colors
+			- [-] Config
+				- [x] Edit servers...
+				- [ ] Edit GUI
+		- [-] Restore Sidebar
+			- [-] Users
 				- [ ] Restore right click menu
 				- [ ] Restore AWAY user display color change
 			- [x] Servers
-			- [x] Channels
+			- [-] Channels
 				- [ ] Restore right click menu
-			- [x] Entry bar
+			- [-] Entry bar
 				- [ ] Restore keybindings for TAB and arrow keys
-		- [ ] `rude_client`
+		- [-] `rude_client`
 			- [x] Fix listboxes
-		- [ ] `server_config_window`
+		- [-] `server_config_window`
 			- [ ] `channel_expand`
 		- [ ] `rude_popout`
 		- [ ] `rude_colours`
