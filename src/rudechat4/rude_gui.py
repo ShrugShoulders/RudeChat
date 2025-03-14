@@ -24,13 +24,13 @@ class RudeTextEdit(QTextEdit):
             e.ignore()
 
 class RudeGui(QWidget):
-
     # Initialisation and Setup
     def __init__(self, master):
         super().__init__()
         self.master = master
         self.app_size = [800, 600]
         self.set_screen_size()
+        self.master.setWindowTitle("RudeChat")
         self.master.resize(self.app_size[0], self.app_size[1])
 
         self.set_icon()
@@ -598,6 +598,13 @@ class RudeGui(QWidget):
             self.destroy_client()
         except Exception as e:
             logging.error(f"Error destroying clients: {e}")
+
+    def destroy_client(self):
+        try:
+            self.master.destroy(True)
+            sys.exit()
+        except Exception as e:
+            logging.error(f"Error When Destroying Client: {e}")
 
     # GUI
     def update_nick_channel_label(self):
@@ -1178,10 +1185,3 @@ class RudeGui(QWidget):
         # Match a space followed by '<', then the nickname inside <>, and then a space after '>'
         nick_matches = list(re.finditer(r"<([^<>]+)>", text))
         return nick_matches
-
-    def destroy_client(self):
-        try:
-            self.master.destroy(True)
-            sys.exit()
-        except Exception as e:
-            logging.error(f"Error When Destroying Client: {e}")

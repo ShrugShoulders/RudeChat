@@ -4441,7 +4441,6 @@ class RudeChatClient:
         except Exception as e:
             logging.error(f"Error in unignore_user_from_gui: {e}")
 
-
     async def ignore_user(self, args):
         if len(args) > 1:
             user_to_ignore = " ".join(args[1:])

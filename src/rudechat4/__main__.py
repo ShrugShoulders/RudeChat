@@ -66,7 +66,7 @@ class Window(QMainWindow):
         NSApp = lookUpClass("NSApplication").sharedApplication()
         NSApp.orderFrontStandardAboutPanel_(None)
 
-def main():
+def __main__():
     CopyConfigs()
     app = QApplication(sys.argv)
     app.setApplicationName("RudeChat")
@@ -99,4 +99,4 @@ def main():
     app.exec()
 
 if __name__ == '__main__':
-    sys.exit(main())
+    sys.exit(__main__())

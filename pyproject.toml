@@ -42,4 +42,4 @@ package-dir = {"" = "src"}
 ]
 
 [project.scripts]
-rudechat = "rudechat4.__main__:main"
+rudechat = "rudechat4.__main__:__main__"
