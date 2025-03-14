@@ -957,7 +957,7 @@ class RudeChatClient:
 
     def update_gui_channel_list(self):
         # Clear existing items
-        self.gui.channelList.clear()
+        self.gui.channel_selector_list.clear()
 
         # Sort channels by the number of prefix characters at the beginning
         sorted_channels = sorted(
@@ -973,7 +973,7 @@ class RudeChatClient:
         # Insert sorted channels into the listbox
         try:
             for chan in sorted_channels:
-                self.gui.channelList.addItem(chan)
+                self.gui.channel_selector_list.addItem(chan)
         except Exception as e:
             logging.error(f"Error1 in update_gui_channel_list: {e}")
 
@@ -986,8 +986,8 @@ class RudeChatClient:
                     # Find the new index in the current listbox
                     new_index = None
                     try:
-                        for idx in range(self.gui.channelList.count()):
-                            if self.gui.channelList.item(idx).text() == channel:
+                        for idx in range(self.gui.channel_selector_list.count()):
+                            if self.gui.channel_selector_list.item(idx).text() == channel:
                                 new_index = idx
                                 break
                     except Exception as e:
@@ -1001,7 +1001,7 @@ class RudeChatClient:
                         try:
                             bg_color = highlighted_info.get('bg', self.mention_note_color)
                             color = QColor(bg_color)  # Convert string to QColor
-                            self.gui.channelList.item(new_index).setBackground(color)
+                            self.gui.channel_selector_list.item(new_index).setBackground(color)
                         except Exception as e:
                             logging.error(f"Error3 in update_gui_channel_list: {e}")
 
@@ -1013,9 +1013,9 @@ class RudeChatClient:
         self.gui.highlight_who_channels()
 
     def update_gui_user_list(self, channel):
-        self.gui.userList.clear()
+        self.gui.user_selector_list.clear()
         for user in self.channel_users.get(channel, []):
-            self.gui.userList.addItem(user)
+            self.gui.user_selector_list.addItem(user)
 
     async def stop_async_loop(self):
         loop = self.loop  # Access the loop from the client object
@@ -1449,12 +1449,12 @@ class RudeChatClient:
             else:
                 # If it's not the currently viewed channel, highlight the channel in green in the Listbox
                 if target != self.current_channel:
-                    for idx in range(self.gui.channelList.count()):
-                        if self.gui.channelList.item(idx).text() == target:
-                            current_bg = self.gui.channelList.item(idx).background().color().name()
+                    for idx in range(self.gui.channel_selector_list.count()):
+                        if self.gui.channel_selector_list.item(idx).text() == target:
+                            current_bg = self.gui.channel_selector_list.item(idx).background().color().name()
 
                             if current_bg != "#ff0000":
-                                self.gui.channelList.item(idx).setBackground(QColor(self.activity_note_color))
+                                self.gui.channel_selector_list.item(idx).setBackground(QColor(self.activity_note_color))
                             break
         except Exception as e:
             logging.error(f"Exception in handle_action_ctcp: {e}")
@@ -1480,11 +1480,11 @@ class RudeChatClient:
     async def notify_user_of_mention(self, server, channel, sender, message):
         notification_msg = f"<{sender}> {message}"
 
-        # Highlight the mentioned channel in the channelList if it's not selected
+        # Highlight the mentioned channel in the channel_selector_list if it's not selected
         if (channel != self.current_channel) or (sender != self.current_channel):
             self.highlight_channel(channel)
 
-        # Highlight the server in the serverList if it's not selected
+        # Highlight the server in the server_selector_list if it's not selected
         self.highlight_server(is_mention=True)
 
         # Play the beep sound/notification
@@ -1497,25 +1497,25 @@ class RudeChatClient:
             if channel in self.joined_channels and self.gui.irc_client == self:
                 if channel != self.current_channel:
                     # Find and highlight the channel in the GUI listbox
-                    for idx in range(self.gui.channelList.count()):
-                        if self.gui.channelList.item(idx).text() == channel:
-                            self.gui.channelList.item(idx).setBackground(QColor(self.mention_note_color))
-                            self.gui.channelList.scrollToItem(self.gui.channelList.item(idx))
+                    for idx in range(self.gui.channel_selector_list.count()):
+                        if self.gui.channel_selector_list.item(idx).text() == channel:
+                            self.gui.channel_selector_list.item(idx).setBackground(QColor(self.mention_note_color))
+                            self.gui.channel_selector_list.scrollToItem(self.gui.channel_selector_list.item(idx))
                             break
         except Exception as e:
             logging.error(f"Exception in highlight_channel: {e}")
 
     def highlight_server(self, server_activity=False, is_mention=False):
-        for idx in range(self.gui.serverList.count()):
-            listbox_server_item = self.gui.serverList.item(idx)
+        for idx in range(self.gui.server_selector_list.count()):
+            listbox_server_item = self.gui.server_selector_list.item(idx)
             if listbox_server_item.text().startswith(self.server_name):
 
                 if server_activity:
-                    self.gui.serverList.item(idx).setBackground(QColor(self.activity_note_color))
+                    self.gui.server_selector_list.item(idx).setBackground(QColor(self.activity_note_color))
                     self.gui.server_colors[idx] = {'fg': self.gui.server_list_fg, 'bg': self.activity_note_color}
 
-                if is_mention and self.gui.irc_client != self and idx != self.gui.serverList.currentRow():
-                    self.gui.serverList.item(idx).setBackground(QColor(self.mention_note_color))
+                if is_mention and self.gui.irc_client != self and idx != self.gui.server_selector_list.currentRow():
+                    self.gui.server_selector_list.item(idx).setBackground(QColor(self.mention_note_color))
                     self.gui.server_colors[idx] = {'fg': self.gui.server_list_fg, 'bg': self.mention_note_color}
                 break
 
@@ -1995,11 +1995,11 @@ class RudeChatClient:
             # Attempt to find the channel in the GUI listbox and highlight it
             if self.gui.irc_client == self:
                 if highlighted_channel != self.current_channel:
-                    for idx in range(self.gui.channelList.count()): 
-                        if self.gui.channelList.item(idx).text() == highlighted_channel:
-                            current_bg = self.gui.channelList.item(idx).background().color().name()
+                    for idx in range(self.gui.channel_selector_list.count()): 
+                        if self.gui.channel_selector_list.item(idx).text() == highlighted_channel:
+                            current_bg = self.gui.channel_selector_list.item(idx).background().color().name()
                             if current_bg != '#ff0000':
-                                self.gui.channelList.item(idx).setBackground(QColor(self.activity_note_color))
+                                self.gui.channel_selector_list.item(idx).setBackground(QColor(self.activity_note_color))
                             break
         except Exception as e:
             logging.error(f"Error0 in _highlight_channel_by_name: {e}")
@@ -2083,7 +2083,7 @@ class RudeChatClient:
             sorted_users = self.sort_users(self.channel_users[channel], channel)
 
             # Update the user listbox for the channel with sorted users
-            self.update_userList(channel)
+            self.update_user_selector_list(channel)
 
         except Exception as e:
             logging.error(f"Error In handle_join: {e}")
@@ -2136,7 +2136,7 @@ class RudeChatClient:
                 current_modes = self.user_modes.get(channel, {})
                 user_modes = current_modes.get(user_info, set())
                 current_modes.pop(user_info, None)
-                self.update_userList(channel)
+                self.update_user_selector_list(channel)
 
         except Exception as e:
             logging.error(f"Error in handle_part: {e}")
@@ -2191,7 +2191,7 @@ class RudeChatClient:
                         self.gui.insert_text_widget(quit_message)
                     if user_info in self.friends.online_friends:
                         self.friends.online_friends.remove(user_info)
-                    self.update_userList(channel)
+                    self.update_user_selector_list(channel)
 
         except Exception as e:
             logging.error(f"Error in handle_quit: {e}")
@@ -2215,7 +2215,7 @@ class RudeChatClient:
                         users[idx] = mode_symbols + new_nick
                         
                         # Update the user listbox for the channel if necessary
-                        self.update_userList(channel)
+                        self.update_user_selector_list(channel)
 
                         # Display the nick change message in the channel
                         if self.server not in self.channel_messages:
@@ -2387,7 +2387,7 @@ class RudeChatClient:
 
                 sorted_users = self.sort_users(self.channel_users.get(channel, []), channel)
                 self.channel_users[channel] = sorted_users
-                self.update_userList(channel)
+                self.update_user_selector_list(channel)
                 if channel == self.current_channel:
                     self.gui.update_nick_channel_label()
             return 
@@ -2420,7 +2420,7 @@ class RudeChatClient:
                 self.channel_messages[self.server][channel] = []
             self.channel_messages[self.server][channel].append(message)
 
-    def update_userList(self, channel):
+    def update_user_selector_list(self, channel):
         # try:
         current_users = self.channel_users.get(channel, [])
         sorted_users = self.sort_users(current_users, channel)
@@ -2431,13 +2431,13 @@ class RudeChatClient:
         # Only update the user listbox if the channel is the currently selected channel
         if channel == self.current_channel and self.gui.irc_client == self and self.server_name in self.gui.popped_out_channels and channel not in self.gui.popped_out_channels[self.server_name]:
             # Update the Tkinter Listbox to reflect the current users in the channel
-            self.gui.userList.clear()  # Clear existing items
+            self.gui.user_selector_list.clear()  # Clear existing items
             for user in unique_users:
-                self.gui.userList.addItem(user)
+                self.gui.user_selector_list.addItem(user)
             self.gui.highlight_away_users()
             self.gui.update_users_label()
         # except Exception as e:
-            # logging.error(f"Error1 in update_userList: {e}")
+            # logging.error(f"Error1 in update_user_selector_list: {e}")
         
         if self.server_name in self.gui.popped_out_channels and channel in self.gui.popped_out_channels[self.server_name]:
             try:
@@ -2837,7 +2837,7 @@ class RudeChatClient:
                 current_modes = self.user_modes.get(channel, {})
                 user_modes = current_modes.get(kicked_nickname, set())
                 current_modes.pop(kicked_nickname, None)
-                self.update_userList(channel)
+                self.update_user_selector_list(channel)
         except Exception as e:
             logging.error(f"Error1 in handle_kick_event: {e}")
 
@@ -2916,7 +2916,7 @@ class RudeChatClient:
                     # Update the channel users with the sorted list
                     self.channel_users[current_channel] = sorted_users
                     # Update the user listbox
-                    self.update_userList(current_channel)
+                    self.update_user_selector_list(current_channel)
 
             except Exception as e:
                 logging.error(f"Error in handle_names_list command 366: {e}")
@@ -2960,7 +2960,7 @@ class RudeChatClient:
                 # Set the topic for the channel under the server entry
                 self.gui.channel_topics[self.server_name][channel_name] = topic
                 if channel_name == self.current_channel:
-                    self.gui.topicLabel.setText(f"Topic: {topic}")
+                    self.gui.topic_label.setText(f"Topic: {topic}")
                     self.gui.insert_text_widget(f"Topic: {topic}\n")
             except Exception as e:
                 logging.error(f"Error in handle_topic command 332: {e}")
@@ -2996,7 +2996,7 @@ class RudeChatClient:
 
                 # Set the topic for the channel under the server entry
                 if channel_name == self.current_channel and self.gui.irc_client == self:
-                    self.gui.topicLabel.setText(f"Topic: {topic}")
+                    self.gui.topic_label.setText(f"Topic: {topic}")
                     self.gui.insert_text_widget(f"Topic: {message}")
             except Exception as e:
                 logging.error(f"Error in handle_topic command TOPIC: {e}")
@@ -4998,8 +4998,8 @@ class RudeChatClient:
             self.gui.insert_text_widget(f"{messages}\n")
 
     def pop_out_switch(self):
-        # Get the existing channel list from the channelList
-        channel_list = self.gui.channelList.get(0, self.gui.channelList.size())
+        # Get the existing channel list from the channel_selector_list
+        channel_list = self.gui.channel_selector_list.get(0, self.gui.channel_selector_list.size())
 
         # Pick a channel at random from the channel list
         if channel_list:
@@ -5026,11 +5026,11 @@ class RudeChatClient:
             except Exception as e:
                 logging.error(f"Error1 force_click: {e}")
 
-        listbox_size = self.gui.channelList.size()
+        listbox_size = self.gui.channel_selector_list.size()
             
         # Iterate through the listbox to find the index of the current selected channel
         for i in range(listbox_size):
-            item_at_index = self.gui.channelList.get(i)
+            item_at_index = self.gui.channel_selector_list.get(i)
             if self.log_on:
                 logging.info(f"item at index: {item_at_index}")
 

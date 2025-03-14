@@ -22,7 +22,7 @@ async def initialize_clients(app):
             print(f"Failed to connect to Server_{i+1} due to {e}. Proceeding to the next server.")
 
     # Update the Listbox with the new list of servers
-    if app.serverList.count() > 0:
-        first_server = app.serverList.item(0)
+    if app.server_selector_list.count() > 0:
+        first_server = app.server_selector_list.item(0)
         app.server_var = first_server
         app.on_server_change(None)
