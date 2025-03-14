@@ -87,6 +87,7 @@ class RudeGui(QWidget):
         # Initialise client
         self.init_client()
 
+        self.master.chat_upload_file_action.triggered.connect(lambda: self.irc_client.loop.create_task(self.irc_client.handle_upload(), name="handle_upload"))
         self.master.chat_clear_chat_action.triggered.connect(self.clear_chat_window)
         self.master.chat_reload_macros_action.triggered.connect(self.reload_macros)
         self.master.colors_color_selector_action.triggered.connect(self.open_color_selector)
@@ -286,12 +287,6 @@ class RudeGui(QWidget):
 
         self.sidebar.addLayout(self.channel_selector)
 
-        self.upload_button = QToolButton(self, text="Upload File")
-        self.upload_button.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed) 
-        self.upload_button.setEnabled(False)
-        QTimer.singleShot(0, self.bind_upload_button)
-        self.sidebar.addWidget(self.upload_button)
-
         self.sidebar.setStretch(0, 2)
         self.sidebar.setStretch(1, 1)
         self.sidebar.setStretch(2, 2)
@@ -351,10 +346,6 @@ class RudeGui(QWidget):
     def bind_return_key(self):
         loop = asyncio.get_event_loop()
         self.text_field.returnPressed.connect(lambda: loop.create_task(self.on_enter_key(), name="on_enter_key"))
-
-    def bind_upload_button(self):
-        loop = asyncio.get_event_loop()
-        self.upload_button.clicked.connect(lambda: loop.create_task(self.irc_client.handle_upload(), name="handle_upload"))
 
     # Tray Icon Management
     def create_tray_icon(self): pass #TODO

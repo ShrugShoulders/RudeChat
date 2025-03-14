@@ -46,5 +46,4 @@ from PyQt6.QtGui import QTextCursor, QTextCharFormat, QColor, QTextFormat
 if platform.system() == "Darwin":
     from objc import lookUpClass
 
-import magic
 import requests

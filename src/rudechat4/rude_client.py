@@ -561,7 +561,7 @@ class RudeChatClient:
                         self.gui.insert_text_widget(f'Connected to the server: {self.server}:{self.port}\n')
                         received_001 = True
                         self.gui.insert_and_scroll()
-                        self.gui.upload_button.setEnabled(True)
+                        self.gui.master.chat_upload_file_action.setEnabled(True)
                     case "002" | "003" | "004":
                         if self.znc_connection:
                             reset_timer("")
@@ -5044,12 +5044,26 @@ class RudeChatClient:
                 break
 
     async def handle_upload(self):
-        filename = QFileDialog().getOpenFileName(self.gui, 'Open File')
-        typing = magic.from_file(filename[0], mime=True).split('/')
-        
-        match typing[0]:
-            case "text":
-                f = open(filename[0], "r")
+        filename_tuple = QFileDialog().getOpenFileName(self.gui, 'Open File')
+        filename = filename_tuple[0]
+        if not filename:
+            return
+
+        if not filename.lower().endswith(('.txt', '.csv', '.log', '.py', '.js', '.html', '.css')): #add other text based extensions here.
+            try:
+                with open(filename, 'rb') as f:
+                    chunk = f.read(1024) #read the first 1024 bytes.
+                    try:
+                        chunk.decode('utf-8') #try to decode as utf-8.
+                    except UnicodeDecodeError:
+                        QMessageBox.warning(self.gui, "Upload Error", "Not a supported filetype.")
+                        return
+            except Exception as e:
+                QMessageBox.warning(self.gui, "Upload Error", f"Error checking file content or extension: {e}")
+                return
+
+        try:
+            with open(filename, "r") as f:
                 outcome = requests.post(
                     url="https://bpa.st/api/v1/paste",
                     json={
@@ -5063,13 +5077,21 @@ class RudeChatClient:
                     }
                 )
 
-                match outcome.status_code:
-                    case 200:
-                        asyncio.get_event_loop().create_task(self.command_parser("RudeChat Upload: " + outcome.json()["link"]))
-                    case _:
-                        QMessageBox.warning(self.gui, "Upload Error", str(outcome.json()["message"]))
-                return
-            case _:
-                QMessageBox.warning(self.gui, "Upload Error", "Not a supported filetype.")
-                return
-        return
+            if outcome.status_code == 200:
+                asyncio.get_event_loop().create_task(self.command_parser("RudeChat Upload: " + outcome.json()["link"]))
+            else:
+                QMessageBox.warning(self.gui, "Upload Error", str(outcome.json().get("message", "Unknown Error")))
+            return
+
+        except FileNotFoundError:
+            QMessageBox.warning(self.gui, "Upload Error", "File not found.")
+            return
+        except requests.exceptions.RequestException as e:
+            QMessageBox.warning(self.gui, "Upload Error", f"Network error during upload: {e}")
+            return
+        except KeyError:
+            QMessageBox.warning(self.gui, "Upload Error", "Error parsing server response.")
+            return
+        except Exception as e:
+            QMessageBox.warning(self.gui, "Upload Error", f"An unexpected error occured: {e}")
+            return

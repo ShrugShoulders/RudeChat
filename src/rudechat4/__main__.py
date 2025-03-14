@@ -50,6 +50,8 @@ class Window(QMainWindow):
             about_action.triggered.connect(self.show_mac_about_panel)
 
         self.chat_menu = menu_bar.addMenu("Chat")
+        self.chat_upload_file_action = self.chat_menu.addAction("Upload File...")
+        self.chat_upload_file_action.setEnabled(False)
         self.chat_clear_chat_action = self.chat_menu.addAction("Clear Chat")
         self.chat_reload_macros_action = self.chat_menu.addAction("Reload Macros")
 
