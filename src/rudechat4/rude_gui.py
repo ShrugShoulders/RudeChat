@@ -595,10 +595,6 @@ class RudeGui(QWidget):
     def find_urls(self, text):
         # Use the precompiled regex pattern to find URLs
         return self.url_pattern.findall(text)
-
-    def find_emojis(self, text):
-        # Detect emojis in the text
-        return [char for char in text if char in emoji.EMOJI_DATA]
     
     def configure_tag_based_on_attributes(self, attributes):
         try:
@@ -688,33 +684,6 @@ class RudeGui(QWidget):
         else:
             self.insert_and_scroll()
 
-    def tag_emojis(self, emojis, message):
-        try:
-            cursor = self.displayText.textCursor()
-            for emoji_char in emojis:
-                # Create a unique tag for each emoji
-                tag_name = f"emoji_{emoji_char}"
-                if tag_name not in self.tag_cache:
-                    # Configure format for emoji with larger font and color
-                    char_format = QTextCharFormat()
-                    char_format.setFontPointSize(self.font_size + 5)
-                    char_format.setForeground(QColor(self.main_fg_color))
-                    char_format.setFontFamily(self.emoji_type)
-                    self.tag_cache[tag_name] = char_format
-
-                # Find and tag all occurrences of the emoji
-                start_idx = 0
-                while True:
-                    start_idx = message.find(emoji_char, start_idx)
-                    if start_idx == -1:
-                        break
-                    cursor.setPosition(start_idx)
-                    cursor.movePosition(QTextCursor.MoveOperation.NextCharacter, QTextCursor.MoveMode.KeepAnchor, len(emoji_char))
-                    cursor.setCharFormat(self.tag_cache[tag_name])
-                    start_idx += len(emoji_char)
-        except Exception as e:
-            logging.error(f"Error in tag_emojis: {e}")
-
     def clear_text_widget(self):
         self.displayText.clear()
 
@@ -730,7 +699,11 @@ class RudeGui(QWidget):
                 return "#{:02x}{:02x}{:02x}".format(r, g, b)
 
     def is_emoji(self, char):
-        return char in emoji.EMOJI_DATA
+        if char in emoji.EMOJI_DATA:
+            emoji_data = emoji.EMOJI_DATA[char]  # Get the emoji's metadata
+            status = emoji_data.get('status', None)  # Extract the 'status' value, default to None if not present
+            return f"{status}"  # Return the status, or you can store it in an instance variable if needed
+        return None
 
     def highlight_nicknames(self):
         """Highlight the user's nickname and other nicknames in text."""
@@ -776,26 +749,18 @@ class RudeGui(QWidget):
             format_nick.setForeground(QColor(nickname_color))
 
             # Calculate emoji offset
-            emoji_offset_start = 0
-            for i in range(start_position):
-                if self.is_emoji(text[i]):
-                    emoji_offset_start += 1
+            emoji_offset_start = emoji_offset_end = 0
 
-            emoji_offset_end = 0
-            for i in range(end_position):
-                if self.is_emoji(text[i]):
-                    emoji_offset_end += 1
+            for i in range(max(start_position, end_position)):
+                emo_type = self.is_emoji(text[i])
+                if emo_type == "2":
+                    if i < start_position:
+                        emoji_offset_start += 1
+                    if i < end_position:
+                        emoji_offset_end += 1
 
-            # Adjust start and end positions with the calculated offset
-            if platform.system() == "Darwin":
-                adjusted_start = start_position + emoji_offset_start
-                adjusted_end = end_position + emoji_offset_end
-            elif platform.system() == "Linux":
-                adjusted_start = start_position + emoji_offset_start - 1
-                adjusted_end = end_position + emoji_offset_end - 1
-            elif platform.system() == "Windows":
-                adjusted_start = start_position + emoji_offset_start
-                adjusted_end = end_position + emoji_offset_end
+            adjusted_start = start_position + emoji_offset_start
+            adjusted_end = end_position + emoji_offset_end
 
             # Apply the color formatting
             cursor.setPosition(adjusted_start)
@@ -807,8 +772,6 @@ class RudeGui(QWidget):
     def insert_text_widget(self, message):
         self.trim_text_widget()
         urls = self.find_urls(message)
-        emojis = self.find_emojis(message)
-
         formatted_text = decoder(message)
 
         # Then apply other formatting
@@ -816,7 +779,6 @@ class RudeGui(QWidget):
 
         # Start tagging URLs using the non-blocking approach
         self.tag_urls(urls)
-        self.tag_emojis(emojis, message)
         self.insert_and_scroll()
 
     def open_url(self, url):
