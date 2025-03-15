@@ -1203,7 +1203,6 @@ class RudeGui(QWidget):
                 user = user_item.text()
                 modes_to_strip = ''.join(self.irc_client.mode_values)
                 strip_user = user.lstrip(modes_to_strip)
-                print(f"channel: {strip_user}")
 
                 # Check if the user is in the away_users_dict
                 if strip_user in self.irc_client.away_users_dict:
