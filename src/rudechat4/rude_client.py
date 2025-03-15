@@ -2938,7 +2938,7 @@ class RudeChatClient:
             if self.ping_start_time is not None:
                 ping_time = current_time - self.ping_start_time
                 ping_time_formatted = "{:.3f}".format(ping_time).lstrip('0') + "ms"
-                #self.gui.update_ping_label(self.server_name, ping_time_formatted)
+                self.gui.update_server_ping(self.server_name, ping_time_formatted)
 
             self.ping_start_time = None
         except Exception as e:

@@ -521,6 +521,14 @@ class RudeGui(QWidget):
         if self.log_on:
             logging.info("Client initializing completed.")
 
+    def update_server_ping(self, server_name, ping_time):
+        """Update the entry for a server in the QListWidget with the new ping time."""
+        for index in range(self.server_selector_list.count()):
+            item = self.server_selector_list.item(index)
+            if item.text().startswith(server_name):  # Find the matching server entry
+                item.setText(f"{server_name} - {ping_time}")
+                return
+
     def send_away_to_clients(self, away_message=None):
         if self.log_on:
             logging.info("Attempting AWAY with message")
