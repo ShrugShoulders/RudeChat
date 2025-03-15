@@ -310,6 +310,8 @@ class RudeGui(QWidget):
         self.iconed = False
         self.target_user_info = None
         self.url_pattern = re.compile(r'(\w+://[^\s()<>]*\([^\s()<>]*\)[^\s()<>]*(?<![.,;!?])|www\.[^\s()<>]*\([^\s()<>]*\)[^\s()<>]*(?<![.,;!?])|\w+://[^\s()<>]+(?<![.,;!?])|www\.[^\s()<>]+(?<![.,;!?]))')
+        self.nickname_pattern = re.compile(r'<([^>]+)>')
+        self.users_nickname_pattern = lambda nickname: re.compile(r"\b" + re.escape(nickname) + r"\b")
 
     def init_client(self):
         self.irc_client = RudeChatClient(self.chat_box, self.text_field, self.master, self)
@@ -1045,35 +1047,54 @@ class RudeGui(QWidget):
         try:
             text = self.chat_box.toPlainText()
 
-            start_position = text.find('<')
-            while start_position != -1:
-                end_position = text.find('>', start_position)
-                if end_position == -1:
-                    break
+            # Highlight user's nickname first
+            user_nickname_matches = list(self.users_nickname_pattern(self.irc_client.nickname).finditer(text))
+            for match in user_nickname_matches:
+                nickname = match.group(0)
+                start_position, end_position = match.span()
+                self.apply_nickname_format(text, start_position, end_position, nickname)
 
-                nickname_with_brackets = text[start_position:end_position + 1]
-                nickname = nickname_with_brackets.strip('<>')
+            # Highlight other nicknames
+            if hasattr(self, 'nickname_pattern'):
+                matches = list(self.nickname_pattern.finditer(text))
+                for match in matches:
+                    nickname_with_brackets = match.group(0)
+                    start_position, end_position = match.span()
+                    self.apply_nickname_format(text, start_position, end_position, nickname_with_brackets)
 
-                self.apply_nickname_format(text, start_position, end_position + 1, nickname)
-
-                start_position = text.find('<', end_position + 1)
         except Exception as e:
             logging.error(f"Error in highlight_nicknames: {e}")
 
     def apply_nickname_format(self, text, start_position, end_position, nickname):
         """Apply color formatting to the nickname with emoji offset correction."""
         try:
+            if not nickname:
+                return
+            modes = self.irc_client.mode_values + ['']
+            modes_to_strip = ''.join(self.irc_client.mode_values)
+            strip_brakets = nickname.strip('<>')
+            plain_nickname = strip_brakets.lstrip(modes_to_strip)
             cursor = self.chat_box.textCursor()
 
-            if f"<{nickname}>" in self.nickname_colors:
-                nickname_color = self.nickname_colors[f"<{nickname}>"]
+            if f"<{plain_nickname}>" in self.nickname_colors:
+                nickname_color = self.nickname_colors[f"<{plain_nickname}>"]
+                # Cache the color for the nickname with modes
+                self.nickname_colors[nickname] = nickname_color
+            elif nickname == f"<{self.irc_client.nickname}>" and nickname not in self.nickname_colors:
+                nickname_color = self.user_nickname_color
+                self.nickname_colors[f"<{plain_nickname}>"] = nickname_color
             else:
                 if self.generate_nickname_colors:
                     nickname_color = self.generate_random_color()
                 else:
                     nickname_color = self.main_fg_color
 
-                self.nickname_colors[f"<{nickname}>"] = nickname_color
+                for mode in modes:
+                    if nickname == f"<{mode}{self.irc_client.nickname}>":
+                        nickname_color = self.user_nickname_color
+
+                self.nickname_colors[nickname] = nickname_color
+                self.nickname_colors[f"<{plain_nickname}>"] = nickname_color
 
             format_nick = QTextCharFormat()
             format_nick.setFontFamily(self.font_family)
@@ -1081,16 +1102,7 @@ class RudeGui(QWidget):
             format_nick.setForeground(QColor(nickname_color))
 
             # Calculate emoji offset
-            emoji_offset_start = emoji_offset_end = 0
-
-            for i in range(max(start_position, end_position)):
-                emo_type = self.is_emoji(text[i])
-                if emo_type == "2":
-                    if i < start_position:
-                        emoji_offset_start += 1
-                    if i < end_position:
-                        emoji_offset_end += 1
-
+            emoji_offset_start, emoji_offset_end = self.calculate_emoji_offsets(text, start_position, end_position)
             adjusted_start = start_position + emoji_offset_start
             adjusted_end = end_position + emoji_offset_end
 
@@ -1101,6 +1113,19 @@ class RudeGui(QWidget):
         except Exception as e:
             logging.error(f"Error in apply_nickname_format: {e}")
 
+    def calculate_emoji_offsets(self, text, start_position, end_position):
+        """Calculates emoji offsets for the given start and end positions."""
+        emoji_offset_start = 0
+        emoji_offset_end = 0
+        for i in range(len(text)):
+            emo_type = self.is_emoji(text[i])
+            if emo_type == "2":
+                if i < start_position:
+                    emoji_offset_start += 1
+                if i < end_position:
+                    emoji_offset_end += 1
+        return emoji_offset_start, emoji_offset_end
+
     def generate_random_color(self):
         while True:
             # Generate random values for each channel
@@ -1108,8 +1133,7 @@ class RudeGui(QWidget):
             g = random.randint(50, 255)
             b = random.randint(50, 255)
             
-            # Ensure the difference between the maximum and minimum channel values is above a threshold
-            if max(r, g, b) - min(r, g, b) > 50:  # 50 is the threshold, you can adjust this value as needed
+            if max(r, g, b) - min(r, g, b) > 50:
                 return "#{:02x}{:02x}{:02x}".format(r, g, b)
 
     def is_emoji(self, char):
