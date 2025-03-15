@@ -29,6 +29,7 @@ import webbrowser
 import pytz
 import threading
 import emoji
+import unicodedata
 from PIL import Image
 from tzlocal import get_localzone
 from typing import List, Tuple, NamedTuple
@@ -41,7 +42,7 @@ from threading import Thread
 
 from  PyQt6.QtWidgets import QApplication, QMessageBox, QVBoxLayout, QWidget, QLabel, QPushButton, QComboBox, QCheckBox, QLabel, QLineEdit, QPushButton, QScrollArea, QSizePolicy, QFrame, QGroupBox, QGridLayout, QMainWindow, QTextEdit, QHBoxLayout, QListWidget, QListView, QAbstractItemView, QListWidgetItem, QAbstractScrollArea, QToolButton, QFileDialog
 from PyQt6.QtCore import QTimer, Qt, QStringListModel
-from PyQt6.QtGui import QTextCursor, QTextCharFormat, QColor, QTextFormat
+from PyQt6.QtGui import QTextCursor, QTextCharFormat, QColor, QTextFormat, QFontMetrics
 
 if platform.system() == "Darwin":
     from objc import lookUpClass

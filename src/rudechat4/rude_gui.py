@@ -78,6 +78,26 @@ class RudeGui(QWidget):
             "🐝", "🐞", "🐛", "🦗", "🦠", "🐍", "🐢", "🦎", "🐳", "🐋", "🐟", "🐠", "🦈", "🐬", "🐙", "🐚", "🦑", "🦐",
         ]
 
+        self.SPECIAL_EMO_CASES = {
+            "⛈": 0,
+            "❌": 0,
+            "😐": 1,
+            "☁️": 0,
+            "☁": 0,
+            "✊": 0,
+            "☘️": 0,
+            "☘": 0,
+            "🌶": 1,
+            "⛴": 0,
+            "⏰": 0,
+            "⏱": 0,
+            "⏲": 0,
+            "🖥": 1,
+            "🖱": 1,
+            "🎙": 1,
+            "🎵": 1,
+        }
+
         # Initialise layout
         self.init_layout()
 
@@ -304,13 +324,14 @@ class RudeGui(QWidget):
         self.popped_out_channels = {}
         self.pop_out_windows = {}
         self.server_colors = {}
+        self.emoji_width_cache = {}
         self.history_index = 0
         self.last_selected_index = None
         self.previous_server_index = None
         self.iconed = False
         self.target_user_info = None
         self.url_pattern = re.compile(r'(\w+://[^\s()<>]*\([^\s()<>]*\)[^\s()<>]*(?<![.,;!?])|www\.[^\s()<>]*\([^\s()<>]*\)[^\s()<>]*(?<![.,;!?])|\w+://[^\s()<>]+(?<![.,;!?])|www\.[^\s()<>]+(?<![.,;!?]))')
-        self.nickname_pattern = re.compile(r'<([^>]+)>')
+        self.nickname_pattern = re.compile(r'<([\S]+)>')
         self.users_nickname_pattern = lambda nickname: re.compile(r"\b" + re.escape(nickname) + r"\b")
 
     def init_client(self):
@@ -335,8 +356,6 @@ class RudeGui(QWidget):
         pass #TODO
 
     def hidden_windows(self): pass #TODO
-
-    def highlight_away_users(self): pass #TODO
 
     def emoji_select(self):
         match platform.system():
@@ -997,42 +1016,38 @@ class RudeGui(QWidget):
     def tag_urls(self, urls, index=0):
         if index < len(urls):
             url = urls[index]
-            if url in self.url_cache:
-                tag_name = self.url_cache[url]
-            else:
-                try:
-                    tag_name = f"url_{url}"
-                    self.url_cache[url] = tag_name
-                    char_format = QTextCharFormat()
-                    char_format.setAnchor(True)
-                    char_format.setAnchorHref(url)
-                except Exception as e:
-                    logging.error(f"Error1 in tag_urls: {e}")
+            try:
+                tag_name = f"url_{url}"
+                char_format = QTextCharFormat()
+                char_format.setAnchor(True)
+                char_format.setAnchorHref(url)
+            except Exception as e:
+                logging.error(f"Error1 in tag_urls: {e}")
                 
-                try:
-                    char_format.setForeground(QColor("blue"))
-                    char_format.setFontUnderline(True)
-                    self.tag_cache[tag_name] = char_format
+            try:
+                char_format.setForeground(QColor("blue"))
+                char_format.setFontUnderline(True)
+                self.tag_cache[tag_name] = char_format
 
-                    cursor = self.chat_box.textCursor()
-                    cursor = self.chat_box.document().find(url, 0)
-                except Exception as e:
-                    logging.error(f"Error2 in tag_urls: {e}")
+                cursor = self.chat_box.textCursor()
+                cursor = self.chat_box.document().find(url, 0)
+            except Exception as e:
+                logging.error(f"Error2 in tag_urls: {e}")
 
-                try:
-                    while not cursor.isNull():
-                        cursor.mergeCharFormat(char_format)
-                        cursor = self.chat_box.document().find(url, cursor)
+            try:
+                while not cursor.isNull():
+                    cursor.mergeCharFormat(char_format)
+                    cursor = self.chat_box.document().find(url, cursor)
 
-                    cursor = self.chat_box.textCursor()
-                    cursor.movePosition(QTextCursor.MoveOperation.Start) 
-                    while self.chat_box.find(url):
-                        cursor.mergeCharFormat(self.tag_cache[tag_name])
-                        cursor.setCharFormat(self.tag_cache[tag_name])
-                        cursor.insertText(url, self.tag_cache[tag_name])
-                        cursor.setPosition(cursor.position() + len(url))
-                except Exception as e:
-                    logging.error(f"Error3 in tag_urls: {e}")
+                cursor = self.chat_box.textCursor()
+                cursor.movePosition(QTextCursor.MoveOperation.Start) 
+                while self.chat_box.find(url):
+                    cursor.mergeCharFormat(self.tag_cache[tag_name])
+                    cursor.setCharFormat(self.tag_cache[tag_name])
+                    cursor.insertText(url, self.tag_cache[tag_name])
+                    cursor.setPosition(cursor.position() + len(url))
+            except Exception as e:
+                logging.error(f"Error3 in tag_urls: {e}")
 
             # Schedule the next URL tagging
             QTimer.singleShot(1, lambda: self.tag_urls(urls, index + 1))
@@ -1113,21 +1128,57 @@ class RudeGui(QWidget):
         except Exception as e:
             logging.error(f"Error in apply_nickname_format: {e}")
 
+    def get_text_width(self, text, font):
+        """Measure the width of text using QFontMetrics, with caching."""
+        if text in self.emoji_width_cache:
+            return self.emoji_width_cache[text]
+
+        metrics = QFontMetrics(font)
+        width = metrics.horizontalAdvance(text)  # Get the width of the text
+        self.emoji_width_cache[text] = width  # Cache result
+        return width
+
+    def estimate_emoji_offset(self, text, font):
+        """Estimate emoji offset based on their visual width, using caching."""
+        normal_char_width = self.get_text_width("A", font)  # Reference width
+
+        emoji_offsets = {}
+
+        for char in set(text):  # Process only unique characters
+            if self.is_emoji(char):  # Only measure emojis
+                width = self.get_text_width(char, font)
+                raw_offset = width / normal_char_width
+
+                if char in self.SPECIAL_EMO_CASES:
+                    offset = self.SPECIAL_EMO_CASES[char]
+                else:
+                    offset = max(0, round(raw_offset) - 1)
+
+                emoji_offsets[char] = offset
+
+        return emoji_offsets
+
     def calculate_emoji_offsets(self, text, start_position, end_position):
-        """Calculates emoji offsets for the given start and end positions."""
+        """Calculate emoji offsets dynamically based on their rendered width."""
         emoji_offset_start = 0
         emoji_offset_end = 0
-        for i in range(len(text)):
-            emo_status, emo_variant, emo_E = self.is_emoji(text[i])
+        font = self.chat_box.font()  # Get the current font
+        emoji_widths = self.estimate_emoji_offset(text, font)  # Estimate emoji widths
 
-            # Exclude emojis where E == 0.6 and variant == True
-            if emo_status == 2 and not (emo_E == 0.6 and emo_variant):
+        for i, char in enumerate(text):
+            if char in emoji_widths:
+                extra_offset = emoji_widths[char]  # Get cached width
+
                 if i < start_position:
-                    emoji_offset_start += 1
+                    emoji_offset_start += extra_offset
                 if i < end_position:
-                    emoji_offset_end += 1
+                    emoji_offset_end += extra_offset
 
         return emoji_offset_start, emoji_offset_end
+
+    def is_emoji(self, char):
+        """Check if a character is an emoji using the emoji library."""
+        return char in emoji.EMOJI_DATA
 
     def generate_random_color(self):
         while True:
@@ -1139,33 +1190,58 @@ class RudeGui(QWidget):
             if max(r, g, b) - min(r, g, b) > 50:
                 return "#{:02x}{:02x}{:02x}".format(r, g, b)
 
-    def is_emoji(self, char):
-        if char in emoji.EMOJI_DATA:
-            emoji_data = emoji.EMOJI_DATA[char]  # Get emoji metadata
-            status = emoji_data.get('status', None)  # Extract status
-            variant = emoji_data.get('variant', False)  # Extract variant flag
-            E_value = emoji_data.get('E', None)  # Extract E value
-            return status, variant, E_value
-        return None, None, None
+    def highlight_away_users(self):
+        try:
+            # Loop through the items in the user_selector_list
+            for index in range(self.user_selector_list.count()):
+                # Get the user from the listbox
+                user_item = self.user_selector_list.item(index)
+                if not user_item:
+                    continue  # If the item is not found, skip it
+
+                # Get the user name
+                user = user_item.text()
+                modes_to_strip = ''.join(self.irc_client.mode_values)
+                strip_user = user.lstrip(modes_to_strip)
+                print(f"channel: {strip_user}")
+
+                # Check if the user is in the away_users_dict
+                if strip_user in self.irc_client.away_users_dict:
+                    # Change the foreground color 
+                    user_item.setForeground(QColor(self.away_user_fg))
+                else:
+                    # Reset the foreground color 
+                    user_item.setForeground(QColor(self.user_listbox_fg))
+            
+            # Update the UI to reflect changes
+            self.user_selector_list.update()
+            
+        except Exception as e:
+            logging.error(f"Exception in highlight_away_users: {e}")
 
     def highlight_who_channels(self):
         try:
             # Loop through the items in the channel_list
             for index in range(self.channel_selector_list.count()):
-                # Get the channel from the listbox
-                channel = self.channel_selector_list.item(index)
+                # Get the channel from the listbox (which should be a QListWidgetItem)
+                channel_item = self.channel_selector_list.item(index)
+                if not channel_item:
+                    continue  # If the item is not found, skip it
 
-                # Check if the stripped channel is in the away_users list
+                # Get the channel name (assuming item text is the channel name)
+                channel = channel_item.text()
+
+                # Check if the channel is in the cap_who_for_chan list
                 if channel in self.irc_client.cap_who_for_chan:
-                    # Make sure the index exists in the channel_list
-                    if 0 <= index < self.channel_selector_list.count():
-                        # Change the foreground color 
-                        channel.setForeground(QColor(self.channel_list_fg))
+                    # Change the foreground color 
+                    channel_item.setForeground(QColor(self.channel_list_fg))
                 else:
-                    # Make sure the index exists in the channel_list
-                    if 0 <= index < self.channel_selector_list.count():
-                        # Reset the foreground color 
-                        channel.setForeground(QColor(self.need_who_chan_fg))
+                    # Reset the foreground color 
+                    channel_item.setForeground(QColor(self.need_who_chan_fg))
+            
+            # Update the UI to reflect changes
+            self.channel_selector_list.update()
+            
         except Exception as e:
             logging.error(f"Exception in highlight_who_channels: {e}")
 

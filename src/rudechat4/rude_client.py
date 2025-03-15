@@ -70,7 +70,7 @@ class RudeChatClient:
         self.time_zone = get_localzone()
         configure_logging()
         self.friends = RudeFriends()
-        self.emoji_pattern = re.compile(r'[⛈️🔥🚑🛳️🏠🏛️🏝️🏞️🎠🎭🏳️🏳️🏴🏁🚩🇺🇸🇬🇧🇨🇦🇦🇺🇫🇷🇩🇪🇮🇹🇪🇸🇯🇵🇨🇳🇧🇷🇮🇳🇷🇺🇿🇦🇲🇽🇰🇷🇸🇦]', re.UNICODE)
+        self.emoji_pattern = re.compile(r'[🇺🇸🇬🇧🇨🇦🇦🇺🇫🇷🇩🇪🇮🇹🇪🇸🇯🇵🇨🇳🇧🇷🇮🇳🇷🇺🇿🇦🇲🇽🇰🇷🇸🇦]', re.UNICODE)
 
     async def read_config(self, config_file):
         config = configparser.ConfigParser()
