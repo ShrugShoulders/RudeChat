@@ -1118,12 +1118,15 @@ class RudeGui(QWidget):
         emoji_offset_start = 0
         emoji_offset_end = 0
         for i in range(len(text)):
-            emo_type = self.is_emoji(text[i])
-            if emo_type == "2":
+            emo_status, emo_variant, emo_E = self.is_emoji(text[i])
+
+            # Exclude emojis where E == 0.6 and variant == True
+            if emo_status == 2 and not (emo_E == 0.6 and emo_variant):
                 if i < start_position:
                     emoji_offset_start += 1
                 if i < end_position:
                     emoji_offset_end += 1
+
         return emoji_offset_start, emoji_offset_end
 
     def generate_random_color(self):
@@ -1138,10 +1141,12 @@ class RudeGui(QWidget):
 
     def is_emoji(self, char):
         if char in emoji.EMOJI_DATA:
-            emoji_data = emoji.EMOJI_DATA[char]  # Get the emoji's metadata
-            status = emoji_data.get('status', None)  # Extract the 'status' value, default to None if not present
-            return f"{status}"  # Return the status, or you can store it in an instance variable if needed
-        return None
+            emoji_data = emoji.EMOJI_DATA[char]  # Get emoji metadata
+            status = emoji_data.get('status', None)  # Extract status
+            variant = emoji_data.get('variant', False)  # Extract variant flag
+            E_value = emoji_data.get('E', None)  # Extract E value
+            return status, variant, E_value
+        return None, None, None
 
     def highlight_who_channels(self):
         try:

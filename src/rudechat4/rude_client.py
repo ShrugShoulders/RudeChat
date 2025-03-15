@@ -70,6 +70,7 @@ class RudeChatClient:
         self.time_zone = get_localzone()
         configure_logging()
         self.friends = RudeFriends()
+        self.emoji_pattern = re.compile(r'[⛈️🔥🚑🛳️🏠🏛️🏝️🏞️🎠🎭🏳️🏳️🏴🏁🚩🇺🇸🇬🇧🇨🇦🇦🇺🇫🇷🇩🇪🇮🇹🇪🇸🇯🇵🇨🇳🇧🇷🇮🇳🇷🇺🇿🇦🇲🇽🇰🇷🇸🇦]', re.UNICODE)
 
     async def read_config(self, config_file):
         config = configparser.ConfigParser()
@@ -3130,6 +3131,7 @@ class RudeChatClient:
                 if self.log_on:
                     logging.debug(f"Decoded data: {decoded_data}...")
                 cleaned_data = decoded_data.replace("\x06", "")  # Remove the character with ASCII value 6
+                cleaned_data = re.sub(self.emoji_pattern, '', decoded_data)
                 if self.log_on:
                     logging.debug(f"Cleaned data (post ASCII-6 removal): {cleaned_data}...")
 
