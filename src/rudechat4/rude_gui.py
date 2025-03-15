@@ -104,6 +104,9 @@ class RudeGui(QWidget):
         # Initialise other instance variables
         self.set_misc_variables()
 
+        # Set GUI Theme
+        self.set_gui_theme()
+
         # Initialise client
         self.init_client()
 
@@ -118,20 +121,16 @@ class RudeGui(QWidget):
 
     def set_screen_size(self):
         try:
-            width = self.screen().size().width()
-            height = self.screen().size().height
-            screen_size = f"{width}x{height}"
+            screen = QGuiApplication.primaryScreen()
+            if not screen:
+                raise ValueError("No available screen detected.")  # Handle None case
+
+            width = screen.size().width()
+            height = screen.size().height()
+            self.app_size = [width, height]
         except Exception as e:
-            logging.error(f"Unable to get screen size: {e} Using default variables.")
-            self.app_size = [800, 600]
-        match screen_size:
-            case "3840x2160": self.app_size = [2200, 1800]
-            case "1920x1080": self.app_size = [1600, 900]
-            case "2560x1440": self.app_size = [1920, 1080]
-            case "1366x768": self.app_size = [1280, 720]
-            case "2560x1600": self.app_size = [1900, 800]
-            case "3440x1440": self.app_size = [3000, 1200]
-            case _: self.app_size = [800, 600]
+            logging.error(f"Unable to get screen size: {e}. Using default variables.")
+            screen_size = "default"  # Prevent NameError in match-case
 
     def set_icon(self): pass #TODO
 
@@ -251,7 +250,7 @@ class RudeGui(QWidget):
         self.id_label = QLabel(self, text="Nickname | #Channel ▶")
         self.message_bar.addWidget(self.id_label)
 
-        self.text_field = QLineEdit(self)
+        self.text_field = QLineEdit(self) # Bind TAB for tab complete.
         self.text_field.setFrame(False)
         QTimer.singleShot(0, self.bind_return_key)
         self.message_bar.addWidget(self.text_field)
@@ -312,6 +311,11 @@ class RudeGui(QWidget):
         self.sidebar.setStretch(2, 2)
 
         self.layout().addLayout(self.sidebar)
+
+    def set_gui_theme(self): # Add more gui configurations here. 
+        chat_font = QFont(self.font_family, self.font_size)
+        self.chat_box.setFont(chat_font)
+        self.master.resize(self.app_size[0], self.app_size[1])
 
     def set_misc_variables(self):
         self.channel_lists = {}
@@ -395,11 +399,6 @@ class RudeGui(QWidget):
         else:
             self.master.hide()  # Hide the window
             self.iconed = True
-
-    def remove_tray_icon(self):
-        if hasattr(self, 'tray_icon'):
-            self.stop_tray_event.set()
-            # self.tray_icon.stop()
 
     # Client Management
     def add_client(self, server_name, irc_client):
@@ -610,12 +609,6 @@ class RudeGui(QWidget):
             logging.error(f"Error quitting Clients: {e}")
 
         try:
-            # Stop and remove the tray icon
-            self.remove_tray_icon()
-        except Exception as e:
-            logging.error(f"Error Removing Tray Icon: {e}")
-
-        try:
             # Destroy the GUI
             self.destroy_client()
         except Exception as e:
@@ -623,8 +616,10 @@ class RudeGui(QWidget):
 
     def destroy_client(self):
         try:
-            self.master.destroy(True)
+            self.master.close()
             sys.exit()
+        except SystemExit:
+            logging.info("SystemExit caught: Client Quit")
         except Exception as e:
             logging.error(f"Error When Destroying Client: {e}")
 

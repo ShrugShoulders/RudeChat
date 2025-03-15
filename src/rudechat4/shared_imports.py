@@ -42,7 +42,7 @@ from threading import Thread
 
 from  PyQt6.QtWidgets import QApplication, QMessageBox, QVBoxLayout, QWidget, QLabel, QPushButton, QComboBox, QCheckBox, QLabel, QLineEdit, QPushButton, QScrollArea, QSizePolicy, QFrame, QGroupBox, QGridLayout, QMainWindow, QTextEdit, QHBoxLayout, QListWidget, QListView, QAbstractItemView, QListWidgetItem, QAbstractScrollArea, QToolButton, QFileDialog
 from PyQt6.QtCore import QTimer, Qt, QStringListModel
-from PyQt6.QtGui import QTextCursor, QTextCharFormat, QColor, QTextFormat, QFontMetrics
+from PyQt6.QtGui import QTextCursor, QTextCharFormat, QColor, QTextFormat, QFontMetrics, QFont, QGuiApplication
 
 if platform.system() == "Darwin":
     from objc import lookUpClass

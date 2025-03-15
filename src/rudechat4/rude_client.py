@@ -1173,7 +1173,7 @@ class RudeChatClient:
     async def auto_save(self):
         while self.loop_running:
             try:
-                await asyncio.sleep(30)
+                await asyncio.sleep(15)
                 await self.save_channel_messages()
                 if not self.loop_running:
                     break
@@ -3971,14 +3971,14 @@ class RudeChatClient:
 
             case "quit":
                 self.gui.save_nickname_colors()
+                await self.save_channel_messages()
                 self.remove_bang_channels()
                 quit_message = " ".join(args[1:]) if len(args) > 0 else None
                 self.gui.quit_clients_with_message(quit_message)
                 self.loop_running = False
                 await self.stop_async_loop()
-                self.gui.remove_tray_icon()
                 self.gui.destroy_client()
-                return False
+                return
 
             case "help":
                 self.display_help()
