@@ -716,7 +716,7 @@ class RudeGui(QWidget):
         config_window = ServerConfigWindow(self.main_window, os.path.join(G_CONFIG_DIR, config_files[0]), on_config_window_close)
 
         def on_config_change(event):
-            selected_config_file = selected_config_file_var.get()
+            selected_config_file = selected_config_file_var.currentText()
             config_window.config_file = os.path.join(G_CONFIG_DIR, selected_config_file)
             config_window.config.read(config_window.config_file)
             config_window.create_widgets()
