@@ -52,6 +52,7 @@ class TabEventFilter(QObject):
                 self.gui.text_field.setText(matched_name + f"{self.gui.tab_complete_terminator} ")
         except Exception as e:
         logging.error(f"Error in TabEventFilter.handle_tab_complete: {e}")
+        return
 
     def find_closest_match(self, input_text, user_list):
         """Returns the closest match to input_text from user_list (case insensitive), after stripping mode prefixes."""
