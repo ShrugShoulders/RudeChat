@@ -160,6 +160,7 @@ class RudeGui(QWidget):
             self.topic_label_font_size = config.getint('GUI', 'topic_label_font_size', fallback=10)
             self.topic_label_font_family = config.get('GUI', 'topic_label_font_family', fallback='Courier')
             self.to_tray = config.getboolean('GUI', 'minimize_to_tray', fallback=True)
+            self.highlight_all_nicknames = config.getboolean('GUI', 'highlight_all_nicknames', fallback=False)
             self.log_on = config.getboolean('GUI', 'turn_logging_on', fallback=False)
 
             # Read Widget Settings
@@ -1067,16 +1068,24 @@ class RudeGui(QWidget):
             text = self.chat_box.toPlainText()
 
             # Highlight user's nickname first
-            nicks_colors = list(self.nickname_colors.keys())
-            for nicknames in nicks_colors:
-                modes_to_strip = ''.join(self.irc_client.mode_values)
-                strip_brakets = nicknames.strip('<>')
-                plain_nickname = strip_brakets.lstrip(modes_to_strip)
-                user_nickname_matches = list(self.users_nickname_pattern(plain_nickname).finditer(text))
+            if not self.highlight_all_nicknames:
+                user_nickname_matches = list(self.users_nickname_pattern(self.irc_client.nickname).finditer(text))
                 for match in user_nickname_matches:
                     nickname = match.group(0)
                     start_position, end_position = match.span()
                     self.apply_nickname_format(text, start_position, end_position, nickname)
+
+            elif self.highlight_all_nicknames:
+                nicks_colors = list(self.nickname_colors.keys())
+                for nicknames in nicks_colors:
+                    modes_to_strip = ''.join(self.irc_client.mode_values)
+                    strip_brakets = nicknames.strip('<>')
+                    plain_nickname = strip_brakets.lstrip(modes_to_strip)
+                    user_nickname_matches = list(self.users_nickname_pattern(plain_nickname).finditer(text))
+                    for match in user_nickname_matches:
+                        nickname = match.group(0)
+                        start_position, end_position = match.span()
+                        self.apply_nickname_format(text, start_position, end_position, nickname)
 
             # Highlight other nicknames
             if hasattr(self, 'nickname_pattern'):
