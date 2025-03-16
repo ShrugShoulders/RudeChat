@@ -4,6 +4,8 @@ from rudechat4.rude_client import RudeChatClient
 from rudechat4.server_config_window import ServerConfigWindow
 from rudechat4.nick_cleaner import clean_nicknames
 from rudechat4.format_decoder import decoder
+from rudechat4.rude_logger import configure_logging
+import logging
 
 class RudeTextEdit(QTextEdit):
     def get_anchor_at(self, pos):
@@ -51,8 +53,8 @@ class TabEventFilter(QObject):
             if matched_name:
                 self.gui.text_field.setText(matched_name + f"{self.gui.tab_complete_terminator} ")
         except Exception as e:
-        logging.error(f"Error in TabEventFilter.handle_tab_complete: {e}")
-        return
+            logging.error(f"Error in TabEventFilter.handle_tab_complete: {e}")
+            return
 
     def find_closest_match(self, input_text, user_list):
         """Returns the closest match to input_text from user_list (case insensitive), after stripping mode prefixes."""
@@ -178,6 +180,7 @@ class RudeGui(QWidget):
         self.master.colors_reset_colors_action.triggered.connect(self.reset_nick_colors)
         self.master.config_edit_servers_action.triggered.connect(self.open_client_config_window)
         self.master.config_edit_gui_action.triggered.connect(self.open_gui_config_window)
+        configure_logging()
 
     def set_screen_size(self):
         try:
