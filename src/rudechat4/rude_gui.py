@@ -23,6 +23,60 @@ class RudeTextEdit(QTextEdit):
         else:
             e.ignore()
 
+class TabEventFilter(QObject):
+    def __init__(self, gui):
+        super().__init__()
+        self.gui = gui  # Store reference to RudeGui
+
+    def eventFilter(self, obj, event):
+        if event.type() == QEvent.Type.KeyPress and event.key() == Qt.Key.Key_Tab:
+            self.handle_tab_complete()  # Call tab completion method
+            return True  # Block the default tab behavior
+        return super().eventFilter(obj, event)
+
+    def handle_tab_complete(self):
+        current_text = self.gui.text_field.text().strip()
+
+        if not current_text:
+            return  # Do nothing if the text field is empty
+
+        # Get list of usernames from QListWidget
+        user_list = [self.gui.user_selector_list.item(i).text() for i in range(self.gui.user_selector_list.count())]
+
+        # Find the closest match
+        matched_name = self.find_closest_match(current_text, user_list)
+
+        # Replace text field with matched nickname
+        if matched_name:
+            self.gui.text_field.setText(matched_name + f"{self.gui.tab_complete_terminator} ")  
+
+    def find_closest_match(self, input_text, user_list):
+        """Returns the closest match to input_text from user_list (case insensitive), after stripping mode prefixes."""
+        
+        input_text = input_text.lower()
+        
+        # Strip any mode characters (e.g., +, @, ~, etc.) from the usernames
+        modes_to_strip = ''.join(self.gui.irc_client.mode_values)
+        
+        # Remove any leading modes from each username in the list
+        def strip_modes(username):
+            for mode in modes_to_strip:
+                if username.startswith(mode):
+                    username = username[1:]  # Remove the mode character
+            return username
+        
+        # Get matches after stripping modes
+        matches = [
+            user for user in user_list 
+            if strip_modes(user).lower().startswith(input_text)
+        ]
+        
+        matched_nick = matches[0] if matches else None  # Return the first match or None
+        plain_nickname = matched_nick.lstrip(modes_to_strip)
+
+        return plain_nickname
+
+
 class RudeGui(QWidget):
     # Initialisation and Setup
     def __init__(self, master):
@@ -254,6 +308,8 @@ class RudeGui(QWidget):
 
         self.text_field = QLineEdit(self) # Bind TAB for tab complete.
         self.text_field.setFrame(False)
+        self.tab_filter = TabEventFilter(self)
+        self.text_field.installEventFilter(self.tab_filter)
         QTimer.singleShot(0, self.bind_return_key)
         self.message_bar.addWidget(self.text_field)
 
