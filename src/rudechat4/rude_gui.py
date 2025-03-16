@@ -96,6 +96,7 @@ class RudeGui(QWidget):
             "🖱": 1,
             "🎙": 1,
             "🎵": 1,
+            "⛅": 0,
         }
 
         # Initialise layout
