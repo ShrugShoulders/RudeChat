@@ -84,6 +84,50 @@ class TabEventFilter(QObject):
         return plain_nickname
 
 
+class RudeListWidget(QListWidget):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self.customContextMenuRequested.connect(self.show_context_menu)
+        self.gui = parent
+
+    def show_context_menu(self, pos: QPoint):
+        """Displays a context menu on right-click."""
+        menu = QMenu(self)
+        selected_item = self.currentItem()
+        
+        if not selected_item:
+            return
+
+        for i in self.gui.irc_client.chantypes:
+            if not selected_item.text().startswith(i):
+                remove_action = QAction("Close DM", self)
+                remove_action.triggered.connect(lambda _, item=selected_item.text(): self.exit_dm(item))
+            else:
+                remove_action = QAction("Leave Channel", self)
+                remove_action.triggered.connect(lambda _, item=selected_item.text(): self.exit_channel(item))
+
+        # Add actions to menu
+        menu.addAction(remove_action)
+
+        # Show menu at cursor position
+        menu.exec(self.mapToGlobal(pos))
+
+    def exit_channel(self, item):
+        """Leaves a channel"""
+        if not item:
+            return
+        channel_name = item
+        reason = f"Bye!"
+        self.gui.irc_client.loop.create_task(self.gui.irc_client.leave_channel(channel_name, reason))    
+
+    def exit_dm(self, item):
+        """Closes a DM from a user"""
+        if not item:
+            return
+        self.gui.irc_client.close_dm(item)
+
+
 class RudeGui(QWidget):
     # Initialisation and Setup
     def __init__(self, master):
@@ -363,7 +407,7 @@ class RudeGui(QWidget):
         self.channel_selector_label.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Preferred)
         self.channel_selector.addWidget(self.channel_selector_label)
 
-        self.channel_selector_list = QListWidget(self)
+        self.channel_selector_list = RudeListWidget(self)
         self.channel_selector_list.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Expanding)
         self.channel_selector_list.setSizeAdjustPolicy(QAbstractScrollArea.SizeAdjustPolicy.AdjustToContents)
         self.channel_selector_list.itemClicked.connect(self.on_channel_click)
@@ -1372,3 +1416,45 @@ class RudeGui(QWidget):
         # Match a space followed by '<', then the nickname inside <>, and then a space after '>'
         nick_matches = list(re.finditer(r"<([^<>]+)>", text))
         return nick_matches
+
+    def the_force_click(self, index):
+        # Set background of currently selected channel back to default
+        current_selected_channel = self.irc_client.current_channel
+        if self.log_on:
+            logging.debug(f"the_force_click current_channel {current_selected_channel}")
+        if current_selected_channel:
+            for i in range(self.channel_selector_list.count()):
+                item = self.channel_selector_list.item(i)  # Get the QListWidgetItem
+                if item.text() == current_selected_channel:
+                    # Reset background color to default
+                    item.setBackground(QColor(self.channel_listbox_bg))
+                    break
+
+        # Get index of clicked item
+        clicked_index = index
+        if self.log_on:
+            logging.debug(f"Simulated Clicked Index: {clicked_index}")
+        if clicked_index is not None and clicked_index >= 0:
+            clicked_item = self.channel_selector_list.item(clicked_index)
+            clicked_channel = clicked_item.text()
+            if self.log_on:
+                logging.debug(f"Clicked Channel: {clicked_channel}")
+            
+            self.switch_channel(clicked_channel)
+            if self.log_on:
+                logging.debug(f"Switching channels...")
+
+            # Change background color of the clicked channel to blue
+            if self.log_on:
+                logging.debug(f"Recolor background hit")
+            clicked_item.setBackground(QColor(self.channel_select_color))
+            self.highlight_away_users()
+            self.update_users_label()
+            if self.log_on:
+                logging.debug(f"Finished with GUI update.")
+
+            # Remove the clicked channel from highlighted_channels dictionary
+            if self.irc_client.server_name in self.irc_client.highlighted_channels:
+                server_highlighted_channels = self.irc_client.highlighted_channels[self.irc_client.server_name]
+                if clicked_channel in server_highlighted_channels:
+                    del server_highlighted_channels[clicked_channel]

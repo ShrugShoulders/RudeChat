@@ -5028,11 +5028,11 @@ class RudeChatClient:
             except Exception as e:
                 logging.error(f"Error1 force_click: {e}")
 
-        listbox_size = self.gui.channel_selector_list.size()
+        listbox_size = self.gui.channel_selector_list.count()
             
         # Iterate through the listbox to find the index of the current selected channel
         for i in range(listbox_size):
-            item_at_index = self.gui.channel_selector_list.get(i)
+            item_at_index = self.gui.channel_selector_list.item(i).text()
             if self.log_on:
                 logging.info(f"item at index: {item_at_index}")
 
