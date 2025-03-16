@@ -1055,7 +1055,7 @@ class RudeGui(QWidget):
             self.text_field.clear()
             await self.irc_client.command_parser(user_input)
         except Exception as e:
-            print(e)
+            logging.error(f"Error in on_enter_key: {e}")
 
     # Text & Formatting
     def insert_text_widget(self, message):
