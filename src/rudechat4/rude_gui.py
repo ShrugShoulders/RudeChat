@@ -35,20 +35,23 @@ class TabEventFilter(QObject):
         return super().eventFilter(obj, event)
 
     def handle_tab_complete(self):
-        current_text = self.gui.text_field.text().strip()
+        try:
+            current_text = self.gui.text_field.text().strip()
 
-        if not current_text:
-            return
+            if not current_text:
+                return
 
-        # Get list of usernames from QListWidget
-        user_list = [self.gui.user_selector_list.item(i).text() for i in range(self.gui.user_selector_list.count())]
+            # Get list of usernames from QListWidget
+            user_list = [self.gui.user_selector_list.item(i).text() for i in range(self.gui.user_selector_list.count())]
 
-        # Find the closest match
-        matched_name = self.find_closest_match(current_text, user_list)
+            # Find the closest match
+            matched_name = self.find_closest_match(current_text, user_list)
 
-        # Replace text field with matched nickname
-        if matched_name:
-            self.gui.text_field.setText(matched_name + f"{self.gui.tab_complete_terminator} ")  
+            # Replace text field with matched nickname
+            if matched_name:
+                self.gui.text_field.setText(matched_name + f"{self.gui.tab_complete_terminator} ")
+        except Exception as e:
+        logging.error(f"Error in TabEventFilter.handle_tab_complete: {e}")
 
     def find_closest_match(self, input_text, user_list):
         """Returns the closest match to input_text from user_list (case insensitive), after stripping mode prefixes."""
