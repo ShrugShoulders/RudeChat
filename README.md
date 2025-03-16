@@ -2,7 +2,7 @@
 - [x] Complete / Has base function
 - [ ] Needs to be done / all child goals need to be completed
 
-**Tasks Complete: (22/37 - 59.46%)**
+**Tasks Complete: (23/37 - 59.46%)**
 - [ ] Convert to Qt
 	- [x] `__main__`
 	- [ ] `rude_gui`
@@ -23,7 +23,7 @@
 				- [x] Restore AWAY user display color change
 			- [x] Servers
 			- [x] Channels
-				- [ ] Restore right click menu
+				- [x] Restore right click menu
 			- [x] Entry bar
 				- [ ] Restore keybindings for TAB and arrow keys
 					- [x] TAB Complete
