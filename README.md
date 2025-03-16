@@ -2,7 +2,7 @@
 - [x] Complete / Has base function
 - [ ] Needs to be done / all child goals need to be completed
 
-**Tasks Complete: (8/25 - 31%)**
+**Tasks Complete: (22/37 - 59.46%)**
 - [ ] Convert to Qt
 	- [x] `__main__`
 	- [ ] `rude_gui`
@@ -20,12 +20,14 @@
 		- [x] Restore Sidebar
 			- [x] Users
 				- [ ] Restore right click menu
-				- [ ] Restore AWAY user display color change
+				- [x] Restore AWAY user display color change
 			- [x] Servers
 			- [x] Channels
 				- [ ] Restore right click menu
 			- [x] Entry bar
 				- [ ] Restore keybindings for TAB and arrow keys
+                                        - [x] TAB Complete
+                                        - [ ] Aarrow Key entry history. 
 	- [x] `rude_client`
 		- [x] Fix listboxes
 	- [x] `server_config_window`
@@ -35,8 +37,8 @@
 	- [ ] `gui_config_window`
 	- [ ] `list_window`
 	- [ ] `user_data_display`
-		- [x] `highlight_nicknames`
-			- [ ] Restore main user nickname highlight
+	- [x] `highlight_nicknames`
+		- [x] Restore main user nickname highlight
 	- [ ] `rude_dragndrop`
 	- [x] `rude_first_run`
 
