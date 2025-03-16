@@ -26,19 +26,19 @@ class RudeTextEdit(QTextEdit):
 class TabEventFilter(QObject):
     def __init__(self, gui):
         super().__init__()
-        self.gui = gui  # Store reference to RudeGui
+        self.gui = gui
 
     def eventFilter(self, obj, event):
         if event.type() == QEvent.Type.KeyPress and event.key() == Qt.Key.Key_Tab:
-            self.handle_tab_complete()  # Call tab completion method
-            return True  # Block the default tab behavior
+            self.handle_tab_complete()
+            return True  # Block TAB behavior
         return super().eventFilter(obj, event)
 
     def handle_tab_complete(self):
         current_text = self.gui.text_field.text().strip()
 
         if not current_text:
-            return  # Do nothing if the text field is empty
+            return
 
         # Get list of usernames from QListWidget
         user_list = [self.gui.user_selector_list.item(i).text() for i in range(self.gui.user_selector_list.count())]
@@ -55,14 +55,14 @@ class TabEventFilter(QObject):
         
         input_text = input_text.lower()
         
-        # Strip any mode characters (e.g., +, @, ~, etc.) from the usernames
+        # Strip any mode characters
         modes_to_strip = ''.join(self.gui.irc_client.mode_values)
         
         # Remove any leading modes from each username in the list
         def strip_modes(username):
             for mode in modes_to_strip:
                 if username.startswith(mode):
-                    username = username[1:]  # Remove the mode character
+                    username = username[1:]
             return username
         
         # Get matches after stripping modes
@@ -71,7 +71,8 @@ class TabEventFilter(QObject):
             if strip_modes(user).lower().startswith(input_text)
         ]
         
-        matched_nick = matches[0] if matches else None  # Return the first match or None
+        # Strip modes from the match
+        matched_nick = matches[0] if matches else None
         plain_nickname = matched_nick.lstrip(modes_to_strip)
 
         return plain_nickname
