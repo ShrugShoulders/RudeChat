@@ -1067,11 +1067,16 @@ class RudeGui(QWidget):
             text = self.chat_box.toPlainText()
 
             # Highlight user's nickname first
-            user_nickname_matches = list(self.users_nickname_pattern(self.irc_client.nickname).finditer(text))
-            for match in user_nickname_matches:
-                nickname = match.group(0)
-                start_position, end_position = match.span()
-                self.apply_nickname_format(text, start_position, end_position, nickname)
+            nicks_colors = list(self.nickname_colors.keys())
+            for nicknames in nicks_colors:
+                modes_to_strip = ''.join(self.irc_client.mode_values)
+                strip_brakets = nicknames.strip('<>')
+                plain_nickname = strip_brakets.lstrip(modes_to_strip)
+                user_nickname_matches = list(self.users_nickname_pattern(plain_nickname).finditer(text))
+                for match in user_nickname_matches:
+                    nickname = match.group(0)
+                    start_position, end_position = match.span()
+                    self.apply_nickname_format(text, start_position, end_position, nickname)
 
             # Highlight other nicknames
             if hasattr(self, 'nickname_pattern'):
