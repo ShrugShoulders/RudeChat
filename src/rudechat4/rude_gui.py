@@ -324,6 +324,8 @@ class RudeGui(QWidget):
             self.master_bg = config.get('GUI', 'master_color', fallback='black')
             self.font_family = config.get('GUI', 'family', fallback='Courier')
             self.font_size = config.getint('GUI', 'size', fallback=10)
+            self.chat_fg_color = config.get('GUI', 'chat_fg_color', fallback='#C0FFEE')
+            self.chat_bg_color = config.get('GUI', 'chat_bg_color', fallback='black')
             self.main_fg_color = config.get('GUI', 'main_fg_color', fallback='#C0FFEE')
             self.main_bg_color = config.get('GUI', 'main_bg_color', fallback='black')
             self.server_fg_color = config.get('GUI', 'server_fg', fallback='#7882ff')
@@ -375,6 +377,8 @@ class RudeGui(QWidget):
             self.font_size = 10
             self.main_fg_color = '#C0FFEE'
             self.main_bg_color = 'black'
+            self.chat_fg_color = '#C0FFEE'
+            self.chat_bg_color = 'black'
             self.server_fg_color = '#7882ff'
             self.server_bg_color = 'black'
             self.selected_list_server = 'blue'
@@ -513,8 +517,8 @@ class RudeGui(QWidget):
 
         # Apply Chat Box Theme
         self.chat_box.setStyleSheet(f"""
-            color: {self.main_fg_color};
-            background-color: {self.main_bg_color};
+            color: {self.chat_fg_color};
+            background-color: {self.chat_bg_color};
             font-family: {self.font_family};
             font-size: {self.font_size}px;
         """)
