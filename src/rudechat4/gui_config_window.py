@@ -29,7 +29,7 @@ class GuiConfigWindow(QWidget):
             section_container.setWidgetResizable(True)
             section_container.setFrameShape(QFrame.Shape.NoFrame)
 
-            section_frame = QGroupBox(section_container)
+            section_frame = QGroupBox(section.title())
             section_frame.layout = QGridLayout(section_frame)
             section_frame.layout.setColumnStretch(0, 1)
             section_frame.layout.setColumnStretch(1, 1)
