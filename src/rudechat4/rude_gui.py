@@ -342,11 +342,11 @@ class RudeGui(QWidget):
             self.list_user_fg = config.get('Lists', 'list_user_fg', fallback='#C0FFEE')
             self.list_user_away_fg = config.get('Lists', 'list_user_away_fg', fallback='#4c6c3b')
             self.main_nickname_color = config.get('Utility', 'main_nickname_color', fallback='#39ff14')
-            self.generate_nickname_colors = config.get('Utility', 'generate_nickname_colors', fallback=True)
-            self.minimize_to_tray = config.get('Utility', 'minimize_to_tray', fallback=True)
-            self.highlight_all_nicknames = config.get('Utility', 'highlight_all_nicknames', fallback=False)
-            self.log_on = config.get('Utility', 'turn_logging_on', fallback=False)
-            self.show_server_window = config.get('Utility', 'show_server_window', fallback=True)
+            self.generate_nickname_colors = config.getboolean('Utility', 'generate_nickname_colors', fallback=True)
+            self.minimize_to_tray = config.getboolean('Utility', 'minimize_to_tray', fallback=True)
+            self.highlight_all_nicknames = config.getboolean('Utility', 'highlight_all_nicknames', fallback=False)
+            self.log_on = config.getboolean('Utility', 'turn_logging_on', fallback=False)
+            self.show_server_window = config.getboolean('Utility', 'show_server_window', fallback=True)
             self.tab_complete_terminator = config.get('Utility', 'tab_complete_terminator', fallback=':')
 
         else:
