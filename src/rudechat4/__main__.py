@@ -89,10 +89,11 @@ class Window(QMainWindow):
 
             # Save Messages
             if hasattr(irc_client, 'save_channel_messages'):
-                irc_client.loop.create_task(irc_client.save_channel_messages())
-                logging.info("IRC client state saved.")
+                for server_name, irc_client in self.gui.clients.items():
+                    irc_client.loop.create_task(irc_client.save_channel_messages())
+                    logging.info(f"IRC messages: {server_name} saved")
             else:
-                logging.info("Warning: irc_client has no save_state() method.")
+                logging.info("Warning: irc_client has no save_channel_messages() method.")
 
             logging.info("Cleanup complete.")
 
