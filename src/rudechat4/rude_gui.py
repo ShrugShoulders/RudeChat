@@ -319,94 +319,65 @@ class RudeGui(QWidget):
             config = configparser.ConfigParser()
             config.read(config_file)
 
-            # Read main GUI settings
-            self.user_nickname_color = config.get('GUI', 'main_nickname_color', fallback='#39ff14')
-            self.generate_nickname_colors = config.getboolean('GUI', 'generate_nickname_colors', fallback=True)
-            self.master_bg = config.get('GUI', 'master_color', fallback='black')
-            self.font_family = config.get('GUI', 'family', fallback='Courier')
-            self.font_size = config.getint('GUI', 'size', fallback=10)
-            self.chat_fg_color = config.get('GUI', 'chat_fg_color', fallback='#C0FFEE')
-            self.chat_bg_color = config.get('GUI', 'chat_bg_color', fallback='black')
-            self.main_fg_color = config.get('GUI', 'main_fg_color', fallback='#C0FFEE')
-            self.main_bg_color = config.get('GUI', 'main_bg_color', fallback='black')
-            self.server_fg_color = config.get('GUI', 'server_fg', fallback='#7882ff')
-            self.server_bg_color = config.get('GUI', 'server_bg', fallback='black')
-            self.selected_list_server = config.get('GUI', 'selected_list_server', fallback='blue')
-            self.user_font_size = config.getint('GUI', 'user_font_size', fallback=10)
-            self.channel_font_size = config.getint('GUI', 'channel_font_size', fallback=10)
-            self.server_font_size = config.getint('GUI', 'server_font_size', fallback=10)
-            self.input_font_size = config.getint('GUI', 'input_font_size', fallback=10)
-            self.list_boxs_font_family = config.get('GUI', 'list_boxs_font_family', fallback='Courier') 
-            self.topic_label_font_size = config.getint('GUI', 'topic_label_font_size', fallback=10)
-            self.topic_label_font_family = config.get('GUI', 'topic_label_font_family', fallback='Courier')
-            self.to_tray = config.getboolean('GUI', 'minimize_to_tray', fallback=True)
-            self.highlight_all_nicknames = config.getboolean('GUI', 'highlight_all_nicknames', fallback=False)
-            self.log_on = config.getboolean('GUI', 'turn_logging_on', fallback=False)
-
-            # Read Widget Settings
-            self.user_list_fg = config.get('WIDGETS', 'users_fg', fallback='#39ff14')
-            self.user_list_bg = config.get('WIDGETS', 'users_bg', fallback='black')
-            self.user_label_bg = config.get('WIDGETS', 'user_label_bg', fallback='black')
-            self.user_label_fg = config.get('WIDGETS', 'user_label_fg', fallback='white')
-            self.away_user_fg = config.get('WIDGETS', 'away_user_fg', fallback='red')
-            self.need_who_chan_fg = config.get('WIDGETS', 'need_who_chan_fg', fallback='red')
-            self.channel_list_fg = config.get('WIDGETS', 'channels_fg', fallback='white')
-            self.channel_list_bg = config.get('WIDGETS', 'channels_bg', fallback='black')
-            self.input_fg = config.get('WIDGETS', 'entry_fg', fallback='#C0FFEE')
-            self.input_bg = config.get('WIDGETS', 'entry_bg', fallback='black')
-            self.input_insertbackground = config.get('WIDGETS', 'entry_insertbackground', fallback='#C0FFEE')
-            self.input_label_bg = config.get('WIDGETS', 'entry_label_bg', fallback='black')
-            self.input_label_fg = config.get('WIDGETS', 'entry_label_fg', fallback='#C0FFEE')
-            self.server_list_bg = config.get('WIDGETS', 'server_list_bg', fallback='black')
-            self.server_list_fg = config.get('WIDGETS', 'server_list_fg', fallback='white')
-            self.channel_label_bg = config.get('WIDGETS', 'channel_label_bg', fallback='black')
-            self.channel_label_fg = config.get('WIDGETS', 'channel_label_fg', fallback='white')
-            self.servers_label_bg = config.get('WIDGETS', 'servers_label_bg', fallback='black')
-            self.servers_label_fg = config.get('WIDGETS', 'servers_label_fg', fallback='white')
-            self.topic_label_bg = config.get('WIDGETS', 'topic_label_bg', fallback='black')
-            self.topic_label_fg = config.get('WIDGETS', 'topic_label_fg', fallback='white')
-            self.show_server_window = config.getboolean('WIDGETS', 'show_server_window', fallback=True)
-            self.channel_select_color = config.get('WIDGETS', 'channel_select_color', fallback='blue')
-            self.tab_complete_terminator = config.get('WIDGETS', 'tab_complete_terminator', fallback=':')
+            self.window_bg = config.get('Chat', 'window_bg', fallback='#1b1e20')
+            self.window_fg = config.get('Chat', 'window_fg', fallback='#C0FFEE')
+            self.window_font_family = config.get('Chat', 'window_font_family', fallback='Courier')
+            self.window_font_size = config.get('Chat', 'window_font_size', fallback=12)
+            self.chat_bg = config.get('Chat', 'chat_bg', fallback='#1b1e20')
+            self.chat_fg = config.get('Chat', 'chat_fg', fallback='#C0FFEE')
+            self.chat_font_family = config.get('Chat', 'chat_font_family', fallback='Courier')
+            self.chat_font_size = config.get('Chat', 'chat_font_size', fallback=12)
+            self.entry_bg = config.get('Entry', 'entry_bg', fallback='#1b1e20')
+            self.entry_fg = config.get('Entry', 'entry_fg', fallback='#C0FFEE')
+            self.entry_selected_bg = config.get('Entry', 'entry_selected_bg', fallback='#C0FFEE')
+            self.entry_font_family = config.get('Entry', 'entry_font_family', fallback='Courier')
+            self.entry_font_size = config.get('Entry', 'entry_font_size', fallback=12)
+            self.list_bg = config.get('Lists', 'list_bg', fallback='#1b1e20')
+            self.list_fg = config.get('Lists', 'list_fg', fallback='#C0FFEE')
+            self.list_font_family = config.get('Lists', 'list_font_family', fallback='Courier')
+            self.list_font_size = config.get('Lists', 'list_font_size', fallback=12)
+            self.list_channel_current_bg = config.get('Lists', 'list_channel_current_bg', fallback='blue')
+            self.list_channel_select_bg = config.get('Lists', 'list_channel_select_bg', fallback='blue')
+            self.list_channel_needwho_fg = config.get('Lists', 'list_channel_needwho_fg', fallback='#a4a4a4')
+            self.list_user_fg = config.get('Lists', 'list_user_fg', fallback='#C0FFEE')
+            self.list_user_away_fg = config.get('Lists', 'list_user_away_fg', fallback='#4c6c3b')
+            self.main_nickname_color = config.get('Utility', 'main_nickname_color', fallback='#39ff14')
+            self.generate_nickname_colors = config.get('Utility', 'generate_nickname_colors', fallback=True)
+            self.minimize_to_tray = config.get('Utility', 'minimize_to_tray', fallback=True)
+            self.highlight_all_nicknames = config.get('Utility', 'highlight_all_nicknames', fallback=False)
+            self.log_on = config.get('Utility', 'turn_logging_on', fallback=False)
+            self.show_server_window = config.get('Utility', 'show_server_window', fallback=True)
+            self.tab_complete_terminator = config.get('Utility', 'tab_complete_terminator', fallback=':')
 
         else:
-            # Use default font settings if config file doesn't exist
-            self.user_nickname_color = '#39ff14'
+            self.window_bg = '#1b1e20'
+            self.window_fg = '#C0FFEE'
+            self.window_font_family = 'Courier'
+            self.window_font_size = 12
+            self.chat_bg = '#1b1e20'
+            self.chat_fg = '#C0FFEE'
+            self.chat_font_family = 'Courier'
+            self.chat_font_size = 12
+            self.entry_bg = '#1b1e20'
+            self.entry_fg = '#C0FFEE'
+            self.entry_selected_bg = '#C0FFEE'
+            self.entry_font_family = 'Courier'
+            self.entry_font_size = 12
+            self.list_bg = '#1b1e20'
+            self.list_fg = '#C0FFEE'
+            self.list_font_family = 'Courier'
+            self.list_font_size = 12
+            self.list_channel_current_bg = 'blue'
+            self.list_channel_select_bg = 'blue'
+            self.list_channel_needwho_fg = '#a4a4a4'
+            self.list_user_away_fg = '#4c6c3b'
+            self.main_nickname_color = '#39ff14'
             self.generate_nickname_colors = True
-            self.master_bg = 'black'
-            self.font_family = 'Courier'
-            self.font_size = 10
-            self.main_fg_color = '#C0FFEE'
-            self.main_bg_color = 'black'
-            self.chat_fg_color = '#C0FFEE'
-            self.chat_bg_color = 'black'
-            self.server_fg_color = '#7882ff'
-            self.server_bg_color = 'black'
-            self.selected_list_server = 'blue'
-            self.user_list_fg = '#39ff14'
-            self.user_list_bg = 'black'
-            self.user_label_bg = 'black'
-            self.user_label_fg = 'white'
-            self.channel_list_fg = 'white'
-            self.channel_list_bg = 'black'
-            self.input_fg = '#C0FFEE'
-            self.input_bg = 'black'
-            self.input_insertbackground = '#C0FFEE'
-            self.input_label_bg = 'black'
-            self.input_label_fg = '#C0FFEE'
-            self.server_list_bg = 'black'
-            self.server_list_fg = 'white'
-            self.channel_label_bg = 'black'
-            self.channel_label_fg = 'white'
-            self.servers_label_fg = 'white'
-            self.servers_label_bg = 'black'
-            self.topic_label_bg = 'black'
-            self.topic_label_fg = 'white'
+            self.minimize_to_tray = True
+            self.highlight_all_nicknames = False
+            self.log_on = False
             self.show_server_window = True
-            self.channel_select_color = 'blue'
-            self.tab_complete_terminator = ":"
-            if self.log_on:
-                logging.error("GUI Fallbacks hit.")
+            self.tab_complete_terminator = ':'
 
     def init_layout(self):
         self.setLayout(QHBoxLayout(self))
@@ -503,74 +474,74 @@ class RudeGui(QWidget):
 
     def set_gui_theme(self):  # Apply GUI theme settings
         # Set Chat Font
-        chat_font = QFont(self.font_family, self.font_size)
+        chat_font = QFont(self.chat_font_family, int(self.chat_font_size))
         self.chat_box.setFont(chat_font)
 
         # Apply Topic Label Theme
         self.topic_label.setStyleSheet(f"""
-            color: {self.topic_label_fg};
-            background-color: {self.topic_label_bg};
-            font-size: {self.topic_label_font_size}px;
-            font-family: {self.topic_label_font_family};
+            color: {self.window_fg};
+            background-color: {self.window_bg};
+            font-family: {self.window_font_family};
+            font-size: {self.window_font_size}px;
         """)
 
         self.master.setStyleSheet(f"""
-            color: {self.main_fg_color};
-            background-color: {self.main_bg_color};
+            color: {self.window_fg};
+            background-color: {self.window_bg};
         """)
 
         # Apply Chat Box Theme
         self.chat_box.setStyleSheet(f"""
-            color: {self.chat_fg_color};
-            background-color: {self.chat_bg_color};
-            font-family: {self.font_family};
-            font-size: {self.font_size}px;
+            color: {self.chat_fg};
+            background-color: {self.chat_bg};
+            font-family: {self.chat_font_family};
+            font-size: {self.chat_font_size}px;
         """)
 
         # Apply Input Field Theme
         self.text_field.setStyleSheet(f"""
-            color: {self.input_fg};
-            background-color: {self.input_bg};
-            selection-background-color: {self.input_insertbackground};
-            font-size: {self.input_font_size}px;
-            font-family: {self.font_family};
+            color: {self.entry_fg};
+            background-color: {self.entry_bg};
+            selection-background-color: {self.entry_selected_bg};
+            font-family: {self.entry_font_family};
+            font-size: {self.entry_font_size}px;
         """)
 
         # Apply User List Theme
         self.user_selector_list.setStyleSheet(f"""
-            color: {self.user_list_fg};
-            background-color: {self.user_list_bg};
-            font-size: {self.user_font_size}px;
-            font-family: {self.list_boxs_font_family};
+            color: {self.list_fg};
+            background-color: {self.list_bg};
+            font-family: {self.list_font_family};
+            font-size: {self.list_font_size}px;
         """)
 
         # Apply Server List Theme
         self.server_selector_list.setStyleSheet(f"""
-            color: {self.server_list_fg};
-            background-color: {self.server_list_bg};
-            font-size: {self.server_font_size}px;
-            font-family: {self.list_boxs_font_family};
+            color: {self.list_fg};
+            background-color: {self.list_bg};
+            font-family: {self.list_font_family};
+            font-size: {self.list_font_size}px;
         """)
 
         # Apply Channel List Theme
         self.channel_selector_list.setStyleSheet(f"""
-            color: {self.channel_list_fg};
-            background-color: {self.channel_list_bg};
-            font-size: {self.channel_font_size}px;
-            font-family: {self.list_boxs_font_family};
+            color: {self.list_fg};
+            background-color: {self.list_bg};
+            font-family: {self.list_font_family};
+            font-size: {self.list_font_size}px;
         """)
 
         # Apply Scrollbar Theme
         self.setStyleSheet(f"""
             QScrollBar:vertical {{
                 border: none;
-                background: {self.channel_list_bg };
+                background: {self.window_bg };
                 width: 12px;
                 margin: 0px 0px 0px 0px;
             }}
 
             QScrollBar::handle:vertical {{
-                background: {self.input_label_bg };
+                background: {self.window_bg };
                 min-height: 20px;
                 border-radius: 5px;
             }}
@@ -583,19 +554,19 @@ class RudeGui(QWidget):
         """)
 
         # Apply Labels (User, Server, and Channel Sections)
-        self.user_selector_label.setStyleSheet(f"color: {self.user_label_fg}; background-color: {self.user_label_bg};")
-        self.server_selector_label.setStyleSheet(f"color: {self.servers_label_fg}; background-color: {self.servers_label_bg};")
-        self.channel_selector_label.setStyleSheet(f"color: {self.channel_label_fg}; background-color: {self.channel_label_bg};")
+        self.user_selector_label.setStyleSheet(f"color: {self.window_fg}; background-color: {self.window_bg};")
+        self.server_selector_label.setStyleSheet(f"color: {self.window_fg}; background-color: {self.window_bg};")
+        self.channel_selector_label.setStyleSheet(f"color: {self.window_fg}; background-color: {self.window_bg};")
 
         # Apply Message ID Label Theme
-        self.id_label.setStyleSheet(f"color: {self.user_label_fg}; background-color: {self.user_label_bg};")
+        self.id_label.setStyleSheet(f"color: {self.window_fg}; background-color: {self.window_bg};")
 
         # Apply Topic Label Theme
-        self.topic_label.setStyleSheet(f"color: {self.topic_label_fg}; background-color: {self.topic_label_bg};")
+        self.topic_label.setStyleSheet(f"color: {self.window_fg}; background-color: {self.window_bg};")
 
         # Apply Selection Colors
-        self.server_selector_list.setStyleSheet(self.server_selector_list.styleSheet() + f"selection-background-color: {self.selected_list_server};")
-        self.channel_selector_list.setStyleSheet(self.channel_selector_list.styleSheet() + f"selection-background-color: {self.channel_select_color};")
+        self.server_selector_list.setStyleSheet(self.server_selector_list.styleSheet() + f"selection-background-color: {self.list_channel_current_bg};")
+        self.channel_selector_list.setStyleSheet(self.channel_selector_list.styleSheet() + f"selection-background-color: {self.list_channel_current_bg};")
         self.highlight_who_channels()
 
     def set_misc_variables(self):
@@ -1047,7 +1018,7 @@ class RudeGui(QWidget):
 
         self.main_window = QWidget()
         self.main_window.setWindowTitle("Rude GUI configuration")
-        self.main_window.resize(800, 500)
+        self.main_window.resize(450, 500)
 
         config_file = os.path.join(G_CONFIG_DIR, 'gui_config.ini')
 
@@ -1059,7 +1030,7 @@ class RudeGui(QWidget):
         self.main_window.layout.addWidget(config_window)
 
         save_button = QPushButton("Apply")
-        save_button.clicked.connect(config_window.save_changes)
+        save_button.clicked.connect(config_window.save_config)
         self.main_window.layout.addWidget(save_button)
 
         self.main_window.show()
@@ -1105,8 +1076,8 @@ class RudeGui(QWidget):
 
             # If there's a previous server, reset its background color to black
             if self.previous_server_index is not None:
-                self.server_selector_list.item(self.previous_server_index).setBackground(QColor(self.server_list_bg))
-                self.server_selector_list.item(self.previous_server_index).setForeground(QColor(self.server_list_fg))
+                self.server_selector_list.item(self.previous_server_index).setBackground(QColor(self.list_bg))
+                self.server_selector_list.item(self.previous_server_index).setForeground(QColor(self.list_fg))
 
             # Get the selected server from the listbox
             selected_server = self.server_selector_list.item(selected_server_index)
@@ -1143,23 +1114,23 @@ class RudeGui(QWidget):
                 self.update_channel_label()
 
                 # Set the background color of the selected server to blue
-                selected_server.setBackground(QColor(self.selected_list_server))
-                selected_server.setForeground(QColor(self.server_list_fg))
+                selected_server.setBackground(QColor(self.list_channel_current_bg))
+                selected_server.setForeground(QColor(self.list_fg))
 
                 # Store the foreground and background colors for the selected server
-                self.server_colors[selected_server_index] = {'fg': self.server_list_fg, 'bg': self.selected_list_server}
+                self.server_colors[selected_server_index] = {'fg': self.list_fg, 'bg': self.list_channel_current_bg}
                 
                 if self.previous_server_index is not None:
                     if self.previous_server_index != selected_server_index:
                         # Check if the previous server color is not a mention or activity highlight before updating
                         prev_bg = self.server_colors[self.previous_server_index].get('bg', '')
                         if prev_bg not in [self.irc_client.activity_note_color, self.irc_client.mention_note_color]:
-                            self.server_colors[self.previous_server_index] = {'bg': self.server_list_bg, 'fg': self.server_list_fg}
+                            self.server_colors[self.previous_server_index] = {'bg': self.list_bg, 'fg': self.list_fg}
 
             for server_index, colors in self.server_colors.items():
                 # Get the stored foreground and background colors
-                fg_color = colors.get('fg', self.server_list_fg)
-                bg_color = colors.get('bg', self.server_list_bg)
+                fg_color = colors.get('fg', self.list_fg)
+                bg_color = colors.get('bg', self.list_bg)
 
                 # Apply the stored colors to each server in the listbox
                 self.server_selector_list.item(server_index).setForeground(QColor(fg_color))
@@ -1175,7 +1146,7 @@ class RudeGui(QWidget):
             if current_selected_channel:
                 for i in range(self.channel_selector_list.count()):
                     if self.channel_selector_list.item(i).text() == current_selected_channel:
-                        self.channel_selector_list.item(i).setBackground(QColor(self.channel_list_bg))
+                        self.channel_selector_list.item(i).setBackground(QColor(self.list_bg))
                         break
 
             # Get index of clicked item
@@ -1184,7 +1155,7 @@ class RudeGui(QWidget):
             self.switch_channel(clicked_channel.text())
 
             # Turn background blue
-            self.channel_selector_list.item(clicked_index).setBackground(QColor(self.channel_select_color))
+            self.channel_selector_list.item(clicked_index).setBackground(QColor(self.list_channel_current_bg))
             self.highlight_nicknames()
             self.highlight_away_users()
             self.update_users_label()
@@ -1319,8 +1290,8 @@ class RudeGui(QWidget):
         try:
             # This method configures tag based on attributes efficiently
             tag_config = QTextCharFormat()
-            tag_config.setFontFamily(self.font_family)
-            tag_config.setFontPointSize(self.font_size)
+            tag_config.setFontFamily(self.chat_font_family)
+            tag_config.setFontPointSize(int(self.chat_font_size))
             if any(attr.bold for attr in attributes):
                 tag_config.setFontWeight(2)
             if any(attr.italic for attr in attributes):
@@ -1453,8 +1424,8 @@ class RudeGui(QWidget):
                 self.nickname_colors[f"<{plain_nickname}>"] = nickname_color
 
             format_nick = QTextCharFormat()
-            format_nick.setFontFamily(self.font_family)
-            format_nick.setFontPointSize(self.font_size)
+            format_nick.setFontFamily(self.chat_font_family)
+            format_nick.setFontPointSize(int(self.chat_font_size))
             format_nick.setForeground(QColor(nickname_color))
 
             # Calculate emoji offset
@@ -1548,10 +1519,10 @@ class RudeGui(QWidget):
                 # Check if the user is in the away_users_dict
                 if strip_user in self.irc_client.away_users_dict:
                     # Change the foreground color 
-                    user_item.setForeground(QColor(self.away_user_fg))
+                    user_item.setForeground(QColor(self.list_user_away_fg))
                 else:
                     # Reset the foreground color 
-                    user_item.setForeground(QColor(self.user_list_fg))
+                    user_item.setForeground(QColor(self.list_user_fg))
             
             # Update the UI to reflect changes
             self.user_selector_list.update()
@@ -1572,18 +1543,18 @@ class RudeGui(QWidget):
                 channel = channel_item.text()
 
                 # Create and set the font for the item
-                font = QFont(self.list_boxs_font_family, self.channel_font_size)
+                font = QFont(self.list_font_family, int(self.list_font_size))
                 channel_item.setFont(font)
 
                 # Check if the channel is in the cap_who_for_chan list
                 if channel in self.irc_client.cap_who_for_chan:
                     # Set foreground and background colors
-                    channel_item.setForeground(QColor(self.channel_list_fg))
-                    channel_item.setBackground(QColor(self.channel_list_bg))
+                    channel_item.setForeground(QColor(self.list_fg))
+                    channel_item.setBackground(QColor(self.list_bg))
                 else:
                     # Highlight channels needing WHO request
-                    channel_item.setForeground(QColor(self.need_who_chan_fg))
-                    channel_item.setBackground(QColor(self.channel_list_bg))
+                    channel_item.setForeground(QColor(self.list_channel_needwho_fg))
+                    channel_item.setBackground(QColor(self.list_bg))
 
             # Update the UI to reflect changes
             self.channel_selector_list.update()
@@ -1648,7 +1619,7 @@ class RudeGui(QWidget):
                 item = self.channel_selector_list.item(i)  # Get the QListWidgetItem
                 if item.text() == current_selected_channel:
                     # Reset background color to default
-                    item.setBackground(QColor(self.channel_listbox_bg))
+                    item.setBackground(QColor(self.list_bg))
                     break
 
         # Get index of clicked item
