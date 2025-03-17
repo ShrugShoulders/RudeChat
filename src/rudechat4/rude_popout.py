@@ -62,21 +62,21 @@ class RudePopOut:
         self.user_label.grid(row=0, column=0, sticky='ew')
 
         # User listbox
-        self.user_listbox = Listbox(self.user_frame, height=25, width=16, bg=self.user_listbox_bg, fg=self.user_listbox_fg)
-        self.user_listbox.grid(row=1, column=0, sticky='nsew')
+        self.user_list = Listbox(self.user_frame, height=25, width=16, bg=self.user_list_bg, fg=self.user_list_fg)
+        self.user_list.grid(row=1, column=0, sticky='nsew')
 
         # User list scrollbar
-        self.user_scrollbar = Scrollbar(self.user_frame, orient="vertical", command=self.user_listbox.yview)
-        self.user_listbox.config(yscrollcommand=self.user_scrollbar.set)
+        self.user_scrollbar = Scrollbar(self.user_frame, orient="vertical", command=self.user_list.yview)
+        self.user_list.config(yscrollcommand=self.user_scrollbar.set)
         self.user_scrollbar.grid(row=1, column=1, sticky='ns')
-        self.user_listbox.bind("<Button-3>", self.show_user_list_menu)
+        self.user_list.bind("<Button-3>", self.show_user_list_menu)
         if platform.system() == "Darwin":  # macOS
-            self.user_listbox.bind("<Button-2>", self.show_user_list_menu)
+            self.user_list.bind("<Button-2>", self.show_user_list_menu)
         else:  # Windows and Linux
-            self.user_listbox.bind("<Button-3>", self.show_user_list_menu)
-        self.user_listbox.bind("<Motion>", self.on_hover)
-        self.user_listbox.bind("<Leave>", self.on_leave)
-        self.usertooltip = RudeToolTip(self.user_listbox, self, self.main_app.app_size)
+            self.user_list.bind("<Button-3>", self.show_user_list_menu)
+        self.user_list.bind("<Motion>", self.on_hover)
+        self.user_list.bind("<Leave>", self.on_leave)
+        self.usertooltip = RudeToolTip(self.user_list, self, self.main_app.app_size)
 
         # Entry widget for message input
         self.entry = tk.Entry(self.frame)
@@ -136,14 +136,14 @@ class RudePopOut:
         self.input_label_fg = config.get('WIDGETS', 'entry_label_fg', fallback='#C0FFEE')
         self.topic_label_bg = config.get('WIDGETS', 'topic_label_bg', fallback='black')
         self.topic_label_fg = config.get('WIDGETS', 'topic_label_fg', fallback='white')
-        self.user_listbox_fg = config.get('WIDGETS', 'users_fg', fallback='#39ff14')
-        self.user_listbox_bg = config.get('WIDGETS', 'users_bg', fallback='black')
+        self.user_list_fg = config.get('WIDGETS', 'users_fg', fallback='#39ff14')
+        self.user_list_bg = config.get('WIDGETS', 'users_bg', fallback='black')
 
     def on_hover(self, event):
         try:
             # Get the index of the user under the cursor
-            index = self.user_listbox.nearest(event.y)
-            username = self.user_listbox.get(index)
+            index = self.user_list.nearest(event.y)
+            username = self.user_list.get(index)
             modes_to_strip = ''.join(self.irc_client.mode_values)
             cleaned_nickname = username.lstrip(modes_to_strip)
             
@@ -170,9 +170,9 @@ class RudePopOut:
         self.usertooltip.hide_tooltip()
 
     def whois_from_menu(self):
-        selected_user_index = self.user_listbox.curselection()
+        selected_user_index = self.user_list.curselection()
         if selected_user_index:
-            selected_user = self.user_listbox.get(selected_user_index)
+            selected_user = self.user_list.get(selected_user_index)
             cleaned_nickname = selected_user.lstrip(self.modes_to_strip)
             user_input = f"/whois {cleaned_nickname}"
             asyncio.run_coroutine_threadsafe(
@@ -181,9 +181,9 @@ class RudePopOut:
             )
 
     def kick_user_from_channel(self):
-        selected_user_index = self.user_listbox.curselection()
+        selected_user_index = self.user_list.curselection()
         if selected_user_index:
-            selected_user = self.user_listbox.get(selected_user_index)
+            selected_user = self.user_list.get(selected_user_index)
             user_input = f"/kick {selected_user} {self.selected_channel} Bye <3"
             asyncio.run_coroutine_threadsafe(
                 self.irc_client.command_parser(user_input),
@@ -191,12 +191,12 @@ class RudePopOut:
             )
 
     def copy_text_user(self):
-        self.user_listbox.event_generate("<<Copy>>")
+        self.user_list.event_generate("<<Copy>>")
 
     def open_query_from_menu(self):
-        selected_user_index = self.user_listbox.curselection()
+        selected_user_index = self.user_list.curselection()
         if selected_user_index:
-            selected_user = self.user_listbox.get(selected_user_index)
+            selected_user = self.user_list.get(selected_user_index)
             cleaned_nickname = selected_user.lstrip(self.modes_to_strip)
             user_input = f"/query {cleaned_nickname}"
             asyncio.run_coroutine_threadsafe(
@@ -207,9 +207,9 @@ class RudePopOut:
 
     def ignore_user(self):
         modes_to_strip = ''.join(self.irc_client.mode_values)
-        selected_user_index = self.user_listbox.curselection()
+        selected_user_index = self.user_list.curselection()
         if selected_user_index:
-            selected_user = self.user_listbox.get(selected_user_index)
+            selected_user = self.user_list.get(selected_user_index)
             cleaned_nickname = selected_user.lstrip(modes_to_strip)
             asyncio.run_coroutine_threadsafe(
                 self.irc_client.ignore_user_from_gui(cleaned_nickname),
@@ -219,9 +219,9 @@ class RudePopOut:
 
     def unignore_user(self):
         modes_to_strip = ''.join(self.irc_client.mode_values)
-        selected_user_index = self.user_listbox.curselection()
+        selected_user_index = self.user_list.curselection()
         if selected_user_index:
-            selected_user = self.user_listbox.get(selected_user_index)
+            selected_user = self.user_list.get(selected_user_index)
             cleaned_nickname = selected_user.lstrip(modes_to_strip)
             asyncio.run_coroutine_threadsafe(
                 self.irc_client.unignore_user_from_gui(cleaned_nickname),
@@ -230,7 +230,7 @@ class RudePopOut:
             self.insert_text(f"User {cleaned_nickname} Unignored.\n")
 
     def create_user_list_menu(self):
-        menu = tk.Menu(self.user_listbox, tearoff=0)
+        menu = tk.Menu(self.user_list, tearoff=0)
         menu.add_command(label="Open Query", command=self.open_query_from_menu)
         menu.add_command(label="Whois", command=self.whois_from_menu)
         menu.add_command(label="Kick", command=self.kick_user_from_channel)
@@ -294,7 +294,7 @@ class RudePopOut:
             if not user_text:
                 return
 
-            timestamp = datetime.datetime.now().strftime('[%H:%M:%S]')
+            timestamp = datetime.now().strftime('[%H:%M:%S]')
             escaped_text = self.main_app.escape_color_codes(user_text)
             current_channel = self.selected_channel
 
@@ -384,7 +384,7 @@ class RudePopOut:
         args = user_input[1:].split() if user_input.startswith('/') else []
         primary_command = args[0].lower() if args else None
 
-        timestamp = datetime.datetime.now().strftime('[%H:%M:%S]')
+        timestamp = datetime.now().strftime('[%H:%M:%S]')
 
         match primary_command:
             case "mac":
@@ -498,7 +498,7 @@ class RudePopOut:
 
     def update_gui_user_list(self, channel):
         # Clear existing items in user listbox
-        self.user_listbox.delete(0, tk.END)
+        self.user_list.delete(0, tk.END)
         
         # Get the list of users for the given channel
         users = self.irc_client.channel_users.get(channel, [])
@@ -506,18 +506,18 @@ class RudePopOut:
         if users:
             # Populate with users for the given channel
             for user in users:
-                self.user_listbox.insert(tk.END, user)
+                self.user_list.insert(tk.END, user)
             self.highlight_away_users()
         else:
             # Handle the case when there are no users in the channel
-            self.user_listbox.insert(tk.END, self.nick_name)
-            self.user_listbox.insert(tk.END, self.selected_channel)
+            self.user_list.insert(tk.END, self.nick_name)
+            self.user_list.insert(tk.END, self.selected_channel)
 
     def highlight_away_users(self):
-        # Loop through the items in the user_listbox
-        for index in range(self.user_listbox.size()):
+        # Loop through the items in the user_list
+        for index in range(self.user_list.size()):
             # Get the username from the listbox
-            username = self.user_listbox.get(index)
+            username = self.user_list.get(index)
             
             # Strip any mode symbols from the username
             stripped_username = username.lstrip(''.join(self.irc_client.mode_values))
@@ -525,10 +525,10 @@ class RudePopOut:
             # Check if the stripped username is in the away_users list
             if stripped_username in self.irc_client.away_users_dict:
                 # Change the foreground color of the user to red
-                self.user_listbox.itemconfig(index, {'fg': self.main_app.away_user_fg})
+                self.user_list.itemconfig(index, {'fg': self.main_app.away_user_fg})
             else:
                 # Reset the foreground color if the user is not away
-                self.user_listbox.itemconfig(index, {'fg': self.main_app.user_listbox_fg})
+                self.user_list.itemconfig(index, {'fg': self.main_app.user_list_fg})
 
     def highlight_nickname(self):
         """Highlight the user's nickname in the text_widget."""
@@ -628,7 +628,7 @@ class RudePopOut:
             user_list = self.irc_client.channel_users[current_channel]
         else:
             # Fallback to the user list from the GUI's user listbox
-            user_list = self.user_listbox.get(0, tk.END)
+            user_list = self.user_list.get(0, tk.END)
 
         # Remove @ and + symbols from nicknames
         user_list_cleaned = [nick.lstrip(self.modes_to_strip) for nick in user_list]
@@ -674,7 +674,7 @@ class RudePopOut:
         """
         Logs your chats for later use.
         """
-        timestamp = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 
         # Split the message into lines
         lines = message.split("\n")
@@ -1098,7 +1098,7 @@ class RudePopOut:
 
             # If there are no users, get the count from the listbox itself
             if user_num == 0:
-                user_num = self.user_listbox.size()
+                user_num = self.user_list.size()
 
             back_text = f"Users ({user_num})"
             self.user_label.config(text=back_text, fg=self.main_app.user_label_fg)

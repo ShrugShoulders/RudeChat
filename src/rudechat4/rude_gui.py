@@ -341,8 +341,8 @@ class RudeGui(QWidget):
             self.log_on = config.getboolean('GUI', 'turn_logging_on', fallback=False)
 
             # Read Widget Settings
-            self.user_listbox_fg = config.get('WIDGETS', 'users_fg', fallback='#39ff14')
-            self.user_listbox_bg = config.get('WIDGETS', 'users_bg', fallback='black')
+            self.user_list_fg = config.get('WIDGETS', 'users_fg', fallback='#39ff14')
+            self.user_list_bg = config.get('WIDGETS', 'users_bg', fallback='black')
             self.user_label_bg = config.get('WIDGETS', 'user_label_bg', fallback='black')
             self.user_label_fg = config.get('WIDGETS', 'user_label_fg', fallback='white')
             self.away_user_fg = config.get('WIDGETS', 'away_user_fg', fallback='red')
@@ -378,8 +378,8 @@ class RudeGui(QWidget):
             self.server_fg_color = '#7882ff'
             self.server_bg_color = 'black'
             self.selected_list_server = 'blue'
-            self.user_listbox_fg = '#39ff14'
-            self.user_listbox_bg = 'black'
+            self.user_list_fg = '#39ff14'
+            self.user_list_bg = 'black'
             self.user_label_bg = 'black'
             self.user_label_fg = 'white'
             self.channel_list_fg = 'white'
@@ -506,6 +506,11 @@ class RudeGui(QWidget):
             font-family: {self.topic_label_font_family};
         """)
 
+        self.master.setStyleSheet(f"""
+            color: {self.main_fg_color};
+            background-color: {self.main_bg_color};
+        """)
+
         # Apply Chat Box Theme
         self.chat_box.setStyleSheet(f"""
             color: {self.main_fg_color};
@@ -525,8 +530,8 @@ class RudeGui(QWidget):
 
         # Apply User List Theme
         self.user_selector_list.setStyleSheet(f"""
-            color: {self.user_listbox_fg};
-            background-color: {self.user_listbox_bg};
+            color: {self.user_list_fg};
+            background-color: {self.user_list_bg};
             font-size: {self.user_font_size}px;
             font-family: {self.list_boxs_font_family};
         """)
@@ -1538,7 +1543,7 @@ class RudeGui(QWidget):
                     user_item.setForeground(QColor(self.away_user_fg))
                 else:
                     # Reset the foreground color 
-                    user_item.setForeground(QColor(self.user_listbox_fg))
+                    user_item.setForeground(QColor(self.user_list_fg))
             
             # Update the UI to reflect changes
             self.user_selector_list.update()
