@@ -1382,7 +1382,7 @@ class RudeChatClient:
                         case "TIME" | "time":
                             if tokens.command == "PRIVMSG":
                                 tz = pytz.timezone(str(self.time_zone))
-                                local_time = datetime.datetime.now(tz).strftime("%Y-%m-%d %H:%M:%S")
+                                local_time = datetime.now(tz).strftime("%Y-%m-%d %H:%M:%S")
                                 time_reply = "\x01TIME " + local_time + "\x01"
                                 await self.send_message(f'NOTICE {sender} :{time_reply}')
                                 self.add_server_message(f"CTCP: {sender} {target}: {ctcp_command}\n")
@@ -3471,7 +3471,7 @@ class RudeChatClient:
     def handle_creation_time(self, tokens):
         channel = tokens.params[1]
         timestamp = int(tokens.params[2])  # Convert timestamp to an integer if it's a string
-        creation_date = datetime.datetime.utcfromtimestamp(timestamp)
+        creation_date = datetime.utcfromtimestamp(timestamp)
         formatted_date = creation_date.strftime('%Y-%m-%d %H:%M:%S UTC')  # Format the date as desired
         data = f"Creation time for {channel}: {formatted_date}\n"
 
