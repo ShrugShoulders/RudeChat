@@ -1,4 +1,3 @@
-import tkinter as tk
 from rudechat4.shared_imports import *
 
 class DragDropListbox(tk.Listbox):

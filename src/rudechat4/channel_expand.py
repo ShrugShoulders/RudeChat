@@ -1,7 +1,4 @@
-#!/usr/bin/env python
-
-import tkinter as tk
-from tkinter import simpledialog
+from rudechat4.shared_imports import *
 
 class ChannelExp:
     def __init__(self, parent, channels, entry_bg_color, entry_fg_color):
@@ -32,4 +29,3 @@ class ChannelExp:
     def get_channels(self):
         self.window.wait_window(self.window)
         return self.channels
-

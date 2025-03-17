@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 """
 GPL-3.0 License
 
@@ -21,7 +20,6 @@ from rudechat4.copy_configs import CopyConfigs
 # Import First Run Configs
 from rudechat4.rude_first_run import FirstRun
 # Import GUI
-# from rudechat4.rude_gui import RudeGui
 from rudechat4.rude_gui import RudeGui
 # Import Client
 from rudechat4.rude_client import RudeChatClient
@@ -31,11 +29,8 @@ from rudechat4.init_clients import initialize_clients
 from rudechat4.shared_imports import *
 # Global variables
 from rudechat4.global_variables import *
+# Logging
 from rudechat4.rude_logger import configure_logging
-import logging
-
-if platform.system() == "Darwin":
-    from objc import lookUpClass
 
 class Window(QMainWindow):
     def __init__(self):
@@ -43,7 +38,7 @@ class Window(QMainWindow):
         self._createMenuBar()
         self.gui = None
         configure_logging()
-        
+
     def _createMenuBar(self):
         menu_bar = self.menuBar()
         menu_bar.setNativeMenuBar(True)
@@ -105,7 +100,7 @@ def __main__():
     first_run = FirstRun(app)
     if first_run.first_run_detect == 0:
         first_run.open_client_config_window()
-    
+
     root = Window()
     gui = RudeGui(root)
     root.set_gui(gui)

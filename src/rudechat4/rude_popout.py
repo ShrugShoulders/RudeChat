@@ -1,24 +1,9 @@
-import tkinter as tk
-import asyncio
-import configparser
-import os
-import time
-import datetime
-import json
-import re
-import random
-import webbrowser
-import platform
-import logging
-from plyer import notification as plyer_notification
-from threading import Thread
-from tkinter import scrolledtext, Listbox, Scrollbar, Tk, Frame, Label, Entry, Listbox, Menu, Scrollbar, StringVar, PhotoImage 
 from rudechat4.format_decoder import Attribute, decoder
 from rudechat4.rude_pronouns import replace_pronouns
 from rudechat4.rude_logger import configure_logging
 from rudechat4.user_data_display import RudeToolTip
+from rudechat4.shared_imports import *
 from rudechat4.global_variables import *
-
 
 class RudePopOut:
     def __init__(self, root, selected_channel, irc_client, nick_name, main_app):
@@ -717,9 +702,7 @@ class RudePopOut:
                 log_line += f'           <{sender if is_sent else self.nick_name}> {line}\n'
 
         # Determine script directory
-        config_directory = G_CONFIG_DIR
-
-        logs_directory = os.path.join(config_directory, 'Logs')
+        logs_directory = os.path.join(G_CONFIG_DIR, 'Logs')
 
         try:
             if channel == self.nick_name:
@@ -1066,7 +1049,6 @@ class RudePopOut:
         """
         Show a system desktop notification.
         """
-        config_directory = G_CONFIG_DIR
 
         # Check if the application window is the active window
         if self.is_app_focused():  # If the app is focused, return early
@@ -1083,7 +1065,7 @@ class RudePopOut:
             else:
                 message = f"You've been pinged in {channel_name}!"
 
-        icon_path = os.path.join(config_directory, "rude.ico")
+        icon_path = os.path.join(G_SOURCE_DIR, "rude.ico")
 
         try:
             if platform.system() == "Linux":

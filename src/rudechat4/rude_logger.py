@@ -1,7 +1,5 @@
-import os
-import logging
+from rudechat4.shared_imports import *
 from rudechat4.global_variables import *
-
 
 def configure_logging():
    # Log file path within the script directory

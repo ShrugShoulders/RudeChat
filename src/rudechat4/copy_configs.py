@@ -1,6 +1,5 @@
 from rudechat4.global_variables import *
-import os
-import shutil
+from rudechat4.shared_imports import *
 
 def CopyConfigs():
     source_file = os.path.join(G_SOURCE_DIR, 'gui_config.ini')

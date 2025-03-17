@@ -1,7 +1,5 @@
-import os
+from rudechat4.shared_imports import *
 from rudechat4.global_variables import *
-
-
 
 class RudeFriends:
     def __init__(self):

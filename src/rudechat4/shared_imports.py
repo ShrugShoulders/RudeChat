@@ -1,50 +1,93 @@
-#!/usr/bin/env python
-import asyncio
 import aiofiles
+import asyncio
 import base64
-import glob
-import ssl
 import configparser
-import datetime
+import dataclasses
+from datetime import datetime, timedelta
+import emoji
 import fnmatch
+import glob
 import irctokens
-import time
-import textwrap
-import random
-import datetime
+import json
 import logging
 import os
 import platform
-import subprocess
-import re
-import sys
-import json
-import tkinter as tk
-import tkinter.font as tkFont
-import dataclasses
-import multiprocessing
-import concurrent.futures
-import shutil
-import webbrowser
-import pytz
-import threading
-import emoji
-import unicodedata
-from PIL import Image
-from tzlocal import get_localzone
-from typing import List, Tuple, NamedTuple
 from plyer import notification as plyer_notification
-from tkinter import ttk
-from tkinter.scrolledtext import ScrolledText
-from tkinter import Tk, Frame, Label, Entry, Listbox, Menu, Scrollbar, StringVar, PhotoImage, messagebox
-from tkinter import simpledialog
-from threading import Thread
+import pytz
+import random
+import re
+import requests
+import shutil
+import ssl
+import subprocess
+import sys
+import threading
+import textwrap
+import time
+from typing import List, Tuple
+from tzlocal import get_localzone
+import webbrowser
 
-from PyQt6.QtWidgets import QApplication, QMessageBox, QVBoxLayout, QWidget, QLabel, QPushButton, QComboBox, QCheckBox, QLabel, QLineEdit, QPushButton, QScrollArea, QSizePolicy, QFrame, QGroupBox, QGridLayout, QMainWindow, QTextEdit, QHBoxLayout, QListWidget, QListView, QAbstractItemView, QListWidgetItem, QAbstractScrollArea, QToolButton, QFileDialog, QMenu, QInputDialog
-from PyQt6.QtCore import QTimer, Qt, QStringListModel, QEvent, QObject, QPoint
-from PyQt6.QtGui import QTextCursor, QTextCharFormat, QColor, QTextFormat, QFontMetrics, QFont, QGuiApplication, QKeyEvent, QAction
+from PyQt6.QtWidgets import (
+    QAbstractScrollArea,
+    QApplication,
+    QCheckBox,
+    QComboBox,
+    QFileDialog,
+    QFrame,
+    QGridLayout,
+    QGroupBox,
+    QHBoxLayout,
+    QLabel,
+    QLineEdit,
+    QListWidget,
+    QListWidgetItem,
+    QMainWindow,
+    QMenu,
+    QMessageBox,
+    QPushButton,
+    QScrollArea,
+    QSizePolicy,
+    QTextEdit,
+    QVBoxLayout,
+    QWidget
+)
+
+from PyQt6.QtCore import (
+    Qt,
+    QEvent,
+    QObject,
+    QPoint,
+    QTimer,
+)
+
+from PyQt6.QtGui import (
+    QAction,
+    QColor,
+    QFont,
+    QFontMetrics,
+    QGuiApplication,
+    QTextCharFormat,
+    QTextCursor
+)
 
 if platform.system() == "Darwin":
     from objc import lookUpClass
 
-import requests
+# Soon to be Obsolete
+import tkinter as tk
+from tkinter import (
+    Tk,
+    ttk,
+    Entry,
+    Frame,
+    Label,
+    Listbox,
+    Menu,
+    messagebox,
+    PhotoImage,
+    Scrollbar,
+    scrolledtext,
+    simpledialog,
+    StringVar
+)

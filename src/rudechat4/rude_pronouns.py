@@ -1,12 +1,9 @@
-import re
-import os
+from rudechat4.shared_imports import *
 from rudechat4.global_variables import *
-
 
 def replace_pronouns(text, channel=None):
     """Replace gender-specific pronouns with gender-neutral pronouns"""
-    config_directory = G_CONFIG_DIR
-    filtered_channels_path = os.path.join(config_directory, 'filtered_channels.txt')
+    filtered_channels_path = os.path.join(G_CONFIG_DIR, 'filtered_channels.txt')
 
     active_channels = []
     if os.path.exists(filtered_channels_path):

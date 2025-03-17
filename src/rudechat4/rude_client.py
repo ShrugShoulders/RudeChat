@@ -1,14 +1,12 @@
-#!/usr/bin/env python
+
 from rudechat4.list_window import ChannelListWindow
 from rudechat4.rude_pronouns import replace_pronouns
 from rudechat4.rude_auto_away import AutoAway
 from rudechat4.rude_friends import RudeFriends
 from rudechat4.shared_imports import *
+from rudechat4.global_variables import *
 from rudechat4.rude_logger import configure_logging
 from rudechat4.rude_mock import RudeMock
-from rudechat4.global_variables import *
-import logging
-
 
 class RudeChatClient:
     def __init__(self, server_text_widget, entry_widget, master, gui):
