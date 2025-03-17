@@ -1037,29 +1037,35 @@ class RudeGui(QWidget):
 
     def on_channel_click(self):
         # Set background of currently selected channel back to default
-        current_selected_channel = self.irc_client.current_channel
-        if current_selected_channel:
-            for i in range(self.channel_selector_list.count()):
-                if self.channel_selector_list.item(i).text() == current_selected_channel:
-                    self.channel_selector_list.item(i).setBackground(QColor(self.channel_list_bg))
-                    break
+        try:
+            current_selected_channel = self.irc_client.current_channel
+            if current_selected_channel:
+                for i in range(self.channel_selector_list.count()):
+                    if self.channel_selector_list.item(i).text() == current_selected_channel:
+                        self.channel_selector_list.item(i).setBackground(QColor(self.channel_list_bg))
+                        break
 
-        # Get index of clicked item
-        clicked_index = self.channel_selector_list.currentRow()
-        clicked_channel = self.channel_selector_list.item(clicked_index)
-        self.switch_channel(clicked_channel.text())
+            # Get index of clicked item
+            clicked_index = self.channel_selector_list.currentRow()
+            clicked_channel = self.channel_selector_list.item(clicked_index)
+            self.switch_channel(clicked_channel.text())
 
-        # Turn background blue
-        self.channel_selector_list.item(clicked_index).setBackground(QColor(self.channel_select_color))
-        self.highlight_nicknames()
-        self.highlight_away_users()
-        self.update_users_label()
+            # Turn background blue
+            self.channel_selector_list.item(clicked_index).setBackground(QColor(self.channel_select_color))
+            self.highlight_nicknames()
+            self.highlight_away_users()
+            self.update_users_label()
 
-        # Remove the clicked channel from highlighted_channels dictionary
-        if self.irc_client.server_name in self.irc_client.highlighted_channels:
-            server_highlighted_channels = self.irc_client.highlighted_channels[self.irc_client.server_name]
-            if clicked_channel.text() in server_highlighted_channels:
-                del server_highlighted_channels[clicked_channel.text()]
+            # Remove the clicked channel from highlighted_channels dictionary
+            if self.irc_client.server_name in self.irc_client.highlighted_channels:
+                server_highlighted_channels = self.irc_client.highlighted_channels[self.irc_client.server_name]
+                if clicked_channel.text() in server_highlighted_channels:
+                    del server_highlighted_channels[clicked_channel.text()]
+        except AttributeError as e:
+            logging.error(f"AttributeError in on_channel_click: {e}")
+            return
+        except Exception as e:
+            logging.error(f"Exception in on_channel_click: {e}")
 
     def switch_channel(self, channel_name):
         try:
