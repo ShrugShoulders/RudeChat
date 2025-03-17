@@ -1173,7 +1173,7 @@ class RudeChatClient:
     async def auto_save(self):
         while self.loop_running:
             try:
-                await asyncio.sleep(15)
+                await asyncio.sleep(30)
                 await self.save_channel_messages()
                 if not self.loop_running:
                     break
