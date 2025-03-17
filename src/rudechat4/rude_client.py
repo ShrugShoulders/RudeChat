@@ -1102,7 +1102,7 @@ class RudeChatClient:
                     continue
 
                 await asyncio.sleep(120)
-                date_time_now = datetime.datetime.now().strftime('[%Y-%m-%d %H:%M:%S]')
+                date_time_now = datetime.now().strftime('[%Y-%m-%d %H:%M:%S]')
                 user_away = self.watcher.check_auto_away()
 
                 if user_away and self.nickname not in self.away_users_dict:
@@ -1345,7 +1345,7 @@ class RudeChatClient:
 
     async def handle_ctcp(self, tokens):
         try:
-            timestamp = datetime.datetime.now().strftime('[%H:%M:%S] ')
+            timestamp = datetime.now().strftime('[%H:%M:%S] ')
             sender = tokens.hostmask.nickname
             target = tokens.params[0]
             message = tokens.params[1]
@@ -1382,7 +1382,7 @@ class RudeChatClient:
                         case "TIME" | "time":
                             if tokens.command == "PRIVMSG":
                                 tz = pytz.timezone(str(self.time_zone))
-                                local_time = datetime.datetime.now(tz).strftime("%Y-%m-%d %H:%M:%S")
+                                local_time = datetime.now(tz).strftime("%Y-%m-%d %H:%M:%S")
                                 time_reply = "\x01TIME " + local_time + "\x01"
                                 await self.send_message(f'NOTICE {sender} :{time_reply}')
                                 self.add_server_message(f"CTCP: {sender} {target}: {ctcp_command}\n")
@@ -1678,7 +1678,7 @@ class RudeChatClient:
         if self.should_ignore_sender(sender_hostmask):
             return
 
-        timestamp = datetime.datetime.now().strftime('[%H:%M:%S] ')
+        timestamp = datetime.now().strftime('[%H:%M:%S] ')
         sender = tokens.hostmask.nickname
         target = tokens.params[0]
         message = tokens.params[1]
@@ -1913,7 +1913,7 @@ class RudeChatClient:
                 logging.error(f"Error3 in handle_channel_message: {e}")
 
     def save_message(self, server, target, sender, message, mode_symbol, is_sent):
-        timestamp = datetime.datetime.now().strftime('[%H:%M:%S] ')
+        timestamp = datetime.now().strftime('[%H:%M:%S] ')
         if self.is_direct_message(target):
             # If it's a DM, handle it differently
             if sender not in self.channel_messages[server]:
@@ -3473,7 +3473,7 @@ class RudeChatClient:
     def handle_creation_time(self, tokens):
         channel = tokens.params[1]
         timestamp = int(tokens.params[2])  # Convert timestamp to an integer if it's a string
-        creation_date = datetime.datetime.utcfromtimestamp(timestamp)
+        creation_date = datetime.utcfromtimestamp(timestamp)
         formatted_date = creation_date.strftime('%Y-%m-%d %H:%M:%S UTC')  # Format the date as desired
         data = f"Creation time for {channel}: {formatted_date}\n"
 
@@ -3510,7 +3510,7 @@ class RudeChatClient:
         """
         if not self.use_logging:
             return
-        timestamp = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 
         # Split the message into lines
         lines = message.split("\n")
@@ -3791,7 +3791,7 @@ class RudeChatClient:
         await self.send_message(f"QUIT :{message}")
 
     async def send_away_notification(self, away_message):
-        timestamp = datetime.datetime.now().strftime('[%Y-%m-%d %H:%M:%S]')
+        timestamp = datetime.now().strftime('[%Y-%m-%d %H:%M:%S]')
         if away_message:
             if self.nickname not in self.away_users_dict:
                 self.away_users_dict[self.nickname] = away_message
@@ -3814,7 +3814,7 @@ class RudeChatClient:
         args = user_input[1:].split() if user_input.startswith('/') else []
         primary_command = args[0].lower() if args else None
 
-        timestamp = datetime.datetime.now().strftime('[%H:%M:%S] ')
+        timestamp = datetime.now().strftime('[%H:%M:%S] ')
 
         match primary_command:
             case "join":
@@ -4064,7 +4064,7 @@ class RudeChatClient:
     async def mocker(self, args):
         try:            
             if self.use_time_stamp:
-                timestamp = datetime.datetime.now().strftime('[%H:%M:%S]')
+                timestamp = datetime.now().strftime('[%H:%M:%S]')
             else:
                 timestamp = ""
             
@@ -4095,7 +4095,7 @@ class RudeChatClient:
             for channel in channels:
                 if channel.startswith(tuple(self.chantypes)):
                     if self.use_time_stamp:
-                        timestamp = datetime.datetime.now().strftime('[%H:%M:%S]')
+                        timestamp = datetime.now().strftime('[%H:%M:%S]')
                     else:
                         timestamp = ""
                     user_mode = self.get_user_mode(self.nickname, channel)
@@ -4300,7 +4300,7 @@ class RudeChatClient:
         window = self.gui.pop_out_windows.get(channel)
         user_mode = self.get_user_mode(self.nickname, channel)
         mode_symbol = self.get_mode_symbol(user_mode) if user_mode else ''
-        timestamp = datetime.datetime.now().strftime('[%H:%M:%S]')
+        timestamp = datetime.now().strftime('[%H:%M:%S]')
         if len(args) < 2:
             available_macros = ", ".join(self.ASCII_ART_MACROS.keys())
             if window:
@@ -4337,7 +4337,7 @@ class RudeChatClient:
         mode_symbol = self.get_mode_symbol(user_mode) if user_mode else ''
 
         if macro_name in self.ASCII_ART_MACROS:
-            current_time = datetime.datetime.now().strftime('[%H:%M:%S] ')
+            current_time = datetime.now().strftime('[%H:%M:%S] ')
             for line in self.ASCII_ART_MACROS[macro_name].splitlines():
                 formatted_message = self.format_message(line, current_time)
                 await self.send_message(f'PRIVMSG {selected_channel} :{formatted_message}')
@@ -4542,7 +4542,7 @@ class RudeChatClient:
         self.gui.insert_text_widget(end_message) 
 
     async def append_to_channel_history(self, channel, message, mode_symbol, is_action=False):
-        timestamp = datetime.datetime.now().strftime('[%H:%M:%S] ')
+        timestamp = datetime.now().strftime('[%H:%M:%S] ')
         
         # Escape color codes in the message
         escaped_message = self.escape_color_codes(message)
@@ -4658,7 +4658,7 @@ class RudeChatClient:
         return random.choice(fortune_files)
 
     async def fortune_cowsay(self, mode_symbol, file_name=None):
-        timestamp = datetime.datetime.now().strftime('[%H:%M:%S] ')
+        timestamp = datetime.now().strftime('[%H:%M:%S] ')
         file_name = self.get_fortune_file(file_name)
         selected_channel = self.current_channel
 
@@ -4683,7 +4683,7 @@ class RudeChatClient:
 
     async def cowsay_custom_message(self, message, mode_symbol):
         """Wrap a custom message using the cowsay format."""
-        timestamp = datetime.datetime.now().strftime('[%H:%M:%S] ')
+        timestamp = datetime.now().strftime('[%H:%M:%S] ')
         selected_channel = self.current_channel
         wrapped_message = self.wrap_text(message)
         cowsay_output = self.cowsay(wrapped_message)
@@ -4705,7 +4705,7 @@ class RudeChatClient:
         selected_channel = self.current_channel
         user_mode = self.get_user_mode(self.nickname, selected_channel)
         mode_symbol = self.get_mode_symbol(user_mode) if user_mode else ''
-        timestamp = datetime.datetime.now().strftime('[%H:%M:%S] ')
+        timestamp = datetime.now().strftime('[%H:%M:%S] ')
         file_name = self.get_fortune_file(file_name)
 
         with open(file_name, 'r', encoding='utf-8') as f:  # Notice the encoding parameter
@@ -4829,7 +4829,7 @@ class RudeChatClient:
             self.watcher.update_last_message_time()
         await self.remove_away_status()
 
-        timestamp = datetime.datetime.now().strftime('[%H:%M:%S] ')
+        timestamp = datetime.now().strftime('[%H:%M:%S] ')
         if self.use_time_stamp == True:
             self.gui.insert_text_widget(f"{timestamp}{formatted_message}\n")
         elif self.use_time_stamp == False:
