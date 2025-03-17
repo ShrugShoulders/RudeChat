@@ -272,6 +272,7 @@ class RudeGui(QWidget):
             "🎙": 1,
             "🎵": 1,
             "⛅": 0,
+            "☹": 0,
         }
 
         # Initialise layout
@@ -332,6 +333,7 @@ class RudeGui(QWidget):
             self.user_font_size = config.getint('GUI', 'user_font_size', fallback=10)
             self.channel_font_size = config.getint('GUI', 'channel_font_size', fallback=10)
             self.server_font_size = config.getint('GUI', 'server_font_size', fallback=10)
+            self.input_font_size = config.getint('GUI', 'input_font_size', fallback=10)
             self.list_boxs_font_family = config.get('GUI', 'list_boxs_font_family', fallback='Courier') 
             self.topic_label_font_size = config.getint('GUI', 'topic_label_font_size', fallback=10)
             self.topic_label_font_family = config.get('GUI', 'topic_label_font_family', fallback='Courier')
@@ -492,10 +494,113 @@ class RudeGui(QWidget):
 
         self.layout().addLayout(self.sidebar)
 
-    def set_gui_theme(self): # Add more gui configurations here. 
+    def set_gui_theme(self):  # Apply GUI theme settings
+        # Set Chat Font
         chat_font = QFont(self.font_family, self.font_size)
         self.chat_box.setFont(chat_font)
-        self.master.resize(self.app_size[0], self.app_size[1])
+
+        # Apply Topic Label Theme
+        self.topic_label.setStyleSheet(f"""
+            color: {self.topic_label_fg};
+            background-color: {self.topic_label_bg};
+            font-size: {self.topic_label_font_size}px;
+            font-family: {self.topic_label_font_family};
+        """)
+
+        # Apply Chat Box Theme
+        self.chat_box.setStyleSheet(f"""
+            color: {self.main_fg_color};
+            background-color: {self.main_bg_color};
+            font-family: {self.font_family};
+            font-size: {self.font_size}px;
+        """)
+
+        # Apply Input Field Theme
+        self.text_field.setStyleSheet(f"""
+            color: {self.input_fg};
+            background-color: {self.input_bg};
+            selection-background-color: {self.input_insertbackground};
+            font-size: {self.input_font_size}px;
+            font-family: {self.font_family};
+        """)
+
+        # Apply User List Theme
+        self.user_selector_list.setStyleSheet(f"""
+            color: {self.user_listbox_fg};
+            background-color: {self.user_listbox_bg};
+            font-size: {self.user_font_size}px;
+            font-family: {self.list_boxs_font_family};
+        """)
+
+        # Apply Server List Theme
+        self.server_selector_list.setStyleSheet(f"""
+            color: {self.server_list_fg};
+            background-color: {self.server_list_bg};
+            font-size: {self.server_font_size}px;
+            font-family: {self.list_boxs_font_family};
+        """)
+
+        # Apply Channel List Theme
+        self.channel_selector_list.setStyleSheet(f"""
+            color: {self.channel_list_fg};
+            background-color: {self.channel_list_bg};
+            font-size: {self.channel_font_size}px;
+            font-family: {self.list_boxs_font_family};
+        """)
+
+        # Apply Scrollbar Theme
+        self.setStyleSheet(f"""
+            QScrollBar:vertical {{
+                border: none;
+                background: {self.channel_list_bg };
+                width: 12px;
+                margin: 0px 0px 0px 0px;
+            }}
+
+            QScrollBar::handle:vertical {{
+                background: {self.input_label_bg };
+                min-height: 20px;
+                border-radius: 5px;
+            }}
+
+            QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {{
+                background: none;
+                border: none;
+            }}
+
+            QScrollBar:horizontal {{
+                border: none;
+                background: {self.channel_list_bg};
+                height: 12px;
+                margin: 0px 0px 0px 0px;
+            }}
+
+            QScrollBar::handle:horizontal {{
+                background: {self.input_label_bg};
+                min-width: 20px;
+                border-radius: 5px;
+            }}
+
+            QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {{
+                background: none;
+                border: none;
+            }}
+        """)
+
+        # Apply Labels (User, Server, and Channel Sections)
+        self.user_selector_label.setStyleSheet(f"color: {self.user_label_fg}; background-color: {self.user_label_bg};")
+        self.server_selector_label.setStyleSheet(f"color: {self.servers_label_fg}; background-color: {self.servers_label_bg};")
+        self.channel_selector_label.setStyleSheet(f"color: {self.channel_label_fg}; background-color: {self.channel_label_bg};")
+
+        # Apply Message ID Label Theme
+        self.id_label.setStyleSheet(f"color: {self.user_label_fg}; background-color: {self.user_label_bg};")
+
+        # Apply Topic Label Theme
+        self.topic_label.setStyleSheet(f"color: {self.topic_label_fg}; background-color: {self.topic_label_bg};")
+
+        # Apply Selection Colors
+        self.server_selector_list.setStyleSheet(f"selection-background-color: {self.selected_list_server};")
+        self.channel_selector_list.setStyleSheet(f"selection-background-color: {self.channel_select_color};")
 
     def set_misc_variables(self):
         self.channel_lists = {}
@@ -537,6 +642,7 @@ class RudeGui(QWidget):
         self.highlight_nicknames()
         self.highlight_away_users()
         self.emoji_select()
+        self.set_gui_theme()
         pass #TODO
 
     def hidden_windows(self): pass #TODO
