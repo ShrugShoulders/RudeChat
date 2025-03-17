@@ -16,7 +16,7 @@
 				- [ ] Reset Colors
 			- [x] Config
 				- [x] Edit Servers...
-				- [ ] Edit GUI
+				- [x] Edit GUI
 		- [x] Restore Sidebar
 			- [x] Users
 				- [ ] Restore right click menu
@@ -34,7 +34,7 @@
 		- [ ] `channel_expand`
 	- [ ] `rude_popout`
 	- [ ] `rude_colours`
-	- [ ] `gui_config_window`
+	- [x] `gui_config_window`
 	- [ ] `list_window`
 	- [ ] `user_data_display`
 	- [x] `highlight_nicknames`
