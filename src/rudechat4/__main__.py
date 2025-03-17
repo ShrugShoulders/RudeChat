@@ -31,6 +31,8 @@ from rudechat4.init_clients import initialize_clients
 from rudechat4.shared_imports import *
 # Global variables
 from rudechat4.global_variables import *
+from rudechat4.rude_logger import configure_logging
+import logging
 
 if platform.system() == "Darwin":
     from objc import lookUpClass
@@ -39,6 +41,8 @@ class Window(QMainWindow):
     def __init__(self):
         super().__init__()
         self._createMenuBar()
+        self.gui = None
+        configure_logging()
         
     def _createMenuBar(self):
         menu_bar = self.menuBar()
@@ -68,6 +72,30 @@ class Window(QMainWindow):
         NSApp = lookUpClass("NSApplication").sharedApplication()
         NSApp.orderFrontStandardAboutPanel_(None)
 
+    def set_gui(self, gui_instance):
+        """Store a reference to the RudeGui instance."""
+        self.gui = gui_instance
+
+    def closeEvent(self, event):
+        """Handle the window close event (when X is clicked)."""
+        self.on_app_exit()
+        event.accept()
+
+    def on_app_exit(self):
+        """Custom function that runs when the user clicks 'X'."""
+        if self.gui and hasattr(self.gui, 'irc_client'):
+            irc_client = self.gui.irc_client
+            logging.info("Saving IRC client data before closing...")
+
+            # Save Messages
+            if hasattr(irc_client, 'save_channel_messages'):
+                irc_client.loop.create_task(irc_client.save_channel_messages())
+                logging.info("IRC client state saved.")
+            else:
+                logging.info("Warning: irc_client has no save_state() method.")
+
+            logging.info("Cleanup complete.")
+
 def __main__():
     CopyConfigs()
     app = QApplication(sys.argv)
@@ -79,6 +107,7 @@ def __main__():
     
     root = Window()
     gui = RudeGui(root)
+    root.set_gui(gui)
     root.setCentralWidget(gui)
 
     new_loop = asyncio.new_event_loop()
@@ -95,7 +124,6 @@ def __main__():
             loop.stop()
             QTimer.singleShot(100, qt_update)
 
-    # root.after(100, tk_update)
     QTimer.singleShot(100, qt_update)
     root.show()
     app.exec()
