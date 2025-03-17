@@ -83,8 +83,7 @@ class TabEventFilter(QObject):
 
         return plain_nickname
 
-
-class RudeListWidget(QListWidget):
+class RudeChannelListWidget(QListWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
@@ -92,7 +91,7 @@ class RudeListWidget(QListWidget):
         self.gui = parent
 
     def show_context_menu(self, pos: QPoint):
-        """Displays a context menu on right-click."""
+        """Displays channel list context menu"""
         menu = QMenu(self)
         selected_item = self.currentItem()
         
@@ -127,6 +126,76 @@ class RudeListWidget(QListWidget):
             return
         self.gui.irc_client.close_dm(item)
 
+class RudeUserListWidget(QListWidget):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self.customContextMenuRequested.connect(self.show_context_menu)
+        self.gui = parent
+
+    def show_context_menu(self, pos: QPoint):
+        """Displays user list context menu"""
+        menu = QMenu(self)
+
+        # Init the actions
+        open_user_dm = QAction("Open DM", self)
+        whois_user = QAction("whois", self)
+        ignore_action = QAction("Ignore User", self)
+        unignore_action = QAction("Unignore User", self)
+        kick_action = QAction("Kick User", self)
+
+        # Connect actions to methods
+        open_user_dm.triggered.connect(self.open_dm_with_user)
+        whois_user.triggered.connect(self.whois_the_user)
+        ignore_action.triggered.connect(self.ignore_user)
+        unignore_action.triggered.connect(self.unignore_user)
+        kick_action.triggered.connect(self.kick_user_from_channel)
+
+        # Add meu actions
+        menu.addAction(open_user_dm)
+        menu.addAction(whois_user)
+        menu.addAction(ignore_action)
+        menu.addAction(unignore_action)
+        menu.addAction(kick_action)
+
+        # Show menu at cursor position
+        menu.exec(self.mapToGlobal(pos))
+
+    def open_dm_with_user(self):
+        """Removes the selected channel from the list."""
+        selected_item = self.currentItem()
+        if selected_item:
+            self.gui.irc_client.loop.create_task(self.gui.irc_client.command_parser(f"/query {selected_item.text()}"))
+
+    def whois_the_user(self):
+        """Runs a whois command on the selected user."""
+        selected_item = self.currentItem()
+        if selected_item:
+            modes_to_strip = ''.join(self.gui.irc_client.mode_values)
+            user = selected_item.text().lstrip(modes_to_strip)
+            self.gui.irc_client.loop.create_task(self.whois(user))
+
+    def ignore_user(self):
+        selected_item = self.currentItem()
+        if selected_item:
+            modes_to_strip = ''.join(self.gui.irc_client.mode_values)
+            cleaned_nickname = selected_item.text().lstrip(modes_to_strip)
+            self.gui.irc_client.loop.create_task(self.gui.irc_client.ignore_user_from_gui(cleaned_nickname))
+
+    def unignore_user(self):
+        selected_item = self.currentItem()
+        if selected_item:
+            modes_to_strip = ''.join(self.gui.irc_client.mode_values)
+            cleaned_nickname = selected_item.text().lstrip(modes_to_strip)
+            self.gui.irc_client.loop.create_task(self.gui.irc_client.unignore_user_from_gui(cleaned_nickname))
+
+    def kick_user_from_channel(self):
+        selected_item = self.currentItem()
+        if selected_item:
+            modes_to_strip = ''.join(self.gui.irc_client.mode_values)
+            channel = self.gui.irc_client.current_channel
+            selected_user = selected_item.text().lstrip(modes_to_strip)
+            self.gui.irc_client.loop.create_task(self.gui.irc_client.handle_kick_command(["/kick", selected_user, channel, "Bye <3"]))
 
 class RudeGui(QWidget):
     # Initialisation and Setup
@@ -378,7 +447,7 @@ class RudeGui(QWidget):
         self.user_selector_label.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Preferred)
         self.user_selector.addWidget(self.user_selector_label)
 
-        self.user_selector_list = QListWidget(self)
+        self.user_selector_list = RudeUserListWidget(self)
         self.user_selector_list.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Expanding)
         self.user_selector_list.setSizeAdjustPolicy(QAbstractScrollArea.SizeAdjustPolicy.AdjustToContents)
         self.user_selector_list.setItemAlignment(Qt.AlignmentFlag.AlignLeading)
@@ -407,7 +476,7 @@ class RudeGui(QWidget):
         self.channel_selector_label.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Preferred)
         self.channel_selector.addWidget(self.channel_selector_label)
 
-        self.channel_selector_list = RudeListWidget(self)
+        self.channel_selector_list = RudeChannelListWidget(self)
         self.channel_selector_list.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Expanding)
         self.channel_selector_list.setSizeAdjustPolicy(QAbstractScrollArea.SizeAdjustPolicy.AdjustToContents)
         self.channel_selector_list.itemClicked.connect(self.on_channel_click)
