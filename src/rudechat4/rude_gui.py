@@ -457,6 +457,7 @@ class RudeGui(QWidget):
         self.user_selector_list.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Expanding)
         self.user_selector_list.setSizeAdjustPolicy(QAbstractScrollArea.SizeAdjustPolicy.AdjustToContents)
         self.user_selector_list.setItemAlignment(Qt.AlignmentFlag.AlignLeading)
+        self.user_selector_list.setAutoFillBackground(True)
         self.user_selector.addWidget(self.user_selector_list)
 
         self.sidebar.addLayout(self.user_selector)
@@ -472,6 +473,7 @@ class RudeGui(QWidget):
         self.server_selector_list.setSizeAdjustPolicy(QAbstractScrollArea.SizeAdjustPolicy.AdjustToContents)
         self.server_selector_list.itemClicked.connect(self.on_server_change)
         self.server_selector_list.setItemAlignment(Qt.AlignmentFlag.AlignLeading)
+        self.server_selector_list.setAutoFillBackground(True)
         self.server_selector.addWidget(self.server_selector_list)
 
         self.sidebar.addLayout(self.server_selector)
@@ -487,6 +489,7 @@ class RudeGui(QWidget):
         self.channel_selector_list.setSizeAdjustPolicy(QAbstractScrollArea.SizeAdjustPolicy.AdjustToContents)
         self.channel_selector_list.itemClicked.connect(self.on_channel_click)
         self.channel_selector_list.setItemAlignment(Qt.AlignmentFlag.AlignLeading)
+        self.channel_selector_list.setAutoFillBackground(True)
         self.channel_selector.addWidget(self.channel_selector_list)
 
         self.sidebar.addLayout(self.channel_selector)
