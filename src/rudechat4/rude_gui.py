@@ -590,8 +590,8 @@ class RudeGui(QWidget):
         self.topic_label.setStyleSheet(f"color: {self.topic_label_fg}; background-color: {self.topic_label_bg};")
 
         # Apply Selection Colors
-        self.server_selector_list.setStyleSheet(self.server_selector_list.styleSheet + f"selection-background-color: {self.selected_list_server};")
-        self.channel_selector_list.setStyleSheet(self.channel_selector_list.styleSheet + f"selection-background-color: {self.channel_select_color};")
+        self.server_selector_list.setStyleSheet(self.server_selector_list.styleSheet() + f"selection-background-color: {self.selected_list_server};")
+        self.channel_selector_list.setStyleSheet(self.channel_selector_list.styleSheet() + f"selection-background-color: {self.channel_select_color};")
         self.highlight_who_channels()
 
     def set_misc_variables(self):
