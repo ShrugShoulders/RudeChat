@@ -173,7 +173,8 @@ class RudeUserListWidget(QListWidget):
         if selected_item:
             modes_to_strip = ''.join(self.gui.irc_client.mode_values)
             user = selected_item.text().lstrip(modes_to_strip)
-            self.gui.irc_client.loop.create_task(self.whois(user))
+            self.gui.irc_client.whois_user_request = True
+            self.gui.irc_client.loop.create_task(self.gui.irc_client.whois(user))
 
     def ignore_user(self):
         selected_item = self.currentItem()
@@ -1030,6 +1031,8 @@ class RudeGui(QWidget):
 
     def on_channel_click(self):
         # Set background of currently selected channel back to default
+        if not self.irc_client.server:
+            return
         current_selected_channel = self.irc_client.current_channel
         if current_selected_channel:
             for i in range(self.channel_selector_list.count()):
@@ -1496,7 +1499,7 @@ class RudeGui(QWidget):
                 item = self.channel_selector_list.item(i)  # Get the QListWidgetItem
                 if item.text() == current_selected_channel:
                     # Reset background color to default
-                    item.setBackground(QColor(self.channel_listbox_bg))
+                    item.setBackground(QColor(self.channel_list_bg))
                     break
 
         # Get index of clicked item
