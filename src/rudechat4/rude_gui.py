@@ -567,23 +567,6 @@ class RudeGui(QWidget):
                 border: none;
             }}
 
-            QScrollBar:horizontal {{
-                border: none;
-                background: {self.channel_list_bg};
-                height: 12px;
-                margin: 0px 0px 0px 0px;
-            }}
-
-            QScrollBar::handle:horizontal {{
-                background: {self.input_label_bg};
-                min-width: 20px;
-                border-radius: 5px;
-            }}
-
-            QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {{
-                background: none;
-                border: none;
-            }}
         """)
 
         # Apply Labels (User, Server, and Channel Sections)
