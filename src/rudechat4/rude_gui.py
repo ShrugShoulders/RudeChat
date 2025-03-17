@@ -583,6 +583,7 @@ class RudeGui(QWidget):
         # Apply Selection Colors
         self.server_selector_list.setStyleSheet(f"selection-background-color: {self.selected_list_server};")
         self.channel_selector_list.setStyleSheet(f"selection-background-color: {self.channel_select_color};")
+        self.highlight_who_channels()
 
     def set_misc_variables(self):
         self.channel_lists = {}
@@ -1561,9 +1562,11 @@ class RudeGui(QWidget):
                 if channel in self.irc_client.cap_who_for_chan:
                     # Change the foreground color 
                     channel_item.setForeground(QColor(self.channel_list_fg))
+                    channel_item.setBackground(QColor(self.channel_list_bg))
                 else:
                     # Reset the foreground color 
                     channel_item.setForeground(QColor(self.need_who_chan_fg))
+                    channel_item.setBackground(QColor(self.channel_list_bg))
             
             # Update the UI to reflect changes
             self.channel_selector_list.update()

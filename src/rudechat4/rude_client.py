@@ -1405,8 +1405,6 @@ class RudeChatClient:
             else:
                 self.motd_dict[self.server_name] = data
                 self.highlight_server(server_activity=True)
-        else:
-            self.gui.insert_server_widget(data)
 
     async def handle_action_ctcp(self, timestamp, sender, target, ctcp_content):
         try:
