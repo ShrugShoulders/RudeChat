@@ -2,6 +2,7 @@ from rudechat4.shared_imports import *
 from rudechat4.global_variables import *
 from rudechat4.rude_client import RudeChatClient
 from rudechat4.server_config_window import ServerConfigWindow
+from rudechat4.gui_config_window import GuiConfigWindow
 from rudechat4.nick_cleaner import clean_nicknames
 from rudechat4.format_decoder import decoder
 from rudechat4.rude_logger import configure_logging
@@ -921,7 +922,7 @@ class RudeGui(QWidget):
         selected_config_file_var.currentIndexChanged.connect(on_config_change)
         self.main_window.layout.addWidget(selected_config_file_var)
 
-        self.main_window.layout.addWidget(config_window.frame)
+        self.main_window.layout.addWidget(config_window)
 
         save_button = QPushButton("Apply")
         save_button.clicked.connect(config_window.save_config)
@@ -929,7 +930,37 @@ class RudeGui(QWidget):
 
         self.main_window.show()
 
-    def open_gui_config_window(self): pass #TODO
+    def open_gui_config_window(self):
+        def after_config_window_close():
+            self.read_config()
+            self.apply_settings()
+
+        def close_window():
+            self.main_window.close()
+
+        def on_config_window_close():
+            QTimer.singleShot(100, after_config_window_close)
+            QTimer.singleShot(200, close_window)
+            return
+
+        self.main_window = QWidget()
+        self.main_window.setWindowTitle("Rude GUI configuration")
+        self.main_window.resize(700, 500)
+
+        config_file = os.path.join(G_CONFIG_DIR, 'gui_config.ini')
+
+        self.main_window.layout = QVBoxLayout(self.main_window)
+        self.main_window.setContentsMargins(0, 0, 0, 0)
+
+        config_window = GuiConfigWindow(self.main_window, config_file, on_config_window_close)
+
+        self.main_window.layout.addWidget(config_window)
+
+        save_button = QPushButton("Apply")
+        save_button.clicked.connect(config_window.save_changes)
+        self.main_window.layout.addWidget(save_button)
+
+        self.main_window.show()
 
     def show_startup_art(self):
         splash_directory = os.path.join(G_SOURCE_DIR, "Splash")

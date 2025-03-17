@@ -3,20 +3,20 @@ from rudechat4.global_variables import *
 from rudechat4.channel_expand import ChannelExp
 from rudechat4.rude_logger import configure_logging
 
-class ServerConfigWindow:
+class ServerConfigWindow(QScrollArea):
     def __init__(self, parent, config_file, close_callback):
+        super().__init__()
         self.parent = parent
         self.config_file = config_file
         self.close_callback = close_callback
-        self.frame = QScrollArea()
-        self.frame.setViewportMargins(-10, -10, -10, -10)
-        self.frame.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
-        self.frame.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-        self.frame.setWidgetResizable(True)
-        self.frame.setFrameShape(QFrame.Shape.NoFrame)
+        self.setViewportMargins(-10, -10, -10, -10)
+        self.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        self.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.setWidgetResizable(True)
+        self.setFrameShape(QFrame.Shape.NoFrame)
         self.widget = QWidget()
         self.widget.layout = QVBoxLayout(self.widget)
-        self.frame.setWidget(self.widget)
+        self.setWidget(self.widget)
 
         self.config = configparser.ConfigParser()
         self.config.read(config_file)
@@ -61,21 +61,7 @@ class ServerConfigWindow:
         }
         configure_logging()
         self.entries = {}
-        self.read_config()
         self.create_widgets()
-
-    def read_config(self):
-        config_file = os.path.join(G_CONFIG_DIR, 'gui_config.ini')
-
-        if os.path.exists(config_file):
-            color_config = configparser.ConfigParser()
-            color_config.read(config_file)
-
-            self.bg_color = color_config.get('GUI', 'master_color', fallback='black')
-            self.fg_color = color_config.get('GUI', 'main_fg_color', fallback='#C0FFEE')
-            self.entry_bg_color = color_config.get('GUI', 'master_color', fallback='black')
-            self.entry_fg_color = color_config.get('GUI', 'main_fg_color', fallback='#C0FFEE')
-            self.frame_bg_color = color_config.get('GUI', 'master_color', fallback='black')
 
     def create_widgets(self):
         self.entries = {}
@@ -123,7 +109,6 @@ class ServerConfigWindow:
                 print("No widget to remove")
 
             self.widget.layout.addWidget(section_frame)
-            
 
     def expand_channels_list(self):
         channels = self.config.get('IRC', 'auto_join_channels')
