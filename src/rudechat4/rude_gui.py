@@ -6,7 +6,6 @@ from rudechat4.gui_config_window import GuiConfigWindow
 from rudechat4.nick_cleaner import clean_nicknames
 from rudechat4.format_decoder import decoder
 from rudechat4.rude_logger import configure_logging
-import logging
 
 class RudeTextEdit(QTextEdit):
     def get_anchor_at(self, pos):
@@ -1051,7 +1050,7 @@ class RudeGui(QWidget):
 
         self.main_window = QWidget()
         self.main_window.setWindowTitle("Rude GUI configuration")
-        self.main_window.resize(700, 500)
+        self.main_window.resize(800, 500)
 
         config_file = os.path.join(G_CONFIG_DIR, 'gui_config.ini')
 

@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+
 from rudechat4.rude_client import RudeChatClient
 from rudechat4.server_config_window import ServerConfigWindow
 from rudechat4.rude_colours import RudeColours

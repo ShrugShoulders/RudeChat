@@ -1,12 +1,9 @@
 from rudechat4.shared_imports import *
 from rudechat4.global_variables import *
 
-
 async def initialize_clients(app):
-    config_directory = G_CONFIG_DIR
-
     # Construct absolute paths for *.rudeserver files
-    config_files = [os.path.join(config_directory, f) for f in os.listdir(config_directory) if f.endswith(".rudeserver")]
+    config_files = [os.path.join(G_CONFIG_DIR, f) for f in os.listdir(G_CONFIG_DIR) if f.endswith(".rudeserver")]
     config_files.sort()
 
     if not config_files:

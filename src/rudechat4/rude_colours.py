@@ -1,10 +1,5 @@
-import json
-import os
-import tkinter as tk
-from tkinter import messagebox, simpledialog, colorchooser
-from tkcolorpicker import askcolor
+from rudechat4.shared_imports import *
 from rudechat4.global_variables import *
-
 
 class RudeColours:
     def __init__(self, root):

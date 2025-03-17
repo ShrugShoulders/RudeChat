@@ -141,11 +141,8 @@ class ServerConfigWindow(QScrollArea):
             # Extract server name from the entries
             server_name = new_config.get('IRC', 'server_name')
 
-            # Determine the script directory
-            config_directory = G_CONFIG_DIR
-
             # Generate new configuration file path in the script directory using server_name
-            new_config_file = os.path.join(config_directory, f"{server_name.lower()}.rudeserver")
+            new_config_file = os.path.join(G_CONFIG_DIR, f"{server_name.lower()}.rudeserver")
 
             with open(new_config_file, 'w') as configfile:
                 new_config.write(configfile)

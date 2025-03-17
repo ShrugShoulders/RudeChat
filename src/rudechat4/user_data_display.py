@@ -1,4 +1,4 @@
-import tkinter as tk
+from rudechat4.shared_imports import *
 
 class RudeToolTip:
     def __init__(self, widget, gui, app_size):

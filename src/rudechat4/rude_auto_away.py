@@ -1,6 +1,4 @@
-from datetime import datetime, timedelta
-import configparser
-import os
+from rudechat4.shared_imports import *
 
 class AutoAway:
     def __init__(self, config_file):

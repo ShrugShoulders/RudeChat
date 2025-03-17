@@ -1,5 +1,4 @@
-import dataclasses
-from typing import List, Tuple
+from rudechat4.shared_imports import *
 
 @dataclasses.dataclass(frozen=True)
 class Attribute:
