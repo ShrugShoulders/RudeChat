@@ -1398,13 +1398,12 @@ class RudeChatClient:
             logging.error(f"Error in handle_ctcp: {e}")
 
     def add_server_message(self, data):
-        if not self.gui.show_server_window:
-            if self.server_name in self.motd_dict:
-                self.motd_dict[self.server_name] += data
-                self.highlight_server(server_activity=True)
-            else:
-                self.motd_dict[self.server_name] = data
-                self.highlight_server(server_activity=True)
+        if self.server_name in self.motd_dict:
+            self.motd_dict[self.server_name] += data
+            self.highlight_server(server_activity=True)
+        else:
+            self.motd_dict[self.server_name] = data
+            self.highlight_server(server_activity=True)
 
     async def handle_action_ctcp(self, timestamp, sender, target, ctcp_content):
         try:

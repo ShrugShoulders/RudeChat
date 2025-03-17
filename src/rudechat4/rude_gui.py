@@ -1548,29 +1548,33 @@ class RudeGui(QWidget):
 
     def highlight_who_channels(self):
         try:
-            # Loop through the items in the channel_list
+            # Loop through the items in the channel list
             for index in range(self.channel_selector_list.count()):
-                # Get the channel from the listbox (which should be a QListWidgetItem)
+                # Get the channel item from the list
                 channel_item = self.channel_selector_list.item(index)
                 if not channel_item:
-                    continue  # If the item is not found, skip it
+                    continue  # Skip if the item is not found
 
                 # Get the channel name (assuming item text is the channel name)
                 channel = channel_item.text()
 
+                # Create and set the font for the item
+                font = QFont(self.list_boxs_font_family, self.channel_font_size)
+                channel_item.setFont(font)
+
                 # Check if the channel is in the cap_who_for_chan list
                 if channel in self.irc_client.cap_who_for_chan:
-                    # Change the foreground color 
+                    # Set foreground and background colors
                     channel_item.setForeground(QColor(self.channel_list_fg))
                     channel_item.setBackground(QColor(self.channel_list_bg))
                 else:
-                    # Reset the foreground color 
+                    # Highlight channels needing WHO request
                     channel_item.setForeground(QColor(self.need_who_chan_fg))
                     channel_item.setBackground(QColor(self.channel_list_bg))
-            
+
             # Update the UI to reflect changes
             self.channel_selector_list.update()
-            
+
         except Exception as e:
             logging.error(f"Exception in highlight_who_channels: {e}")
 
