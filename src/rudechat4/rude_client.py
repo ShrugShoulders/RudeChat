@@ -2012,7 +2012,7 @@ class RudeChatClient:
             else:
                 if not current_highlight and is_mention == False:
                     self.highlighted_channels[self.server_name][channel] = {'index': joined_index, 'bg': self.activity_note_color}
-                elif current_highlight['bg'] != 'red':
+                elif current_highlight['bg'] != self.mention_note_color:
                     self.highlighted_channels[self.server_name][channel] = {'index': joined_index, 'bg': self.activity_note_color}
         except Exception as e:
             logging.error(f"Exception in save_highlight: {e}")
