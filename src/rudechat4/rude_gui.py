@@ -348,6 +348,7 @@ class RudeGui(QWidget):
             self.log_on = config.getboolean('Utility', 'turn_logging_on', fallback=False)
             self.show_server_window = config.getboolean('Utility', 'show_server_window', fallback=True)
             self.tab_complete_terminator = config.get('Utility', 'tab_complete_terminator', fallback=':')
+
         else:
             self.window_bg = '#1b1e20'
             self.window_fg = '#C0FFEE'
@@ -471,22 +472,6 @@ class RudeGui(QWidget):
 
         self.layout().addLayout(self.sidebar)
 
-    def set_server_list_theme(self):
-        palette = self.server_selector_list.palette()
-
-        # Set the foreground (text) color
-        palette.setColor(QPalette.ColorRole.Text, QColor(self.server_list_fg))
-
-        # Set the background color
-        palette.setColor(QPalette.ColorRole.Base, QColor(self.server_list_bg))
-
-        # Apply the palette
-        self.server_selector_list.setPalette(palette)
-
-        # Set the font
-        server_list_font = QFont(self.list_boxs_font_family, self.server_font_size)
-        self.server_selector_list.setFont(server_list_font)
-
     def set_gui_theme(self):  # Apply GUI theme settings
         # Set Chat Font
         chat_font = QFont(self.chat_font_family, int(self.chat_font_size))
@@ -583,7 +568,6 @@ class RudeGui(QWidget):
         self.server_selector_list.setStyleSheet(self.server_selector_list.styleSheet() + f"selection-background-color: {self.list_channel_current_bg};")
         self.channel_selector_list.setStyleSheet(self.channel_selector_list.styleSheet() + f"selection-background-color: {self.list_channel_current_bg};")
         self.highlight_who_channels()
-        self.set_server_list_theme()
 
     def set_misc_variables(self):
         self.channel_lists = {}
@@ -1001,7 +985,7 @@ class RudeGui(QWidget):
             config_window.create_widgets()
 
         # Instruction label
-        instruction_label = QLabel("To create a new config file, change the data in the fields, then edit the file name in the file selection above.\nConfiguration files must follow exampleserver.rudeserver format.\nColors are set using their hex values Example: #ff0000.")
+        instruction_label = QLabel("To create a new config file, change the data in the fields, then edit the file name in the file selection above.\nConfiguration files must follow exampleserver.rudeserver format.")
         instruction_label.setWordWrap(True)
         self.main_window.layout.addWidget(instruction_label)
 
@@ -1126,6 +1110,7 @@ class RudeGui(QWidget):
                 self.irc_client.display_server_motd(actual_server)
                 self.update_users_label()
                 self.highlight_nicknames()
+                self.highlight_who_channels()
                 self.update_channel_label()
 
                 # Set the background color of the selected server to blue
@@ -1548,8 +1533,6 @@ class RudeGui(QWidget):
     def highlight_who_channels(self):
         try:
             # Loop through the items in the channel list
-            if not hasattr(self.irc_client, 'activity_note_color') or not hasattr(self.irc_client, 'mention_note_color'):
-                return
             for index in range(self.channel_selector_list.count()):
                 # Get the channel item from the list
                 channel_item = self.channel_selector_list.item(index)
@@ -1562,12 +1545,6 @@ class RudeGui(QWidget):
                 # Create and set the font for the item
                 font = QFont(self.list_font_family, int(self.list_font_size))
                 channel_item.setFont(font)
-
-                # Get the current background color
-                current_bg_color = channel_item.background().color().name()
-
-                # Colors to preserve
-                preserve_colors = [f"{self.irc_client.activity_note_color}", f"{self.irc_client.mention_note_color}"]
 
                 # Check if the channel is in the cap_who_for_chan list
                 if channel in self.irc_client.cap_who_for_chan:
