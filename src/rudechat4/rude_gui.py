@@ -329,8 +329,6 @@ class RudeGui(QWidget):
             self.chat_bg_color = config.get('GUI', 'chat_bg_color', fallback='black')
             self.main_fg_color = config.get('GUI', 'main_fg_color', fallback='#C0FFEE')
             self.main_bg_color = config.get('GUI', 'main_bg_color', fallback='black')
-            self.server_fg_color = config.get('GUI', 'server_fg', fallback='#7882ff')
-            self.server_bg_color = config.get('GUI', 'server_bg', fallback='black')
             self.selected_list_server = config.get('GUI', 'selected_list_server', fallback='blue')
             self.user_font_size = config.getint('GUI', 'user_font_size', fallback=10)
             self.channel_font_size = config.getint('GUI', 'channel_font_size', fallback=10)
@@ -358,6 +356,7 @@ class RudeGui(QWidget):
             self.input_label_bg = config.get('WIDGETS', 'entry_label_bg', fallback='black')
             self.input_label_fg = config.get('WIDGETS', 'entry_label_fg', fallback='#C0FFEE')
             self.server_list_bg = config.get('WIDGETS', 'server_list_bg', fallback='black')
+            self.scrollbar_bg = config.get('WIDGETS', 'scrollbar_bg', fallback='#2a2e32')
             self.server_list_fg = config.get('WIDGETS', 'server_list_fg', fallback='white')
             self.channel_label_bg = config.get('WIDGETS', 'channel_label_bg', fallback='black')
             self.channel_label_fg = config.get('WIDGETS', 'channel_label_fg', fallback='white')
@@ -380,8 +379,6 @@ class RudeGui(QWidget):
             self.main_bg_color = 'black'
             self.chat_fg_color = '#C0FFEE'
             self.chat_bg_color = 'black'
-            self.server_fg_color = '#7882ff'
-            self.server_bg_color = 'black'
             self.selected_list_server = 'blue'
             self.user_list_fg = '#39ff14'
             self.user_list_bg = 'black'
@@ -501,6 +498,22 @@ class RudeGui(QWidget):
 
         self.layout().addLayout(self.sidebar)
 
+    def set_server_list_theme(self):
+        palette = self.server_selector_list.palette()
+
+        # Set the foreground (text) color
+        palette.setColor(QPalette.ColorRole.Text, QColor(self.server_list_fg))
+
+        # Set the background color
+        palette.setColor(QPalette.ColorRole.Base, QColor(self.server_list_bg))
+
+        # Apply the palette
+        self.server_selector_list.setPalette(palette)
+
+        # Set the font
+        server_list_font = QFont(self.list_boxs_font_family, self.server_font_size)
+        self.server_selector_list.setFont(server_list_font)
+
     def set_gui_theme(self):  # Apply GUI theme settings
         # Set Chat Font
         chat_font = QFont(self.font_family, self.font_size)
@@ -544,14 +557,6 @@ class RudeGui(QWidget):
             font-family: {self.list_boxs_font_family};
         """)
 
-        # Apply Server List Theme
-        self.server_selector_list.setStyleSheet(f"""
-            color: {self.server_list_fg};
-            background-color: {self.server_list_bg};
-            font-size: {self.server_font_size}px;
-            font-family: {self.list_boxs_font_family};
-        """)
-
         # Apply Channel List Theme
         self.channel_selector_list.setStyleSheet(f"""
             color: {self.channel_list_fg};
@@ -564,13 +569,13 @@ class RudeGui(QWidget):
         self.setStyleSheet(f"""
             QScrollBar:vertical {{
                 border: none;
-                background: {self.channel_list_bg };
+                background: {self.scrollbar_bg };
                 width: 12px;
                 margin: 0px 0px 0px 0px;
             }}
 
             QScrollBar::handle:vertical {{
-                background: {self.input_label_bg };
+                background: {self.scrollbar_bg };
                 min-height: 20px;
                 border-radius: 5px;
             }}
@@ -597,6 +602,7 @@ class RudeGui(QWidget):
         self.server_selector_list.setStyleSheet(self.server_selector_list.styleSheet() + f"selection-background-color: {self.selected_list_server};")
         self.channel_selector_list.setStyleSheet(self.channel_selector_list.styleSheet() + f"selection-background-color: {self.channel_select_color};")
         self.highlight_who_channels()
+        self.set_server_list_theme()
 
     def set_misc_variables(self):
         self.channel_lists = {}
@@ -1014,7 +1020,7 @@ class RudeGui(QWidget):
             config_window.create_widgets()
 
         # Instruction label
-        instruction_label = QLabel("To create a new config file, change the data in the fields, then edit the file name in the file selection above.\nConfiguration files must follow exampleserver.rudeserver format.")
+        instruction_label = QLabel("To create a new config file, change the data in the fields, then edit the file name in the file selection above.\nConfiguration files must follow exampleserver.rudeserver format.\nColors are set using their hex values Example: #ff0000.")
         instruction_label.setWordWrap(True)
         self.main_window.layout.addWidget(instruction_label)
 
@@ -1139,7 +1145,6 @@ class RudeGui(QWidget):
                 self.irc_client.display_server_motd(actual_server)
                 self.update_users_label()
                 self.highlight_nicknames()
-                self.highlight_who_channels()
                 self.update_channel_label()
 
                 # Set the background color of the selected server to blue
@@ -1562,6 +1567,8 @@ class RudeGui(QWidget):
     def highlight_who_channels(self):
         try:
             # Loop through the items in the channel list
+            if not hasattr(self.irc_client, 'activity_note_color') or not hasattr(self.irc_client, 'mention_note_color'):
+                return
             for index in range(self.channel_selector_list.count()):
                 # Get the channel item from the list
                 channel_item = self.channel_selector_list.item(index)
@@ -1575,15 +1582,25 @@ class RudeGui(QWidget):
                 font = QFont(self.list_boxs_font_family, self.channel_font_size)
                 channel_item.setFont(font)
 
+                # Get the current background color
+                current_bg_color = channel_item.background().color().name()
+
+                # Colors to preserve
+                preserve_colors = [f"{self.irc_client.activity_note_color}", f"{self.irc_client.mention_note_color}"]
+
                 # Check if the channel is in the cap_who_for_chan list
                 if channel in self.irc_client.cap_who_for_chan:
-                    # Set foreground and background colors
                     channel_item.setForeground(QColor(self.channel_list_fg))
-                    channel_item.setBackground(QColor(self.channel_list_bg))
+
+                    # Only change background if it's NOT in the preserved color list
+                    if current_bg_color not in preserve_colors:
+                        channel_item.setBackground(QColor(self.channel_list_bg))
                 else:
-                    # Highlight channels needing WHO request
                     channel_item.setForeground(QColor(self.need_who_chan_fg))
-                    channel_item.setBackground(QColor(self.channel_list_bg))
+
+                    # Only change background if it's NOT in the preserved color list
+                    if current_bg_color not in preserve_colors:
+                        channel_item.setBackground(QColor(self.channel_list_bg))
 
             # Update the UI to reflect changes
             self.channel_selector_list.update()

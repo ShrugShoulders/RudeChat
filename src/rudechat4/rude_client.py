@@ -1,4 +1,3 @@
-
 from rudechat4.list_window import ChannelListWindow
 from rudechat4.rude_pronouns import replace_pronouns
 from rudechat4.rude_auto_away import AutoAway
@@ -94,8 +93,8 @@ class RudeChatClient:
         self.display_user_modes = config.getboolean('IRC', 'display_user_modes', fallback=True)
         self.use_auto_away = config.getboolean('IRC', 'use_auto_away', fallback=True)
         self.use_emojis = config.getboolean('IRC', 'use_emojis', fallback=True)
-        self.mention_note_color = config.get('IRC', 'mention_note_color', fallback='red')
-        self.activity_note_color = config.get('IRC', 'activity_note_color', fallback='green')
+        self.mention_note_color = config.get('IRC', 'mention_note_color', fallback='#ff0000').lower()
+        self.activity_note_color = config.get('IRC', 'activity_note_color', fallback='#008000').lower()
         self.use_time_stamp = config.getboolean('IRC', 'use_time_stamp', fallback=True)
         self.show_full_hostmask = config.getboolean('IRC', 'show_hostmask', fallback=True)
         self.show_join_part_quit_nick = config.getboolean('IRC', 'show_join_part_quit_nick', fallback=True)
@@ -955,10 +954,40 @@ class RudeChatClient:
             self.gui.insert_text_widget(f"You have \x02DETACHED\x0F from \x02{channel}\x0F\n")
             self.gui.insert_text_widget(f"To \x02REATTACH\x0F simply issue a normal /join \x02{channel}\x0F\n")
 
+    def restore_channel_highlights(self):
+        # Update and restore the highlighted background color for all previously highlighted channels
+        updated_highlighted_channels = {}
+        for channel, highlighted_info in self.highlighted_channels.get(self.server_name, {}).items():
+            if highlighted_info is not None:
+                old_index = highlighted_info.get('index')
+                
+                if old_index is not None:
+                    # Find the new index in the current listbox
+                    new_index = None
+                    for idx in range(self.gui.channel_selector_list.count()):
+                        if self.gui.channel_selector_list.item(idx).text() == channel:
+                            new_index = idx
+                            break
+                    
+                    if new_index is not None:
+                        # Update the index in the highlighted info
+                        highlighted_info['index'] = new_index
+                        
+                        # Set the background color directly based on the dictionary entry
+                        bg_color = highlighted_info.get('bg', self.mention_note_color)
+                        color = QColor(bg_color)  # Convert string to QColor
+                        self.gui.channel_selector_list.item(new_index).setBackground(color)
+                        
+                        # Update the dictionary with the new index
+                        updated_highlighted_channels[channel] = highlighted_info
+        
+        # Update the highlighted_channels dictionary with the new indexes
+        self.highlighted_channels[self.server_name] = updated_highlighted_channels
+
     def update_gui_channel_list(self):
         # Clear existing items
         self.gui.channel_selector_list.clear()
-
+        
         # Sort channels by the number of prefix characters at the beginning
         sorted_channels = sorted(
             (
@@ -969,48 +998,15 @@ class RudeChatClient:
             ),
             key=lambda chan: len(chan) - len(chan.lstrip(''.join(self.chantypes)))
         )
-
+        
+        
         # Insert sorted channels into the listbox
-        try:
-            for chan in sorted_channels:
-                self.gui.channel_selector_list.addItem(chan)
-        except Exception as e:
-            logging.error(f"Error1 in update_gui_channel_list: {e}")
-
-        # Update and restore the highlighted background color for all previously highlighted channels
-        updated_highlighted_channels = {}
-        for channel, highlighted_info in self.highlighted_channels.get(self.server_name, {}).items():
-            if highlighted_info is not None:
-                old_index = highlighted_info.get('index')
-                if old_index is not None:
-                    # Find the new index in the current listbox
-                    new_index = None
-                    try:
-                        for idx in range(self.gui.channel_selector_list.count()):
-                            if self.gui.channel_selector_list.item(idx).text() == channel:
-                                new_index = idx
-                                break
-                    except Exception as e:
-                        logging.error(f"Error2 in update_gui_channel_list: {e}")
-
-                    if new_index is not None:
-                        # Update the index in the highlighted info
-                        highlighted_info['index'] = new_index
-
-                        # Set the background color directly based on the dictionary entry
-                        try:
-                            bg_color = highlighted_info.get('bg', self.mention_note_color)
-                            color = QColor(bg_color)  # Convert string to QColor
-                            self.gui.channel_selector_list.item(new_index).setBackground(color)
-                        except Exception as e:
-                            logging.error(f"Error3 in update_gui_channel_list: {e}")
-
-                        # Update the dictionary with the new index
-                        updated_highlighted_channels[channel] = highlighted_info
-
-        # Update the highlighted_channels dictionary with the new indexes
-        self.highlighted_channels[self.server_name] = updated_highlighted_channels
+        for chan in sorted_channels:
+            self.gui.channel_selector_list.addItem(chan)
+        
+        # Trigger GUI update for highlighted channels
         self.gui.highlight_who_channels()
+        self.restore_channel_highlights()
 
     def update_gui_user_list(self, channel):
         self.gui.user_selector_list.clear()
