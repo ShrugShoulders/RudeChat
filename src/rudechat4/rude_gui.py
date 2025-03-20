@@ -221,10 +221,7 @@ class RudeGui(QWidget):
         self.master = master
         self.app_size = [800, 600]
         self.set_screen_size()
-        self.master.setWindowTitle("RudeChat")
         self.master.resize(self.app_size[0], self.app_size[1])
-
-        self.set_icon()
 
         self.read_config()
         #self.start_tray_icon()
@@ -317,6 +314,27 @@ class RudeGui(QWidget):
         self.master.config_edit_servers_action.triggered.connect(self.open_client_config_window)
         self.master.config_edit_gui_action.triggered.connect(self.open_gui_config_window)
         configure_logging()
+        self.set_icon()
+
+    def set_icon(self): # Need to debug this, it wont show the icon on Linux. 
+        match platform.system():
+            case "Darwin":
+                icon = QIcon()
+                icon_file = os.path.join(G_SOURCE_DIR, 'rude.png')
+                icon.addFile(icon_file)
+                self.master.setWindowIcon(icon)
+            case "Linux":
+                icon = QIcon()
+                icon_file = os.path.join(G_SOURCE_DIR, 'rude.png') # Icon file too big?
+                icon.addFile(icon_file)
+                self.master.setWindowIcon(icon)
+            case "Windows":
+                icon = QIcon()
+                icon_file = os.path.join(G_SOURCE_DIR, 'rude.ico')
+                icon.addFile(icon_file)
+                self.master.setWindowIcon(icon)
+            case _:
+                logging.error(f"Unknown Operating System in set_icon: {platform.system()}")
 
     def set_screen_size(self):
         try:
@@ -343,8 +361,6 @@ class RudeGui(QWidget):
             self.server_listbox.scrollToItem(self.server_listbox.item(index_server))
 
             self.on_server_change(None)
-
-    def set_icon(self): pass #TODO
 
     def read_config(self):
         config_file = os.path.join(G_CONFIG_DIR, 'gui_config.ini')
@@ -634,26 +650,16 @@ class RudeGui(QWidget):
     def init_client(self):
         self.irc_client = RudeChatClient(self.chat_box, self.text_field, self.master, self)
         self.init_input_menu()
-        self.init_message_menu()
-        self.init_server_menu()
         self.apply_settings()
         self.show_startup_art()
 
     def init_input_menu(self): pass #TODO
 
-    def init_message_menu(self): pass #TODO
-
-    def init_server_menu(self): pass #TODO
-
     def apply_settings(self):
-        self.hidden_windows()
         self.highlight_nicknames()
         self.highlight_away_users()
         self.emoji_select()
         self.set_gui_theme()
-        pass #TODO
-
-    def hidden_windows(self): pass #TODO
 
     def emoji_select(self):
         match platform.system():
@@ -993,7 +999,9 @@ class RudeGui(QWidget):
 
     def open_color_selector(self): pass #TODO
 
-    def reset_nick_colors(self): pass #TODO
+    def reset_nick_colors(self):
+        self.nickname_colors = self.load_nickname_colors()
+        self.highlight_nicknames()
 
     def open_client_config_window(self):
         def after_config_window_close():

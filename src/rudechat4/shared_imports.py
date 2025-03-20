@@ -73,7 +73,8 @@ from PyQt6.QtGui import (
     QFontMetrics,
     QGuiApplication,
     QTextCharFormat,
-    QTextCursor
+    QTextCursor,
+    QIcon,
 )
 
 if platform.system() == "Darwin":
