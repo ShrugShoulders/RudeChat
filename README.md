@@ -2,7 +2,7 @@
 - [x] Complete / Has base function
 - [ ] Needs to be done / all child goals need to be completed
 
-**Tasks Complete: (23/37 - 59.46%)**
+**Tasks Complete: (27/37 - 72.97%)**
 - [ ] Convert to Qt
 	- [x] `__main__`
 	- [ ] `rude_gui`
@@ -19,7 +19,7 @@
 				- [x] Edit GUI
 		- [x] Restore Sidebar
 			- [x] Users
-				- [ ] Restore right click menu
+				- [x] Restore right click menu
 				- [x] Restore AWAY user display color change
 			- [x] Servers
 			- [x] Channels
@@ -35,7 +35,7 @@
 	- [ ] `rude_popout`
 	- [ ] `rude_colours`
 	- [x] `gui_config_window`
-	- [ ] `list_window`
+	- [x] `list_window`
 	- [ ] `user_data_display`
 	- [x] `highlight_nicknames`
 		- [x] Restore main user nickname highlight
