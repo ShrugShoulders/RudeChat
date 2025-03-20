@@ -273,6 +273,11 @@ class RudeGui(QWidget):
             "🎵": 1,
             "⛅": 0,
             "☹": 0,
+            "☹️": 0,
+            "🥪": 1,
+            "✨": 0,
+            "✅": 0,
+            "😈": 1,
         }
 
         # Initialise layout
@@ -779,13 +784,7 @@ class RudeGui(QWidget):
             logging.error(f"Error starting thread_killer task: {e}")
 
         if self.log_on:
-            logging.info("Finished Creating Client Tasks: auto_who, auto_away, handle_incoming_message, auto_trim, auto_save, & keep_alive")
-
-        try:
-            self.bind_return_key
-        except Exception as e:
-            logging.error(f"Error binding return key: {e}")
-        if self.log_on:
+            logging.info("Finished Creating Client Tasks.")
             logging.info("Client initializing completed.")
 
     def update_server_ping(self, server_name, ping_time):
