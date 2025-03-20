@@ -38,11 +38,12 @@ class GuiConfigWindow(QScrollArea):
             'entry_font_size' : ['Entry Font Size', 'int'],
 
             'list_bg' : ['List BG Color', 'string'],
-            'list_fg' : ['List FG Color', 'string'],
             'list_font_family' : ['List Font Family', 'string'],
             'list_font_size' : ['List Font Size', 'int'],
             'list_channel_current_bg' : ['Current Channel BG Color', 'string'],
             'list_channel_needwho_fg' : ['Pending Channels FG Color', 'string'],
+            'list_server_fg' : ['Server FG Color', 'string'],
+            'list_channel_fg' : ['Channel FG Color', 'string'],
             'list_user_fg': ['User FG Color', 'string'],
             'list_user_away_fg' : ['Away User FG Color', 'string'],
 

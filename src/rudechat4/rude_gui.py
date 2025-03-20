@@ -351,7 +351,8 @@ class RudeGui(QWidget):
             self.entry_font_family = config.get('Entry', 'entry_font_family', fallback='Courier')
             self.entry_font_size = config.get('Entry', 'entry_font_size', fallback=12)
             self.list_bg = config.get('Lists', 'list_bg', fallback='#1b1e20')
-            self.list_fg = config.get('Lists', 'list_fg', fallback='#C0FFEE')
+            self.list_server_fg = config.get('Lists', 'list_server_fg', fallback='#C0FFEE')
+            self.list_channel_fg = config.get('Lists', 'list_channel_fg', fallback='#C0FFEE')
             self.list_font_family = config.get('Lists', 'list_font_family', fallback='Courier')
             self.list_font_size = config.get('Lists', 'list_font_size', fallback=12)
             self.list_channel_current_bg = config.get('Lists', 'list_channel_current_bg', fallback='blue')
@@ -383,7 +384,9 @@ class RudeGui(QWidget):
             self.entry_font_family = 'Courier'
             self.entry_font_size = 12
             self.list_bg = '#1b1e20'
-            self.list_fg = '#C0FFEE'
+            self.list_user_fg = '#C0FFEE'
+            self.list_server_fg = '#C0FFEE'
+            self.list_channel_fg = '#C0FFEE'
             self.list_font_family = 'Courier'
             self.list_font_size = 12
             self.list_channel_current_bg = 'blue'
@@ -528,7 +531,7 @@ class RudeGui(QWidget):
 
         # Apply User List Theme
         self.user_selector_list.setStyleSheet(f"""
-            color: {self.list_fg};
+            color: {self.list_user_fg};
             background-color: {self.list_bg};
             font-family: {self.list_font_family};
             font-size: {self.list_font_size}px;
@@ -536,7 +539,7 @@ class RudeGui(QWidget):
 
         # Apply Server List Theme
         self.server_selector_list.setStyleSheet(f"""
-            color: {self.list_fg};
+            color: {self.list_server_fg};
             background-color: {self.list_bg};
             font-family: {self.list_font_family};
             font-size: {self.list_font_size}px;
@@ -544,7 +547,7 @@ class RudeGui(QWidget):
 
         # Apply Channel List Theme
         self.channel_selector_list.setStyleSheet(f"""
-            color: {self.list_fg};
+            color: {self.list_channel_fg};
             background-color: {self.list_bg};
             font-family: {self.list_font_family};
             font-size: {self.list_font_size}px;
@@ -1090,7 +1093,7 @@ class RudeGui(QWidget):
             # If there's a previous server, reset its background color to black
             if self.previous_server_index is not None:
                 self.server_selector_list.item(self.previous_server_index).setBackground(QColor(self.list_bg))
-                self.server_selector_list.item(self.previous_server_index).setForeground(QColor(self.list_fg))
+                self.server_selector_list.item(self.previous_server_index).setForeground(QColor(self.list_server_fg))
 
             # Get the selected server from the listbox
             selected_server = self.server_selector_list.item(selected_server_index)
@@ -1128,21 +1131,21 @@ class RudeGui(QWidget):
 
                 # Set the background color of the selected server to blue
                 selected_server.setBackground(QColor(self.list_channel_current_bg))
-                selected_server.setForeground(QColor(self.list_fg))
+                selected_server.setForeground(QColor(self.list_server_fg))
 
                 # Store the foreground and background colors for the selected server
-                self.server_colors[selected_server_index] = {'fg': self.list_fg, 'bg': self.list_channel_current_bg}
+                self.server_colors[selected_server_index] = {'fg': self.list_server_fg, 'bg': self.list_channel_current_bg}
                 
                 if self.previous_server_index is not None:
                     if self.previous_server_index != selected_server_index:
                         # Check if the previous server color is not a mention or activity highlight before updating
                         prev_bg = self.server_colors[self.previous_server_index].get('bg', '')
                         if prev_bg not in [self.irc_client.activity_note_color, self.irc_client.mention_note_color]:
-                            self.server_colors[self.previous_server_index] = {'bg': self.list_bg, 'fg': self.list_fg}
+                            self.server_colors[self.previous_server_index] = {'bg': self.list_bg, 'fg': self.list_server_fg}
 
             for server_index, colors in self.server_colors.items():
                 # Get the stored foreground and background colors
-                fg_color = colors.get('fg', self.list_fg)
+                fg_color = colors.get('fg', self.list_server_fg)
                 bg_color = colors.get('bg', self.list_bg)
 
                 # Apply the stored colors to each server in the listbox
@@ -1565,7 +1568,7 @@ class RudeGui(QWidget):
                 # Check if the channel is in the cap_who_for_chan list
                 if channel in self.irc_client.cap_who_for_chan:
                     # Set foreground and background colors
-                    channel_item.setForeground(QColor(self.list_fg))
+                    channel_item.setForeground(QColor(self.list_channel_fg))
                     if current_bg_color not in preserve_colors:
                         channel_item.setBackground(QColor(self.list_bg))
                 else:
