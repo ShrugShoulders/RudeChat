@@ -348,6 +348,7 @@ class RudeGui(QWidget):
             self.log_on = config.getboolean('Utility', 'turn_logging_on', fallback=False)
             self.show_server_window = config.getboolean('Utility', 'show_server_window', fallback=True)
             self.tab_complete_terminator = config.get('Utility', 'tab_complete_terminator', fallback=':')
+            self.scrollbar_bg = config.get('Utility', 'scrollbar_bg', fallback='#2a2e32')
 
         else:
             self.window_bg = '#1b1e20'
@@ -535,13 +536,13 @@ class RudeGui(QWidget):
         self.setStyleSheet(f"""
             QScrollBar:vertical {{
                 border: none;
-                background: {self.window_bg };
+                background: {self.scrollbar_bg };
                 width: 12px;
                 margin: 0px 0px 0px 0px;
             }}
 
             QScrollBar::handle:vertical {{
-                background: {self.window_bg };
+                background: {self.scrollbar_bg };
                 min-height: 20px;
                 border-radius: 5px;
             }}
@@ -1532,6 +1533,10 @@ class RudeGui(QWidget):
 
     def highlight_who_channels(self):
         try:
+            if not hasattr(self, 'irc_client'):
+                return
+            if not hasattr(self.irc_client, 'activity_note_color') or not hasattr(self.irc_client, 'mention_note_color'):
+                return
             # Loop through the items in the channel list
             for index in range(self.channel_selector_list.count()):
                 # Get the channel item from the list
@@ -1542,19 +1547,20 @@ class RudeGui(QWidget):
                 # Get the channel name (assuming item text is the channel name)
                 channel = channel_item.text()
 
-                # Create and set the font for the item
-                font = QFont(self.list_font_family, int(self.list_font_size))
-                channel_item.setFont(font)
+                current_bg_color = channel_item.background().color().name()
+                preserve_colors = [self.irc_client.activity_note_color, self.irc_client.mention_note_color]
 
                 # Check if the channel is in the cap_who_for_chan list
                 if channel in self.irc_client.cap_who_for_chan:
                     # Set foreground and background colors
                     channel_item.setForeground(QColor(self.list_fg))
-                    channel_item.setBackground(QColor(self.list_bg))
+                    if current_bg_color not in preserve_colors:
+                        channel_item.setBackground(QColor(self.list_bg))
                 else:
                     # Highlight channels needing WHO request
                     channel_item.setForeground(QColor(self.list_channel_needwho_fg))
-                    channel_item.setBackground(QColor(self.list_bg))
+                    if current_bg_color not in preserve_colors:
+                        channel_item.setBackground(QColor(self.list_bg))
 
             # Update the UI to reflect changes
             self.channel_selector_list.update()

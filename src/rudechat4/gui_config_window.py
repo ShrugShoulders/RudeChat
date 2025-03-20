@@ -52,7 +52,8 @@ class GuiConfigWindow(QScrollArea):
             'highlight_all_nicknames' : ['Highlight All Nicks', 'bool'],
             'show_server_window' : ['Show Server Window', 'bool'],
             'tab_complete_terminator' : ['Tab Autocomplete Terminator', 'string'],
-            'turn_logging_on' : ['Turn On Logging', 'bool']
+            'turn_logging_on' : ['Turn On Logging', 'bool'],
+            'scrollbar_bg' : ['Scrollbar Background', 'string']
         }
         configure_logging()
         self.entries = {}
