@@ -305,10 +305,23 @@ class RudeGui(QWidget):
 
             width = screen.size().width()
             height = screen.size().height()
+            width = width // 2
+            height = height // 2
             self.app_size = [width, height]
         except Exception as e:
             logging.error(f"Unable to get screen size: {e}. Using default variables.")
             screen_size = "default"  # Prevent NameError in match-case
+
+    def select_first_server(self):
+        server_count = self.server_listbox.count()
+        index_server = 0
+
+        if server_count > 0:
+            self.server_listbox.clearSelection()
+            self.server_listbox.setCurrentRow(index_server)
+            self.server_listbox.scrollToItem(self.server_listbox.item(index_server))
+
+            self.on_server_change(None)
 
     def set_icon(self): pass #TODO
 
