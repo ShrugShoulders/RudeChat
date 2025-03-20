@@ -2,7 +2,7 @@
 - [x] Complete / Has base function
 - [ ] Needs to be done / all child goals need to be completed
 
-**Tasks Complete: (27/37 - 72.97%)**
+**Tasks Complete: (29/38 - 76.32%)**
 - [ ] Convert to Qt
 	- [x] `__main__`
 	- [ ] `rude_gui`
@@ -25,9 +25,9 @@
 			- [x] Channels
 				- [x] Restore right click menu
 			- [x] Entry bar
-				- [ ] Restore keybindings for TAB and arrow keys
+				- [x] Restore keybindings for TAB and arrow keys
 					- [x] TAB Complete
-					- [ ] Aarrow Key entry history. 
+					- [x] Aarrow Key entry history. 
 	- [x] `rude_client`
 		- [x] Fix listboxes
 	- [x] `server_config_window`

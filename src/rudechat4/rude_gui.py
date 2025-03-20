@@ -84,6 +84,21 @@ class TabEventFilter(QObject):
 
         return plain_nickname
 
+class ArrowKeyEventFilter(QObject):
+    def __init__(self, parent):
+        super().__init__(parent)
+        self.parent = parent
+
+    def eventFilter(self, obj, event):
+        if obj == self.parent.text_field and event.type() == QEvent.Type.KeyPress:
+            if event.key() == Qt.Key.Key_Up:
+                self.parent.show_previous_entry()
+                return True
+            elif event.key() == Qt.Key.Key_Down:
+                self.parent.show_next_entry()
+                return True
+        return super().eventFilter(obj, event)
+
 class RudeChannelListWidget(QListWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -428,8 +443,10 @@ class RudeGui(QWidget):
         self.id_label = QLabel(self, text="Nickname | #Channel ▶")
         self.message_bar.addWidget(self.id_label)
 
-        self.text_field = QLineEdit(self) # Bind TAB for tab complete.
+        self.text_field = QLineEdit(self)
         self.text_field.setFrame(False)
+        self.arrow_key_filter = ArrowKeyEventFilter(self)
+        self.text_field.installEventFilter(self.arrow_key_filter)
         self.tab_filter = TabEventFilter(self)
         self.text_field.installEventFilter(self.tab_filter)
         QTimer.singleShot(0, self.bind_return_key)
@@ -604,7 +621,7 @@ class RudeGui(QWidget):
         self.pop_out_windows = {}
         self.server_colors = {}
         self.emoji_width_cache = {}
-        self.download_channel_list = {}
+        self.download_channel_list = {} 
         self.history_index = 0
         self.last_selected_index = None
         self.previous_server_index = None
@@ -648,6 +665,19 @@ class RudeGui(QWidget):
     def bind_return_key(self):
         loop = asyncio.get_event_loop()
         self.text_field.returnPressed.connect(lambda: loop.create_task(self.on_enter_key(), name="on_enter_key"))
+
+    def show_previous_entry(self):
+        if self.history_index > 0:
+            self.history_index -= 1
+            self.text_field.setText(self.entry_history[self.history_index])
+
+    def show_next_entry(self):
+        if self.history_index < len(self.entry_history) - 1:
+            self.history_index += 1
+            self.text_field.setText(self.entry_history[self.history_index])
+        elif self.history_index == len(self.entry_history) - 1:
+            self.history_index += 1
+            self.text_field.clear()
 
     # Tray Icon Management
     def create_tray_icon(self): pass #TODO
