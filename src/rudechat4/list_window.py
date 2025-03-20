@@ -1,39 +1,25 @@
-
 from rudechat4.shared_imports import *
 from rudechat4.global_variables import *
 
-class ChannelListWindow(tk.Toplevel):
-    def __init__(self, client, *args, **kwargs):
+class ChannelListWindow(QDialog):
+    def __init__(self, gui, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.title("Channel List")
-        self.geometry("800x400")
+        self.setWindowTitle("Channel List")
+        self.resize(800, 400)
 
-        self.client = client
-        self.is_destroyed = False  # To check if the window has been destroyed
-        self.sort_order = "ascending"  # Default sort order for users
+        self.gui = gui
+        self.is_destroyed = False
+        self.sort_order = "ascending"
 
         self.load_configuration()
-
-        # Apply the background color to the main window
-        self.configure(bg=self.main_bg_color)
-
-        # Apply custom styles using ttk.Style
-        style = ttk.Style(self)
-        style.configure("TLabel", background=self.main_bg_color, foreground=self.main_fg_color)
-        style.configure("Treeview", background=self.main_bg_color, fieldbackground=self.main_bg_color, foreground=self.main_fg_color, rowheight=25)
-        style.configure("TButton", background=self.main_bg_color, foreground=self.main_fg_color, padding=5)
-        style.configure("TScrollbar", background=self.main_bg_color)
-
-        # Apply treeview heading colors
-        style.configure("Treeview.Heading", background=self.main_bg_color, foreground=self.main_fg_color)
+        self.setStyleSheet(f"background-color: {self.main_bg_color}; color: {self.main_fg_color};")
 
         self.create_widgets()
 
-        # Start the periodic UI update
-        self.after(100, self.update_ui_periodically)
-
-        # Start populating the channel list
-        asyncio.create_task(self.populate_channel_list())
+        # Start periodic UI updates
+        self.timer = QTimer(self)
+        self.timer.timeout.connect(self.update_ui_periodically)
+        self.timer.start(100)
 
     def load_configuration(self):
         # Load configuration from gui_config.ini
@@ -41,99 +27,94 @@ class ChannelListWindow(tk.Toplevel):
         config_file = os.path.join(G_CONFIG_DIR, 'gui_config.ini')
         config.read(config_file)
 
-        # Load colors
-        self.main_fg_color = config.get('GUI', 'main_fg_color')
-        self.main_bg_color = config.get('GUI', 'main_bg_color')
+        self.main_fg_color = config.get('Chat', 'window_fg', fallback="#C0FFEE")
+        self.main_bg_color = config.get('Chat', 'window_bg', fallback="#1b1e20")
 
     def create_widgets(self):
-        self.search_label = ttk.Label(self, text="Search Channel/Topic:", style="TLabel")
-        self.search_label.grid(row=0, column=0, padx=10, pady=5, sticky="w")
+        layout = QVBoxLayout(self)
 
-        self.search_entry = ttk.Entry(self)
-        self.search_entry.grid(row=0, column=1, padx=10, pady=5, sticky="ew")
-        self.search_entry.bind("<KeyRelease>", self.handle_search)  # Bind the search function
+        # Search bar
+        search_layout = QHBoxLayout()
+        search_label = QLabel("Search Channel/Topic:")
+        search_label.setStyleSheet(f"color: {self.main_fg_color};")
+        self.search_entry = QLineEdit()
+        self.search_entry.setStyleSheet("padding: 5px;")
+        self.search_entry.textChanged.connect(self.handle_search)
 
-        self.tree = ttk.Treeview(self, columns=("Channel", "Users", "Topic"), show='headings', style="Treeview")
-        self.tree.heading("Channel", text="Channel")
-        self.tree.heading("Users", text="Users", command=self.sort_by_users)
-        self.tree.heading("Topic", text="Topic")
+        search_layout.addWidget(search_label)
+        search_layout.addWidget(self.search_entry)
+        layout.addLayout(search_layout)
 
-        self.tree.column("Channel", width=150)
-        self.tree.column("Users", width=5)
-        self.tree.column("Topic", width=395)
+        # Tree widget (Channel list)
+        self.tree = QTreeWidget()
+        self.tree.setColumnCount(3)
+        self.tree.setHeaderLabels(["Channel", "Users", "Topic"])
+        self.tree.header().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+        self.tree.setStyleSheet(f"color: {self.main_fg_color}; background-color: {self.main_bg_color};")
+        self.tree.header().sectionClicked.connect(self.sort_by_users)
 
-        self.tree.grid(row=1, column=0, columnspan=2, sticky="nsew")
+        layout.addWidget(self.tree)
 
-        self.scrollbar = ttk.Scrollbar(self, orient="vertical", command=self.tree.yview, style="TScrollbar")
-        self.tree.configure(yscrollcommand=self.scrollbar.set)
-        self.scrollbar.grid(row=1, column=2, sticky="ns")
+        # Scrollbar
+        self.scrollbar = QScrollBar(Qt.Orientation.Vertical)
+        self.tree.setVerticalScrollBar(self.scrollbar)
 
-        self.close_button = ttk.Button(self, text="Close", command=self.destroy, style="TButton")
-        self.close_button.grid(row=2, column=0, columnspan=2, pady=10, padx=10, sticky="ew")
-
-        # Make the Treeview and scrollbar resizable
-        self.grid_rowconfigure(1, weight=1)
-        self.grid_columnconfigure(0, weight=1)
+        # Close button
+        close_button = QPushButton("Close")
+        close_button.setStyleSheet(f"background-color: {self.main_bg_color}; color: {self.main_fg_color}; padding: 5px;")
+        close_button.clicked.connect(self.close)
+        layout.addWidget(close_button)
 
     def sort_by_users(self):
-        # Toggle the sort order
+        # Toggle sorting order
         self.sort_order = "descending" if self.sort_order == "ascending" else "ascending"
-        
-        # Get the list of channels
-        channels = [(self.tree.item(child)["values"][0], int(self.tree.item(child)["values"][1]), self.tree.item(child)["values"][2])
-                    for child in self.tree.get_children()]
-        
-        # Sort the channels by user count
-        channels.sort(key=lambda x: x[1], reverse=self.sort_order == "descending")
-        
-        # Clear the existing entries
-        self.tree.delete(*self.tree.get_children())
-        
-        # Repopulate the Treeview with sorted data
+
+        channels = []
+        for index in range(self.tree.topLevelItemCount()):
+            item = self.tree.topLevelItem(index)
+            channels.append((item.text(0), int(item.text(1)), item.text(2)))
+
+        # Sort channels based on user count
+        channels.sort(key=lambda x: x[1], reverse=(self.sort_order == "descending"))
+
+        # Clear and repopulate
+        self.tree.clear()
         for channel in channels:
-            self.tree.insert("", tk.END, values=(channel[0], channel[1], channel[2]))
-
-    async def populate_channel_list(self):
-        processed_channel_names = set()  # To keep track of channels already processed
-
-        while True:
-            if self.is_destroyed:
-                break  # Stop populating if the window is destroyed
-
-            # Populate the list with new channels
-            for channel, info in self.client.download_channel_list.items():
-                if channel not in processed_channel_names:
-                    # Insert the new channel into the Treeview
-                    self.tree.insert("", tk.END, values=(channel, info['user_count'], info['topic']))
-
-                    # Mark this channel as processed
-                    processed_channel_names.add(channel)
-
-            await asyncio.sleep(0.1)  # Allow time for more channels to be added
+            QTreeWidgetItem(self.tree, [channel[0], str(channel[1]), channel[2]])
 
     def update_ui_periodically(self):
         if self.is_destroyed:
-            return
+            self.timer.stop()
 
-        self.after(100, self.update_ui_periodically)
+    async def populate_channel_list(self):
+        processed_channel_names = set()
 
-    def handle_search(self, event=None):
-        search_text = self.search_entry.get().lower()
-        # Remove previous search results
-        self.tree.delete(*self.tree.get_children())
-        # Populate the list with channels matching the search text, considering current sort order
-        channels = [(channel, info['user_count'], info['topic']) for channel, info in self.client.download_channel_list.items()
-                    if search_text in channel.lower() or search_text in info['topic'].lower()]
-        
-        # Sort channels based on the current sort order
-        channels.sort(key=lambda x: x[1], reverse=self.sort_order == "descending")
-        
+        while not self.is_destroyed:
+            for channel, info in self.gui.download_channel_list.items():
+                if channel not in processed_channel_names:
+                    QTreeWidgetItem(self.tree, [channel, str(info['user_count']), info['topic']])
+                    processed_channel_names.add(channel)
+
+            await asyncio.sleep(0.1)
+
+    def handle_search(self):
+        search_text = self.search_entry.text().lower()
+        self.tree.clear()
+
+        channels = [
+            (channel, info['user_count'], info['topic'])
+            for channel, info in self.gui.download_channel_list.items()
+            if search_text in channel.lower() or search_text in info['topic'].lower()
+        ]
+
+        # Sort before populating
+        channels.sort(key=lambda x: x[1], reverse=(self.sort_order == "descending"))
         for channel in channels:
-            self.tree.insert("", tk.END, values=(channel[0], channel[1], channel[2]))
+            QTreeWidgetItem(self.tree, [channel[0], str(channel[1]), channel[2]])
 
     async def update_channel_info(self, channel_name, user_count, topic):
-        self.tree.insert("", tk.END, values=(channel_name, user_count, topic))
+        QTreeWidgetItem(self.tree, [channel_name, str(user_count), topic])
 
-    def destroy(self):
+    def closeEvent(self, event):
         self.is_destroyed = True
-        super().destroy()
+        event.accept()

@@ -50,7 +50,12 @@ from PyQt6.QtWidgets import (
     QSizePolicy,
     QTextEdit,
     QVBoxLayout,
-    QWidget
+    QWidget,
+    QDialog,
+    QTreeWidget,
+    QTreeWidgetItem,
+    QHeaderView,
+    QScrollBar
 )
 
 from PyQt6.QtCore import (

@@ -1,4 +1,3 @@
-from rudechat4.list_window import ChannelListWindow
 from rudechat4.rude_pronouns import replace_pronouns
 from rudechat4.rude_auto_away import AutoAway
 from rudechat4.rude_friends import RudeFriends
@@ -38,7 +37,6 @@ class RudeChatClient:
         self.mode_to_symbol = {}
         self.whois_data = {}
         self.who_user_data = {}
-        self.download_channel_list = {}
         self.highlighted_channels = {}
         self.mentions = {}
         self.ASCII_ART_MACROS = {}
@@ -1044,7 +1042,7 @@ class RudeChatClient:
         self.user_modes.clear()
         self.mode_to_symbol.clear()
         self.whois_data.clear()
-        self.download_channel_list.clear()
+        self.gui.download_channel_list.clear()
         self.whois_executed.clear()
 
     def grab_server_name(self, config_file):
@@ -2870,19 +2868,16 @@ class RudeChatClient:
         user_count = tokens.params[2]
         topic = tokens.params[3]
         # Add the channel information to a dictionary or list (to be implemented)
-        self.download_channel_list[channel_name] = {
+        self.gui.download_channel_list[channel_name] = {
             'user_count': user_count,
             'topic': topic
         }
-
-    def show_channel_list_window(self):
-        self.channel_window = ChannelListWindow(self, self.master)
 
     async def save_channel_list_to_file(self):
         channel_list_path = os.path.join(G_CONFIG_DIR, "channel_list.txt")
 
         with open(channel_list_path, "w", encoding='utf-8') as f:
-            for channel, info in self.download_channel_list.items():
+            for channel, info in self.gui.download_channel_list.items():
                 f.write(f"{channel} - Users: {info['user_count']} - Topic: {info['topic']}\n")
 
     def handle_names_list(self, tokens):
@@ -3270,7 +3265,7 @@ class RudeChatClient:
                         self.command_432(tokens)
                     case "322":  # Channel list
                         await self.handle_list_response(tokens)
-                        await self.channel_window.update_channel_info(tokens.params[1], tokens.params[2], tokens.params[3])
+                        await self.gui.channel_window.update_channel_info(tokens.params[1], tokens.params[2], tokens.params[3])
                     case "323":  # End of channel list
                         await self.save_channel_list_to_file()
                     case "476" | "479":
@@ -3927,7 +3922,7 @@ class RudeChatClient:
             case "list":
                 await self.send_message("LIST")
                 # Create the channel list window
-                self.show_channel_list_window()
+                self.gui.show_channel_list_window()
 
             case "sw":
                 channel_name = args[1]

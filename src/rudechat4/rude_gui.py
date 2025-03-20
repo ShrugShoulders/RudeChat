@@ -3,6 +3,7 @@ from rudechat4.global_variables import *
 from rudechat4.rude_client import RudeChatClient
 from rudechat4.server_config_window import ServerConfigWindow
 from rudechat4.gui_config_window import GuiConfigWindow
+from rudechat4.list_window import ChannelListWindow
 from rudechat4.nick_cleaner import clean_nicknames
 from rudechat4.format_decoder import decoder
 from rudechat4.rude_logger import configure_logging
@@ -603,6 +604,7 @@ class RudeGui(QWidget):
         self.pop_out_windows = {}
         self.server_colors = {}
         self.emoji_width_cache = {}
+        self.download_channel_list = {}
         self.history_index = 0
         self.last_selected_index = None
         self.previous_server_index = None
@@ -1050,6 +1052,10 @@ class RudeGui(QWidget):
         self.main_window.layout.addWidget(save_button)
 
         self.main_window.show()
+
+    def show_channel_list_window(self):
+        self.channel_window = ChannelListWindow(self, self.master)
+        self.channel_window.show()
 
     def show_startup_art(self):
         splash_directory = os.path.join(G_SOURCE_DIR, "Splash")
