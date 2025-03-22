@@ -124,7 +124,7 @@ class FirstRun:
         selected_config_file_var.currentIndexChanged.connect(on_config_change)
         self.main_window.layout.addWidget(selected_config_file_var)
 
-        self.main_window.layout.addWidget(config_window.frame)
+        self.main_window.layout.addWidget(config_window)
 
         save_button = QPushButton("Start Client")
         save_button.clicked.connect(config_window.save_config)
