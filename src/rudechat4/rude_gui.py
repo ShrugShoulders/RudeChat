@@ -19,12 +19,44 @@ class RudeTextEdit(QTextEdit):
         cursor = self.cursorForPosition(pos)
         return cursor.charFormat().isAnchor()
 
+    def reset_cursor_position(self):
+        """Reset the cursor to the bottom-right position."""
+        cursor = self.textCursor()
+        cursor.movePosition(QTextCursor.MoveOperation.End)
+        cursor.movePosition(QTextCursor.MoveOperation.StartOfBlock)
+        self.setTextCursor(cursor)
+
+    def copy(self):
+        super().copy()
+        self.reset_cursor_position()
+
+    def contextMenuEvent(self, event):
+        menu = self.createStandardContextMenu()
+        copy_action = menu.actions()[0]  # "Copy" is usually the first action
+
+        # Connect to trigger
+        copy_action.triggered.connect(self.reset_cursor_position)
+
+        # Show the menu
+        menu.exec(event.globalPos())
+
+    def keyPressEvent(self, event: QKeyEvent):
+        super().keyPressEvent(event)
+
+    def mouseDoubleClickEvent(self, event: QMouseEvent):
+        if event.button() == Qt.MouseButton.LeftButton:
+            super().mouseDoubleClickEvent(event)
+
+    def mouseReleaseEvent(self, event: QMouseEvent):
+        if event.button() == Qt.MouseButton.LeftButton:
+            super().mouseReleaseEvent(event)
+
     def mousePressEvent(self, e):
         if self.is_anchor_at(e.pos()):
             url = self.get_anchor_at(e.pos())
             webbrowser.open(url)
-        else:
-            e.ignore()
+        elif e.button() == Qt.MouseButton.LeftButton:
+            super().mousePressEvent(e)
 
 class TabEventFilter(QObject):
     def __init__(self, gui):
@@ -80,6 +112,8 @@ class TabEventFilter(QObject):
         
         # Strip modes from the match
         matched_nick = matches[0] if matches else None
+        if matched_nick is None:
+            return
         plain_nickname = matched_nick.lstrip(modes_to_strip)
 
         return plain_nickname
@@ -314,7 +348,6 @@ class RudeGui(QWidget):
         self.master.config_edit_servers_action.triggered.connect(self.open_client_config_window)
         self.master.config_edit_gui_action.triggered.connect(self.open_gui_config_window)
         configure_logging()
-        self.set_icon()
 
     def set_icon(self): # Need to debug this, it wont show the icon on Linux. 
         match platform.system():
@@ -361,6 +394,7 @@ class RudeGui(QWidget):
             self.server_listbox.scrollToItem(self.server_listbox.item(index_server))
 
             self.on_server_change(None)
+            return
 
     def read_config(self):
         config_file = os.path.join(G_CONFIG_DIR, 'gui_config.ini')
@@ -660,6 +694,7 @@ class RudeGui(QWidget):
         self.highlight_away_users()
         self.emoji_select()
         self.set_gui_theme()
+        self.set_icon()
 
     def emoji_select(self):
         match platform.system():
@@ -1198,6 +1233,7 @@ class RudeGui(QWidget):
 
             # Update the previous_server_index to the currently selected server index
             self.previous_server_index = selected_server_index
+            return
 
     def on_channel_click(self):
         # Set background of currently selected channel back to default
@@ -1305,6 +1341,7 @@ class RudeGui(QWidget):
 
     # Text & Formatting
     def insert_text_widget(self, message):
+        self.chat_box.reset_cursor_position()
         self.trim_text_widget()
         urls = self.find_urls(message)
         formatted_text = decoder(message)

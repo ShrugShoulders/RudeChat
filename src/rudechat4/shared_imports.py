@@ -16,6 +16,7 @@ from plyer import notification as plyer_notification
 import pytz
 import random
 import re
+import regex
 import requests
 import shutil
 import ssl
@@ -75,6 +76,8 @@ from PyQt6.QtGui import (
     QTextCharFormat,
     QTextCursor,
     QIcon,
+    QKeyEvent,
+    QMouseEvent
 )
 
 if platform.system() == "Darwin":

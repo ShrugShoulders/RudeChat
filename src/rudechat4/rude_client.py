@@ -65,7 +65,7 @@ class RudeChatClient:
         self.time_zone = get_localzone()
         configure_logging()
         self.friends = RudeFriends()
-        self.emoji_pattern = re.compile(r'[🇺🇸🇬🇧🇨🇦🇦🇺🇫🇷🇩🇪🇮🇹🇪🇸🇯🇵🇨🇳🇧🇷🇮🇳🇷🇺🇿🇦🇲🇽🇰🇷🇸🇦]', re.UNICODE)
+        self.flag_pattern = regex.compile(r'[\U0001F1E6-\U0001F1FF]{2}')
 
     async def read_config(self, config_file):
         config = configparser.ConfigParser()
@@ -437,7 +437,7 @@ class RudeChatClient:
         count_366 = 0
         got_topic = 0
         last_366_time = None
-        TIMEOUT_SECONDS = 0.25
+        TIMEOUT_SECONDS = 0.30
         MAX_WAIT_TIME = 60
         PRIVMSGTOKENS = []
         NAMESTOKENS = []
@@ -445,19 +445,11 @@ class RudeChatClient:
 
         start_time = asyncio.get_event_loop().time()
 
-        async def insert_processing_symbols(PRIVMSGTOKENS):
-            symbol_list = ['░', '▒', '▓', '█']
-            num_tokens = len(PRIVMSGTOKENS)
-            block_thresholds = [num_tokens // len(symbol_list) * (i + 1) for i in range(len(symbol_list))]
-
-            self.gui.insert_text_widget(f'\n\x0307\x02Processing Tokens: \x0F')
-            for i, tokens in enumerate(PRIVMSGTOKENS):
-                for j, threshold in enumerate(block_thresholds):
-                    if i < threshold:
-                        self.gui.insert_text_widget(f'\x0303{symbol_list[j]}\x0F')
-                        break
+        async def process_PRIVMSG_tokens(PRIVMSGTOKENS):
+            self.gui.insert_text_widget(f'\n\x0307\x02Processing Tokens\x0F\n')
+            for tokens in PRIVMSGTOKENS:
                 await self.handle_privmsg(tokens, znc_privmsg=True)
-            self.gui.insert_text_widget(f'\n\x0303\x02DONE!\x0F\n')
+            self.gui.insert_text_widget(f'\x0303\x02DONE!\x0F\n')
             await self.send_message('CAP REQ :away-notify')
             await self.send_message('CAP REQ :account-notify')
             await self.send_message('CAP REQ :extended-join')
@@ -473,10 +465,8 @@ class RudeChatClient:
                 last_366_time = time.time()
                 if motd_received:
                     if sync:
-                        self.gui.insert_text_widget(f'\x0307\x02Syncing with ZNC:\x0F ')
+                        self.gui.insert_text_widget(f'\n\x0307\x02Syncing with ZNC\x0F\n')
                         sync = False
-                    else:
-                        self.gui.insert_text_widget(f'\x0303\x02{symbol}\x0F')
 
         def check_timeout():
             nonlocal last_366_time
@@ -502,7 +492,7 @@ class RudeChatClient:
                             self.handle_topic(token)
                         for tokens in NAMESTOKENS:
                             self.handle_names_list(tokens)
-                        await insert_processing_symbols(PRIVMSGTOKENS)
+                        await process_PRIVMSG_tokens(PRIVMSGTOKENS)
                         return
 
                 match tokens.command:
@@ -725,7 +715,7 @@ class RudeChatClient:
                             self.handle_topic(token)
                         for tokens in NAMESTOKENS:
                             self.handle_names_list(tokens)
-                        await insert_processing_symbols(PRIVMSGTOKENS)
+                        await process_PRIVMSG_tokens(PRIVMSGTOKENS)
                         return
 
             # Check for overall timeout
@@ -737,7 +727,7 @@ class RudeChatClient:
                         self.handle_topic(token)
                     for token in NAMESTOKENS:
                         self.handle_names_list(token)
-                    await insert_processing_symbols(PRIVMSGTOKENS)
+                    await process_PRIVMSG_tokens(PRIVMSGTOKENS)
                     return
                 else:
                     self.gui.insert_text_widget("\nMaximum sync time exceeded\n")
@@ -1263,7 +1253,7 @@ class RudeChatClient:
                 await self.send_who(channel)
                 self.gui.highlight_away_users()
                 self.cap_who_for_chan.append(channel)
-                await asyncio.sleep(9)
+                await asyncio.sleep(14)
                 self.gui.highlight_who_channels()
             self.who_for_chan_complete = True
             break
@@ -2679,7 +2669,7 @@ class RudeChatClient:
             elif command == "317":
                 try:
                     idle_time_seconds = int(tokens.params[2])
-                    idle_time = str(datetime.timedelta(seconds=idle_time_seconds))
+                    idle_time = str(timedelta(seconds=idle_time_seconds))
                     if self.whois_data.get(nickname):
                         self.whois_data[nickname]["Idle Time"] = idle_time
                 except Exception as e:
@@ -3123,7 +3113,7 @@ class RudeChatClient:
                 if self.log_on:
                     logging.debug(f"Decoded data: {decoded_data}...")
                 cleaned_data = decoded_data.replace("\x06", "")  # Remove the character with ASCII value 6
-                cleaned_data = re.sub(self.emoji_pattern, '', decoded_data)
+                cleaned_data = self.flag_pattern.sub('', decoded_data)
                 if self.log_on:
                     logging.debug(f"Cleaned data (post ASCII-6 removal): {cleaned_data}...")
 
