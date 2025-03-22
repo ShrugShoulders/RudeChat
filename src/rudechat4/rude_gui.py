@@ -32,12 +32,8 @@ class RudeTextEdit(QTextEdit):
 
     def contextMenuEvent(self, event):
         menu = self.createStandardContextMenu()
-        copy_action = menu.actions()[0]  # "Copy" is usually the first action
-
-        # Connect to trigger
+        copy_action = menu.actions()[0]
         copy_action.triggered.connect(self.reset_cursor_position)
-
-        # Show the menu
         menu.exec(event.globalPos())
 
     def keyPressEvent(self, event: QKeyEvent):
@@ -1741,7 +1737,7 @@ class RudeGui(QWidget):
             # Change background color of the clicked channel to blue
             if self.log_on:
                 logging.debug(f"Recolor background hit")
-            clicked_item.setBackground(QColor(self.channel_select_color))
+            clicked_item.setBackground(QColor(self.list_channel_select_bg))
             self.highlight_away_users()
             self.update_users_label()
             if self.log_on:

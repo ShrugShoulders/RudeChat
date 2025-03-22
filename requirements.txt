@@ -12,3 +12,4 @@ emoji
 py2app
 PyQt6
 requests
+regex
