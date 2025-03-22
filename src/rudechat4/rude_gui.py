@@ -381,18 +381,6 @@ class RudeGui(QWidget):
             logging.error(f"Unable to get screen size: {e}. Using default variables.")
             screen_size = "default"  # Prevent NameError in match-case
 
-    def select_first_server(self):
-        server_count = self.server_listbox.count()
-        index_server = 0
-
-        if server_count > 0:
-            self.server_listbox.clearSelection()
-            self.server_listbox.setCurrentRow(index_server)
-            self.server_listbox.scrollToItem(self.server_listbox.item(index_server))
-
-            self.on_server_change(None)
-            return
-
     def read_config(self):
         config_file = os.path.join(G_CONFIG_DIR, 'gui_config.ini')
 
@@ -558,6 +546,18 @@ class RudeGui(QWidget):
         self.sidebar.setStretch(2, 2)
 
         self.layout().addLayout(self.sidebar)
+
+    def select_first_server(self):
+        server_count = self.server_selector_list.count()
+        index_server = 0
+
+        if server_count > 0:
+            self.server_selector_list.clearSelection()
+            self.server_selector_list.setCurrentRow(index_server)
+            self.server_selector_list.scrollToItem(self.self.server_selector_list.item(index_server))
+
+            self.on_server_change(None)
+            return
 
     def set_gui_theme(self):  # Apply GUI theme settings
         # Set Chat Font
