@@ -414,7 +414,6 @@ class RudeGui(QWidget):
             self.main_nickname_color = config.get('Utility', 'main_nickname_color', fallback='#39ff14')
             self.generate_nickname_colors = config.getboolean('Utility', 'generate_nickname_colors', fallback=True)
             self.minimize_to_tray = config.getboolean('Utility', 'minimize_to_tray', fallback=True)
-            self.highlight_all_nicknames = config.getboolean('Utility', 'highlight_all_nicknames', fallback=False)
             self.log_on = config.getboolean('Utility', 'turn_logging_on', fallback=False)
             self.show_server_window = config.getboolean('Utility', 'show_server_window', fallback=True)
             self.tab_complete_terminator = config.get('Utility', 'tab_complete_terminator', fallback=':')
@@ -447,7 +446,6 @@ class RudeGui(QWidget):
             self.main_nickname_color = '#39ff14'
             self.generate_nickname_colors = True
             self.minimize_to_tray = True
-            self.highlight_all_nicknames = False
             self.log_on = False
             self.show_server_window = True
             self.tab_complete_terminator = ':'
@@ -1451,86 +1449,88 @@ class RudeGui(QWidget):
         self.chat_box.moveCursor(QTextCursor.MoveOperation.End)
 
     def highlight_nicknames(self):
-        """Highlight the user's nickname and other nicknames in text."""
+        """Efficiently highlight nicknames in the chat box with emoji-aware offset correction."""
         try:
             text = self.chat_box.toPlainText()
+            if not text:
+                return
 
-            # Highlight user's nickname first
-            if not self.highlight_all_nicknames:
-                user_nickname_matches = list(self.users_nickname_pattern(self.irc_client.nickname).finditer(text))
-                for match in user_nickname_matches:
-                    nickname = match.group(0)
-                    start_position, end_position = match.span()
-                    self.apply_nickname_format(text, start_position, end_position, nickname)
+            # Precompute emoji offsets once for the entire text
+            emoji_offset_start, emoji_offset_end = {}, {}
+            font = self.chat_box.font()
+            emoji_widths = self.estimate_emoji_offset(text, font)
 
-            elif self.highlight_all_nicknames:
-                nicks_colors = list(self.nickname_colors.keys())
-                for nicknames in nicks_colors:
-                    modes_to_strip = ''.join(self.irc_client.mode_values)
-                    strip_brakets = nicknames.strip('<>')
-                    plain_nickname = strip_brakets.lstrip(modes_to_strip)
-                    user_nickname_matches = list(self.users_nickname_pattern(plain_nickname).finditer(text))
-                    for match in user_nickname_matches:
-                        nickname = match.group(0)
-                        start_position, end_position = match.span()
-                        self.apply_nickname_format(text, start_position, end_position, nickname)
+            # Precompute cumulative emoji offsets for faster lookup
+            emoji_offset_start, emoji_offset_end = self.build_emoji_offset_map(text, emoji_widths)
+            nicknames_to_highlight = set()
+            nicknames_to_highlight.add(self.irc_client.nickname)
 
-            # Highlight other nicknames
+            # Include matches from general nickname pattern
             if hasattr(self, 'nickname_pattern'):
-                matches = list(self.nickname_pattern.finditer(text))
-                for match in matches:
-                    nickname_with_brackets = match.group(0)
-                    start_position, end_position = match.span()
-                    self.apply_nickname_format(text, start_position, end_position, nickname_with_brackets)
+                for match in self.nickname_pattern.finditer(text):
+                    nick = match.group(0)
+                    nicknames_to_highlight.add(nick.strip('<>').lstrip(''.join(self.irc_client.mode_values)))
+
+            # Highlight nicknames
+            for nickname in nicknames_to_highlight:
+                pattern = self.users_nickname_pattern(nickname)
+                for match in pattern.finditer(text):
+                    matched_text = match.group(0)
+                    start, end = match.span()
+                    adjusted_start = start + emoji_offset_start.get(start, 0)
+                    adjusted_end = end + emoji_offset_end.get(end, 0)
+                    self.apply_nickname_format(matched_text, adjusted_start, adjusted_end, matched_text)
 
         except Exception as e:
-            logging.error(f"Error in highlight_nicknames: {e}")
+            logging.error(f"Error in optimized highlight_nicknames: {e}")
+
+    def build_emoji_offset_map(self, text, emoji_widths):
+        """Precompute emoji offset adjustments at each index."""
+        offset_start_map = {}
+        offset_end_map = {}
+        cum_offset = 0
+
+        for i, char in enumerate(text):
+            offset = emoji_widths.get(char, 0)
+            if offset:
+                cum_offset += offset
+            offset_start_map[i + 1] = cum_offset
+            offset_end_map[i + 1] = cum_offset
+
+        return offset_start_map, offset_end_map
 
     def apply_nickname_format(self, text, start_position, end_position, nickname):
         """Apply color formatting to the nickname with emoji offset correction."""
         try:
             if not nickname:
                 return
-            modes = self.irc_client.mode_values + ['']
-            modes_to_strip = ''.join(self.irc_client.mode_values)
-            strip_brakets = nickname.strip('<>')
-            plain_nickname = strip_brakets.lstrip(modes_to_strip)
-            cursor = self.chat_box.textCursor()
 
-            if f"<{plain_nickname}>" in self.nickname_colors:
-                nickname_color = self.nickname_colors[f"<{plain_nickname}>"]
-                # Cache the color for the nickname with modes
-                self.nickname_colors[nickname] = nickname_color
-            elif nickname == f"<{self.irc_client.nickname}>" and nickname not in self.nickname_colors:
-                nickname_color = self.user_nickname_color
-                self.nickname_colors[f"<{plain_nickname}>"] = nickname_color
+            # Determine the nickname color
+            if nickname in self.nickname_colors:
+                nickname_color = self.nickname_colors[nickname]
             else:
                 if self.generate_nickname_colors:
-                    nickname_color = self.generate_random_color()
+                    if nickname == self.irc_client.nickname:
+                        nickname_color = self.main_nickname_color
+                    else:
+                        nickname_color = self.generate_random_color()
                 else:
                     nickname_color = self.main_fg_color
 
-                for mode in modes:
-                    if nickname == f"<{mode}{self.irc_client.nickname}>":
-                        nickname_color = self.user_nickname_color
-
                 self.nickname_colors[nickname] = nickname_color
-                self.nickname_colors[f"<{plain_nickname}>"] = nickname_color
 
+            # Setup text format
             format_nick = QTextCharFormat()
             format_nick.setFontFamily(self.chat_font_family)
             format_nick.setFontPointSize(int(self.chat_font_size))
             format_nick.setForeground(QColor(nickname_color))
 
-            # Calculate emoji offset
-            emoji_offset_start, emoji_offset_end = self.calculate_emoji_offsets(text, start_position, end_position)
-            adjusted_start = start_position + emoji_offset_start
-            adjusted_end = end_position + emoji_offset_end
-
-            # Apply the color formatting
-            cursor.setPosition(adjusted_start)
-            cursor.setPosition(adjusted_end, QTextCursor.MoveMode.KeepAnchor)
+            # Apply formatting
+            cursor = self.chat_box.textCursor()
+            cursor.setPosition(start_position)
+            cursor.setPosition(end_position, QTextCursor.MoveMode.KeepAnchor)
             cursor.setCharFormat(format_nick)
+
         except Exception as e:
             logging.error(f"Error in apply_nickname_format: {e}")
 
@@ -1563,24 +1563,6 @@ class RudeGui(QWidget):
                 emoji_offsets[char] = offset
 
         return emoji_offsets
-
-    def calculate_emoji_offsets(self, text, start_position, end_position):
-        """Calculate emoji offsets dynamically based on their rendered width."""
-        emoji_offset_start = 0
-        emoji_offset_end = 0
-        font = self.chat_box.font()  # Get the current font
-        emoji_widths = self.estimate_emoji_offset(text, font)  # Estimate emoji widths
-
-        for i, char in enumerate(text):
-            if char in emoji_widths:
-                extra_offset = emoji_widths[char]  # Get cached width
-
-                if i < start_position:
-                    emoji_offset_start += extra_offset
-                if i < end_position:
-                    emoji_offset_end += extra_offset
-
-        return emoji_offset_start, emoji_offset_end
 
     def is_emoji(self, char):
         """Check if a character is an emoji using the emoji library."""

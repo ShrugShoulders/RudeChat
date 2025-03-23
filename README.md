@@ -13,7 +13,7 @@
 			- [x] Color
 				- [ ] Color selector
 				- [x] Save Colors
-				- [ ] Reset Colors
+				- [x] Reset Colors
 			- [x] Config
 				- [x] Edit Servers...
 				- [x] Edit GUI
