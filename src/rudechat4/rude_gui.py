@@ -554,7 +554,7 @@ class RudeGui(QWidget):
         if server_count > 0:
             self.server_selector_list.clearSelection()
             self.server_selector_list.setCurrentRow(index_server)
-            self.server_selector_list.scrollToItem(self.self.server_selector_list.item(index_server))
+            self.server_selector_list.scrollToItem(self.server_selector_list.item(index_server))
 
             self.on_server_change(None)
             return
