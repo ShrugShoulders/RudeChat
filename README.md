@@ -2,7 +2,7 @@
 - [x] Complete / Has base function
 - [ ] Needs to be done / all child goals need to be completed
 
-**Tasks Complete: (29/38 - 76.32%)**
+**Tasks Complete: (30/46 - 65.22%)**
 - [ ] Convert to Qt
 	- [x] `__main__`
 	- [ ] `rude_gui`
@@ -28,18 +28,26 @@
 				- [x] Restore keybindings for TAB and arrow keys
 					- [x] TAB Complete
 					- [x] Aarrow Key entry history. 
+		- [ ] `rude_dragndrop`
+			- [ ] `Set Up logic for GUI`
+		- [ ] `rude_popout`
+			- [ ] Design pop out window
+			- [ ] Implement logic for display
+			- [ ] Implement commands
+		- [ ] `user_data_display`
+			- [ ] Design user data display
+			- [ ] Implement display logic.
+		- [ ] `rude_colours`
+			- [ ] Design nickname color edit window
+			- [ ] Implement logic
+		- [x] `server_config_window`
+			- [ ] `channel_expand`
 	- [x] `rude_client`
 		- [x] Fix listboxes
-	- [x] `server_config_window`
-		- [ ] `channel_expand`
-	- [ ] `rude_popout`
-	- [ ] `rude_colours`
 	- [x] `gui_config_window`
 	- [x] `list_window`
-	- [ ] `user_data_display`
 	- [x] `highlight_nicknames`
 		- [x] Restore main user nickname highlight
-	- [ ] `rude_dragndrop`
 	- [x] `rude_first_run`
 
 # RudeChat IRC Client: For Fun & Reasons.
