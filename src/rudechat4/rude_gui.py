@@ -1337,7 +1337,7 @@ class RudeGui(QWidget):
     # Text & Formatting
     def insert_text_widget(self, message):
         self.chat_box.reset_cursor_position()
-        self.trim_text_widget()
+        #self.trim_text_widget()
         urls = self.find_urls(message)
         formatted_text = decoder(message)
 
@@ -1354,9 +1354,9 @@ class RudeGui(QWidget):
         if line_count > 1000:
             excess_lines = line_count - 1000
             cursor = self.chat_box.textCursor()
-            cursor.movePosition(QTextCursor.Start)
+            cursor.movePosition(QTextCursor.MoveOperation.Start)
             for _ in range(excess_lines):
-                cursor.select(QTextCursor.BlockUnderCursor)
+                cursor.select(QTextCursor.SelectionType.BlockUnderCursor)
                 cursor.removeSelectedText()
                 cursor.deleteChar()
 

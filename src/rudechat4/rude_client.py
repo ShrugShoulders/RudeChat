@@ -330,24 +330,33 @@ class RudeChatClient:
             await self.send_message(f'USER {self.nickname} 0 * :{self.nickname}')
 
     def handle_motd_line(self, tokens):
-        motd_line = tokens.params[-1]  # Assumes the MOTD line is the last parameter
-        self.motd_lines.append(motd_line)
+        try:
+            motd_line = tokens.params[-1]  # Assumes the MOTD line is the last parameter
+            self.motd_lines.append(motd_line)
+        except Exception as e:
+            logging.error(f"Error in handle_motd_line: {e}")
 
     def handle_motd_start(self, tokens):
-        self.motd_lines.clear()
-        motd_start_line = tokens.params[-1]  # Assumes the introductory line is the last parameter
-        self.motd_lines.append(motd_start_line)
+        try:
+            self.motd_lines.clear()
+            motd_start_line = tokens.params[-1]  # Assumes the introductory line is the last parameter
+            self.motd_lines.append(motd_start_line)
+        except Exception as e:
+            logging.error(f"Error in handle_motd_start: {e}")
 
     def handle_motd_end(self, tokens):
-        full_motd = "\n".join(self.motd_lines)
-        
-        if self.server_name in self.motd_dict:
-            self.motd_dict[self.server_name] += full_motd + "\n"
-        else:
-            self.motd_dict[self.server_name] = full_motd + "\n"
+        try:
+            full_motd = "\n".join(self.motd_lines)
+            
+            if self.server_name in self.motd_dict:
+                self.motd_dict[self.server_name] += full_motd + "\n"
+            else:
+                self.motd_dict[self.server_name] = full_motd + "\n"
 
-        self.gui.insert_text_widget(f"Message of the Day:\n{full_motd}\n")
-        self.motd_lines.clear()
+            self.gui.insert_text_widget(f"Message of the Day:\n{full_motd}\n")
+            self.motd_lines.clear()
+        except Exception as e:
+            logging.error(f"Error in handle_motd_end: {e}")
             
     async def wait_for_welcome(self, config_file):
         try:
@@ -358,18 +367,27 @@ class RudeChatClient:
             return
 
     def handle_connection_info(self, tokens):
-        connection_info = tokens.params[-1]  # Assumes the connection info is the last parameter
-        self.gui.insert_text_widget(f"Server Info: {connection_info}\n")
+        try:
+            connection_info = tokens.params[-1]  # Assumes the connection info is the last parameter
+            self.gui.insert_text_widget(f"Server Info: {connection_info}\n")
+        except Exception as e:
+            logging.error(f"Error in handle_connection_info: {e}")
 
     def handle_global_users_info(self, tokens):
-        global_users_info = tokens.params[-1]  # Assumes the global users info is the last parameter
-        self.gui.insert_text_widget(f"Server Users Info: {global_users_info}\n")
+        try:
+            global_users_info = tokens.params[-1]  # Assumes the global users info is the last parameter
+            self.gui.insert_text_widget(f"Server Users Info: {global_users_info}\n")
+        except Exception as e:
+            logging.error(f"Error in handle_global_users_info: {e}")
 
     async def handle_nickname_conflict(self, tokens):
-        new_nickname = self.nickname + str(random.randint(1, 99))
-        await self.send_message(f'NICK {new_nickname}')
-        self.nickname = new_nickname
-        self.gui.insert_text_widget(f"Nickname already in use. Changed nickname to: {self.nickname}\n")
+        try:
+            new_nickname = self.nickname + str(random.randint(1, 99))
+            await self.send_message(f'NICK {new_nickname}')
+            self.nickname = new_nickname
+            self.gui.insert_text_widget(f"Nickname already in use. Changed nickname to: {self.nickname}\n")
+        except Exception as e:
+            logging.error(f"Error in handle_nickname_conflict: {e}")
 
     async def initial_ping(self, tokens):
         ping_param = tokens.params[0]
@@ -392,15 +410,18 @@ class RudeChatClient:
                     await self.send_message(f"NAMES {channel}")
 
     def server_message_handler(self, tokens):
-        if len(tokens.params) > 3:
-            params_combined = ' '.join(tokens.params[1:])
-            self.add_server_message(params_combined + "\n")
-        elif len(tokens.params) == 3:
-            params_combined = ' '.join(tokens.params[1:])
-            self.add_server_message(params_combined + "\n")
-        else:
-            data = tokens.params[1]
-            self.add_server_message(data + "\n")
+        try:
+            if len(tokens.params) > 3:
+                params_combined = ' '.join(tokens.params[1:])
+                self.add_server_message(params_combined + "\n")
+            elif len(tokens.params) == 3:
+                params_combined = ' '.join(tokens.params[1:])
+                self.add_server_message(params_combined + "\n")
+            else:
+                data = tokens.params[1]
+                self.add_server_message(data + "\n")
+        except Exception as e:
+            logging.error(f"Error in server_message_handler: {e}")
 
     def join_znc_channel(self, tokens):
         channel = tokens.params[0]
@@ -878,22 +899,27 @@ class RudeChatClient:
         except BrokenPipeError as e:
             logging.error(f"BrokenPipeError in send_message: {e}. The connection might have been lost.")
             self.gui.insert_text_widget(f"Connection Error: {e}: Cannot send message.\n")
+            await self.reconnect(self.config)
             
         except TimeoutError as e:
             logging.error(f"TimeoutError in send_message: {e}. The operation took too long.")
             self.gui.insert_text_widget(f"Connection Error: {e}: Cannot send message.\n")
+            await self.reconnect(self.config)
             
         except ConnectionResetError as e:
             logging.error(f"ConnectionResetError in send_message: {e}. The connection was reset by the peer.")
             self.gui.insert_text_widget(f"Connection Error: {e}: Cannot send message.\n")
+            await self.reconnect(self.config)
             
         except ConnectionRefusedError as e:
             logging.error(f"ConnectionRefusedError in send_message: {e}. The connection attempt was refused.")
             self.gui.insert_text_widget(f"Connection Error: {e}: Cannot send message.\n")
+            await self.reconnect(self.config)
             
         except OSError as e:
             logging.error(f"OSError in send_message: {e}. A general OS-related error occurred.")
             self.gui.insert_text_widget(f"Connection Error: {e}: Cannot send message.\n")
+            await self.reconnect(self.config)
 
     def is_valid_channel(self, channel):
         return any(channel.startswith(prefix) for prefix in self.chantypes)
@@ -2778,11 +2804,14 @@ class RudeChatClient:
         """
         Handle the server's response for the TIME command.
         """
-        server_name = tokens.params[0]  # The server's name
-        local_time = tokens.params[1]   # The local time on the server
+        try:
+            server_name = tokens.params[0]  # The server's name
+            local_time = tokens.params[1]   # The local time on the server
 
-        message = f"Server Time from {server_name}: {local_time}"
-        self.gui.insert_text_widget(message)
+            message = f"Server Time from {server_name}: {local_time}"
+            self.gui.insert_text_widget(message)
+        except Exception as e:
+            logging.error(f"Error in handle_time_request: {e}")
 
     async def handle_kick_event(self, tokens):
         """
@@ -2854,21 +2883,27 @@ class RudeChatClient:
         await self.join_channel(channel)
 
     async def handle_list_response(self, tokens):
-        channel_name = tokens.params[1]
-        user_count = tokens.params[2]
-        topic = tokens.params[3]
-        # Add the channel information to a dictionary or list (to be implemented)
-        self.gui.download_channel_list[channel_name] = {
-            'user_count': user_count,
-            'topic': topic
-        }
+        try:
+            channel_name = tokens.params[1]
+            user_count = tokens.params[2]
+            topic = tokens.params[3]
+            # Add the channel information to a dictionary or list (to be implemented)
+            self.gui.download_channel_list[channel_name] = {
+                'user_count': user_count,
+                'topic': topic
+            }
+        except Exception as e:
+            logging.error(f"Error in handle_list_response: {e}")
 
     async def save_channel_list_to_file(self):
-        channel_list_path = os.path.join(G_CONFIG_DIR, "channel_list.txt")
+        try:
+            channel_list_path = os.path.join(G_CONFIG_DIR, "channel_list.txt")
 
-        with open(channel_list_path, "w", encoding='utf-8') as f:
-            for channel, info in self.gui.download_channel_list.items():
-                f.write(f"{channel} - Users: {info['user_count']} - Topic: {info['topic']}\n")
+            with open(channel_list_path, "w", encoding='utf-8') as f:
+                for channel, info in self.gui.download_channel_list.items():
+                    f.write(f"{channel} - Users: {info['user_count']} - Topic: {info['topic']}\n")
+        except Exception as e:
+            logging.error(f"Error in save_channel_list_to_file: {e}")
 
     def handle_names_list(self, tokens):
         command = tokens.command
@@ -2927,8 +2962,11 @@ class RudeChatClient:
             logging.error(f"Error in handle_pong: {e}")
 
     def handle_error(self, tokens):
-        error_message = ' '.join(tokens.params) if tokens.params else 'Unknown error'
-        self.gui.insert_text_widget(f"ERROR: {error_message}\n")
+        try:
+            error_message = ' '.join(tokens.params) if tokens.params else 'Unknown error'
+            self.gui.insert_text_widget(f"ERROR: {error_message}\n")
+        except Exception as e:
+            logging.error(f"Exception in handle_error: {e}")
 
     def handle_topic(self, tokens):
         channel_name = tokens.params[1]
@@ -2989,44 +3027,50 @@ class RudeChatClient:
         """
         Handle the "401" response, which indicates that a given nickname doesn't exist on the server.
         """
-        if len(tokens.params) >= 2:
-            # Extract the nickname from the second element of the list
-            nickname = tokens.params[1]
-            if nickname in self.away_users_dict:
-                del self.away_users_dict[nickname]
-            
-            self.gui.insert_text_widget(f"The nickname '{nickname}' doesn't exist on the server.\n")
-        else:
-            if self.log_on:
-                logging.info("Invalid response format for '401'.")
-            pass
+        try:
+            if len(tokens.params) >= 2:
+                # Extract the nickname from the second element of the list
+                nickname = tokens.params[1]
+                if nickname in self.away_users_dict:
+                    del self.away_users_dict[nickname]
+                
+                self.gui.insert_text_widget(f"The nickname '{nickname}' doesn't exist on the server.\n")
+            else:
+                if self.log_on:
+                    logging.info("Invalid response format for '401'.")
+                pass
+        except Exception as e:
+            logging.error(f"Error in handle_nickname_doesnt_exist: {e}")
 
     def handle_away(self, tokens):
-        nickname = tokens.hostmask.nickname
-        params = tokens.params
+        try:
+            nickname = tokens.hostmask.nickname
+            params = tokens.params
 
-        if params:
-            # User is away with a message
-            away_message = str(tokens.params[0])
-            away_status = f"Away: {away_message}"  # Set the away status message
+            if params:
+                # User is away with a message
+                away_message = str(tokens.params[0])
+                away_status = f"Away: {away_message}"  # Set the away status message
 
-            # Update the dictionaries.
-            if nickname not in self.away_users_dict:
-                self.away_users_dict[nickname] = away_message
+                # Update the dictionaries.
+                if nickname not in self.away_users_dict:
+                    self.away_users_dict[nickname] = away_message
 
-            if nickname in self.who_user_data:
-                user_details = self.who_user_data[nickname]
-                user_details['status'] = away_status  # Update the status
-        else:
-            # User is back (no params)
-            if nickname in self.away_users_dict:
-                del self.away_users_dict[nickname]
+                if nickname in self.who_user_data:
+                    user_details = self.who_user_data[nickname]
+                    user_details['status'] = away_status  # Update the status
+            else:
+                # User is back (no params)
+                if nickname in self.away_users_dict:
+                    del self.away_users_dict[nickname]
 
-            if nickname in self.who_user_data:
-                user_details = self.who_user_data[nickname]
-                user_details['status'] = "Active"  # Set status as Active
+                if nickname in self.who_user_data:
+                    user_details = self.who_user_data[nickname]
+                    user_details['status'] = "Active"  # Set status as Active
 
-        self.gui.highlight_away_users()
+            self.gui.highlight_away_users()
+        except Exception as e:
+            logging.error(f"Error in handle_away: {e}")
 
     def handle_account_message(self, tokens):
         """
@@ -3255,7 +3299,10 @@ class RudeChatClient:
                         self.command_432(tokens)
                     case "322":  # Channel list
                         await self.handle_list_response(tokens)
-                        await self.gui.channel_window.update_channel_info(tokens.params[1], tokens.params[2], tokens.params[3])
+                        try:
+                            await self.gui.channel_window.update_channel_info(tokens.params[1], tokens.params[2], tokens.params[3])
+                        except Exception as e:
+                            logging.error(f"Error updating channel_window.update_channel_info: {e}")
                     case "323":  # End of channel list
                         await self.save_channel_list_to_file()
                     case "476" | "479":
@@ -3294,195 +3341,264 @@ class RudeChatClient:
                             self.handle_server_message(line)
 
     def unable_to_join_channel(self, tokens):
-        channel = tokens.params[1]
-        reason = tokens.params[2] if len(tokens.params) > 2 else ""
+        try:
+            channel = tokens.params[1]
+            reason = tokens.params[2] if len(tokens.params) > 2 else ""
 
-        # Combine information into one message
-        message = f"Cannot join channel {channel} - {reason}"
-        self.gui.insert_text_widget(f"{message}\n")
-        self.add_server_message(message)
+            # Combine information into one message
+            message = f"Cannot join channel {channel} - {reason}"
+            self.gui.insert_text_widget(f"{message}\n")
+            self.add_server_message(message)
 
-        # Make sure to remove the channel 
-        if channel in self.joined_channels:
-            self.joined_channels.remove(channel)
-            self.gui.channel_lists[self.server] = self.joined_channels
-            self.update_gui_channel_list()
+            # Make sure to remove the channel 
+            if channel in self.joined_channels:
+                self.joined_channels.remove(channel)
+                self.gui.channel_lists[self.server] = self.joined_channels
+                self.update_gui_channel_list()
+        except Exception as e:
+            logging.error(f"Error in unable_to_join_channel: {e}")
 
     async def handle_invite(self, tokens):
-        inviter = tokens.source.split('!')[0]
-        invitee = tokens.params[0]
-        channel = tokens.params[1]
+        try:
+            inviter = tokens.source.split('!')[0]
+            invitee = tokens.params[0]
+            channel = tokens.params[1]
 
-        if self.auto_join_invite:
-            message = f"{inviter} has invited you to join {channel}, Joining {channel}..."
-            self.gui.insert_text_widget(f"{message}\n")
-            await self.command_parser(f"/join {channel}")
-        else:
-            message = f"{inviter} has invited you to join {channel}"
-            self.gui.insert_text_widget(f"{message}\n")
+            if self.auto_join_invite:
+                message = f"{inviter} has invited you to join {channel}, Joining {channel}..."
+                self.gui.insert_text_widget(f"{message}\n")
+                await self.command_parser(f"/join {channel}")
+            else:
+                message = f"{inviter} has invited you to join {channel}"
+                self.gui.insert_text_widget(f"{message}\n")
+        except Exception as e:
+            logging.error(f"Error in handle_invite: {e}")
 
     async def handle_bad_channel_name(self, tokens):
         # Extract the channel name and reason from the tokens
-        channel = tokens.params[1]
-        reason = tokens.params[2] if len(tokens.params) > 2 else "Invalid channel name"
+        try:
+            channel = tokens.params[1]
+            reason = tokens.params[2] if len(tokens.params) > 2 else "Invalid channel name"
 
-        # Combine information into a message to display to the user
-        message = f"Cannot join channel {channel} - {reason}"
-        self.gui.insert_text_widget(f"{message}\n")
-        if channel in self.joined_channels:
-            await self.send_message(f'PART {channel}')
-            self.joined_channels.remove(channel)
-            self.gui.channel_lists[self.server] = self.joined_channels
-            self.update_gui_channel_list()
+            # Combine information into a message to display to the user
+            message = f"Cannot join channel {channel} - {reason}"
+            self.gui.insert_text_widget(f"{message}\n")
+            if channel in self.joined_channels:
+                await self.send_message(f'PART {channel}')
+                self.joined_channels.remove(channel)
+                self.gui.channel_lists[self.server] = self.joined_channels
+                self.update_gui_channel_list()
+        except Exception as e:
+            logging.error(f"Error in handle_bad_channel_name: {e}")
 
     def handle_263(self, tokens):
-        source = tokens.source
-        issued_command = tokens.params[1]
-        message = tokens.params[2]
-        data = f"{source}: {issued_command} - {message}\n"
-        self.add_server_message(data)
+        try:
+            source = tokens.source
+            issued_command = tokens.params[1]
+            message = tokens.params[2]
+            data = f"{source}: {issued_command} - {message}\n"
+            self.add_server_message(data)
+        except Exception as e:
+            logging.error(f"Error in handle_263: {e}")
 
     def command_404(self, tokens):
-        channel = tokens.params[1]
-        message = tokens.params[2]
-        data = f"{channel}: {message}"
-        self.add_server_message(data)
+        try:
+            channel = tokens.params[1]
+            message = tokens.params[2]
+            data = f"{channel}: {message}"
+            self.add_server_message(data)
+        except Exception as e:
+            logging.error(f"Error in command_404: {e}")
 
     def command_900(self, tokens):
-        logged_in_as = tokens.params[3]
-        data = f"Successfully authenticated as: {logged_in_as}\n"
-        self.add_server_message(data)
+        try:
+            logged_in_as = tokens.params[3]
+            data = f"Successfully authenticated as: {logged_in_as}\n"
+            self.add_server_message(data)
+        except Exception as e:
+            logging.error(f"Error in command_900: {e}")
 
     def command_396(self, tokens):
-        hidden_host = tokens.params[1]
-        reason = tokens.params[2]
-        data = f"Your host is now hidden as: {hidden_host}. Reason: {reason}\n"
-        self.add_server_message(data)
+        try:
+            hidden_host = tokens.params[1]
+            reason = tokens.params[2]
+            data = f"Your host is now hidden as: {hidden_host}. Reason: {reason}\n"
+            self.add_server_message(data)
+        except Exception as e:
+            logging.error(f"Error in command_396: {e}")
 
     def command_403(self, tokens):
-        target = tokens.params[1]
-        message = tokens.params[2]
-        data = f"{message}: {target}\n"
-        self.add_server_message(data)
+        try:
+            target = tokens.params[1]
+            message = tokens.params[2]
+            data = f"{message}: {target}\n"
+            self.add_server_message(data)
+        except Exception as e:
+            logging.error(f"Error in command_403: {e}")
 
     def handle_kill_command(self, tokens):
-        source = tokens.source
-        user = tokens.params[0]
-        message = tokens.params[1]
-        data = f"{source} {user}: {message}\n"
+        try:
+            source = tokens.source
+            user = tokens.params[0]
+            message = tokens.params[1]
+            data = f"{source} {user}: {message}\n"
 
-        self.add_server_message(data)
+            self.add_server_message(data)
+        except Exception as e:
+            logging.error(f"Error in handle_kill_command: {e}")
 
     def command_379(self, tokens):
-        source = tokens.source
-        user = tokens.params[0]
-        connecting_user = tokens.params[1]
-        message = tokens.params[2]
-        data = f"{source} {user}: {connecting_user} {message}\n"
+        try:
+            source = tokens.source
+            user = tokens.params[0]
+            connecting_user = tokens.params[1]
+            message = tokens.params[2]
+            data = f"{source} {user}: {connecting_user} {message}\n"
 
-        self.add_server_message(data)
+            self.add_server_message(data)
+        except Exception as e:
+            logging.error(f"Error in command_379: {e}")
 
     def command_378(self, tokens):
-        source = tokens.source
-        user = tokens.params[0]
-        identified_nick = tokens.params[1]
-        message = tokens.params[2]
-        data = f"{source} {user} {identified_nick}: {message}\n"
+        try:
+            source = tokens.source
+            user = tokens.params[0]
+            identified_nick = tokens.params[1]
+            message = tokens.params[2]
+            data = f"{source} {user} {identified_nick}: {message}\n"
 
-        self.add_server_message(data)
+            self.add_server_message(data)
+        except Exception as e:
+            logging.error(f"Error in command_378: {e}")
 
     def command_307(self, tokens):
-        source = tokens.source
-        user = tokens.params[0]
-        identified_nick = tokens.params[1]
-        message = tokens.params[2]
-        data = f"{source} {user} {identified_nick}: {message}\n"
+        try:
+            source = tokens.source
+            user = tokens.params[0]
+            identified_nick = tokens.params[1]
+            message = tokens.params[2]
+            data = f"{source} {user} {identified_nick}: {message}\n"
 
-        self.add_server_message(data)
+            self.add_server_message(data)
+        except Exception as e:
+            logging.error(f"Error in command_307: {e}")
 
     def command_432(self, tokens):
-        source = tokens.source
-        user = tokens.params[0]
-        message = f"""{tokens.params[2]}"""
-        data = f"{source} {user}: {message}\n"
+        try:
+            source = tokens.source
+            user = tokens.params[0]
+            message = f"""{tokens.params[2]}"""
+            data = f"{source} {user}: {message}\n"
 
-        self.add_server_message(data)
+            self.add_server_message(data)
+        except Exception as e:
+            logging.error(f"Error in command_432: {e}")
 
     def command_487(self, tokens):
-        source = tokens.source
-        user = tokens.params[0]
-        message = f"""{tokens.params[1]}"""
-        data = f"{source} {user}: {message}\n"
+        try:
+            source = tokens.source
+            user = tokens.params[0]
+            message = f"""{tokens.params[1]}"""
+            data = f"{source} {user}: {message}\n"
 
-        self.add_server_message(data)
+            self.add_server_message(data)
+        except Exception as e:
+            logging.error(f"Exception in command_487: {e}")
 
     async def command_433(self, tokens): #Nickname Alrady In Use
-        source = tokens.source
-        current_nick = tokens.params[0]
-        user = tokens.params[1]
-        message = f"""{tokens.params[2]}"""
-        data = f"{source} {user}: {message}\n"
+        try:
+            source = tokens.source
+            current_nick = tokens.params[0]
+            user = tokens.params[1]
+            message = f"""{tokens.params[2]}"""
+            data = f"{source} {user}: {message}\n"
 
-        self.add_server_message(data)
-        await self.change_nickname(current_nick, is_from_token=True)
+            self.add_server_message(data)
+            await self.change_nickname(current_nick, is_from_token=True)
+        except Exception as e:
+            logging.error(f"Error in command_433: {e}")
 
     def handle_already_on_channel(self, tokens):
-        channel = tokens.params[2]
-        message = tokens.params[3]
-        data = f"{channel}: {message}\n"
+        try:
+            channel = tokens.params[2]
+            message = tokens.params[3]
+            data = f"{channel}: {message}\n"
 
-        self.add_server_message(data)
+            self.add_server_message(data)
+        except Exception as e:
+            logging.error(f"Error in handle_already_on_channel: {e}")
 
     def handle_not_on_channel(self, tokens):
-        channel = tokens.params[1]
-        message = tokens.params[2]
-        data = f"{channel}: {message}\n"
+        try:
+            channel = tokens.params[1]
+            message = tokens.params[2]
+            data = f"{channel}: {message}\n"
 
-        self.add_server_message(data)
+            self.add_server_message(data)
+        except Exception as e:
+            logging.error(f"Error in handle_not_on_channel: {e}")
 
     def handle_unknown_mode(self, tokens):
-        channel = tokens.params[1]
-        message = tokens.params[2]
-        data = f"Unknown mode for {channel}: {message}\n"
+        try:
+            channel = tokens.params[1]
+            message = tokens.params[2]
+            data = f"Unknown mode for {channel}: {message}\n"
 
-        self.add_server_message(data)
+            self.add_server_message(data)
+        except Exception as e:
+            logging.error(f"Error in handle_unknown_mode: {e}")
 
     def handle_mode_info(self, tokens):
-        channel = tokens.params[1]
-        modes = tokens.params[2]
-        data = f"Modes for {channel}: {modes}\n"
+        try:
+            channel = tokens.params[1]
+            modes = tokens.params[2]
+            data = f"Modes for {channel}: {modes}\n"
 
-        self.add_server_message(data)
+            self.add_server_message(data)
+        except Exception as e:
+            logging.error(f"Error in handle_mode_info: {e}")
 
     def handle_creation_time(self, tokens):
-        channel = tokens.params[1]
-        timestamp = int(tokens.params[2])  # Convert timestamp to an integer if it's a string
-        creation_date = datetime.utcfromtimestamp(timestamp)
-        formatted_date = creation_date.strftime('%Y-%m-%d %H:%M:%S UTC')  # Format the date as desired
-        data = f"Creation time for {channel}: {formatted_date}\n"
+        try:
+            channel = tokens.params[1]
+            timestamp = int(tokens.params[2])  # Convert timestamp to an integer if it's a string
+            creation_date = datetime.utcfromtimestamp(timestamp)
+            formatted_date = creation_date.strftime('%Y-%m-%d %H:%M:%S UTC')  # Format the date as desired
+            data = f"Creation time for {channel}: {formatted_date}\n"
 
-        self.add_server_message(data)
+            self.add_server_message(data)
+        except Exception as e:
+            logging.error(f"Exception in handle_creation_time: {e}")
 
     def handle_not_channel_operator(self, tokens):
-        channel = tokens.params[1]
-        message = tokens.params[2]
-        data = f"{channel}: {message}\n"
+        try:
+            channel = tokens.params[1]
+            message = tokens.params[2]
+            data = f"{channel}: {message}\n"
 
-        self.add_server_message(data)
+            self.add_server_message(data)
+        except Exception as e:
+            logging.error(f"Error in handle_not_channel_operator: {e}")
 
     def handle_328(self, tokens):
-        channel = tokens.params[1]
-        url = tokens.params[2]
-        data = f"URL for {channel} {url}\n"
+        try:
+            channel = tokens.params[1]
+            url = tokens.params[2]
+            data = f"URL for {channel} {url}\n"
 
-        self.add_server_message(data)
+            self.add_server_message(data)
+        except Exception as e:
+            logging.error(f"Error in handle_328: {e}")
 
     def handle_cannot_join_channel(self, tokens):
-        channel_name = tokens.params[1]
-        error_message = tokens.params[2]
-        
-        error_text = f"Cannot join channel {channel_name}: {error_message}\n"
-        self.gui.insert_text_widget(error_text)
+        try:
+            channel_name = tokens.params[1]
+            error_message = tokens.params[2]
+            
+            error_text = f"Cannot join channel {channel_name}: {error_message}\n"
+            self.gui.insert_text_widget(error_text)
+        except Exception as e:
+            logging.error(f"Error in handle_cannot_join_channel: {e}")
 
     def sanitize_channel_name(self, channel):
         #gotta remove any characters that are not alphanumeric or allowed special characters
@@ -4504,26 +4620,32 @@ class RudeChatClient:
         """
         Handle the RPL_BANLIST reply, which provides info about each ban mask.
         """
-        channel = tokens.params[1]
-        banmask = tokens.params[2]
-        setter = tokens.params[3]
-        timestamp = tokens.params[4]
-        
-        # Construct the ban information message
-        ban_info = f"Channel: {channel}, Banmask: {banmask}, Set by: {setter}, Timestamp: {timestamp}\n"
-        
-        # Update the GUI's message text with this ban information
-        self.gui.insert_text_widget(ban_info)
+        try:
+            channel = tokens.params[1]
+            banmask = tokens.params[2]
+            setter = tokens.params[3]
+            timestamp = tokens.params[4]
+            
+            # Construct the ban information message
+            ban_info = f"Channel: {channel}, Banmask: {banmask}, Set by: {setter}, Timestamp: {timestamp}\n"
+            
+            # Update the GUI's message text with this ban information
+            self.gui.insert_text_widget(ban_info)
+        except Exception as e:
+            logging.error(f"Error in handle_banlist: {e}")
 
     def handle_endofbanlist(self, tokens):
         """
         Handle the RPL_ENDOFBANLIST reply, signaling the end of the ban list.
         """
-        channel = tokens.params[1]
-        
-        # Notify the user that the ban list has ended
-        end_message = f"End of ban list for channel: {channel}\n"
-        self.gui.insert_text_widget(end_message) 
+        try:
+            channel = tokens.params[1]
+            
+            # Notify the user that the ban list has ended
+            end_message = f"End of ban list for channel: {channel}\n"
+            self.gui.insert_text_widget(end_message)
+        except Exception as e:
+            logging.error(f"Error in handle_endofbanlist: {e}") 
 
     async def append_to_channel_history(self, channel, message, mode_symbol, is_action=False):
         timestamp = datetime.now().strftime('[%H:%M:%S] ')
