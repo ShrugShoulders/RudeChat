@@ -3105,7 +3105,7 @@ class RudeChatClient:
             logging.error(f"Error in parse_prefix: {e}")
 
     def handle_WALLOPS(self, tokens):
-        msg = f'{tokens.source}: {token.params[0]}'
+        msg = f'{tokens.source}: {token.params[0]}\n'
         self.add_server_message(msg)
 
     async def handle_incoming_message(self, config_file):
