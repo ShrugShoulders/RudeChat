@@ -517,6 +517,8 @@ class RudeChatClient:
                         return
 
                 match tokens.command:
+                    case "WALLOPS":
+                        self.handle_WALLOPS(tokens)
                     case "ACCOUNT":
                         self.handle_account_message(tokens)
                     case "AWAY":
@@ -726,7 +728,7 @@ class RudeChatClient:
 
                     case _:
                         if self.log_on:
-                            logging.info(f"Unhandled Token command in _await_welcome_message: {tokens.command}. Token: {tokens}")
+                            logging.error(f"Unhandled Token command in _await_welcome_message: {tokens.command}. Token: {tokens}")
                         self.gui.insert_and_scroll()
 
                 if check_timeout():
@@ -892,33 +894,21 @@ class RudeChatClient:
             
             if self.log_on:
                 logging.info(f"Message sent successfully: {message}")
-            
+        
+        except (ssl.SSLError, ConnectionResetError, ConnectionRefusedError, 
+                BrokenPipeError, TimeoutError, OSError) as e:
+            logging.error(f"{type(e).__name__} in send_message: {e}")
+            self.gui.insert_text_widget(f"Connection Error: {e}: Cannot send message.\n")
+            await self.reconnect(self.config)
+
         except AttributeError as e:
             logging.error(f"AttributeError in send_message: {e}")
-            
-        except BrokenPipeError as e:
-            logging.error(f"BrokenPipeError in send_message: {e}. The connection might have been lost.")
-            self.gui.insert_text_widget(f"Connection Error: {e}: Cannot send message.\n")
+            # Optional: Reconnect on writer being None
             await self.reconnect(self.config)
-            
-        except TimeoutError as e:
-            logging.error(f"TimeoutError in send_message: {e}. The operation took too long.")
-            self.gui.insert_text_widget(f"Connection Error: {e}: Cannot send message.\n")
-            await self.reconnect(self.config)
-            
-        except ConnectionResetError as e:
-            logging.error(f"ConnectionResetError in send_message: {e}. The connection was reset by the peer.")
-            self.gui.insert_text_widget(f"Connection Error: {e}: Cannot send message.\n")
-            await self.reconnect(self.config)
-            
-        except ConnectionRefusedError as e:
-            logging.error(f"ConnectionRefusedError in send_message: {e}. The connection attempt was refused.")
-            self.gui.insert_text_widget(f"Connection Error: {e}: Cannot send message.\n")
-            await self.reconnect(self.config)
-            
-        except OSError as e:
-            logging.error(f"OSError in send_message: {e}. A general OS-related error occurred.")
-            self.gui.insert_text_widget(f"Connection Error: {e}: Cannot send message.\n")
+
+        except Exception as e:
+            logging.error(f"Unexpected exception in send_message: {e}")
+            self.gui.insert_text_widget(f"Unexpected Error: {e}: Cannot send message.\n")
             await self.reconnect(self.config)
 
     def is_valid_channel(self, channel):
@@ -1210,6 +1200,7 @@ class RudeChatClient:
             try:
                 await asyncio.sleep(125)
                 self.trim_messages()
+                self.gui.trim_text_widget()
                 if not self.loop_running:
                     break
 
@@ -3113,6 +3104,10 @@ class RudeChatClient:
         except Exception as e:
             logging.error(f"Error in parse_prefix: {e}")
 
+    def handle_WALLOPS(self, tokens):
+        msg = f'{tokens.source}: {token.params[0]}'
+        self.add_server_message(msg)
+
     async def handle_incoming_message(self, config_file):
         buffer = ""
         current_users_list = []
@@ -3156,18 +3151,17 @@ class RudeChatClient:
                 decoded_data = data.decode('UTF-8', errors='ignore')
                 if self.log_on:
                     logging.debug(f"Decoded data: {decoded_data}...")
-                cleaned_data = decoded_data.replace("\x06", "")  # Remove the character with ASCII value 6
-                cleaned_data = self.flag_pattern.sub('', decoded_data)
+                cleaned_data = decoded_data.replace("\x06", "")  # Remove ASCII 6
+                cleaned_data = self.flag_pattern.sub('', cleaned_data)
                 if self.log_on:
                     logging.debug(f"Cleaned data (post ASCII-6 removal): {cleaned_data}...")
 
                 if not self.use_colors:
-                    # Remove IRC colors and formatting using regular expressions
                     cleaned_data = re.sub(r'\x03(?:\d{1,2}(?:,\d{1,2})?)?', '', cleaned_data)
                     if self.log_on:
                         logging.debug(f"Cleaned data (post color removal): {cleaned_data}...")
 
-                buffer += cleaned_data
+                buffer += cleaned_data  # Append new data to the buffer
                 if self.log_on:
                     logging.debug(f"Buffer updated: {buffer}...")
 
@@ -3175,22 +3169,21 @@ class RudeChatClient:
                 logging.exception(f"Exception occurred during data processing: {e}")
                 continue
 
-            while '\n' in buffer:
-                line, buffer = buffer.split('\n', 1)
+            lines = buffer.splitlines(keepends=True)
+            buffer = ""  
+            for line in lines:
+                if not line.endswith("\r\n"):
+                    buffer = line
+                    break
+
+                line = line.strip("\r\n")
+
                 try:
-                    # Check for an empty line or line with only whitespace before attempting to tokenize
                     if len(line.strip()) == 0:
                         if self.log_on:
                             logging.info(f"Debug: Received an empty or whitespace-only line: '{line}'\n")
                         continue
 
-                    # Additional check: Ensure that the line has at least one character
-                    if len(line) < 1:
-                        if self.log_on:
-                            logging.info(f"Debug: Received a too-short line: '{line}'\n")
-                        continue
-
-                    # Debug statement before tokenizing line
                     if self.log_on:
                         logging.info(f"Debug: About to tokenize the line - '{line}'")
 
@@ -3203,142 +3196,146 @@ class RudeChatClient:
                     self.gui.insert_text_widget(f"IndexError in handle_incoming_message: {ie}. Line: '{line}'\n")
                     logging.error(f"IndexError in handle_incoming_message: {ie}. Line: '{line}'")
                     continue
-
-                match tokens.command:
-                    case "PRIVMSG":
-                        await self.handle_privmsg(tokens)
-                    case "AWAY":
-                        self.handle_away(tokens)
-                    case "CAP":
-                       await self.handle_cap(tokens)
-                    case "ERROR":
-                        self.handle_error(tokens)
-                    case "001":
-                        pass
-                    case "002" | "003" | "004":
-                        self.server_message_handler(tokens)
-                    case "005":
-                        pass
-                    case "250":
-                        self.handle_connection_info(tokens)
-                    case "251" | "252" | "253" | "254" | "255" | "265":
-                        self.server_message_handler(tokens)
-                    case "266":
-                        self.handle_global_users_info(tokens)
-                    case "263":
-                        self.handle_263(tokens)
-                    case "412":
-                        pass
-                    case "353" | "366":  # NAMES list
-                        self.handle_names_list(tokens)
-                    case "372":
-                        self.handle_motd_line(tokens)
-                    case "375":
-                        self.handle_motd_start(tokens)
-                    case "376":
-                        self.handle_motd_end(tokens)
-                    case "305":
-                        message = f"{self.server_name}: You are no longer marked as being away"
-                        self.gui.insert_text_widget(f"{message}\n")
-                    case "306":
-                        message = f"{self.server_name}: You have been marked as being away"
-                        self.gui.insert_text_widget(f"{message}\n")
-                    case "307":
-                        self.command_307(tokens)
-                    case "391":
-                        self.handle_time_request(tokens)
-                    case "352" | "315" | "354":
-                        await self.handle_who_reply(tokens)
-                    case "311" | "312" | "313" | "317" | "319" | "301" | "671" | "338" | "318" | "330":
-                        await self.handle_whois_replies(tokens.command, tokens)
-                    case "332" | "333" | "TOPIC":
-                        self.handle_topic(tokens)
-                    case "321":
-                        pass
-                    case "324":
-                        self.handle_mode_info(tokens)
-                    case "329":
-                        self.handle_creation_time(tokens)
-                    case "328":
-                        self.handle_328(tokens)
-                    case "367":  
-                        self.handle_banlist(tokens)     
-                    case "368":  
-                        self.handle_endofbanlist(tokens)
-                    case "378":
-                        self.command_378(tokens)
-                    case "379":
-                        self.command_379(tokens)
-                    case "401":
-                        self.handle_nickname_doesnt_exist(tokens)
-                    case "396":
-                        self.command_396(tokens)
-                    case "900":
-                        self.command_900(tokens)
-                    case "403":
-                        self.command_403(tokens)
-                    case "404":
-                        self.command_404(tokens)
-                    case "442":
-                        self.handle_not_on_channel(tokens)
-                    case "443":
-                        self.handle_already_on_channel(tokens)
-                    case "472":
-                        self.handle_unknown_mode(tokens)
-                    case "473" | "475" | "474" | "471":
-                        self.unable_to_join_channel(tokens)
-                    case "477":
-                        self.handle_cannot_join_channel(tokens)
-                    case "482":
-                        self.handle_not_channel_operator(tokens)
-                    case "487":
-                        self.command_487(tokens)
-                    case "433":
-                        await self.command_433(tokens)
-                    case "432":
-                        self.command_432(tokens)
-                    case "322":  # Channel list
-                        await self.handle_list_response(tokens)
-                        try:
-                            await self.gui.channel_window.update_channel_info(tokens.params[1], tokens.params[2], tokens.params[3])
-                        except Exception as e:
-                            logging.error(f"Error updating channel_window.update_channel_info: {e}")
-                    case "323":  # End of channel list
-                        await self.save_channel_list_to_file()
-                    case "476" | "479":
-                        await self.handle_bad_channel_name(tokens)
-                    case "KICK":
-                        await self.handle_kick_event(tokens)
-                    case "NOTICE":
-                        self.handle_notice_message(tokens)
-                    case "JOIN":
-                        self.handle_join(tokens)
-                    case "PART":
-                        self.handle_part(tokens)
-                    case "QUIT":
-                        self.handle_quit(tokens)
-                    case "NICK":
-                        await self.handle_nick(tokens)
-                    case "MODE":
-                        self.handle_mode(tokens)
-                    case "PING":
-                        ping_param = tokens.params[0]
-                        await self.send_message(f'PONG {ping_param}')
-                    case "KILL":
-                        self.handle_kill_command(tokens)
-                    case "PONG":
-                        self.handle_pong(tokens)
-                    case "INVITE":
-                        await self.handle_invite(tokens)
-                    case "ACCOUNT":
-                        self.handle_account_message(tokens)
-                    case _:
-                        if self.log_on:
-                            logging.info(f"Unhandled Token command in handle_incoming_message: {tokens.command}.")
-                            logging.info(f"Unhandled Token in handle_incoming_message: {tokens}")
-                            logging.info(f"Unhandled Line in handle_incoming_message: {line}")
-                        if line.startswith(f":{self.server}"):
-                            self.handle_server_message(line)
+                try:
+                    match tokens.command:
+                        case "WALLOPS":
+                            self.handle_WALLOPS(tokens)
+                        case "PRIVMSG":
+                            await self.handle_privmsg(tokens)
+                        case "AWAY":
+                            self.handle_away(tokens)
+                        case "CAP":
+                           await self.handle_cap(tokens)
+                        case "ERROR":
+                            self.handle_error(tokens)
+                        case "001":
+                            pass
+                        case "002" | "003" | "004":
+                            self.server_message_handler(tokens)
+                        case "005":
+                            pass
+                        case "250":
+                            self.handle_connection_info(tokens)
+                        case "251" | "252" | "253" | "254" | "255" | "265":
+                            self.server_message_handler(tokens)
+                        case "266":
+                            self.handle_global_users_info(tokens)
+                        case "263":
+                            self.handle_263(tokens)
+                        case "412":
+                            pass
+                        case "353" | "366":  # NAMES list
+                            self.handle_names_list(tokens)
+                        case "372":
+                            self.handle_motd_line(tokens)
+                        case "375":
+                            self.handle_motd_start(tokens)
+                        case "376":
+                            self.handle_motd_end(tokens)
+                        case "305":
+                            message = f"{self.server_name}: You are no longer marked as being away"
+                            self.gui.insert_text_widget(f"{message}\n")
+                        case "306":
+                            message = f"{self.server_name}: You have been marked as being away"
+                            self.gui.insert_text_widget(f"{message}\n")
+                        case "307":
+                            self.command_307(tokens)
+                        case "391":
+                            self.handle_time_request(tokens)
+                        case "352" | "315" | "354":
+                            await self.handle_who_reply(tokens)
+                        case "311" | "312" | "313" | "317" | "319" | "301" | "671" | "338" | "318" | "330":
+                            await self.handle_whois_replies(tokens.command, tokens)
+                        case "332" | "333" | "TOPIC":
+                            self.handle_topic(tokens)
+                        case "321":
+                            pass
+                        case "324":
+                            self.handle_mode_info(tokens)
+                        case "329":
+                            self.handle_creation_time(tokens)
+                        case "328":
+                            self.handle_328(tokens)
+                        case "367":  
+                            self.handle_banlist(tokens)     
+                        case "368":  
+                            self.handle_endofbanlist(tokens)
+                        case "378":
+                            self.command_378(tokens)
+                        case "379":
+                            self.command_379(tokens)
+                        case "401":
+                            self.handle_nickname_doesnt_exist(tokens)
+                        case "396":
+                            self.command_396(tokens)
+                        case "900":
+                            self.command_900(tokens)
+                        case "403":
+                            self.command_403(tokens)
+                        case "404":
+                            self.command_404(tokens)
+                        case "442":
+                            self.handle_not_on_channel(tokens)
+                        case "443":
+                            self.handle_already_on_channel(tokens)
+                        case "472":
+                            self.handle_unknown_mode(tokens)
+                        case "473" | "475" | "474" | "471":
+                            self.unable_to_join_channel(tokens)
+                        case "477":
+                            self.handle_cannot_join_channel(tokens)
+                        case "482":
+                            self.handle_not_channel_operator(tokens)
+                        case "487":
+                            self.command_487(tokens)
+                        case "433":
+                            await self.command_433(tokens)
+                        case "432":
+                            self.command_432(tokens)
+                        case "322":  # Channel list
+                            await self.handle_list_response(tokens)
+                            try:
+                                await self.gui.channel_window.update_channel_info(tokens.params[1], tokens.params[2], tokens.params[3])
+                            except Exception as e:
+                                logging.error(f"Error updating channel_window.update_channel_info: {e}")
+                        case "323":  # End of channel list
+                            await self.save_channel_list_to_file()
+                        case "476" | "479":
+                            await self.handle_bad_channel_name(tokens)
+                        case "KICK":
+                            await self.handle_kick_event(tokens)
+                        case "NOTICE":
+                            self.handle_notice_message(tokens)
+                        case "JOIN":
+                            self.handle_join(tokens)
+                        case "PART":
+                            self.handle_part(tokens)
+                        case "QUIT":
+                            self.handle_quit(tokens)
+                        case "NICK":
+                            await self.handle_nick(tokens)
+                        case "MODE":
+                            self.handle_mode(tokens)
+                        case "PING":
+                            ping_param = tokens.params[0]
+                            await self.send_message(f'PONG {ping_param}')
+                        case "KILL":
+                            self.handle_kill_command(tokens)
+                        case "PONG":
+                            self.handle_pong(tokens)
+                        case "INVITE":
+                            await self.handle_invite(tokens)
+                        case "ACCOUNT":
+                            self.handle_account_message(tokens)
+                        case _:
+                            if self.log_on:
+                                logging.error(f"Unhandled Token command in handle_incoming_message: {tokens.command}.")
+                                logging.error(f"Unhandled Token in handle_incoming_message: {tokens}")
+                                logging.error(f"Unhandled Line in handle_incoming_message: {line}")
+                            if line.startswith(f":{self.server}"):
+                                self.handle_server_message(line)
+                except Exception as e:
+                    logging.error(f"Unhandled General Error in message handling: {e}")
 
     def unable_to_join_channel(self, tokens):
         try:

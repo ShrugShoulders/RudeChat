@@ -322,6 +322,7 @@ class RudeGui(QWidget):
             "✅": 0,
             "😈": 1,
             "❤️": 0,
+            "🎶": 1,
         }
 
         # Initialise layout
@@ -1337,7 +1338,6 @@ class RudeGui(QWidget):
     # Text & Formatting
     def insert_text_widget(self, message):
         self.chat_box.reset_cursor_position()
-        #self.trim_text_widget()
         urls = self.find_urls(message)
         formatted_text = decoder(message)
 
