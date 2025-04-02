@@ -1516,11 +1516,11 @@ class RudeChatClient:
 
                 if server_activity:
                     self.gui.server_selector_list.item(idx).setBackground(QColor(self.activity_note_color))
-                    self.gui.server_colors[idx] = {'fg': self.gui.list_bg, 'bg': self.activity_note_color}
+                    self.gui.server_colors[idx] = {'fg': self.gui.list_server_fg, 'bg': self.activity_note_color}
 
                 if is_mention and self.gui.irc_client != self and idx != self.gui.server_selector_list.currentRow():
                     self.gui.server_selector_list.item(idx).setBackground(QColor(self.mention_note_color))
-                    self.gui.server_colors[idx] = {'fg': self.gui.list_fg, 'bg': self.mention_note_color}
+                    self.gui.server_colors[idx] = {'fg': self.gui.list_server_fg, 'bg': self.mention_note_color}
                 break
 
     async def trigger_beep_notification(self, channel_name=None, message_content=None):
