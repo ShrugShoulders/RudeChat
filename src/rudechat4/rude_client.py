@@ -503,8 +503,13 @@ class RudeChatClient:
 
             decoded_data = data.decode('UTF-8', errors='ignore')
             buffer += decoded_data
-            while '\r\n' in buffer:
-                line, buffer = buffer.split('\r\n', 1)
+            lines = buffer.splitlines(keepends=True)
+            buffer = ""
+            for line in lines:
+                if not line.endswith("\r\n"):
+                    buffer = line
+                    break
+                line = line.strip("\r\n")
                 tokens = irctokens.tokenise(line)
                 if check_timeout():
                     # Timeout occurred
