@@ -399,16 +399,6 @@ class RudeChatClient:
                 await self.join_channel(channel)
                 await asyncio.sleep(0.1)
 
-    async def auto_topic_nicklist(self):
-        for channel in self.auto_join_channels:
-            if channel in self.joined_channels:
-                # Check if topic is empty
-                if len(self.gui.channel_topics.get(self.server, {}).get(channel, [])) < 10:
-                    await self.send_message(f"TOPIC {channel}")
-                # Check if names list is empty
-                if len(self.channel_users.get(channel, [])) < 10:
-                    await self.send_message(f"NAMES {channel}")
-
     def server_message_handler(self, tokens):
         try:
             if len(tokens.params) > 3:
@@ -2464,9 +2454,6 @@ class RudeChatClient:
             params = tokens.params[:-1]  # Exclude the trailing "are supported by this server" message
             isupport_message = " ".join(params)
 
-            data = f"ISUPPORT: {isupport_message}\n"
-            self.add_server_message(data)
-
             # Parse ISUPPORT parameters
             for param in params:
                 if param.startswith("PREFIX="):
@@ -4134,13 +4121,6 @@ class RudeChatClient:
                 else:
                     self.gui.insert_text_widget("You're either not connected to a ZNC or haven't provided a channel.")
 
-            case "sync":
-                if self.znc_connection:
-                    self.gui.insert_text_widget(f"Syncing Nicks & Channel Topics...")
-                    await self.auto_topic_nicklist()
-                else:
-                    self.gui.insert_text_widget("You're Not Using A ZNC")
-
             case "watch":
                 self.watch_list(args)
 
@@ -5020,7 +5000,6 @@ class RudeChatClient:
                 "_________",
             ],
             "ZNC Commands": [
-                "/sync - Syncs your nickname list and channel topics.",
                 "/detach - Detaches you from the given channel Example: /detach #channel",
                 "_________",
             ],
