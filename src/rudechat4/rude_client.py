@@ -503,13 +503,8 @@ class RudeChatClient:
 
             decoded_data = data.decode('UTF-8', errors='ignore')
             buffer += decoded_data
-            lines = buffer.splitlines(keepends=True)
-            buffer = ""
-            for line in lines:
-                if not line.endswith("\r\n"):
-                    buffer = line
-                    break
-                line = line.strip("\r\n")
+            while "\r\n" in buffer:
+                line, buffer = buffer.split("\r\n", 1)
                 tokens = irctokens.tokenise(line)
                 if check_timeout():
                     # Timeout occurred
@@ -3110,7 +3105,11 @@ class RudeChatClient:
             logging.error(f"Error in parse_prefix: {e}")
 
     def handle_WALLOPS(self, tokens):
-        msg = f'{tokens.source}: {token.params[0]}\n'
+        msg = f"{tokens.source}: {token.params[0]}\n"
+        self.add_server_message(msg)
+
+    def handle_716(tokens):
+        msg = f"{tokens.source}: {tokens.params[1]} {tokens.params[2]}\n"
         self.add_server_message(msg)
 
     async def handle_incoming_message(self, config_file):
@@ -3174,14 +3173,8 @@ class RudeChatClient:
                 logging.exception(f"Exception occurred during data processing: {e}")
                 continue
 
-            lines = buffer.splitlines(keepends=True)
-            buffer = ""  
-            for line in lines:
-                if not line.endswith("\r\n"):
-                    buffer = line
-                    break
-
-                line = line.strip("\r\n")
+            while "\r\n" in buffer:
+                line, buffer = buffer.split("\r\n", 1)
 
                 try:
                     if len(line.strip()) == 0:
@@ -3307,6 +3300,8 @@ class RudeChatClient:
                             await self.save_channel_list_to_file()
                         case "476" | "479":
                             await self.handle_bad_channel_name(tokens)
+                        case "716":
+                            self.handle_716(tokens)
                         case "KICK":
                             await self.handle_kick_event(tokens)
                         case "NOTICE":
