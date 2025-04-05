@@ -38,7 +38,7 @@
 			- [ ] Design user data display
 			- [ ] Implement display logic.
 		- [ ] `rude_colours`
-			- [ ] Design nickname color edit window
+			- [x] Design nickname color edit window
 			- [ ] Implement logic
 		- [x] `server_config_window`
 			- [ ] `channel_expand`
