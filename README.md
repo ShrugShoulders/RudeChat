@@ -31,7 +31,7 @@
 		- [ ] `rude_dragndrop`
 			- [ ] `Set Up logic for GUI`
 		- [ ] `rude_popout`
-			- [ ] Design pop out window
+			- [s] Design pop out window
 			- [ ] Implement logic for display
 			- [ ] Implement commands
 		- [ ] `user_data_display`
