@@ -799,27 +799,20 @@ class RudeChatClient:
                 rejected_capabilities = tokens.params[2].split()
 
                 if "away-notify" in rejected_capabilities:
-                    data = f"{self.server_name}: Server denied away-notify capability.\n"
                     self.gui.insert_text_widget(f"\n{self.server_name}: Server denied away-notify capability.\n")
-                    self.add_server_message(data)
                     self.away_notify = False
 
                 if "account-notify" in rejected_capabilities:
-                    data = f"{self.server_name}: Server denied account-notify capability.\n"
                     self.gui.insert_text_widget(f"\n{self.server_name}: Server denied account-notify capability.\n")
-                    self.add_server_message(data)
                     self.account_notify = False
 
                 if "extended-join" in rejected_capabilities:
-                    data = f"{self.server_name}: Server denied extended-join capability.\n"
                     self.gui.insert_text_widget(f"\n{self.server_name}: Server denied extended-join capability.\n")
-                    self.add_server_message(data)
                     self.extended_join = False
 
                 if "sasl" in rejected_capabilities:
-                    data = f"{self.server_name}: Server denied SASL capability.\n"
                     self.gui.insert_text_widget(f"\n{self.server_name}: Server denied SASL capability.\n")
-                    self.add_server_message(data)
+                    self.sasl_enabled = False
 
                 if not self.sasl_enabled:
                     await self.send_message("CAP END")
@@ -1052,8 +1045,15 @@ class RudeChatClient:
             return server[1]
 
     def replace_dms_in_gui(self):
-        replaced_dms = self.dm_list + self.joined_channels
-        self.joined_channels = replaced_dms
+        listed_channels = self.gui.get_channel_selector_items()
+        print(listed_channels)
+        replaced_dms = []
+        for dm in self.dm_list:
+            if dm not in listed_channels:
+                replaced_dms.append(dm)
+
+        new_entries = replaced_dms + self.joined_channels
+        self.joined_channels = new_entries
         self.gui.channel_lists[self.server] = self.joined_channels
         self.update_gui_channel_list()
 

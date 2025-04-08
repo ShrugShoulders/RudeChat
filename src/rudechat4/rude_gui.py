@@ -5,7 +5,7 @@ from rudechat4.server_config_window import ServerConfigWindow
 from rudechat4.gui_config_window import GuiConfigWindow
 from rudechat4.list_window import ChannelListWindow
 from rudechat4.nick_cleaner import clean_nicknames
-from rudechat4.format_decoder import decoder
+#from rudechat4.format_decoder import decoder
 from rudechat4.rude_logger import configure_logging
 
 class RudeTextEdit(QTextEdit):
@@ -703,6 +703,9 @@ class RudeGui(QWidget):
         loop = asyncio.get_event_loop()
         self.text_field.returnPressed.connect(lambda: loop.create_task(self.on_enter_key(), name="on_enter_key"))
 
+    def get_channel_selector_items(self) -> list[str]:
+        return [self.channel_selector_list.item(i).text() for i in range(self.channel_selector_list.count())]
+
     def show_previous_entry(self):
         if self.history_index > 0:
             self.history_index -= 1
@@ -1339,7 +1342,7 @@ class RudeGui(QWidget):
     def insert_text_widget(self, message):
         self.chat_box.reset_cursor_position()
         urls = self.find_urls(message)
-        formatted_text = decoder(message)
+        formatted_text = self.decoder(message)
 
         # Then apply other formatting
         self.tag_text(formatted_text)
@@ -1364,45 +1367,125 @@ class RudeGui(QWidget):
         # Use the precompiled regex pattern to find URLs
         return self.url_pattern.findall(text)
 
+    def decoder(self, input_text: str) -> List[Tuple[str, QTextCharFormat]]:
+        output = []
+        text_buffer = []
+
+        # Mutable state
+        current_attr = {
+            "bold": False,
+            "italic": False,
+            "underline": False,
+            "strikethrough": False,
+            "inverse": False,
+            "colour": 0,
+            "background": 1
+        }
+
+        def flush():
+            if text_buffer:
+                try:
+                    fmt = self.configure_tag_based_on_attributes(current_attr)
+                    output.append(("".join(text_buffer), fmt))
+                except Exception as e:
+                    logging.error(f"Error creating format during flush: {e}")
+                text_buffer.clear()
+
+        c_index = 0
+        while c_index < len(input_text):
+            c = input_text[c_index]
+            match c:
+                case '\x02':  # Bold
+                    flush()
+                    current_attr["bold"] = not current_attr["bold"]
+                case '\x1D':  # Italic
+                    flush()
+                    current_attr["italic"] = not current_attr["italic"]
+                case '\x1F':  # Underline
+                    flush()
+                    current_attr["underline"] = not current_attr["underline"]
+                case '\x1E':  # Strikethrough
+                    flush()
+                    current_attr["strikethrough"] = not current_attr["strikethrough"]
+                case '\x16':  # Inverse
+                    flush()
+                    fg, bg = current_attr["colour"], current_attr["background"]
+                    current_attr["colour"], current_attr["background"] = bg, fg
+                case '\x03':  # Color code
+                    flush()
+                    current_attr = {
+                        "bold": False,
+                        "italic": False,
+                        "underline": False,
+                        "strikethrough": False,
+                        "inverse": False,
+                        "colour": 0,
+                        "background": 1
+                    }
+                    color_match = re.match(r'\x03(\d{1,2})(?:,(\d{1,2}))?', input_text[c_index:])
+                    if color_match:
+                        fg = int(color_match.group(1))
+                        bg = int(color_match.group(2)) if color_match.group(2) else 1
+                        current_attr["colour"] = fg
+                        current_attr["background"] = bg
+                        c_index += color_match.end() - 1
+                case '\x0F':  # Reset
+                    flush()
+                    current_attr = {
+                        "bold": False,
+                        "italic": False,
+                        "underline": False,
+                        "strikethrough": False,
+                        "inverse": False,
+                        "colour": 0,
+                        "background": 1
+                    }
+                case _:
+                    text_buffer.append(c)
+
+            c_index += 1
+
+        flush()
+        return output
+
     def tag_text(self, formatted_text):
         cursor = self.chat_box.textCursor()
-        for text, attributes in formatted_text:
-            # Create a tag name based on the attributes
-            tag_name = "_".join(str(attr) for attr in attributes)
-
-            char_format = self.configure_tag_based_on_attributes(attributes)
-
-            # Insert the formatted text with the current tag
+        for text, char_format in formatted_text:
             try:
                 cursor.insertText(text, char_format)
             except Exception as e:
                 logging.error(f"Error in tag_text: {e}")
 
-    def configure_tag_based_on_attributes(self, attributes):
+    def configure_tag_based_on_attributes(self, attr: dict) -> QTextCharFormat:
         try:
-            # This method configures tag based on attributes efficiently
-            tag_config = QTextCharFormat()
-            tag_config.setFontFamily(self.chat_font_family)
-            tag_config.setFontPointSize(int(self.chat_font_size))
-            if any(attr.bold for attr in attributes):
-                tag_config.setFontWeight(2)
-            if any(attr.italic for attr in attributes):
-                tag_config.setFontItalic(True)
-            if any(attr.underline for attr in attributes):
-                tag_config.setFontUnderline(True)
-            if any(attr.strikethrough for attr in attributes):
-                tag_config.setFontStrikeOut(True)
-            if attributes and attributes[0].colour != 0:
-                irc_color_code = f"{attributes[0].colour:02d}"
+            fmt = QTextCharFormat()
+            fmt.setFontFamily(self.chat_font_family)
+            fmt.setFontPointSize(int(self.chat_font_size))
+            
+            if attr["bold"]:
+                fmt.setFontWeight(2)
+            if attr["italic"]:
+                fmt.setFontItalic(True)
+            if attr["underline"]:
+                fmt.setFontUnderline(True)
+            if attr["strikethrough"]:
+                fmt.setFontStrikeOut(True)
+            
+            if attr["colour"] != 0:
+                irc_color_code = f"{attr['colour']:02d}"
                 hex_color = self.irc_colors.get(irc_color_code, 'white')
-                tag_config.setForeground(QColor(hex_color))
-            if attributes and attributes[0].background != 1:
-                irc_background_code = f"{attributes[0].background:02d}"
+                fmt.setForeground(QColor(hex_color))
+            
+            if attr["background"] != 1:
+                irc_background_code = f"{attr['background']:02d}"
                 hex_background = self.irc_colors.get(irc_background_code, 'black')
-                tag_config.setBackground(QColor(hex_background))
-            return tag_config
+                fmt.setBackground(QColor(hex_background))
+            
+            return fmt
+
         except Exception as e:
             logging.error(f"Error in configure_tag_based_on_attributes: {e}")
+            return QTextCharFormat()
 
     def tag_urls(self, urls, index=0):
         if index < len(urls):
