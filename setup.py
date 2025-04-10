@@ -8,7 +8,7 @@ if platform.system() == "Darwin":
     DATA_FILES = []
     OPTIONS = {
         'iconfile': 'src/rudechat4/rude.icns', 
-        'excludes': ['rubicon'],
+        'excludes': ['rubicon', 'setuptools'],
         'plist': {
             'CFBundleName': 'RudeChat',
             'CFBundleDisplayName': 'RudeChat',

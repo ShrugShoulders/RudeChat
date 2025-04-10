@@ -2,7 +2,7 @@
 - [x] Complete / Has base function
 - [ ] Needs to be done / all child goals need to be completed
 
-**Tasks Complete: (33/46 - 71.71%)**
+**Tasks Complete: (37/46 - 80.43%)**
 - [ ] Convert to Qt
 	- [x] `__main__`
 	- [ ] `rude_gui`
@@ -11,7 +11,7 @@
 				- [x] Clear Chat
 				- [x] Reset Macros
 			- [x] Color
-				- [ ] Color selector
+				- [x] Color selector
 				- [x] Save Colors
 				- [x] Reset Colors
 			- [x] Config
@@ -31,17 +31,17 @@
 		- [ ] `rude_dragndrop`
 			- [ ] `Set Up logic for GUI`
 		- [ ] `rude_popout`
-			- [s] Design pop out window
+			- [x] Design pop out window
 			- [ ] Implement logic for display
 			- [ ] Implement commands
 		- [ ] `user_data_display`
 			- [x] Design user data display
 			- [ ] Implement display logic.
-		- [ ] `rude_colours`
+		- [x] `rude_colours`
 			- [x] Design nickname color edit window
-			- [ ] Implement logic
+			- [x] Implement logic
 		- [x] `server_config_window`
-			- [ ] `channel_expand`
+			- [x] `channel_expand`
 	- [x] `rude_client`
 		- [x] Fix listboxes
 	- [x] `gui_config_window`

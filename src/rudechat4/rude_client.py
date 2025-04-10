@@ -561,6 +561,7 @@ class RudeChatClient:
                         received_001 = True
                         self.gui.insert_and_scroll()
                         self.gui.master.chat_upload_file_action.setEnabled(True)
+                        self.gui.text_field.setPlaceholderText("Type here...")
                     case "002" | "003" | "004":
                         if self.znc_connection:
                             reset_timer("")
