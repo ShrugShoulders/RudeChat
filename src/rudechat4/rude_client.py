@@ -2440,10 +2440,11 @@ class RudeChatClient:
         
         if self.server_name in self.gui.popped_out_channels and channel in self.gui.popped_out_channels[self.server_name]:
             try:
-                pass
-                #window = self.gui.pop_out_windows[channel]
-                #window.update_gui_user_list(channel)
-                #window.update_users_label()
+                window_list = self.gui.pop_out_windows.get(channel)
+                window = window_list[1] if window_list else None
+                window.update_gui_user_list(channel)
+                window.update_users_label()
+
             except Exception as e:
                 logging.error(f"Error2 Updating Popped Out User List Box or Label: {e}")
 
@@ -4282,8 +4283,10 @@ class RudeChatClient:
         if userchan.startswith(tuple(self.chantypes)):
             return
         if self.server_name in self.gui.popped_out_channels and userchan in self.gui.popped_out_channels[self.server_name]:
-            window = self.gui.pop_out_windows.get(userchan)
-            if userchan in self.away_users_dict:
+            window_list = self.gui.pop_out_windows.get(userchan)
+            window = window_list[1] if window_list else None
+
+            if window and userchan in self.away_users_dict:
                 if self.away_users_dict.get(userchan) == "":
                     await self.get_away_user_whois(userchan)
                     await asyncio.sleep(0.3)

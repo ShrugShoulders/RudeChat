@@ -220,7 +220,7 @@ class RudePopout(QObject):
         self.display_text.append(f"{cleaned_message}")
         self.highlight_nicknames()
 
-    def load_channel_messages(self): #messages = self.channel_messages[server_name][channel]
+    def load_channel_messages(self):
         try:
             messages = self.parentGui.irc_client.channel_messages[self.parentGui.irc_client.server][self.channel]
             for message in messages:
@@ -268,11 +268,16 @@ class RudePopout(QObject):
             logging.error(f"Exception in insert_and_send_message: {e}")
 
     def load_user_list(self):
-        num_users = self.user_list.count()
-        self.user_label.setText(f"Users ({num_users})")
         for user in self.parentGui.irc_client.channel_users.get(self.channel, []):
             self.user_list.addItem(user)
+
+        num_users = self.user_list.count()
+        self.user_label.setText(f"Users ({num_users})")
         self.highlight_away_users()
+
+    def update_user_label(self):
+        num_users = self.user_list.count()
+        self.user_label.setText(f"Users ({num_users})")
 
     def update_gui_user_list(self, channel):
         self.user_list.clear()
