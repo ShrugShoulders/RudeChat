@@ -10,6 +10,8 @@ class NickEditor(QWidget):
         self.nick = nick
         self.color = color
 
+        self.setWindowTitle(f"Editing {self.nick}..." if self.nick != "" else "Adding new entry...")
+
         self.setFixedSize(336, 126)
         self.layout = QGridLayout(self)
 
@@ -19,6 +21,7 @@ class NickEditor(QWidget):
         self.nick_label = QLabel("Nickname")
         self.nick_input = QLineEdit()
         self.nick_input.setText(self.nick)
+        if (self.nick != ""): self.nick_input.setEnabled(False)
 
         self.layout.addWidget(self.nick_label, 0, 0)
         self.layout.addWidget(self.nick_input, 0, 1, 1, 2)
