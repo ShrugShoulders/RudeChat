@@ -485,6 +485,7 @@ class RudeGui(QWidget):
         self.text_field.installEventFilter(self.arrow_key_filter)
         self.tab_filter = TabEventFilter(self)
         self.text_field.installEventFilter(self.tab_filter)
+        self.text_field.setPlaceholderText("Connecting... please wait...")
         QTimer.singleShot(0, self.bind_return_key)
         self.message_bar.addWidget(self.text_field)
 

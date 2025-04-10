@@ -1,31 +1,59 @@
 from rudechat4.shared_imports import *
 
-class ChannelExp:
-    def __init__(self, parent, channels, entry_bg_color, entry_fg_color):
+class ChannelExp(QWidget):
+    def __init__(self, channels, set):
+        super().__init__()
         self.channels = channels
-        self.root = parent
-        self.window = tk.Toplevel(self.root)
-        self.window.configure(bg=entry_bg_color)
-        self.window.title("Channel Edit Example: #channel,#channel,#channel")
-        self.entry_bg_color = entry_bg_color
-        self.entry_fg_color = entry_fg_color
-        self.create_window()
+        self.set = set
 
-    def create_window(self):
-        # Long text entry field
-        channel_len = len(self.channels)
-        self.text_entry = tk.Entry(self.window, width=channel_len, bg=self.entry_bg_color, fg=self.entry_fg_color, insertbackground="white")
-        self.text_entry.insert(0, self.channels)  # Set initial values
-        self.text_entry.pack(padx=10, pady=10, fill="both", expand=True)
+        self.layout = QGridLayout(self)
 
-        # Submit button
-        submit_button = tk.Button(self.window, text="Submit", command=self.close_window, bg=self.entry_bg_color, fg=self.entry_fg_color)
-        submit_button.pack(pady=10)
+        self.create_widgets()
 
-    def close_window(self):
-        self.channels = self.text_entry.get()
-        self.window.destroy()
+    def create_widgets(self):
+        self.channel_list = QListWidget()
+        self.layout.addWidget(self.channel_list, 0, 0)
 
-    def get_channels(self):
-        self.window.wait_window(self.window)
-        return self.channels
+        self.load_channels()
+
+        self.delete_channel_button = QPushButton("-")
+        self.delete_channel_button.setEnabled(False)
+        self.delete_channel_button.clicked.connect(self.remove_channel)
+        self.layout.addWidget(self.delete_channel_button, 0, 1)
+
+        self.channel_input = QLineEdit()
+        self.channel_input.setPlaceholderText("Type channel here...")
+
+        self.layout.addWidget(self.channel_input, 1, 0)
+
+        self.add_channel_button = QPushButton("+")
+        self.add_channel_button.setEnabled(False)
+        self.add_channel_button.clicked.connect(self.add_channel)
+        self.layout.addWidget(self.add_channel_button, 1, 1)
+
+        self.channel_input.textChanged.connect(lambda: self.add_channel_button.setEnabled(self.channel_input.text() != ""))
+        self.channel_list.itemSelectionChanged.connect(lambda: self.delete_channel_button.setEnabled(True))
+
+        self.done_button = QPushButton("Done")
+        self.done_button.clicked.connect(self.save_channels)
+        self.layout.addWidget(self.done_button, 2, 0, 1, 2)
+
+    def load_channels(self):
+        for channel in self.channels.split(","):
+            self.channel_list.addItem(channel)
+
+    def add_channel(self):
+        self.channel_list.addItem(self.channel_input.text())
+        self.channel_input.clear()
+
+    def remove_channel(self):
+        self.channel_list.takeItem(self.channel_list.currentRow())
+
+    def save_channels(self):
+        result = []
+
+        for i in range (0, self.channel_list.count()):
+            result.append(self.channel_list.item(i).text())
+        
+        self.set(','.join(result))
+        self.close()

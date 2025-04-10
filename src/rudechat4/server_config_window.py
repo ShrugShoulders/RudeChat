@@ -20,12 +20,14 @@ class ServerConfigWindow(QScrollArea):
 
         self.config = configparser.ConfigParser()
         self.config.read(config_file)
+
+        self.channels = self.config.get('IRC', 'auto_join_channels')
         
         self.label_map = {
             'server_name': ['Server Name', 'string'],
             'nickname': ['Nickname', 'string'],
             'server': ['Server Address', 'string'],
-            'auto_join_channels': ['Auto-Join Channels', 'string'],
+            'auto_join_channels': ['Auto-Join Channels', 'ChannelSelect'],
             'use_nickserv_auth': ['Use NickServ Authentication', 'bool'],
             'nickserv_password': ['NickServ Password', 'string'],
             'port': ['Port', 'string'],
@@ -94,7 +96,7 @@ class ServerConfigWindow(QScrollArea):
                         entry = QLineEdit(section_frame)
                         entry.setText(self.config.get(section, option))
                         
-                    case 'button':
+                    case 'ChannelSelect':
                         button = QPushButton(section_frame, text="Edit Channels")
                         button.clicked.connect(self.expand_channels_list)
                         entry = button
@@ -111,14 +113,14 @@ class ServerConfigWindow(QScrollArea):
             self.widget.layout.addWidget(section_frame)
 
     def expand_channels_list(self):
-        channels = self.config.get('IRC', 'auto_join_channels')
+        channels = self.channels
         if channels:
-            expander = ChannelExp(self.parent, channels, self.entry_bg_color, self.entry_fg_color)
-            new_list = str(expander.get_channels())
-            for (section, option), entry in self.entries.items():
-                if option == 'auto_join_channels':
-                    entry.delete(0, tk.END)
-                    entry.insert(0, new_list)
+            self.expander = ChannelExp(channels, self.set_channels )
+
+            self.expander.show()
+
+    def set_channels(self, new_channels):
+        self.channels = new_channels
 
     def save_config(self):
         try:
@@ -131,8 +133,8 @@ class ServerConfigWindow(QScrollArea):
                         value = str(entry.isChecked())
                     case 'string':
                         value = entry.text()
-                    case 'button':
-                        value = entry.get()
+                    case 'ChannelSelect':
+                        value = self.channels
                 # Add the entry to the new configuration
                 if not new_config.has_section(section):
                     new_config.add_section(section)

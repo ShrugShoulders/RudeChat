@@ -2,7 +2,7 @@
 - [x] Complete / Has base function
 - [ ] Needs to be done / all child goals need to be completed
 
-**Tasks Complete: (36/46 - 78.26%)**
+**Tasks Complete: (37/46 - 80.43%)**
 - [ ] Convert to Qt
 	- [x] `__main__`
 	- [ ] `rude_gui`
@@ -41,7 +41,7 @@
 			- [x] Design nickname color edit window
 			- [x] Implement logic
 		- [x] `server_config_window`
-			- [ ] `channel_expand`
+			- [x] `channel_expand`
 	- [x] `rude_client`
 		- [x] Fix listboxes
 	- [x] `gui_config_window`
