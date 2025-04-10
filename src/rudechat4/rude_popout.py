@@ -21,6 +21,37 @@ class RudePopout(QObject):
         self.parentGui = None
         self.channel = None
         self.form = None
+        self.emoji_width_cache = {}
+
+        self.SPECIAL_EMO_CASES = {
+            "⛈": 0,
+            "❌": 0,
+            "😐": 1,
+            "☁️": 0,
+            "☁": 0,
+            "✊": 0,
+            "☘️": 0,
+            "☘": 0,
+            "🌶": 1,
+            "⛴": 0,
+            "⏰": 0,
+            "⏱": 0,
+            "⏲": 0,
+            "🖥": 1,
+            "🖱": 1,
+            "🎙": 1,
+            "🎵": 1,
+            "⛅": 0,
+            "☹": 0,
+            "☹️": 0,
+            "🥪": 1,
+            "✨": 0,
+            "✅": 0,
+            "😈": 1,
+            "❤️": 0,
+            "🎶": 1,
+            "⚠": 0,
+        }
 
     def setupUi(self, Form):
         # === Main Window Setup ===
@@ -168,6 +199,7 @@ class RudePopout(QObject):
         self.pushButton.setText(_translate("Form", "Pop In"))
         self.pushButton.clicked.connect(self.pop_in_window)
         self.input.setFocus()
+        self.load_channel_messages()
         self.load_user_list()
         self.set_topic()
 
@@ -187,6 +219,16 @@ class RudePopout(QObject):
         cleaned_message = message.rstrip("\r\n")
         self.display_text.append(f"{cleaned_message}")
         self.highlight_nicknames()
+
+    def load_channel_messages(self): #messages = self.channel_messages[server_name][channel]
+        try:
+            messages = self.parentGui.irc_client.channel_messages[self.parentGui.irc_client.server][self.channel]
+            for message in messages:
+                cleaned_message = message.rstrip("\r\n")
+                self.display_text.append(f"{cleaned_message}")
+            self.highlight_nicknames()
+        except Exception as e:
+            logging.error(f"Unable to load pop out messages: {e}")
 
     def set_topic(self):
         try:
@@ -329,7 +371,7 @@ class RudePopout(QObject):
             if nickname in self.parentGui.nickname_colors:
                 nickname_color = self.parentGui.nickname_colors[nickname]
             else:
-                if self.generate_nickname_colors:
+                if self.parentGui.generate_nickname_colors:
                     if nickname == self.parentGui.irc_client.nickname:
                         nickname_color = self.parentGui.main_nickname_color
                     else:
@@ -356,12 +398,12 @@ class RudePopout(QObject):
 
     def get_text_width(self, text, font):
         """Measure the width of text using QFontMetrics, with caching."""
-        if text in self.parentGui.emoji_width_cache:
-            return self.parentGui.emoji_width_cache[text]
+        if text in self.emoji_width_cache:
+            return self.emoji_width_cache[text]
 
         metrics = QFontMetrics(font)
         width = metrics.horizontalAdvance(text)  # Get the width of the text
-        self.parentGui.emoji_width_cache[text] = width  # Cache result
+        self.emoji_width_cache[text] = width  # Cache result
         return width
 
     def estimate_emoji_offset(self, text, font):
@@ -375,8 +417,8 @@ class RudePopout(QObject):
                 width = self.get_text_width(char, font)
                 raw_offset = width / normal_char_width
 
-                if char in self.parentGui.SPECIAL_EMO_CASES:
-                    offset = self.parentGui.SPECIAL_EMO_CASES[char]
+                if char in self.SPECIAL_EMO_CASES:
+                    offset = self.SPECIAL_EMO_CASES[char]
                 else:
                     offset = max(0, round(raw_offset) - 1)
 
