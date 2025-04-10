@@ -30,7 +30,7 @@
 					- [x] Aarrow Key entry history.
 		- [ ] `rude_popout`
 			- [x] Design pop out window
-			- [ ] Implement logic for display
+			- [x] Implement logic for display
 			- [ ] Implement commands
 		- [ ] `user_data_display`
 			- [x] Design user data display
