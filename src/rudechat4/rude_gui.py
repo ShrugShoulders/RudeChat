@@ -1,6 +1,7 @@
 from rudechat4.shared_imports import *
 from rudechat4.global_variables import *
 from rudechat4.rude_client import RudeChatClient
+from rudechat4.rude_colours import RudeColours
 from rudechat4.server_config_window import ServerConfigWindow
 from rudechat4.gui_config_window import GuiConfigWindow
 from rudechat4.list_window import ChannelListWindow
@@ -1032,7 +1033,19 @@ class RudeGui(QWidget):
         loop = asyncio.get_event_loop()
         loop.create_task(self.irc_client.update_available_macros())
 
-    def open_color_selector(self): pass #TODO
+    def open_color_selector(self):
+        def after_selector_window_close():
+            pass
+
+        def close_window():
+            pass
+        
+        def on_selector_window_close():
+            pass
+
+        self.color_selector = RudeColours()
+
+        self.color_selector.show()
 
     def reset_nick_colors(self):
         self.nickname_colors = self.load_nickname_colors()
