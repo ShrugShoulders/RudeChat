@@ -1,14 +1,17 @@
 from rudechat4.shared_imports import *
 from rudechat4.global_variables import *
 
-class RudeColours:
-    def __init__(self, root):
-        self.root = root
-        self.root.title("Colour Options Editor")
+class RudeColours(QWidget):
+    def __init__(self):
+        super().__init__()
+        
+        self.resize(300, 500)
+
+        self.layout = QVBoxLayout(self)
 
         self.color_options = {}
-        
         self.colors_json_path = os.path.join(G_CONFIG_DIR, "nickname_colours.json")
+
         self.load_color_options()
 
         self.create_widgets()
@@ -26,48 +29,60 @@ class RudeColours:
 
     def create_widgets(self):
         # Create a search entry widget
-        self.search_label = tk.Label(self.root, text="Search Nickname:")
-        self.search_label.pack(pady=5)
+        self.search_bar = QLineEdit(self, placeholderText="Search...")
+        self.search_bar.textChanged.connect(self.filter_list)
 
-        self.search_entry = tk.Entry(self.root, width=30)
-        self.search_entry.pack(pady=5)
-        self.search_entry.bind("<KeyRelease>", self.filter_list)
+        self.nicks_list = QTableWidget(self)
+        self.nicks_list.setColumnCount(2)
+        self.nicks_list.setRowCount(1)
+        self.nicks_list.setHorizontalHeaderLabels(["Nickname", "Colour"])
+        self.nicks_list.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
+        self.nicks_list.horizontalHeader().setStretchLastSection(True)
+        self.nicks_list.verticalHeader().setVisible(False)
 
-        # Create a scroll bar
-        scrollbar = tk.Scrollbar(self.root, width=12)
-        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        self.layout.addWidget(self.search_bar)
+        self.layout.addWidget(self.nicks_list)
 
-        self.listbox = tk.Listbox(self.root, selectmode=tk.SINGLE, yscrollcommand=scrollbar.set)
-        self.listbox.pack(padx=10, pady=10, expand=True, fill=tk.BOTH)
+        self.buttons = QHBoxLayout()
+        self.buttons.setSpacing(5)
 
-        # Attach the scroll bar to the listbox
-        scrollbar.config(command=self.listbox.yview)
+        self.add_button = QPushButton("Add", self)
+        self.buttons.addWidget(self.add_button)
 
-        # Insert the initial list of color options
-        self.update_listbox()
-
-        add_button = tk.Button(self.root, text="Add/Edit Color Option", command=self.add_edit_color_option)
-        add_button.pack(pady=10)
-
-    def update_listbox(self, filtered_options=None):
-        # Clear the listbox and insert new items
-        self.listbox.delete(0, tk.END)
+        self.edit_button = QPushButton("Edit", self)
+        self.buttons.addWidget(self.edit_button)
         
+        self.delete_button = QPushButton("Delete", self)
+        self.buttons.addWidget(self.delete_button)
+
+        self.layout.addLayout(self.buttons)
+
+        self.update_list()
+
+    def update_list(self, filtered_options=None):
+        # Clear the listbox and insert new items
+        self.nicks_list.clearContents()
+        self.nicks_list.setRowCount(len(self.color_options))
+
         # If filtered options are provided, use them; otherwise, use all options
         color_options_to_display = filtered_options if filtered_options else self.color_options
-        
+
+        index = 0
         for key, value in color_options_to_display.items():
-            self.listbox.insert(tk.END, f"{key}: {value}")
+
+            self.nicks_list.setItem(index, 0, QTableWidgetItem(key))
+            self.nicks_list.setItem(index, 1, QTableWidgetItem(value))
+            index += 1
 
     def filter_list(self, event):
         # Get the search query
-        query = self.search_entry.get().lower()
+        query = self.search_bar.text().lower()
         
         # Filter the color options by the search query
         filtered_options = {key: value for key, value in self.color_options.items() if query in key.lower()}
         
         # Update the listbox with filtered results
-        self.update_listbox(filtered_options)
+        self.update_list(filtered_options)
 
     def add_edit_color_option(self):
         selected_index = self.listbox.curselection()
@@ -114,7 +129,7 @@ class RudeColours:
                 self.save_color_options()
 
                 # Update the listbox
-                self.update_listbox()
+                self.update_list()
 
                 messagebox.showinfo("Success", f"Color option removed for {selected_key}!")
 
@@ -134,7 +149,7 @@ class RudeColours:
                 self.save_color_options()
 
                 # Update the listbox
-                self.update_listbox()
+                self.update_list()
 
                 messagebox.showinfo("Success", f"Color option updated for {selected_key or new_key}!")
 
