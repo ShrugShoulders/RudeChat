@@ -33,6 +33,7 @@ from PyQt6.QtWidgets import (
     QAbstractScrollArea,
     QApplication,
     QCheckBox,
+    QColorDialog,
     QComboBox,
     QFileDialog,
     QFrame,
