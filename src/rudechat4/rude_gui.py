@@ -324,6 +324,7 @@ class RudeGui(QWidget):
             "😈": 1,
             "❤️": 0,
             "🎶": 1,
+            "⚠": 0,
         }
 
         # Initialise layout
