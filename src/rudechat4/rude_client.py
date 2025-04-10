@@ -1848,13 +1848,20 @@ class RudeChatClient:
 
     async def pip_to_pop_out(self, timestamp, sender, message, target, mode_symbol):
         try:
-            window = self.gui.pop_out_windows.get(target) or self.gui.pop_out_windows.get(sender)
-            if window:
-                formatted_message = f"{timestamp}<{mode_symbol}{sender}> {message}\n" if self.use_time_stamp else f"<{mode_symbol}{sender}> {message}\n"
+            # Get the second window from the list for the target or sender channel
+            windows_list = self.gui.pop_out_windows.get(target) or self.gui.pop_out_windows.get(sender)
+            
+            if windows_list and len(windows_list) > 1:
+                # Access the second window in the list
+                window = windows_list[1]
+                
+                # Format the message
+                formatted_message = f"{timestamp}<{mode_symbol}{sender}> {message}" if self.use_time_stamp else f"<{mode_symbol}{sender}> {message}"
+                
+                # Insert the formatted message into the second window
                 window.insert_text(formatted_message)
-                window.highlight_nicknames()
-                await window.check_focus_and_notify(message)
-                window.update_users_label()
+            else:
+                logging.warning(f"Window list for target {target} or sender {sender} is empty or has less than two items.")
         except Exception as e:
             logging.error(f"Error in pip_to_pop_out: {e}")
 
@@ -2416,7 +2423,6 @@ class RudeChatClient:
             self.channel_messages[self.server][channel].append(message)
 
     def update_user_selector_list(self, channel):
-        # try:
         current_users = self.channel_users.get(channel, [])
         sorted_users = self.sort_users(current_users, channel)
         
@@ -2431,14 +2437,13 @@ class RudeChatClient:
                 self.gui.user_selector_list.addItem(user)
             self.gui.highlight_away_users()
             self.gui.update_users_label()
-        # except Exception as e:
-            # logging.error(f"Error1 in update_user_selector_list: {e}")
         
         if self.server_name in self.gui.popped_out_channels and channel in self.gui.popped_out_channels[self.server_name]:
             try:
-                window = self.gui.pop_out_windows[channel]
-                window.update_gui_user_list(channel)
-                window.update_users_label()
+                pass
+                #window = self.gui.pop_out_windows[channel]
+                #window.update_gui_user_list(channel)
+                #window.update_users_label()
             except Exception as e:
                 logging.error(f"Error2 Updating Popped Out User List Box or Label: {e}")
 
