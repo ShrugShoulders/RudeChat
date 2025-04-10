@@ -8,13 +8,11 @@ class EnterFilter(QObject):
         self.gui = gui
 
     def eventFilter(self, obj, event):
-        if obj == self.gui.input and event.type() == QtCore.QEvent.Type.KeyPress:
-            if event.key() in [QtCore.Qt.Key.Key_Enter, QtCore.Qt.Key.Key_Return]:
-                logging.debug("Enter key pressed in input field")
-                self.gui.insert_and_send_message()  # Handle Enter key press
-                return True  
-            else:
-                logging.debug("Else block hit, key pressed is not Enter")
+        if hasattr(self.gui, 'input'):
+            if obj == self.gui.input and event.type() == QtCore.QEvent.Type.KeyPress:
+                if event.key() in [QtCore.Qt.Key.Key_Enter, QtCore.Qt.Key.Key_Return]:
+                    self.gui.insert_and_send_message()  # Handle Enter key press
+                    return True  
         return super().eventFilter(obj, event)  # Let other events pass normally
 
 class RudePopout(QObject):
@@ -22,6 +20,7 @@ class RudePopout(QObject):
         super().__init__()
         self.parentGui = None
         self.channel = None
+        self.form = None
 
     def setupUi(self, Form):
         # === Main Window Setup ===
@@ -151,8 +150,11 @@ class RudePopout(QObject):
 
     def retranslateUi(self, Form): 
         _translate = QtCore.QCoreApplication.translate
+        self.form = Form
+        self.form.closeEvent = self.handle_close_event
 
         # Topic header
+        self.topic_label.setWordWrap(True)
         self.topic_label.setText(_translate("Form", "Topic: "))
         if self.parentGui.log_on:
             logging.debug("Topic label set")
@@ -164,15 +166,34 @@ class RudePopout(QObject):
 
         # Button text
         self.pushButton.setText(_translate("Form", "Pop In"))
+        self.pushButton.clicked.connect(self.pop_in_window)
         self.input.setFocus()
         self.load_user_list()
+        self.set_topic()
 
         if self.parentGui.log_on:
             logging.info(f"channel and parent is set to: {self.channel} & {self.parentGui}")
 
+    def handle_close_event(self, event):
+        self.pop_in_window()
+        event.accept()
+
+    def pop_in_window(self):
+        self.form.close()
+        self.parentGui.remove_from_pop_out_dict(self.channel)
+        self.parentGui.irc_client.update_gui_channel_list()
+
     def insert_text(self, message):
         cleaned_message = message.rstrip("\r\n")
         self.display_text.append(f"{cleaned_message}")
+        self.highlight_nicknames()
+
+    def set_topic(self):
+        try:
+            topic = self.parentGui.channel_topics[self.parentGui.irc_client.server_name][self.channel]
+            self.topic_label.setText(str(topic))
+        except Exception as e:
+            logging.error(f"Error setting topic: {e}")
 
     def send_message(self, text):
         try:
@@ -185,16 +206,28 @@ class RudePopout(QObject):
 
     def insert_and_send_message(self):
         try:
+            nickname = self.parentGui.irc_client.nickname
+            user_mode = self.parentGui.irc_client.get_user_mode(nickname, self.channel)
+            mode_symbol = self.parentGui.irc_client.get_mode_symbol(user_mode) if user_mode else ''
+            if self.parentGui.irc_client.use_time_stamp:
+                timestamp = datetime.now().strftime('[%H:%M:%S] ')
+            else:
+                timestamp = ""
             text = self.input.text().strip()
             if self.parentGui.log_on:
                 logging.debug(f"Message to send: {text}")
-            self.display_text.append(f"<{self.parentGui.irc_client.nickname}> {text}")  # Append keeps previous content and adds a new line
+            self.display_text.append(f"{timestamp}<{mode_symbol}{self.parentGui.irc_client.nickname}> {text}")  # Append keeps previous content and adds a new line
             self.input.clear()
             self.send_message(text)
+            self.highlight_nicknames()
+            self.parentGui.irc_client.save_message(self.parentGui.irc_client.server, self.channel, nickname, text, mode_symbol, is_sent=False)
+            self.parentGui.irc_client.log_message(self.parentGui.irc_client.server_name, self.channel, nickname, text, is_sent=False)
         except Exception as e:
             logging.error(f"Exception in insert_and_send_message: {e}")
 
     def load_user_list(self):
+        num_users = self.user_list.count()
+        self.user_label.setText(f"Users ({num_users})")
         for user in self.parentGui.irc_client.channel_users.get(self.channel, []):
             self.user_list.addItem(user)
         self.highlight_away_users()
@@ -235,3 +268,132 @@ class RudePopout(QObject):
         except Exception as e:
             logging.error(f"Exception in highlight_away_users: {e}")
 
+    def highlight_nicknames(self):
+        """Efficiently highlight nicknames in the chat box with emoji-aware offset correction."""
+        try:
+            text = self.display_text.toPlainText() # self.display_text
+            if not text:
+                return
+
+            # Precompute emoji offsets once for the entire text
+            emoji_offset_start, emoji_offset_end = {}, {}
+            font = self.display_text.font()
+            emoji_widths = self.estimate_emoji_offset(text, font)
+
+            # Precompute cumulative emoji offsets for faster lookup
+            emoji_offset_start, emoji_offset_end = self.build_emoji_offset_map(text, emoji_widths)
+            nicknames_to_highlight = set()
+            nicknames_to_highlight.add(self.parentGui.irc_client.nickname)
+
+            # Include matches from general nickname pattern
+            if hasattr(self.parentGui, 'nickname_pattern'):
+                for match in self.parentGui.nickname_pattern.finditer(text):
+                    nick = match.group(0)
+                    nicknames_to_highlight.add(nick.strip('<>').lstrip(''.join(self.parentGui.irc_client.mode_values)))
+
+            # Highlight nicknames
+            for nickname in nicknames_to_highlight:
+                pattern = self.parentGui.users_nickname_pattern(nickname)
+                for match in pattern.finditer(text):
+                    matched_text = match.group(0)
+                    start, end = match.span()
+                    adjusted_start = start + emoji_offset_start.get(start, 0)
+                    adjusted_end = end + emoji_offset_end.get(end, 0)
+                    self.apply_nickname_format(matched_text, adjusted_start, adjusted_end, matched_text)
+
+        except Exception as e:
+            logging.error(f"Error in optimized highlight_nicknames: {e}")
+
+    def build_emoji_offset_map(self, text, emoji_widths):
+        """Precompute emoji offset adjustments at each index."""
+        offset_start_map = {}
+        offset_end_map = {}
+        cum_offset = 0
+
+        for i, char in enumerate(text):
+            offset = emoji_widths.get(char, 0)
+            if offset:
+                cum_offset += offset
+            offset_start_map[i + 1] = cum_offset
+            offset_end_map[i + 1] = cum_offset
+
+        return offset_start_map, offset_end_map
+
+    def apply_nickname_format(self, text, start_position, end_position, nickname):
+        """Apply color formatting to the nickname with emoji offset correction."""
+        try:
+            if not nickname:
+                return
+
+            # Determine the nickname color
+            if nickname in self.parentGui.nickname_colors:
+                nickname_color = self.parentGui.nickname_colors[nickname]
+            else:
+                if self.generate_nickname_colors:
+                    if nickname == self.parentGui.irc_client.nickname:
+                        nickname_color = self.parentGui.main_nickname_color
+                    else:
+                        nickname_color = self.generate_random_color()
+                else:
+                    nickname_color = self.parentGui.main_fg_color
+
+                self.parentGui.nickname_colors[nickname] = nickname_color
+
+            # Setup text format
+            format_nick = QTextCharFormat()
+            format_nick.setFontFamily(self.parentGui.chat_font_family)
+            format_nick.setFontPointSize(int(self.parentGui.chat_font_size))
+            format_nick.setForeground(QColor(nickname_color))
+
+            # Apply formatting
+            cursor = self.display_text.textCursor()
+            cursor.setPosition(start_position)
+            cursor.setPosition(end_position, QTextCursor.MoveMode.KeepAnchor)
+            cursor.setCharFormat(format_nick)
+
+        except Exception as e:
+            logging.error(f"Error in apply_nickname_format: {e}")
+
+    def get_text_width(self, text, font):
+        """Measure the width of text using QFontMetrics, with caching."""
+        if text in self.parentGui.emoji_width_cache:
+            return self.parentGui.emoji_width_cache[text]
+
+        metrics = QFontMetrics(font)
+        width = metrics.horizontalAdvance(text)  # Get the width of the text
+        self.parentGui.emoji_width_cache[text] = width  # Cache result
+        return width
+
+    def estimate_emoji_offset(self, text, font):
+        """Estimate emoji offset based on their visual width, using caching."""
+        normal_char_width = self.get_text_width("A", font)  # Reference width
+
+        emoji_offsets = {}
+
+        for char in set(text):  # Process only unique characters
+            if self.is_emoji(char):  # Only measure emojis
+                width = self.get_text_width(char, font)
+                raw_offset = width / normal_char_width
+
+                if char in self.parentGui.SPECIAL_EMO_CASES:
+                    offset = self.parentGui.SPECIAL_EMO_CASES[char]
+                else:
+                    offset = max(0, round(raw_offset) - 1)
+
+                emoji_offsets[char] = offset
+
+        return emoji_offsets
+
+    def is_emoji(self, char):
+        """Check if a character is an emoji using the emoji library."""
+        return char in emoji.EMOJI_DATA
+
+    def generate_random_color(self):
+        while True:
+            # Generate random values for each channel
+            r = random.randint(50, 255)
+            g = random.randint(50, 255)
+            b = random.randint(50, 255)
+            
+            if max(r, g, b) - min(r, g, b) > 50:
+                return "#{:02x}{:02x}{:02x}".format(r, g, b)

@@ -181,4 +181,4 @@ file name: gui_config.ini
 		channel_select_color = blue # Channel selected color
 		show_server_window = False # Server Window Toggle. 
 
-![alt text](https://i.imgur.com/tfz3LDv.png)
+![alt text](https://i.imgur.com/N9AqHKx.png)

@@ -1063,6 +1063,13 @@ class RudeGui(QWidget):
         if user_or_chan not in self.popped_out_channels[self.irc_client.server_name]:
             self.popped_out_channels[self.irc_client.server_name].append(user_or_chan)
 
+    def remove_from_pop_out_dict(self, user_or_chan):
+        if self.irc_client.server_name in self.popped_out_channels:
+            if user_or_chan in self.popped_out_channels[self.irc_client.server_name]:
+                self.popped_out_channels[self.irc_client.server_name].remove(user_or_chan)
+        if user_or_chan in self.pop_out_windows:
+            del self.pop_out_windows[user_or_chan]
+
     def open_pop_out_window(self, usrchannel):
         if usrchannel in self.pop_out_windows:
             # Get the list of windows for the user channel
@@ -1088,6 +1095,7 @@ class RudeGui(QWidget):
         # Save reference to keep it alive
         self.pop_out_windows[usrchannel] = [window, ui]
         self.append_to_pop_out_dict(usrchannel)
+        self.irc_client.update_gui_channel_list()
         if self.log_on:
             logging.info(f"Listed Pop Out Windows: {self.pop_out_windows}")
 
