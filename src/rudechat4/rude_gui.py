@@ -1,11 +1,11 @@
 from rudechat4.shared_imports import *
 from rudechat4.global_variables import *
 from rudechat4.rude_client import RudeChatClient
+from rudechat4.rude_popout import RudePopout
 from rudechat4.server_config_window import ServerConfigWindow
 from rudechat4.gui_config_window import GuiConfigWindow
 from rudechat4.list_window import ChannelListWindow
 from rudechat4.nick_cleaner import clean_nicknames
-#from rudechat4.format_decoder import decoder
 from rudechat4.rude_logger import configure_logging
 
 class RudeTextEdit(QTextEdit):
@@ -152,8 +152,13 @@ class RudeChannelListWidget(QListWidget):
                 remove_action = QAction("Leave Channel", self)
                 remove_action.triggered.connect(lambda _, item=selected_item.text(): self.exit_channel(item))
 
+        # Pop Out Window
+        pop_out_action = QAction("Pop Out", self)
+        pop_out_action.triggered.connect(lambda _, item=selected_item.text(): self.gui.open_pop_out_window(item))
+
         # Add actions to menu
         menu.addAction(remove_action)
+        menu.addAction(pop_out_action)
 
         # Show menu at cursor position
         menu.exec(self.mapToGlobal(pos))
@@ -1037,6 +1042,40 @@ class RudeGui(QWidget):
     def reset_nick_colors(self):
         self.nickname_colors = self.load_nickname_colors()
         self.highlight_nicknames()
+
+    def append_to_pop_out_dict(self, user_or_chan):
+        if self.irc_client.server_name not in self.popped_out_channels:
+            self.popped_out_channels[self.irc_client.server_name] = []
+        if user_or_chan not in self.popped_out_channels[self.irc_client.server_name]:
+            self.popped_out_channels[self.irc_client.server_name].append(user_or_chan)
+
+    def open_pop_out_window(self, usrchannel):
+        if usrchannel in self.pop_out_windows:
+            # Get the list of windows for the user channel
+            windows_list = self.pop_out_windows[usrchannel]
+            
+            if windows_list:
+                # Use the first window in the list
+                window = windows_list[0]
+                window.raise_()
+                window.activateWindow()
+                return
+
+        # Create and store new popout window
+        window = QWidget()
+        ui = RudePopout()
+        ui.parentGui = self
+        ui.channel = usrchannel
+        ui.setupUi(window)
+        window.setWindowTitle(str(usrchannel))
+        window.resize(self.app_size[0], self.app_size[1])
+        window.show()
+
+        # Save reference to keep it alive
+        self.pop_out_windows[usrchannel] = [window, ui]
+        self.append_to_pop_out_dict(usrchannel)
+        if self.log_on:
+            logging.info(f"Listed Pop Out Windows: {self.pop_out_windows}")
 
     def open_client_config_window(self):
         def after_config_window_close():
