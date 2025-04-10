@@ -9,12 +9,10 @@ class EnterFilter(QObject):
 
     def eventFilter(self, obj, event):
         if obj == self.gui.input and event.type() == QtCore.QEvent.Type.KeyPress:
-            # Log the key and check for both QtCore.Qt.Key_Enter and QtCore.Qt.Key_Return
-            logging.debug(f"Event Type: {event.type()}, Key: {event.key()}")
             if event.key() in [QtCore.Qt.Key.Key_Enter, QtCore.Qt.Key.Key_Return]:
                 logging.debug("Enter key pressed in input field")
                 self.gui.insert_and_send_message()  # Handle Enter key press
-                return True  # Return True to stop further processing of this event
+                return True  
             else:
                 logging.debug("Else block hit, key pressed is not Enter")
         return super().eventFilter(obj, event)  # Let other events pass normally
