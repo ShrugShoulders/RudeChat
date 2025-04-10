@@ -2,7 +2,7 @@
 - [x] Complete / Has base function
 - [ ] Needs to be done / all child goals need to be completed
 
-**Tasks Complete: (37/46 - 80.43%)**
+**Tasks Complete: (37/45 - 82.22%)**
 - [ ] Convert to Qt
 	- [x] `__main__`
 	- [ ] `rude_gui`
@@ -27,9 +27,7 @@
 			- [x] Entry bar
 				- [x] Restore keybindings for TAB and arrow keys
 					- [x] TAB Complete
-					- [x] Aarrow Key entry history. 
-		- [ ] `rude_dragndrop`
-			- [ ] `Set Up logic for GUI`
+					- [x] Aarrow Key entry history.
 		- [ ] `rude_popout`
 			- [x] Design pop out window
 			- [ ] Implement logic for display
@@ -45,7 +43,8 @@
 	- [x] `rude_client`
 		- [x] Fix listboxes
 	- [x] `gui_config_window`
-	- [x] `list_window`
+	- [ ] `list_window`
+		- [ ] Untheme
 	- [x] `highlight_nicknames`
 		- [x] Restore main user nickname highlight
 	- [x] `rude_first_run`
