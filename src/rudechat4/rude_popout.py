@@ -1,4 +1,5 @@
 from rudechat4.shared_imports import *
+from rudechat4.rude_text_browser import RudeTextBrowser
 from PyQt6 import QtCore, QtGui, QtWidgets
 
 
@@ -117,7 +118,7 @@ class RudePopout(QObject):
         self.chat_area.addWidget(self.topic_label)
 
         # * Chat display area (read-only text browser) *
-        self.display_text = QtWidgets.QTextBrowser(parent=Form)
+        self.display_text = RudeTextBrowser(parent=Form)
         self.display_text.setObjectName("display_text")
         self.chat_area.addWidget(self.display_text)
 
@@ -460,9 +461,6 @@ class RudePopout(QObject):
             QTimer.singleShot(1, lambda: self.tag_urls(urls, index + 1))
         else:
             self.insert_and_scroll()
-
-    def open_url(self, url):
-        webbrowser.open(url)
 
     def load_channel_messages(self):
         try:

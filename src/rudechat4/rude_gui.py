@@ -8,52 +8,7 @@ from rudechat4.gui_config_window import GuiConfigWindow
 from rudechat4.list_window import ChannelListWindow
 from rudechat4.nick_cleaner import clean_nicknames
 from rudechat4.rude_logger import configure_logging
-
-class RudeTextEdit(QTextEdit):
-    def get_anchor_at(self, pos):
-        cursor = self.cursorForPosition(pos)
-        char_format = cursor.charFormat()
-        if char_format.isAnchor():
-            return char_format.anchorHref()
-
-    def is_anchor_at(self, pos):
-        cursor = self.cursorForPosition(pos)
-        return cursor.charFormat().isAnchor()
-
-    def reset_cursor_position(self):
-        """Reset the cursor to the bottom-right position."""
-        cursor = self.textCursor()
-        cursor.movePosition(QTextCursor.MoveOperation.End)
-        cursor.movePosition(QTextCursor.MoveOperation.StartOfBlock)
-        self.setTextCursor(cursor)
-
-    def copy(self):
-        super().copy()
-        self.reset_cursor_position()
-
-    def contextMenuEvent(self, event):
-        menu = self.createStandardContextMenu()
-        copy_action = menu.actions()[0]
-        copy_action.triggered.connect(self.reset_cursor_position)
-        menu.exec(event.globalPos())
-
-    def keyPressEvent(self, event: QKeyEvent):
-        super().keyPressEvent(event)
-
-    def mouseDoubleClickEvent(self, event: QMouseEvent):
-        if event.button() == Qt.MouseButton.LeftButton:
-            super().mouseDoubleClickEvent(event)
-
-    def mouseReleaseEvent(self, event: QMouseEvent):
-        if event.button() == Qt.MouseButton.LeftButton:
-            super().mouseReleaseEvent(event)
-
-    def mousePressEvent(self, e):
-        if self.is_anchor_at(e.pos()):
-            url = self.get_anchor_at(e.pos())
-            webbrowser.open(url)
-        elif e.button() == Qt.MouseButton.LeftButton:
-            super().mousePressEvent(e)
+from rudechat4.rude_text_browser import RudeTextBrowser
 
 class TabEventFilter(QObject):
     def __init__(self, gui):
@@ -471,7 +426,7 @@ class RudeGui(QWidget):
         self.topic_label.setWordWrap(True)
         self.topic_and_chat.addWidget(self.topic_label)
 
-        self.chat_box = RudeTextEdit(self)
+        self.chat_box = RudeTextBrowser(self)
         self.chat_box.setReadOnly(True)
         self.chat_box.setAcceptRichText(True)
         self.topic_and_chat.addWidget(self.chat_box)
@@ -1825,9 +1780,6 @@ class RudeGui(QWidget):
                 json.dump(clean_nicks, file, indent=2)
         except Exception as e:
             logging.error(f"An unexpected error occurred while saving nickname colors: {e}. Unable to save nickname colors.")
-
-    def open_url(self, url):
-        webbrowser.open(url)
 
     # Unused (but maybe used in the future)
     def find_nicks_in_brackets(self, text):
