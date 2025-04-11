@@ -22,6 +22,35 @@ class RudePopout(QObject):
         self.channel = None
         self.form = None
         self.emoji_width_cache = {}
+        self.tag_cache = {}
+
+        self.irc_colors = {
+            '00': '#ffffff', '01': '#000000', '02': '#0000AA', '03': '#00AA00',
+            '04': '#AA0000', '05': '#AA5500', '06': '#AA00AA', '07': '#FFAA00',
+            '08': '#FFFF00', '09': '#00ff00', '10': '#00AAAA', '11': '#00FFAA',
+            '12': '#2576ff', '13': '#ff00ff', '14': '#AAAAAA', '15': '#D3D3D3',
+            '16': '#470000', '17': '#472100', '18': '#474700', '19': '#324700',
+            '20': '#004700', '21': '#00472c', '22': '#004747', '23': '#002747',
+            '24': '#000047', '25': '#2e0047', '26': '#470047', '27': '#47002a',
+            '28': '#740000', '29': '#743a00', '30': '#747400', '31': '#517400',
+            '32': '#007400', '33': '#007449', '34': '#007474', '35': '#004074',
+            '36': '#000074', '37': '#4b0074', '38': '#740074', '39': '#740045',
+            '40': '#b50000', '41': '#b56300', '42': '#b5b500', '43': '#7db500',
+            '44': '#00b500', '45': '#00b571', '46': '#00b5b5', '47': '#0063b5',
+            '48': '#0000b5', '49': '#7500b5', '50': '#b500b5', '51': '#b5006b',
+            '52': '#ff0000', '53': '#ff8c00', '54': '#ffff00', '55': '#b2ff00',
+            '56': '#00ff00', '57': '#00ffa0', '58': '#00ffff', '59': '#008cff',
+            '60': '#0000ff', '61': '#a500ff', '62': '#ff00ff', '63': '#ff0098',
+            '64': '#ff5959', '65': '#ffb459', '66': '#ffff71', '67': '#cfff60',
+            '68': '#6fff6f', '69': '#65ffc9', '70': '#6dffff', '71': '#59b4ff',
+            '72': '#5959ff', '73': '#c459ff', '74': '#ff66ff', '75': '#ff59bc', 
+            '76': '#ff9c9c', '77': '#ffd39c', '78': '#ffff9c', '79': '#e2ff9c', 
+            '80': '#9cff9c', '81': '#9cffdb', '82': '#9cffff', '83': '#9cd3ff', 
+            '84': '#9c9cff', '85': '#dc9cff', '86': '#ff9cff', '87': '#ff94d3', 
+            '88': '#000000', '89': '#131313', '90': '#282828', '91': '#363636', 
+            '92': '#4d4d4d', '93': '#656565', '94': '#818181', '95': '#9f9f9f',
+            '96': '#bcbcbc', '97': '#e2e2e2', '98': '#ffffff'
+        }
 
         self.SPECIAL_EMO_CASES = {
             "⛈": 0,
@@ -52,6 +81,8 @@ class RudePopout(QObject):
             "🎶": 1,
             "⚠": 0,
         }
+
+        self.url_pattern = re.compile(r'(\w+://[^\s()<>]*\([^\s()<>]*\)[^\s()<>]*(?<![.,;!?])|www\.[^\s()<>]*\([^\s()<>]*\)[^\s()<>]*(?<![.,;!?])|\w+://[^\s()<>]+(?<![.,;!?])|www\.[^\s()<>]+(?<![.,;!?]))')
 
     def setupUi(self, Form):
         # === Main Window Setup ===
@@ -179,6 +210,43 @@ class RudePopout(QObject):
         if self.parentGui.log_on:
             logging.info("UI setup complete")
 
+    def set_theme(self, Form):
+        self.display_text.setStyleSheet(f"""
+            color: {self.parentGui.chat_fg};
+            background-color: {self.parentGui.chat_bg};
+            font-family: {self.parentGui.chat_font_family};
+            font-size: {self.parentGui.chat_font_size}px;
+        """)
+
+        # Apply User List Theme
+        self.user_list.setStyleSheet(f"""
+            color: {self.parentGui.list_user_fg};
+            background-color: {self.parentGui.list_bg};
+            font-family: {self.parentGui.list_font_family};
+            font-size: {self.parentGui.list_font_size}px;
+        """)
+
+        Form.setStyleSheet(f"""
+            QScrollBar:vertical {{
+                border: none;
+                background: {self.parentGui.scrollbar_bg };
+                width: 12px;
+                margin: 0px 0px 0px 0px;
+            }}
+
+            QScrollBar::handle:vertical {{
+                background: {self.parentGui.scrollbar_bg };
+                min-height: 20px;
+                border-radius: 5px;
+            }}
+
+            QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {{
+                background: none;
+                border: none;
+            }}
+
+        """)
+
     def retranslateUi(self, Form): 
         _translate = QtCore.QCoreApplication.translate
         self.form = Form
@@ -199,6 +267,7 @@ class RudePopout(QObject):
         self.pushButton.setText(_translate("Form", "Pop In"))
         self.pushButton.clicked.connect(self.pop_in_window)
         self.input.setFocus()
+        self.set_theme(Form)
         self.load_channel_messages()
         self.load_user_list()
         self.set_topic()
@@ -215,17 +284,192 @@ class RudePopout(QObject):
         self.parentGui.remove_from_pop_out_dict(self.channel)
         self.parentGui.irc_client.update_gui_channel_list()
 
+    def insert_and_scroll(self):
+        self.display_text.moveCursor(QTextCursor.MoveOperation.End)
+
     def insert_text(self, message):
-        cleaned_message = message.rstrip("\r\n")
-        self.display_text.append(f"{cleaned_message}")
+        urls = self.find_urls(message)
+        formatted_text = self.decoder(message + "\n")
+        self.tag_text(formatted_text)
+        self.tag_urls(urls)
+
         self.highlight_nicknames()
+        self.insert_and_scroll()
+
+    def decoder(self, input_text: str) -> List[Tuple[str, QTextCharFormat]]:
+        output = []
+        text_buffer = []
+
+        # Mutable state
+        current_attr = {
+            "bold": False,
+            "italic": False,
+            "underline": False,
+            "strikethrough": False,
+            "inverse": False,
+            "colour": 0,
+            "background": 1
+        }
+
+        def flush():
+            if text_buffer:
+                try:
+                    fmt = self.configure_tag_based_on_attributes(current_attr)
+                    output.append(("".join(text_buffer), fmt))
+                except Exception as e:
+                    logging.error(f"Error creating format during flush: {e}")
+                text_buffer.clear()
+
+        c_index = 0
+        while c_index < len(input_text):
+            c = input_text[c_index]
+            match c:
+                case '\x02':  # Bold
+                    flush()
+                    current_attr["bold"] = not current_attr["bold"]
+                case '\x1D':  # Italic
+                    flush()
+                    current_attr["italic"] = not current_attr["italic"]
+                case '\x1F':  # Underline
+                    flush()
+                    current_attr["underline"] = not current_attr["underline"]
+                case '\x1E':  # Strikethrough
+                    flush()
+                    current_attr["strikethrough"] = not current_attr["strikethrough"]
+                case '\x16':  # Inverse
+                    flush()
+                    fg, bg = current_attr["colour"], current_attr["background"]
+                    current_attr["colour"], current_attr["background"] = bg, fg
+                case '\x03':  # Color code
+                    flush()
+                    current_attr = {
+                        "bold": False,
+                        "italic": False,
+                        "underline": False,
+                        "strikethrough": False,
+                        "inverse": False,
+                        "colour": 0,
+                        "background": 1
+                    }
+                    color_match = re.match(r'\x03(\d{1,2})(?:,(\d{1,2}))?', input_text[c_index:])
+                    if color_match:
+                        fg = int(color_match.group(1))
+                        bg = int(color_match.group(2)) if color_match.group(2) else 1
+                        current_attr["colour"] = fg
+                        current_attr["background"] = bg
+                        c_index += color_match.end() - 1
+                case '\x0F':  # Reset
+                    flush()
+                    current_attr = {
+                        "bold": False,
+                        "italic": False,
+                        "underline": False,
+                        "strikethrough": False,
+                        "inverse": False,
+                        "colour": 0,
+                        "background": 1
+                    }
+                case _:
+                    text_buffer.append(c)
+
+            c_index += 1
+
+        flush()
+        return output
+
+    def tag_text(self, formatted_text):
+        cursor = self.display_text.textCursor()
+        for text, char_format in formatted_text:
+            try:
+                cursor.insertText(text, char_format)
+            except Exception as e:
+                logging.error(f"Error in tag_text: {e}")
+
+    def configure_tag_based_on_attributes(self, attr: dict) -> QTextCharFormat:
+        try:
+            fmt = QTextCharFormat()
+            fmt.setFontFamily(self.parentGui.chat_font_family)
+            fmt.setFontPointSize(int(self.parentGui.chat_font_size))
+            
+            if attr["bold"]:
+                fmt.setFontWeight(2)
+            if attr["italic"]:
+                fmt.setFontItalic(True)
+            if attr["underline"]:
+                fmt.setFontUnderline(True)
+            if attr["strikethrough"]:
+                fmt.setFontStrikeOut(True)
+            
+            if attr["colour"] != 0:
+                irc_color_code = f"{attr['colour']:02d}"
+                hex_color = self.irc_colors.get(irc_color_code, 'white')
+                fmt.setForeground(QColor(hex_color))
+            
+            if attr["background"] != 1:
+                irc_background_code = f"{attr['background']:02d}"
+                hex_background = self.irc_colors.get(irc_background_code, 'black')
+                fmt.setBackground(QColor(hex_background))
+            
+            return fmt
+
+        except Exception as e:
+            logging.error(f"Error in configure_tag_based_on_attributes: {e}")
+            return QTextCharFormat()
+
+    def find_urls(self, text):
+        # Use the precompiled regex pattern to find URLs
+        return self.url_pattern.findall(text)
+
+    def tag_urls(self, urls, index=0):
+        if index < len(urls):
+            url = urls[index]
+            try:
+                tag_name = f"url_{url}"
+                char_format = QTextCharFormat()
+                char_format.setAnchor(True)
+                char_format.setAnchorHref(url)
+            except Exception as e:
+                logging.error(f"Error1 in tag_urls: {e}")
+                
+            try:
+                char_format.setForeground(QColor("blue"))
+                char_format.setFontUnderline(True)
+                self.tag_cache[tag_name] = char_format
+
+                cursor = self.display_text.textCursor()
+                cursor = self.display_text.document().find(url, 0)
+            except Exception as e:
+                logging.error(f"Error2 in tag_urls: {e}")
+
+            try:
+                while not cursor.isNull():
+                    cursor.mergeCharFormat(char_format)
+                    cursor = self.display_text.document().find(url, cursor)
+
+                cursor = self.display_text.textCursor()
+                cursor.movePosition(QTextCursor.MoveOperation.Start) 
+                while self.display_text.find(url):
+                    cursor.mergeCharFormat(self.tag_cache[tag_name])
+                    cursor.setCharFormat(self.tag_cache[tag_name])
+                    cursor.insertText(url, self.tag_cache[tag_name])
+                    cursor.setPosition(cursor.position() + len(url))
+            except Exception as e:
+                logging.error(f"Error3 in tag_urls: {e}")
+
+            # Schedule the next URL tagging
+            QTimer.singleShot(1, lambda: self.tag_urls(urls, index + 1))
+        else:
+            self.insert_and_scroll()
+
+    def open_url(self, url):
+        webbrowser.open(url)
 
     def load_channel_messages(self):
         try:
             messages = self.parentGui.irc_client.channel_messages[self.parentGui.irc_client.server][self.channel]
-            for message in messages:
+            for message in messages[-150:]:
                 cleaned_message = message.rstrip("\r\n")
-                self.display_text.append(f"{cleaned_message}")
+                self.insert_text(f"{cleaned_message}")
             self.highlight_nicknames()
         except Exception as e:
             logging.error(f"Unable to load pop out messages: {e}")
@@ -258,7 +502,7 @@ class RudePopout(QObject):
             text = self.input.text().strip()
             if self.parentGui.log_on:
                 logging.debug(f"Message to send: {text}")
-            self.display_text.append(f"{timestamp}<{mode_symbol}{self.parentGui.irc_client.nickname}> {text}")  # Append keeps previous content and adds a new line
+            self.insert_text(f"{timestamp}<{mode_symbol}{self.parentGui.irc_client.nickname}> {text}")
             self.input.clear()
             self.send_message(text)
             self.highlight_nicknames()
@@ -271,8 +515,7 @@ class RudePopout(QObject):
         for user in self.parentGui.irc_client.channel_users.get(self.channel, []):
             self.user_list.addItem(user)
 
-        num_users = self.user_list.count()
-        self.user_label.setText(f"Users ({num_users})")
+        self.update_user_label()
         self.highlight_away_users()
 
     def update_user_label(self):
