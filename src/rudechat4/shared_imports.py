@@ -31,6 +31,8 @@ import webbrowser
 
 from PyQt6.QtWidgets import (
     QAbstractScrollArea,
+    QAbstractItemView,
+    QListView,
     QApplication,
     QCheckBox,
     QColorDialog,
@@ -69,6 +71,8 @@ from PyQt6.QtCore import (
     QObject,
     QPoint,
     QTimer,
+    QCoreApplication,
+    QMetaObject,
 )
 
 from PyQt6.QtGui import (

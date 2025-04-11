@@ -1,7 +1,5 @@
 from rudechat4.shared_imports import *
 from rudechat4.rude_text_browser import RudeTextBrowser
-from PyQt6 import QtCore, QtGui, QtWidgets
-
 
 class EnterFilter(QObject):
     def __init__(self, gui):
@@ -10,8 +8,8 @@ class EnterFilter(QObject):
 
     def eventFilter(self, obj, event):
         if hasattr(self.gui, 'input'):
-            if obj == self.gui.input and event.type() == QtCore.QEvent.Type.KeyPress:
-                if event.key() in [QtCore.Qt.Key.Key_Enter, QtCore.Qt.Key.Key_Return]:
+            if obj == self.gui.input and event.type() == QEvent.Type.KeyPress:
+                if event.key() in [Qt.Key.Key_Enter, Qt.Key.Key_Return]:
                     self.gui.insert_and_send_message()  # Handle Enter key press
                     return True  
         return super().eventFilter(obj, event)  # Let other events pass normally
@@ -91,26 +89,26 @@ class RudePopout(QObject):
             logging.info("Setting up UI components")
 
         # === Main Horizontal Layout (Chat + Sidebar) ===
-        self.horizontalLayout = QtWidgets.QHBoxLayout(Form)
+        self.horizontalLayout = QHBoxLayout(Form)
         self.horizontalLayout.setObjectName("horizontalLayout")
 
         # ===============================
         #       LEFT: CHAT AREA
         # ===============================
-        self.content = QtWidgets.QVBoxLayout()
+        self.content = QVBoxLayout()
         self.content.setSpacing(5)
         self.content.setObjectName("content")
 
         # --- Chat Area (Topic Label + Text Display) ---
-        self.chat_area = QtWidgets.QVBoxLayout()
+        self.chat_area = QVBoxLayout()
         self.chat_area.setSpacing(5)
         self.chat_area.setObjectName("chat_area")
 
         # * Topic label (appears above the chat log) *
-        self.topic_label = QtWidgets.QLabel(parent=Form)
-        sizePolicy = QtWidgets.QSizePolicy(
-            QtWidgets.QSizePolicy.Policy.Expanding,
-            QtWidgets.QSizePolicy.Policy.Preferred
+        self.topic_label = QLabel(parent=Form)
+        sizePolicy = QSizePolicy(
+            QSizePolicy.Policy.Expanding,
+            QSizePolicy.Policy.Preferred
         )
         sizePolicy.setHeightForWidth(self.topic_label.sizePolicy().hasHeightForWidth())
         self.topic_label.setSizePolicy(sizePolicy)
@@ -126,15 +124,15 @@ class RudePopout(QObject):
         self.content.addLayout(self.chat_area)
 
         # --- Input field for typing messages ---
-        self.text_input = QtWidgets.QHBoxLayout()
+        self.text_input = QHBoxLayout()
         self.text_input.setSpacing(5)
         self.text_input.setObjectName("text_input")
 
         # * Line edit for typing messages *
-        self.input = QtWidgets.QLineEdit(parent=Form)
-        sizePolicy = QtWidgets.QSizePolicy(
-            QtWidgets.QSizePolicy.Policy.Expanding,
-            QtWidgets.QSizePolicy.Policy.Preferred
+        self.input = QLineEdit(parent=Form)
+        sizePolicy = QSizePolicy(
+            QSizePolicy.Policy.Expanding,
+            QSizePolicy.Policy.Preferred
         )
         sizePolicy.setHeightForWidth(self.input.sizePolicy().hasHeightForWidth())
         self.input.setSizePolicy(sizePolicy)
@@ -150,20 +148,20 @@ class RudePopout(QObject):
         # ===============================
         #       RIGHT: SIDEBAR
         # ===============================
-        self.sidebar = QtWidgets.QVBoxLayout()
+        self.sidebar = QVBoxLayout()
         self.sidebar.setSpacing(5)
         self.sidebar.setObjectName("sidebar")
 
         # --- Sidebar layout for user list + button ---
-        self.users_selector = QtWidgets.QVBoxLayout()
+        self.users_selector = QVBoxLayout()
         self.users_selector.setSpacing(5)
         self.users_selector.setObjectName("users_selector")
 
         # * Label above user list *
-        self.user_label = QtWidgets.QLabel(parent=Form)
-        sizePolicy = QtWidgets.QSizePolicy(
-            QtWidgets.QSizePolicy.Policy.Preferred,
-            QtWidgets.QSizePolicy.Policy.Preferred
+        self.user_label = QLabel(parent=Form)
+        sizePolicy = QSizePolicy(
+            QSizePolicy.Policy.Preferred,
+            QSizePolicy.Policy.Preferred
         )
         sizePolicy.setHeightForWidth(self.user_label.sizePolicy().hasHeightForWidth())
         self.user_label.setSizePolicy(sizePolicy)
@@ -171,25 +169,25 @@ class RudePopout(QObject):
         self.users_selector.addWidget(self.user_label)
 
         # * List of users (clickable items) *
-        self.user_list = QtWidgets.QListWidget(parent=Form)
-        sizePolicy = QtWidgets.QSizePolicy(
-            QtWidgets.QSizePolicy.Policy.Preferred,
-            QtWidgets.QSizePolicy.Policy.Expanding
+        self.user_list = QListWidget(parent=Form)
+        sizePolicy = QSizePolicy(
+            QSizePolicy.Policy.Preferred,
+            QSizePolicy.Policy.Expanding
         )
         sizePolicy.setHeightForWidth(self.user_list.sizePolicy().hasHeightForWidth())
         self.user_list.setSizePolicy(sizePolicy)
         self.user_list.setMouseTracking(True)
         self.user_list.setAutoFillBackground(True)
-        self.user_list.setSizeAdjustPolicy(QtWidgets.QAbstractScrollArea.SizeAdjustPolicy.AdjustToContents)
-        self.user_list.setEditTriggers(QtWidgets.QAbstractItemView.EditTrigger.NoEditTriggers)
-        self.user_list.setResizeMode(QtWidgets.QListView.ResizeMode.Adjust)
-        self.user_list.setItemAlignment(QtCore.Qt.AlignmentFlag.AlignLeading)
+        self.user_list.setSizeAdjustPolicy(QAbstractScrollArea.SizeAdjustPolicy.AdjustToContents)
+        self.user_list.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
+        self.user_list.setResizeMode(QListView.ResizeMode.Adjust)
+        self.user_list.setItemAlignment(Qt.AlignmentFlag.AlignLeading)
         self.user_list.setObjectName("user_list")
 
         self.users_selector.addWidget(self.user_list)
 
         # * Button under user list (e.g. to "Pop In" the window) *
-        self.pushButton = QtWidgets.QPushButton(parent=Form)
+        self.pushButton = QPushButton(parent=Form)
         self.pushButton.setObjectName("pushButton")
         self.users_selector.addWidget(self.pushButton)
 
@@ -204,7 +202,7 @@ class RudePopout(QObject):
         #       SET WINDOW TEXTS
         # ===============================
         self.retranslateUi(Form)
-        QtCore.QMetaObject.connectSlotsByName(Form)
+        QMetaObject.connectSlotsByName(Form)
 
         self.enter_filter = EnterFilter(self)
         self.input.installEventFilter(self.enter_filter)
@@ -249,7 +247,7 @@ class RudePopout(QObject):
         """)
 
     def retranslateUi(self, Form): 
-        _translate = QtCore.QCoreApplication.translate
+        _translate = QCoreApplication.translate
         self.form = Form
         self.form.closeEvent = self.handle_close_event
 
