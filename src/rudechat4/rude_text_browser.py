@@ -1,5 +1,4 @@
 from rudechat4.shared_imports import *
-from PyQt6 import QtCore, QtGui, QtWidgets
 
 class RudeTextBrowser(QTextBrowser):
     def __init__(self, parent=None):
