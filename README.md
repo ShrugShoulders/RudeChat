@@ -2,7 +2,7 @@
 - [x] Complete / Has base function
 - [ ] Needs to be done / all child goals need to be completed
 
-**Tasks Complete: (37/45 - 82.22%)**
+**Tasks Complete: (41/45 - 91.11%)**
 - [ ] Convert to Qt
 	- [x] `__main__`
 	- [ ] `rude_gui`
