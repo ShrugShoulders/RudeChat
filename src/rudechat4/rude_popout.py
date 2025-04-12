@@ -141,13 +141,14 @@ class ArrowKeyEventFilter(QObject):
         self.parent = parent
 
     def eventFilter(self, obj, event):
-        if obj == self.parent.input and event.type() == QEvent.Type.KeyPress:
-            if event.key() == Qt.Key.Key_Up:
-                self.parent.show_previous_entry()
-                return True
-            elif event.key() == Qt.Key.Key_Down:
-                self.parent.show_next_entry()
-                return True
+        if hasattr(self.parent, 'input'):
+            if obj == self.parent.input and event.type() == QEvent.Type.KeyPress:
+                if event.key() == Qt.Key.Key_Up:
+                    self.parent.show_previous_entry()
+                    return True
+                elif event.key() == Qt.Key.Key_Down:
+                    self.parent.show_next_entry()
+                    return True
         return super().eventFilter(obj, event)
 
 class EnterFilter(QObject):

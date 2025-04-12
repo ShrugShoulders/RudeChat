@@ -1064,8 +1064,6 @@ class RudeGui(QWidget):
             first_item = self.channel_selector_list.item(0)
             self.channel_selector_list.setCurrentItem(first_item)
             self.channel_selector_list.setFocus()
-
-            # Trigger the same behavior as if it was clicked
             self.on_channel_click()
 
     def open_client_config_window(self):

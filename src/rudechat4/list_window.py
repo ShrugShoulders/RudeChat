@@ -1,5 +1,4 @@
 from rudechat4.shared_imports import *
-from rudechat4.global_variables import *
 
 class ChannelListWindow(QDialog):
     def __init__(self, gui, *args, **kwargs):
@@ -11,9 +10,6 @@ class ChannelListWindow(QDialog):
         self.is_destroyed = False
         self.sort_order = "ascending"
 
-        self.load_configuration()
-        self.setStyleSheet(f"background-color: {self.main_bg_color}; color: {self.main_fg_color};")
-
         self.create_widgets()
 
         # Start periodic UI updates
@@ -21,24 +17,13 @@ class ChannelListWindow(QDialog):
         self.timer.timeout.connect(self.update_ui_periodically)
         self.timer.start(100)
 
-    def load_configuration(self):
-        # Load configuration from gui_config.ini
-        config = configparser.ConfigParser()
-        config_file = os.path.join(G_CONFIG_DIR, 'gui_config.ini')
-        config.read(config_file)
-
-        self.main_fg_color = config.get('Chat', 'window_fg', fallback="#C0FFEE")
-        self.main_bg_color = config.get('Chat', 'window_bg', fallback="#1b1e20")
-
     def create_widgets(self):
         layout = QVBoxLayout(self)
 
         # Search bar
         search_layout = QHBoxLayout()
         search_label = QLabel("Search Channel/Topic:")
-        search_label.setStyleSheet(f"color: {self.main_fg_color};")
         self.search_entry = QLineEdit()
-        self.search_entry.setStyleSheet("padding: 5px;")
         self.search_entry.textChanged.connect(self.handle_search)
 
         search_layout.addWidget(search_label)
@@ -50,7 +35,6 @@ class ChannelListWindow(QDialog):
         self.tree.setColumnCount(3)
         self.tree.setHeaderLabels(["Channel", "Users", "Topic"])
         self.tree.header().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
-        self.tree.setStyleSheet(f"color: {self.main_fg_color}; background-color: {self.main_bg_color};")
         self.tree.header().sectionClicked.connect(self.sort_by_users)
 
         layout.addWidget(self.tree)
@@ -61,9 +45,29 @@ class ChannelListWindow(QDialog):
 
         # Close button
         close_button = QPushButton("Close")
-        close_button.setStyleSheet(f"background-color: {self.main_bg_color}; color: {self.main_fg_color}; padding: 5px;")
         close_button.clicked.connect(self.close)
         layout.addWidget(close_button)
+
+        self.setStyleSheet(f"""
+            QScrollBar:vertical {{
+                border: none;
+                background: {self.gui.scrollbar_bg };
+                width: 12px;
+                margin: 0px 0px 0px 0px;
+            }}
+
+            QScrollBar::handle:vertical {{
+                background: white;
+                min-height: 20px;
+                border-radius: 5px;
+            }}
+
+            QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {{
+                background: none;
+                border: none;
+            }}
+
+        """)
 
     def sort_by_users(self):
         # Toggle sorting order

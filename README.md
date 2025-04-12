@@ -43,8 +43,8 @@
 	- [x] `rude_client`
 		- [x] Fix listboxes
 	- [x] `gui_config_window`
-	- [ ] `list_window`
-		- [ ] Untheme
+	- [x] `list_window`
+		- [x] Untheme
 	- [x] `highlight_nicknames`
 		- [x] Restore main user nickname highlight
 	- [x] `rude_first_run`
