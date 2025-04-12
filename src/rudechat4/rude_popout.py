@@ -442,6 +442,7 @@ class RudePopout(QObject):
         self.form.close()
         self.parentGui.remove_from_pop_out_dict(self.channel)
         self.parentGui.irc_client.update_gui_channel_list()
+        self.parentGui.pop_out_return(self.channel)
 
     def insert_and_scroll(self):
         self.display_text.moveCursor(QTextCursor.MoveOperation.End)
