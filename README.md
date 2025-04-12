@@ -28,10 +28,10 @@
 				- [x] Restore keybindings for TAB and arrow keys
 					- [x] TAB Complete
 					- [x] Aarrow Key entry history.
-		- [ ] `rude_popout`
+		- [x] `rude_popout`
 			- [x] Design pop out window
 			- [x] Implement logic for display
-			- [ ] Implement commands
+			- [x] Implement commands
 		- [ ] `user_data_display`
 			- [x] Design user data display
 			- [ ] Implement display logic.

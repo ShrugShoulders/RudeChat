@@ -285,6 +285,10 @@ class RudeGui(QWidget):
             "❤️": 0,
             "🎶": 1,
             "⚠": 0,
+            "🤖": 1,
+            "⚙": 0,
+            "🔒": 1,
+            "⚰": 0,
         }
 
         # Initialise layout
@@ -1051,8 +1055,18 @@ class RudeGui(QWidget):
         self.pop_out_windows[usrchannel] = [window, ui]
         self.append_to_pop_out_dict(usrchannel)
         self.irc_client.update_gui_channel_list()
+        self.force_click()
         if self.log_on:
             logging.info(f"Listed Pop Out Windows: {self.pop_out_windows}")
+
+    def force_click(self):
+        if self.channel_selector_list.count() > 0:
+            first_item = self.channel_selector_list.item(0)
+            self.channel_selector_list.setCurrentItem(first_item)
+            self.channel_selector_list.setFocus()
+
+            # Trigger the same behavior as if it was clicked
+            self.on_channel_click()
 
     def open_client_config_window(self):
         def after_config_window_close():

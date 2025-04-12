@@ -1,6 +1,155 @@
 from rudechat4.shared_imports import *
 from rudechat4.rude_text_browser import RudeTextBrowser
 
+
+class RudeUserListWidget(QListWidget):
+    def __init__(self, parent=None, maingui=None):
+        super().__init__(parent)
+        self.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self.customContextMenuRequested.connect(self.show_context_menu)
+        self.parentGui = maingui
+        self.gui = parent
+
+    def show_context_menu(self, pos: QPoint):
+        """Displays user list context menu"""
+        menu = QMenu(self)
+
+        # Init the actions
+        open_user_dm = QAction("Open DM", self)
+        whois_user = QAction("whois", self)
+        ignore_action = QAction("Ignore User", self)
+        unignore_action = QAction("Unignore User", self)
+        kick_action = QAction("Kick User", self)
+
+        # Connect actions to methods
+        open_user_dm.triggered.connect(self.open_dm_with_user)
+        whois_user.triggered.connect(self.whois_the_user)
+        ignore_action.triggered.connect(self.ignore_user)
+        unignore_action.triggered.connect(self.unignore_user)
+        kick_action.triggered.connect(self.kick_user_from_channel)
+
+        # Add meu actions
+        menu.addAction(open_user_dm)
+        menu.addAction(whois_user)
+        menu.addAction(ignore_action)
+        menu.addAction(unignore_action)
+        menu.addAction(kick_action)
+
+        # Show menu at cursor position
+        menu.exec(self.mapToGlobal(pos))
+
+    def open_dm_with_user(self):
+        selected_item = self.currentItem()
+        if selected_item:
+            self.parentGui.irc_client.loop.create_task(self.parentGui.irc_client.command_parser(f"/query {selected_item.text()}"))
+
+    def whois_the_user(self):
+        """Runs a whois command on the selected user."""
+        selected_item = self.currentItem()
+        if selected_item:
+            modes_to_strip = ''.join(self.parentGui.irc_client.mode_values)
+            user = selected_item.text().lstrip(modes_to_strip)
+            self.parentGui.irc_client.whois_user_request = True
+            self.parentGui.irc_client.loop.create_task(self.parentGui.irc_client.whois(user))
+
+    def ignore_user(self):
+        selected_item = self.currentItem()
+        if selected_item:
+            modes_to_strip = ''.join(self.parentGui.irc_client.mode_values)
+            cleaned_nickname = selected_item.text().lstrip(modes_to_strip)
+            self.parentGui.irc_client.loop.create_task(self.parentGui.irc_client.ignore_user_from_gui(cleaned_nickname))
+
+    def unignore_user(self):
+        selected_item = self.currentItem()
+        if selected_item:
+            modes_to_strip = ''.join(self.parentGui.irc_client.mode_values)
+            cleaned_nickname = selected_item.text().lstrip(modes_to_strip)
+            self.parentGui.irc_client.loop.create_task(self.parentGui.irc_client.unignore_user_from_gui(cleaned_nickname))
+
+    def kick_user_from_channel(self):
+        selected_item = self.currentItem()
+        if selected_item:
+            modes_to_strip = ''.join(self.parentGui.irc_client.mode_values)
+            channel = self.parentGui.irc_client.current_channel
+            selected_user = selected_item.text().lstrip(modes_to_strip)
+            self.parentGui.irc_client.loop.create_task(self.parentGui.irc_client.handle_kick_command(["/kick", selected_user, channel, "Bye <3"]))
+
+class TabEventFilter(QObject):
+    def __init__(self, parent, gui):
+        super().__init__()
+        self.gui = gui
+        self.parent = parent
+
+    def eventFilter(self, obj, event):
+        if event.type() == QEvent.Type.KeyPress and event.key() == Qt.Key.Key_Tab:
+            self.handle_tab_complete()
+            return True  # Block TAB behavior
+        return super().eventFilter(obj, event)
+
+    def handle_tab_complete(self):
+        try:
+            current_text = self.parent.input.text().strip()
+
+            if not current_text:
+                return
+
+            # Get list of usernames from QListWidget
+            user_list = [self.parent.user_list.item(i).text() for i in range(self.parent.user_list.count())]
+
+            # Find the closest match
+            matched_name = self.find_closest_match(current_text, user_list)
+
+            # Replace text field with matched nickname
+            if matched_name:
+                self.parent.input.setText(matched_name + f"{self.gui.tab_complete_terminator} ")
+        except Exception as e:
+            logging.error(f"Error in TabEventFilter.handle_tab_complete: {e}")
+            return
+
+    def find_closest_match(self, input_text, user_list):
+        """Returns the closest match to input_text from user_list (case insensitive), after stripping mode prefixes."""
+        
+        input_text = input_text.lower()
+        
+        # Strip any mode characters
+        modes_to_strip = ''.join(self.gui.irc_client.mode_values)
+        
+        # Remove any leading modes from each username in the list
+        def strip_modes(username):
+            for mode in modes_to_strip:
+                if username.startswith(mode):
+                    username = username[1:]
+            return username
+        
+        # Get matches after stripping modes
+        matches = [
+            user for user in user_list 
+            if strip_modes(user).lower().startswith(input_text)
+        ]
+        
+        # Strip modes from the match
+        matched_nick = matches[0] if matches else None
+        if matched_nick is None:
+            return
+        plain_nickname = matched_nick.lstrip(modes_to_strip)
+
+        return plain_nickname
+
+class ArrowKeyEventFilter(QObject):
+    def __init__(self, parent):
+        super().__init__(parent)
+        self.parent = parent
+
+    def eventFilter(self, obj, event):
+        if obj == self.parent.input and event.type() == QEvent.Type.KeyPress:
+            if event.key() == Qt.Key.Key_Up:
+                self.parent.show_previous_entry()
+                return True
+            elif event.key() == Qt.Key.Key_Down:
+                self.parent.show_next_entry()
+                return True
+        return super().eventFilter(obj, event)
+
 class EnterFilter(QObject):
     def __init__(self, gui):
         super().__init__()
@@ -22,6 +171,8 @@ class RudePopout(QObject):
         self.form = None
         self.emoji_width_cache = {}
         self.tag_cache = {}
+        self.history_index = 0
+        self.entry_history = []
 
         self.irc_colors = {
             '00': '#ffffff', '01': '#000000', '02': '#0000AA', '03': '#00AA00',
@@ -79,6 +230,10 @@ class RudePopout(QObject):
             "❤️": 0,
             "🎶": 1,
             "⚠": 0,
+            "🤖": 1,
+            "⚙": 0,
+            "🔒": 1,
+            "⚰": 0,
         }
 
         self.url_pattern = re.compile(r'(\w+://[^\s()<>]*\([^\s()<>]*\)[^\s()<>]*(?<![.,;!?])|www\.[^\s()<>]*\([^\s()<>]*\)[^\s()<>]*(?<![.,;!?])|\w+://[^\s()<>]+(?<![.,;!?])|www\.[^\s()<>]+(?<![.,;!?]))')
@@ -169,7 +324,7 @@ class RudePopout(QObject):
         self.users_selector.addWidget(self.user_label)
 
         # * List of users (clickable items) *
-        self.user_list = QListWidget(parent=Form)
+        self.user_list = RudeUserListWidget(parent=Form, maingui=self.parentGui)
         sizePolicy = QSizePolicy(
             QSizePolicy.Policy.Preferred,
             QSizePolicy.Policy.Expanding
@@ -206,6 +361,10 @@ class RudePopout(QObject):
 
         self.enter_filter = EnterFilter(self)
         self.input.installEventFilter(self.enter_filter)
+        self.tab_filter = TabEventFilter(self, self.parentGui)
+        self.input.installEventFilter(self.tab_filter)
+        self.arrow_key_filter = ArrowKeyEventFilter(self)
+        self.input.installEventFilter(self.arrow_key_filter)
         if self.parentGui.log_on:
             logging.info("UI setup complete")
 
@@ -488,6 +647,7 @@ class RudePopout(QObject):
 
     def insert_and_send_message(self):
         try:
+            text = self.input.text().strip()
             nickname = self.parentGui.irc_client.nickname
             user_mode = self.parentGui.irc_client.get_user_mode(nickname, self.channel)
             mode_symbol = self.parentGui.irc_client.get_mode_symbol(user_mode) if user_mode else ''
@@ -495,17 +655,52 @@ class RudePopout(QObject):
                 timestamp = datetime.now().strftime('[%H:%M:%S] ')
             else:
                 timestamp = ""
-            text = self.input.text().strip()
+
+            if text.startswith("/"):
+                self.parentGui.irc_client.loop.create_task(self.parentGui.irc_client.command_parser(text))
+                self.input.clear()
+                return
+
             if self.parentGui.log_on:
                 logging.debug(f"Message to send: {text}")
+
             self.insert_text(f"{timestamp}<{mode_symbol}{self.parentGui.irc_client.nickname}> {text}")
             self.input.clear()
             self.send_message(text)
+            self.save_entry_history(text)
             self.highlight_nicknames()
             self.parentGui.irc_client.save_message(self.parentGui.irc_client.server, self.channel, nickname, text, mode_symbol, is_sent=False)
             self.parentGui.irc_client.log_message(self.parentGui.irc_client.server_name, self.channel, nickname, text, is_sent=False)
         except Exception as e:
             logging.error(f"Exception in insert_and_send_message: {e}")
+
+    def show_previous_entry(self):
+        if self.history_index > 0:
+            self.history_index -= 1
+            self.input.setText(self.entry_history[self.history_index])
+
+    def show_next_entry(self):
+        if self.history_index < len(self.entry_history) - 1:
+            self.history_index += 1
+            self.input.setText(self.entry_history[self.history_index])
+        elif self.history_index == len(self.entry_history) - 1:
+            self.history_index += 1
+            self.input.clear()
+
+    def save_entry_history(self, text):
+        try:
+            # Save the entered message to entry_history
+            if text:
+                self.entry_history.append(text)
+
+                # Limit the entry_history to the last 10 messages
+                if len(self.entry_history) > 10:
+                    self.entry_history.pop(0)
+
+                # Reset history_index to the end of entry_history
+                self.history_index = len(self.entry_history)
+        except Exception as e:
+            logging.error(f"Error in save_entry_history: {e}")
 
     def load_user_list(self):
         for user in self.parentGui.irc_client.channel_users.get(self.channel, []):
