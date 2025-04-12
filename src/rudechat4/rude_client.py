@@ -147,6 +147,7 @@ class RudeChatClient:
         for channel in self.auto_join_channels:
             if channel not in self.joined_channels:
                 self.loop.create_task(self.join_channel(channel))
+                self.loop.create_task(self.request_who_for_all_channels())
 
     def update_away_status(self):
         for nickname, away_message in self.away_users_dict.items():
@@ -1258,11 +1259,12 @@ class RudeChatClient:
         await asyncio.sleep(4)
         while self.loop_running:
             for channel in self.joined_channels:
-                await self.send_who(channel)
-                self.gui.highlight_away_users()
-                self.cap_who_for_chan.append(channel)
-                await asyncio.sleep(14)
-                self.gui.highlight_who_channels()
+                if channel not in self.cap_who_for_chan:
+                    await self.send_who(channel)
+                    self.gui.highlight_away_users()
+                    self.cap_who_for_chan.append(channel)
+                    await asyncio.sleep(14)
+                    self.gui.highlight_who_channels()
             self.who_for_chan_complete = True
             break
 
@@ -3706,7 +3708,7 @@ class RudeChatClient:
         # Update the GUI's list of channels
         self.update_gui_channel_list()
 
-        self.force_click(channel=None)
+        self.gui.force_click()
 
         # Display a message indicating the DM was closed
         self.gui.insert_text_widget(f"Private message with {nickname} closed.\n")
@@ -3734,7 +3736,7 @@ class RudeChatClient:
             self.update_gui_channel_list()
             if self.joined_channels:
                 try:
-                    self.force_click()
+                    self.gui.force_click()
                 except TypeError as e:
                     logging.error(f"TypeError in leave_channel: {e}")
                 except Exception as e:
@@ -4024,7 +4026,7 @@ class RudeChatClient:
             case "sw":
                 channel_name = args[1]
                 if channel_name in self.joined_channels and self.server_name in self.gui.popped_out_channels and channel_name not in self.gui.popped_out_channels[self.server_name]:
-                    self.pop_out_return(channel_name)
+                    self.gui.pop_out_return(channel_name)
                 else:
                     self.gui.insert_text_widget(f"Not a member of channel or Channel in Pop Out Window: {channel_name}\n")
 
@@ -5087,52 +5089,6 @@ class RudeChatClient:
         if server_name:
             messages = self.motd_dict.get(server_name, [])
             self.gui.insert_text_widget(f"{messages}\n")
-
-    def pop_out_switch(self):
-        # Get the existing channel list from the channel_selector_list
-        channel_list = self.gui.channel_selector_list.get(0, self.gui.channel_selector_list.size())
-
-        # Pick a channel at random from the channel list
-        if channel_list:
-            channel = random.choice(channel_list)
-            self.force_click(channel)
-
-    def pop_out_return(self, channel):
-        self.force_click(channel)
-
-    def force_click(self, channel=None):
-        if self.log_on:
-            logging.info(f"force click channel: {channel}")
-        if channel is not None:
-            if self.log_on:
-                logging.info(f"channel is not None")
-            current_selected_channel = channel
-            if self.log_on:
-                logging.info(f"Currently Selected Channel: {current_selected_channel}")
-        else:
-            try:
-                current_selected_channel = self.joined_channels[0]
-                if self.log_on:
-                    logging.info(f"Else Currently Selected Channel: {current_selected_channel}")
-            except Exception as e:
-                logging.error(f"Error1 force_click: {e}")
-
-        listbox_size = self.gui.channel_selector_list.count()
-            
-        # Iterate through the listbox to find the index of the current selected channel
-        for i in range(listbox_size):
-            item_at_index = self.gui.channel_selector_list.item(i).text()
-            if self.log_on:
-                logging.info(f"item at index: {item_at_index}")
-
-            if item_at_index == current_selected_channel:
-                if self.log_on:
-                    logging.info(f"Time for the force click!")
-                try:
-                    self.gui.the_force_click(i)  # Perform the force click at the matched index
-                except Exception as e:
-                    logging.error(f"Error2 force_click: {e}")
-                break
 
     async def handle_upload(self):
         filename_tuple = QFileDialog().getOpenFileName(self.gui, 'Open File')

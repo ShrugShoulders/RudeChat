@@ -1059,12 +1059,24 @@ class RudeGui(QWidget):
         if self.log_on:
             logging.info(f"Listed Pop Out Windows: {self.pop_out_windows}")
 
-    def force_click(self):
-        if self.channel_selector_list.count() > 0:
-            first_item = self.channel_selector_list.item(0)
-            self.channel_selector_list.setCurrentItem(first_item)
-            self.channel_selector_list.setFocus()
-            self.on_channel_click()
+    def force_click(self, channel=None):
+        if channel and self.channel_selector_list.count() > 0:
+            for index in range(self.channel_selector_list.count()):
+                item = self.channel_selector_list.item(index)
+                if item.text() == channel:
+                    self.channel_selector_list.setCurrentItem(item)
+                    self.channel_selector_list.setFocus()
+                    self.on_channel_click()
+                    break
+        else:
+            if self.channel_selector_list.count() > 0:
+                first_item = self.channel_selector_list.item(0)
+                self.channel_selector_list.setCurrentItem(first_item)
+                self.channel_selector_list.setFocus()
+                self.on_channel_click()
+
+    def pop_out_return(self, channel):
+        self.force_click(channel)
 
     def open_client_config_window(self):
         def after_config_window_close():
