@@ -73,6 +73,7 @@ from PyQt6.QtCore import (
     QTimer,
     QCoreApplication,
     QMetaObject,
+    QRect,
 )
 
 from PyQt6.QtGui import (

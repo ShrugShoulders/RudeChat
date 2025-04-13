@@ -649,7 +649,7 @@ class RudePopout(QObject):
 
     def handle_action(self, args, nickname, timestamp):
         action_message = ' '.join(args[1:])
-        escaped_input = self.parentGui.escape_color_codes(action_message) # \x01ACTION {escaped_input}\x01
+        escaped_input = self.parentGui.escape_color_codes(action_message)
         formatted_message = f"* {nickname} {escaped_input}"
         self.send_message(f"\x01ACTION {escaped_input}\x01")
         self.insert_text(f"{timestamp} {formatted_message}")

@@ -9,6 +9,7 @@ from rudechat4.list_window import ChannelListWindow
 from rudechat4.nick_cleaner import clean_nicknames
 from rudechat4.rude_logger import configure_logging
 from rudechat4.rude_text_browser import RudeTextBrowser
+from rudechat4.user_data_display import RudeUserData
 
 class TabEventFilter(QObject):
     def __init__(self, gui):
@@ -150,6 +151,7 @@ class RudeUserListWidget(QListWidget):
         ignore_action = QAction("Ignore User", self)
         unignore_action = QAction("Unignore User", self)
         kick_action = QAction("Kick User", self)
+        open_user_data_action = QAction("User Data", self) # TODO 
 
         # Connect actions to methods
         open_user_dm.triggered.connect(self.open_dm_with_user)
@@ -157,6 +159,7 @@ class RudeUserListWidget(QListWidget):
         ignore_action.triggered.connect(self.ignore_user)
         unignore_action.triggered.connect(self.unignore_user)
         kick_action.triggered.connect(self.kick_user_from_channel)
+        open_user_data_action.triggered.connect(self.open_user_data_window) # TODO 
 
         # Add meu actions
         menu.addAction(open_user_dm)
@@ -164,9 +167,25 @@ class RudeUserListWidget(QListWidget):
         menu.addAction(ignore_action)
         menu.addAction(unignore_action)
         menu.addAction(kick_action)
+        menu.addAction(open_user_data_action) # TODO 
 
         # Show menu at cursor position
         menu.exec(self.mapToGlobal(pos))
+
+    def open_user_data_window(self):
+        try:
+            # Get the user
+            selected_item = self.currentItem()
+            username = selected_item.text()
+            modes_to_strip = ''.join(self.gui.irc_client.mode_values)
+            cleaned_nickname = username.lstrip(modes_to_strip)
+            
+            # Retrieve WHO data if it exists
+            if cleaned_nickname in self.gui.irc_client.who_user_data:
+                self.gui.open_user_info(cleaned_nickname)
+
+        except Exception as e:
+            logging.error(f"Error Showing User Data: {e}")
 
     def open_dm_with_user(self):
         """Removes the selected channel from the list."""
@@ -1077,6 +1096,25 @@ class RudeGui(QWidget):
 
     def pop_out_return(self, channel):
         self.force_click(channel)
+
+    def open_user_info(self, usr):
+        try:
+            self.user_info_window = QWidget()
+            self.user_info_ui = RudeUserData(parent=self)
+            self.user_info_ui.setupUi(self.user_info_window)
+
+            # Set the title
+            self.user_info_window.setWindowTitle(f"User Info - {usr}")
+
+            # Retrieve WHO data if it exists
+            if usr in self.irc_client.who_user_data:
+                who_info = self.irc_client.who_user_data[usr]
+                self.user_info_ui.set_user_data(who_info)
+
+            # Show the user data window
+            self.user_info_window.show()
+        except Exception as e:
+            logging.error(f"Error on open_user_info: {e}")
 
     def open_client_config_window(self):
         def after_config_window_close():
