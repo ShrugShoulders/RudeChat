@@ -2,10 +2,10 @@
 - [x] Complete / Has base function
 - [ ] Needs to be done / all child goals need to be completed
 
-**Tasks Complete: (41/45 - 91.11%)**
-- [ ] Convert to Qt
+**Tasks Complete: (45/45 - 100.00%)**
+- [x] Convert to Qt
 	- [x] `__main__`
-	- [ ] `rude_gui`
+	- [x] `rude_gui`
 		- [x] Menubar
 			- [x] Chat
 				- [x] Clear Chat
@@ -32,9 +32,9 @@
 			- [x] Design pop out window
 			- [x] Implement logic for display
 			- [x] Implement commands
-		- [ ] `user_data_display`
+		- [x] `user_data_display`
 			- [x] Design user data display
-			- [ ] Implement display logic.
+			- [x] Implement display logic.
 		- [x] `rude_colours`
 			- [x] Design nickname color edit window
 			- [x] Implement logic
