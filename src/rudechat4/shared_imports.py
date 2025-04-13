@@ -91,21 +91,3 @@ from PyQt6.QtGui import (
 
 if platform.system() == "Darwin":
     from objc import lookUpClass
-
-# Soon to be Obsolete
-import tkinter as tk
-from tkinter import (
-    Tk,
-    ttk,
-    Entry,
-    Frame,
-    Label,
-    Listbox,
-    Menu,
-    messagebox,
-    PhotoImage,
-    Scrollbar,
-    scrolledtext,
-    simpledialog,
-    StringVar
-)
