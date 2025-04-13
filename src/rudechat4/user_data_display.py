@@ -1,4 +1,3 @@
-from PyQt6 import QtCore, QtGui, QtWidgets
 from rudechat4.shared_imports import * 
 
 class RudeUserData(object):
@@ -12,7 +11,7 @@ class RudeUserData(object):
         self.verticalLayout = QVBoxLayout(Form)
         self.verticalLayout.setObjectName("verticalLayout")
         self.label = QLabel(parent=Form)
-        sizePolicy = QSizePolicy(QtWidgets.QSizePolicy.Policy.Preferred, QtWidgets.QSizePolicy.Policy.Maximum)
+        sizePolicy = QSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Maximum)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.label.sizePolicy().hasHeightForWidth())
@@ -72,7 +71,7 @@ class RudeUserData(object):
         self.horizontalLayout.setObjectName("horizontalLayout")
 
         self.lineEdit = QLineEdit(parent=Form)
-        sizePolicy = QSizePolicy(QtWidgets.QSizePolicy.Policy.Expanding, QtWidgets.QSizePolicy.Policy.Preferred)
+        sizePolicy = QSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
         sizePolicy.setHeightForWidth(self.lineEdit.sizePolicy().hasHeightForWidth())
         self.lineEdit.setSizePolicy(sizePolicy)
         self.lineEdit.setAlignment(Qt.AlignmentFlag.AlignCenter)
