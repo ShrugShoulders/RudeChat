@@ -87,7 +87,8 @@ from PyQt6.QtGui import (
     QTextCursor,
     QIcon,
     QKeyEvent,
-    QMouseEvent
+    QMouseEvent,
+    QPixmap
 )
 
 if platform.system() == "Darwin":

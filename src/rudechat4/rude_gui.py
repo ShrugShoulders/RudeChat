@@ -335,14 +335,15 @@ class RudeGui(QWidget):
         match platform.system():
             case "Darwin":
                 icon = QIcon()
-                icon_file = os.path.join(G_SOURCE_DIR, 'rude_tray_icon.png')
+                icon_file = os.path.join(G_SOURCE_DIR, 'rude256x256.png')
                 icon.addFile(icon_file)
                 self.master.setWindowIcon(icon)
             case "Linux":
                 icon = QIcon()
-                icon_file = os.path.join(G_SOURCE_DIR, 'rude_tray_icon.png') # Icon file too big?
+                icon_file = os.path.join(G_SOURCE_DIR, 'rude128x128.png') # Icon file too big?
+                icon.addPixmap(QPixmap(icon_file))
                 icon.addFile(icon_file)
-                self.master.setWindowIcon(icon)
+                self.setWindowIcon(icon)
             case "Windows":
                 icon = QIcon()
                 icon_file = os.path.join(G_SOURCE_DIR, 'rude.ico')
@@ -676,7 +677,7 @@ class RudeGui(QWidget):
         self.highlight_away_users()
         self.emoji_select()
         self.set_gui_theme()
-        self.set_icon()
+        #self.set_icon()
 
     def emoji_select(self):
         match platform.system():
@@ -742,7 +743,7 @@ class RudeGui(QWidget):
         else:
             self.tray_icon.showMessage(
                 "RudeChat",
-                "Minimized to tray. Double-click the icon to restore.",
+                "Minimized to tray. Right-Click to show",
                 QSystemTrayIcon.MessageIcon.Information,
                 3000
             )
