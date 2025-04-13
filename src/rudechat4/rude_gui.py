@@ -339,11 +339,11 @@ class RudeGui(QWidget):
                 icon.addFile(icon_file)
                 self.master.setWindowIcon(icon)
             case "Linux":
+                icon_path = os.path.join(G_SOURCE_DIR, 'rude_icon_round.png')
                 icon = QIcon()
-                icon_file = os.path.join(G_SOURCE_DIR, 'rude128x128.png') # Icon file too big?
-                icon.addPixmap(QPixmap(icon_file))
-                icon.addFile(icon_file)
-                self.setWindowIcon(icon)
+                icon.addFile(icon_path)
+                icon.addPixmap(QPixmap(icon_path), QIcon.Mode.Normal, QIcon.State.On)
+                self.master.setWindowIcon(icon)
             case "Windows":
                 icon = QIcon()
                 icon_file = os.path.join(G_SOURCE_DIR, 'rude.ico')
@@ -677,7 +677,7 @@ class RudeGui(QWidget):
         self.highlight_away_users()
         self.emoji_select()
         self.set_gui_theme()
-        #self.set_icon()
+        self.set_icon()
 
     def emoji_select(self):
         match platform.system():
@@ -709,7 +709,7 @@ class RudeGui(QWidget):
     # Tray Icon Management
     def create_tray_icon(self):
         # Create the tray icon
-        icon_file = os.path.join(G_SOURCE_DIR, 'rude_tray_icon.png')
+        icon_file = os.path.join(G_SOURCE_DIR, 'rude_icon_round_tray.png')
         self.tray_icon = QSystemTrayIcon()
         self.tray_icon.setIcon(QIcon(icon_file))
 
