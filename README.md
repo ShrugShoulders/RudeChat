@@ -10,7 +10,7 @@
 		- [ ] Gentoo(ebuild)
 		- [ ] Universal Stand-alone
 	- [ ] `MacOS`
-		- [ ].app 
+		- [ ] Application.app 
 	- [ ] `Windows`
 		- [ ] Installer
 
