@@ -73,8 +73,17 @@ class Window(QMainWindow):
 
     def closeEvent(self, event):
         """Handle the window close event (when X is clicked)."""
-        self.on_app_exit()
-        event.accept()
+        if self.gui and hasattr(self.gui, 'minimize_to_tray'):
+            if self.gui.minimize_to_tray:
+                event.ignore()
+                self.gui.send_to_tray()
+
+            else:
+                self.on_app_exit()
+                event.accept()
+        else:
+            self.on_app_exit()
+            event.accept()
 
     def on_app_exit(self):
         """Custom function that runs when the user clicks 'X'."""

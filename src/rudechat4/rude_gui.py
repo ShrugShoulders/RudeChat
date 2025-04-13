@@ -234,7 +234,6 @@ class RudeGui(QWidget):
         self.master.resize(self.app_size[0], self.app_size[1])
 
         self.read_config()
-        #self.start_tray_icon()
 
         self.irc_colors = {
             '00': '#ffffff', '01': '#000000', '02': '#0000AA', '03': '#00AA00',
@@ -332,16 +331,16 @@ class RudeGui(QWidget):
         self.master.config_edit_gui_action.triggered.connect(self.open_gui_config_window)
         configure_logging()
 
-    def set_icon(self): # Need to debug this, it wont show the icon on Linux. 
+    def set_icon(self): # Need to debug this, it wont show the icon on Linux/MacOS. Windows works. 
         match platform.system():
             case "Darwin":
                 icon = QIcon()
-                icon_file = os.path.join(G_SOURCE_DIR, 'rude.png')
+                icon_file = os.path.join(G_SOURCE_DIR, 'rude_tray_icon.png')
                 icon.addFile(icon_file)
                 self.master.setWindowIcon(icon)
             case "Linux":
                 icon = QIcon()
-                icon_file = os.path.join(G_SOURCE_DIR, 'rude.png') # Icon file too big?
+                icon_file = os.path.join(G_SOURCE_DIR, 'rude_tray_icon.png') # Icon file too big?
                 icon.addFile(icon_file)
                 self.master.setWindowIcon(icon)
             case "Windows":
@@ -531,6 +530,7 @@ class RudeGui(QWidget):
         self.sidebar.setStretch(2, 2)
 
         self.layout().addLayout(self.sidebar)
+        self.create_tray_icon()
 
     def select_first_server(self):
         server_count = self.server_selector_list.count()
@@ -706,30 +706,46 @@ class RudeGui(QWidget):
             self.text_field.clear()
 
     # Tray Icon Management
-    def create_tray_icon(self): pass #TODO
+    def create_tray_icon(self):
+        # Create the tray icon
+        icon_file = os.path.join(G_SOURCE_DIR, 'rude_tray_icon.png')
+        self.tray_icon = QSystemTrayIcon()
+        self.tray_icon.setIcon(QIcon(icon_file))
 
-    def start_tray_icon(self):
-        """Start the tray icon in a separate thread."""
-        if platform.system() == "Darwin":
-            self.to_tray = False
-            return
-        else:
-            try:
-                self.stop_tray_event = threading.Event()  # Event to stop the tray icon thread
-                tray_thread = threading.Thread(target=self.create_tray_icon)
-                tray_thread.daemon = True  # Make it a daemon thread so it will exit with the program
-                tray_thread.start()
-            except Exception as e:
-                logging.error(f"Error starting tray icon: {e}")
-                self.to_tray = False
-                return
+        # Create context menu
+        tray_menu = QMenu()
 
-    def minimize_to_tray(self):
+        # Set actions to the menu
+        show_action = QAction("Show", self)
+        quit_action = QAction("Quit", self)
+
+        show_action.triggered.connect(self.restore_from_tray)
+        quit_action.triggered.connect(QApplication.quit)
+
+        tray_menu.addAction(show_action)
+        tray_menu.addAction(quit_action)
+
+        self.tray_icon.setContextMenu(tray_menu)
+        self.tray_icon.show()
+
+    def restore_from_tray(self):
+        self.master.show()
+        self.master.setWindowState(Qt.WindowState.WindowActive)
+        self.master.raise_()
+        self.master.activateWindow()
+        self.iconed = False
+
+    def send_to_tray(self):
         """Minimize the window to the system tray."""
-        if not self.to_tray:
-            self.client_shutdown()
+        if not self.minimize_to_tray:
             return
         else:
+            self.tray_icon.showMessage(
+                "RudeChat",
+                "Minimized to tray. Double-click the icon to restore.",
+                QSystemTrayIcon.MessageIcon.Information,
+                3000
+            )
             self.master.hide()  # Hide the window
             self.iconed = True
 

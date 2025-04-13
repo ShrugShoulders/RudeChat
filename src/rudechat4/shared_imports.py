@@ -62,7 +62,8 @@ from PyQt6.QtWidgets import (
     QTreeWidget,
     QTreeWidgetItem,
     QHeaderView,
-    QScrollBar
+    QScrollBar,
+    QSystemTrayIcon
 )
 
 from PyQt6.QtCore import (
@@ -73,7 +74,7 @@ from PyQt6.QtCore import (
     QTimer,
     QCoreApplication,
     QMetaObject,
-    QRect,
+    QRect
 )
 
 from PyQt6.QtGui import (
