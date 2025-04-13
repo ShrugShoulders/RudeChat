@@ -151,7 +151,7 @@ class RudeUserListWidget(QListWidget):
         ignore_action = QAction("Ignore User", self)
         unignore_action = QAction("Unignore User", self)
         kick_action = QAction("Kick User", self)
-        open_user_data_action = QAction("User Data", self) # TODO 
+        open_user_data_action = QAction("User Data", self)
 
         # Connect actions to methods
         open_user_dm.triggered.connect(self.open_dm_with_user)
@@ -159,7 +159,7 @@ class RudeUserListWidget(QListWidget):
         ignore_action.triggered.connect(self.ignore_user)
         unignore_action.triggered.connect(self.unignore_user)
         kick_action.triggered.connect(self.kick_user_from_channel)
-        open_user_data_action.triggered.connect(self.open_user_data_window) # TODO 
+        open_user_data_action.triggered.connect(self.open_user_data_window)
 
         # Add meu actions
         menu.addAction(open_user_dm)
@@ -167,7 +167,7 @@ class RudeUserListWidget(QListWidget):
         menu.addAction(ignore_action)
         menu.addAction(unignore_action)
         menu.addAction(kick_action)
-        menu.addAction(open_user_data_action) # TODO 
+        menu.addAction(open_user_data_action)
 
         # Show menu at cursor position
         menu.exec(self.mapToGlobal(pos))
