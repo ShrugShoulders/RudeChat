@@ -647,6 +647,13 @@ class RudePopout(QObject):
         except Exception as e:
             logging.error(f"Exception in send_message: {e}")
 
+    def handle_action(self, args, nickname, timestamp):
+        action_message = ' '.join(args[1:])
+        escaped_input = self.parentGui.escape_color_codes(action_message) # \x01ACTION {escaped_input}\x01
+        formatted_message = f"* {nickname} {escaped_input}"
+        self.send_message(f"\x01ACTION {escaped_input}\x01")
+        self.insert_text(f"{timestamp} {formatted_message}")
+
     def insert_and_send_message(self):
         try:
             text = self.input.text().strip()
@@ -659,9 +666,22 @@ class RudePopout(QObject):
                 timestamp = ""
 
             if text.startswith("/"):
-                self.parentGui.irc_client.loop.create_task(self.parentGui.irc_client.command_parser(text))
-                self.input.clear()
-                return
+                args = text[1:].split()
+                primary_command = args[0].lower() if args else None
+
+                match args[0]:
+                    case "mac":
+                        self.parentGui.irc_client.loop.create_task(self.parentGui.irc_client.handle_pop_out_mac_command(args, self.channel))
+                        self.input.clear()
+                        return
+                    case "me":
+                        self.handle_action(args, nickname, timestamp)
+                        self.input.clear()
+                        return
+                    case None:
+                        self.parentGui.irc_client.loop.create_task(self.parentGui.irc_client.command_parser(text))
+                        self.input.clear()
+                        return
 
             if self.parentGui.log_on:
                 logging.debug(f"Message to send: {text}")

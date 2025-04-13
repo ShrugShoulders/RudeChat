@@ -1048,7 +1048,6 @@ class RudeChatClient:
 
     def replace_dms_in_gui(self):
         listed_channels = self.gui.get_channel_selector_items()
-        print(listed_channels)
         replaced_dms = []
         for dm in self.dm_list:
             if dm not in listed_channels:
@@ -1437,9 +1436,11 @@ class RudeChatClient:
                 and target in self.gui.popped_out_channels[self.server_name]
             ):
                 try:
-                    window = self.gui.pop_out_windows[target]
-                    window.insert_text(action_message)
-                    window.highlight_nicknames()
+                    window_list = self.gui.pop_out_windows.get(target)
+                    window = window_list[1] if window_list else None
+                    if window != None:
+                        window.insert_text(action_message.strip("\n"))
+                        window.highlight_nicknames()
                 except Exception as e:
                     logging.error(f"Error Handling Popped Out Windows ACTION command: {e}")
             
@@ -2402,10 +2403,12 @@ class RudeChatClient:
     def pipe_mode_to_pop_out(self, message, target):
         if target in self.gui.pop_out_windows:
             try:
-                window = self.gui.pop_out_windows[target]
-                formatted_message = f"{message}"
-                window.insert_text(formatted_message)
-                window.highlight_nicknames()
+                window_list = self.gui.pop_out_windows.get(target)
+                window = window_list[1] if window_list else None
+                formatted_message = f"{message.strip("\n")}"
+                if window != None:
+                    window.insert_text(formatted_message)
+                    window.highlight_nicknames()
                 return
             except Exception as e:
                 logging.error(f"Exception in pipe_mode_to_pop_out: {e}")
@@ -2444,8 +2447,9 @@ class RudeChatClient:
             try:
                 window_list = self.gui.pop_out_windows.get(channel)
                 window = window_list[1] if window_list else None
-                window.update_gui_user_list(channel)
-                window.update_users_label()
+                if window != None:
+                    window.update_gui_user_list(channel)
+                    window.update_user_label()
 
             except Exception as e:
                 logging.error(f"Error2 Updating Popped Out User List Box or Label: {e}")
@@ -3104,9 +3108,25 @@ class RudeChatClient:
         msg = f"{tokens.source}: {token.params[0]}\n"
         self.add_server_message(msg)
 
-    def handle_716(tokens):
+    def handle_716(self, tokens):
         msg = f"{tokens.source}: {tokens.params[1]} {tokens.params[2]}\n"
         self.add_server_message(msg)
+
+    def znc_invalid_password(self, tokens): 
+        msg = f"{tokens.source} {tokens.params[0]} {tokens.params[1]}\n"
+        self.add_server_message(msg)
+
+    def handle_341(self, tokens): 
+        msg = f"{tokens.source} {' '.join(tokens.params)}\n"
+        self.add_server_message(msg)
+
+    def handle_431(self, tokens):
+        msg = f"{tokens.source} {" ".join(params)}\n"
+        self.gui.insert_text_widget(msg)
+
+    def handle_461(self, tokens):
+        msg = f"{tokens.source} {" ".join(params)}\n"
+        self.gui.insert_text_widget(msg)
 
     async def handle_incoming_message(self, config_file):
         buffer = ""
@@ -3250,6 +3270,8 @@ class RudeChatClient:
                             self.handle_creation_time(tokens)
                         case "328":
                             self.handle_328(tokens)
+                        case "341": 
+                            self.handle_341(tokens)
                         case "367":  
                             self.handle_banlist(tokens)     
                         case "368":  
@@ -3268,10 +3290,16 @@ class RudeChatClient:
                             self.command_403(tokens)
                         case "404":
                             self.command_404(tokens)
+                        case "431":
+                            self.handle_431(tokens)
                         case "442":
                             self.handle_not_on_channel(tokens)
                         case "443":
                             self.handle_already_on_channel(tokens)
+                        case "461":
+                            self.handle_461(tokens)
+                        case "464": 
+                            self.znc_invalid_password(tokens)
                         case "472":
                             self.handle_unknown_mode(tokens)
                         case "473" | "475" | "474" | "471":
@@ -4295,14 +4323,14 @@ class RudeChatClient:
 
                     away_message = self.away_users_dict.get(userchan, "")
                     if away_message and userchan not in self.away_notified:
-                        window.insert_text(f"User Is AWAY: {away_message}\n")
+                        window.insert_text(f"User Is AWAY: {away_message}")
                         self.away_notified.add(userchan)
 
                 else:
                     if userchan not in self.away_notified:
                         away_message = self.away_users_dict[userchan]
                         if away_message:
-                            window.insert_text(f"User Is AWAY: {away_message}\n")
+                            window.insert_text(f"User Is AWAY: {away_message}")
                             self.away_notified.add(userchan)
         else:
             return
@@ -4385,15 +4413,18 @@ class RudeChatClient:
             self.gui.insert_text_widget(f"No channel selected. Use /join to join a channel.\n")
 
     async def handle_pop_out_mac_command(self, args, channel):
-        window = self.gui.pop_out_windows.get(channel)
+        window_list = self.gui.pop_out_windows.get(channel)
+        window = window_list[1] if window_list else None
+        if window is None:
+            return
         user_mode = self.get_user_mode(self.nickname, channel)
         mode_symbol = self.get_mode_symbol(user_mode) if user_mode else ''
         timestamp = datetime.now().strftime('[%H:%M:%S]')
         if len(args) < 2:
             available_macros = ", ".join(self.ASCII_ART_MACROS.keys())
             if window:
-                window.insert_text(f"Available ASCII art macros: {available_macros}\n")
-                window.insert_text("Usage: /mac <macro_name>\n")
+                window.insert_text(f"Available ASCII art macros: {available_macros}")
+                window.insert_text("Usage: /mac <macro_name>")
                 return
 
         macro_name = args[1]
@@ -4404,13 +4435,13 @@ class RudeChatClient:
                     await self.send_message(f'PRIVMSG {channel} :{formatted_message}')
                     await asyncio.sleep(0.4)
                     if self.use_time_stamp:
-                        window.insert_text(f"{timestamp} <{mode_symbol}{self.nickname}> {formatted_message}")
+                        window.insert_text(f"{timestamp} <{mode_symbol}{self.nickname}> {formatted_message.strip("\n")}")
                     else:
-                        window.insert_text(f"<{mode_symbol}{self.nickname}> {formatted_message}")
+                        window.insert_text(f"<{mode_symbol}{self.nickname}> {formatted_message.strip("\n")}")
                     window.highlight_nicknames()
                     await self.append_to_channel_history(channel, line, mode_symbol)
             else:
-                window.insert_text(f"Unknown ASCII art macro: {macro_name}. Type '/mac' to see available macros.\n")
+                window.insert_text(f"Unknown ASCII art macro: {macro_name}. Type '/mac' to see available macros.")
 
     async def handle_mac_command(self, args):
         if len(args) < 2:
