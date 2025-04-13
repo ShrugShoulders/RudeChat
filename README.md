@@ -2,52 +2,17 @@
 - [x] Complete / Has base function
 - [ ] Needs to be done / all child goals need to be completed
 
-**Tasks Complete: (45/45 - 100.00%)**
-- [x] Convert to Qt
-	- [x] `__main__`
-	- [x] `rude_gui`
-		- [x] Menubar
-			- [x] Chat
-				- [x] Clear Chat
-				- [x] Reset Macros
-			- [x] Color
-				- [x] Color selector
-				- [x] Save Colors
-				- [x] Reset Colors
-			- [x] Config
-				- [x] Edit Servers...
-				- [x] Edit GUI
-		- [x] Restore Sidebar
-			- [x] Users
-				- [x] Restore right click menu
-				- [x] Restore AWAY user display color change
-			- [x] Servers
-			- [x] Channels
-				- [x] Restore right click menu
-			- [x] Entry bar
-				- [x] Restore keybindings for TAB and arrow keys
-					- [x] TAB Complete
-					- [x] Aarrow Key entry history.
-		- [x] `rude_popout`
-			- [x] Design pop out window
-			- [x] Implement logic for display
-			- [x] Implement commands
-		- [x] `user_data_display`
-			- [x] Design user data display
-			- [x] Implement display logic.
-		- [x] `rude_colours`
-			- [x] Design nickname color edit window
-			- [x] Implement logic
-		- [x] `server_config_window`
-			- [x] `channel_expand`
-	- [x] `rude_client`
-		- [x] Fix listboxes
-	- [x] `gui_config_window`
-	- [x] `list_window`
-		- [x] Untheme
-	- [x] `highlight_nicknames`
-		- [x] Restore main user nickname highlight
-	- [x] `rude_first_run`
+**Tasks Complete: (0/10 - 0.00%)**
+- [ ] OS Builds
+	- [ ] `Linux`
+		- [ ] Debian/Ubuntu
+		- [ ] Fedora
+		- [ ] Gentoo(ebuild)
+		- [ ] Universal Stand-alone
+	- [ ] `MacOS`
+		- [ ].app 
+	- [ ] `Windows`
+		- [ ] Installer
 
 # RudeChat IRC Client: For Fun & Reasons.
 ## How to Install
@@ -76,11 +41,7 @@ pip install -r requirements.txt .
 
 
 ```sh
-# NOT USING HOMEBREW
 pip3 install -r requirements.txt
-
-# USING HOMEBREW (might have some unexpected side effects)
-pip3 install -r requirements.txt --break-system-packages
 ```
 
 - Use the below command to build the MacOS App.

@@ -37,6 +37,7 @@ class Window(QMainWindow):
         super().__init__()
         self._createMenuBar()
         self.gui = None
+        self.setWindowIcon(QIcon(ICON_FILE))
         configure_logging()
 
     def _createMenuBar(self):

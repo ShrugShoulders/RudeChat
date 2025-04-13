@@ -331,26 +331,12 @@ class RudeGui(QWidget):
         self.master.config_edit_gui_action.triggered.connect(self.open_gui_config_window)
         configure_logging()
 
-    def set_icon(self): # Need to debug this, it wont show the icon on Linux/MacOS. Windows works. 
-        match platform.system():
-            case "Darwin":
-                icon = QIcon()
-                icon_file = os.path.join(G_SOURCE_DIR, 'rude256x256.png')
-                icon.addFile(icon_file)
-                self.master.setWindowIcon(icon)
-            case "Linux":
-                icon_path = os.path.join(G_SOURCE_DIR, 'rude_icon_round.png')
-                icon = QIcon()
-                icon.addFile(icon_path)
-                icon.addPixmap(QPixmap(icon_path), QIcon.Mode.Normal, QIcon.State.On)
-                self.master.setWindowIcon(icon)
-            case "Windows":
-                icon = QIcon()
-                icon_file = os.path.join(G_SOURCE_DIR, 'rude.ico')
-                icon.addFile(icon_file)
-                self.master.setWindowIcon(icon)
-            case _:
-                logging.error(f"Unknown Operating System in set_icon: {platform.system()}")
+    def set_icon(self):
+        icon = QIcon()
+        icon.addFile(ICON_FILE)
+        app = QApplication.instance()
+        if app:
+            app.setWindowIcon(icon)
 
     def set_screen_size(self):
         try:
@@ -365,7 +351,6 @@ class RudeGui(QWidget):
             self.app_size = [width, height]
         except Exception as e:
             logging.error(f"Unable to get screen size: {e}. Using default variables.")
-            screen_size = "default"  # Prevent NameError in match-case
 
     def read_config(self):
         config_file = os.path.join(G_CONFIG_DIR, 'gui_config.ini')
@@ -677,7 +662,7 @@ class RudeGui(QWidget):
         self.highlight_away_users()
         self.emoji_select()
         self.set_gui_theme()
-        self.set_icon()
+        #self.set_icon()
 
     def emoji_select(self):
         match platform.system():
@@ -709,7 +694,7 @@ class RudeGui(QWidget):
     # Tray Icon Management
     def create_tray_icon(self):
         # Create the tray icon
-        icon_file = os.path.join(G_SOURCE_DIR, 'rude_icon_round_tray.png')
+        icon_file = os.path.join(G_CONFIG_DIR, 'rude_icon_round_tray.png')
         self.tray_icon = QSystemTrayIcon()
         self.tray_icon.setIcon(QIcon(icon_file))
 
