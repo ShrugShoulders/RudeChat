@@ -106,15 +106,11 @@ def __main__():
     app = QApplication(sys.argv)
     app.setApplicationName("RudeChat")
     app.setApplicationVersion("4.0.0")
-    icon_path = os.path.join(G_CONFIG_DIR, 'rude.png')  # Ensure the icon exists
-    app.setWindowIcon(QIcon(icon_path))
-
     first_run = FirstRun(app)
     if first_run.first_run_detect == 0:
         first_run.open_client_config_window()
 
     root = Window()
-    root.setWindowIcon(QIcon(icon_path))
     gui = RudeGui(root)
     root.set_gui(gui)
     root.setCentralWidget(gui)
