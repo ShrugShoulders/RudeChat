@@ -331,13 +331,6 @@ class RudeGui(QWidget):
         self.master.config_edit_gui_action.triggered.connect(self.open_gui_config_window)
         configure_logging()
 
-    def set_icon(self):
-        icon = QIcon()
-        icon.addFile(ICON_FILE)
-        app = QApplication.instance()
-        if app:
-            app.setWindowIcon(icon)
-
     def set_screen_size(self):
         try:
             screen = QGuiApplication.primaryScreen()
@@ -662,7 +655,6 @@ class RudeGui(QWidget):
         self.highlight_away_users()
         self.emoji_select()
         self.set_gui_theme()
-        #self.set_icon()
 
     def emoji_select(self):
         match platform.system():
@@ -1021,13 +1013,13 @@ class RudeGui(QWidget):
 
     def open_color_selector(self):
         def after_selector_window_close():
-            pass
+            pass # TODO
 
         def close_window():
-            pass
+            pass # TODO
         
         def on_selector_window_close():
-            pass
+            pass # TODO
 
         self.color_selector = RudeColours()
 
