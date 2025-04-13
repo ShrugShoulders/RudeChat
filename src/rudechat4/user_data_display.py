@@ -1,4 +1,5 @@
 from rudechat4.shared_imports import * 
+from rudechat4.global_variables import *
 
 class RudeUserData(object):
     def __init__(self, parent):
@@ -7,6 +8,7 @@ class RudeUserData(object):
 
     def setupUi(self, Form):
         Form.setObjectName("Form")
+        Form.setWindowIcon(QIcon(ICON_FILE))
         Form.resize(412, 390)
         self.verticalLayout = QVBoxLayout(Form)
         self.verticalLayout.setObjectName("verticalLayout")

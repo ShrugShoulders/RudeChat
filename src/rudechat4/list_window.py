@@ -1,8 +1,10 @@
 from rudechat4.shared_imports import *
+from rudechat4.global_variables import *
 
 class ChannelListWindow(QDialog):
     def __init__(self, gui, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.setWindowIcon(QIcon(ICON_FILE))
         self.setWindowTitle("Channel List")
         self.resize(800, 400)
 

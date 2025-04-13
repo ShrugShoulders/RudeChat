@@ -1,4 +1,5 @@
 from rudechat4.shared_imports import *
+from rudechat4.global_variables import *
 from rudechat4.rude_text_browser import RudeTextBrowser
 
 
@@ -240,6 +241,7 @@ class RudePopout(QObject):
         self.url_pattern = re.compile(r'(\w+://[^\s()<>]*\([^\s()<>]*\)[^\s()<>]*(?<![.,;!?])|www\.[^\s()<>]*\([^\s()<>]*\)[^\s()<>]*(?<![.,;!?])|\w+://[^\s()<>]+(?<![.,;!?])|www\.[^\s()<>]+(?<![.,;!?]))')
 
     def setupUi(self, Form):
+        Form.setWindowIcon(QIcon(ICON_FILE))
         # === Main Window Setup ===
         if self.parentGui.log_on:
             logging.info("Setting up UI components")

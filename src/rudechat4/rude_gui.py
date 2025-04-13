@@ -1124,6 +1124,7 @@ class RudeGui(QWidget):
             return
 
         self.main_window = QWidget()
+        self.main_window.setWindowIcon(QIcon(ICON_FILE))
         self.main_window.setWindowTitle("Rude Server configuration")
         self.main_window.resize(450, 500)
 
@@ -1181,6 +1182,7 @@ class RudeGui(QWidget):
 
         self.main_window = QWidget()
         self.main_window.setWindowTitle("Rude GUI configuration")
+        self.main_window.setWindowIcon(QIcon(ICON_FILE))
         self.main_window.resize(450, 500)
 
         config_file = os.path.join(G_CONFIG_DIR, 'gui_config.ini')
