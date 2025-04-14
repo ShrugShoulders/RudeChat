@@ -3,6 +3,9 @@
 - [ ] Needs to be done / all child goals need to be completed
 
 **Tasks Complete: (0/10 - 0.00%)**
+- [ ] Small Bugfixes
+	- [ ] Make clicking on the app reopen the window (MacOS)
+	- [ ] Implement full notification support for mentions and DMs.
 - [ ] OS Builds
 	- [ ] `Linux`
 		- [ ] Debian/Ubuntu
