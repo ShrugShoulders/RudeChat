@@ -11,6 +11,7 @@ class RudeColours(QWidget):
         self.layout = QVBoxLayout(self)
 
         self.selectedKey = None
+        self.selectedIndex = -1
 
         self.color_options = {}
         self.colors_json_path = os.path.join(G_CONFIG_DIR, "nickname_colours.json")
@@ -69,10 +70,19 @@ class RudeColours(QWidget):
         self.update_list()
 
     def update_index(self):
-        self.edit_button.setEnabled(True)
-
-        self.selectedIndex = self.nicks_list.currentRow()
-        self.selectedKey = list(self.color_options.keys())[self.selectedIndex]
+        if self.nicks_list.selectedItems():
+            self.edit_button.setEnabled(True)
+            self.selectedIndex = self.nicks_list.currentRow()
+            keys = list(self.color_options.keys())
+            if 0 <= self.selectedIndex < len(keys):
+                self.selectedKey = keys[self.selectedIndex]
+            else:
+                self.selectedKey = None
+                self.edit_button.setEnabled(False)
+        else:
+            self.edit_button.setEnabled(False)
+            self.selectedKey = None
+            self.selectedIndex = -1
 
     def update_list(self, filtered_options=None):
         # Clear the listbox and insert new items
@@ -84,10 +94,32 @@ class RudeColours(QWidget):
 
         index = 0
         for key, value in color_options_to_display.items():
-
             self.nicks_list.setItem(index, 0, QTableWidgetItem(key))
             self.nicks_list.setItem(index, 1, QTableWidgetItem(value))
             index += 1
+
+        # After updating the list, reset the selected index and key if the previous selection is no longer valid
+        if self.selectedIndex >= self.nicks_list.rowCount():
+            self.selectedIndex = -1
+            self.selectedKey = None
+            self.edit_button.setEnabled(False)
+        elif self.selectedIndex != -1 and self.selectedKey not in self.color_options:
+            # This can happen if the selected item was deleted
+            self.selectedIndex = -1
+            self.selectedKey = None
+            self.edit_button.setEnabled(False)
+        elif self.selectedIndex != -1 and list(self.color_options.keys())[self.selectedIndex] != self.selectedKey:
+            # This can happen if the order of items changed due to filtering
+            try:
+                self.selectedKey = list(self.color_options.keys())[self.selectedIndex]
+            except IndexError:
+                self.selectedKey = None
+                self.selectedIndex = -1
+                self.edit_button.setEnabled(False)
+        elif self.nicks_list.rowCount() == 0:
+            self.selectedIndex = -1
+            self.selectedKey = None
+            self.edit_button.setEnabled(False)
 
     def filter_list(self, event):
         # Get the search query
@@ -105,13 +137,11 @@ class RudeColours(QWidget):
         self.editor.show()
 
     def edit_option(self):
-        initial_value = self.color_options[self.selectedKey]
+        if self.selectedKey:
+            initial_value = self.color_options[self.selectedKey]
+            self.editor = NickEditor(self.save_changes, self.selectedKey, initial_value)
+            self.editor.show()
 
-        self.editor = NickEditor(self.save_changes, self.selectedKey, initial_value)
-
-        self.editor.show()
-
-    # Function to remove the selected entry
     def delete_option(self):
         if self.selectedKey:
             del self.color_options[self.selectedKey]
@@ -119,19 +149,33 @@ class RudeColours(QWidget):
 
             # Update the listbox
             self.update_list()
+            self.selectedKey = None
+            self.selectedIndex = -1
+            self.edit_button.setEnabled(False)
 
-    # Function to save changes
     def save_changes(self, key, value):
         new_key = key.strip()
         new_value = value.strip()
 
         if new_key and new_value:
-            self.color_options[new_key] = new_value
+            if self.selectedKey and new_key != self.selectedKey and new_key in self.color_options:
+                QMessageBox.warning(self, "Warning", f"Nickname '{new_key}' already exists.")
+                return
 
             if self.selectedKey and new_key != self.selectedKey:
                 del self.color_options[self.selectedKey]
+                self.selectedKey = new_key
+            elif not self.selectedKey:
+                self.selectedKey = new_key
 
+            self.color_options[new_key] = new_value
             self.save_color_options()
 
             # Update the listbox
             self.update_list()
+            # Try to re-select the edited item
+            try:
+                index = list(self.color_options.keys()).index(new_key)
+                self.nicks_list.setCurrentCell(index, 0)
+            except ValueError:
+                pass

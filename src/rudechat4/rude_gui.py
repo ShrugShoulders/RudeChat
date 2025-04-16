@@ -307,6 +307,7 @@ class RudeGui(QWidget):
             "⚙": 0,
             "🔒": 1,
             "⚰": 0,
+            "💩": 1,
         }
 
         # Initialise layout
