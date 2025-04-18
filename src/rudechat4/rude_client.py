@@ -3931,6 +3931,17 @@ class RudeChatClient:
             await self.send_message(f"AWAY :Away @ {timestamp}")
             self.gui.update_users_label()
 
+    async def tray_quit(self):
+        self.gui.minimize_to_tray = False
+        self.gui.save_nickname_colors()
+        await self.save_channel_messages()
+        self.remove_bang_channels()
+        quit_message = "Client Quit"
+        self.gui.quit_clients_with_message(quit_message)
+        self.loop_running = False
+        self.gui.destroy_client()
+        return
+
     async def command_parser(self, user_input):
         args = user_input[1:].split() if user_input.startswith('/') else []
         primary_command = args[0].lower() if args else None
@@ -4089,6 +4100,7 @@ class RudeChatClient:
                     await self.ping_server()
 
             case "quit":
+                self.gui.minimize_to_tray = False
                 self.gui.save_nickname_colors()
                 await self.save_channel_messages()
                 self.remove_bang_channels()

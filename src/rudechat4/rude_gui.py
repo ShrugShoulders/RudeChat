@@ -699,13 +699,16 @@ class RudeGui(QWidget):
         quit_action = QAction("Quit", self)
 
         show_action.triggered.connect(self.restore_from_tray)
-        quit_action.triggered.connect(QApplication.quit)
+        quit_action.triggered.connect(self.quit_from_tray)
 
         tray_menu.addAction(show_action)
         tray_menu.addAction(quit_action)
 
         self.tray_icon.setContextMenu(tray_menu)
         self.tray_icon.show()
+
+    def quit_from_tray(self):
+        self.irc_client.loop.create_task(self.irc_client.tray_quit())
 
     def restore_from_tray(self):
         self.master.show()
@@ -1013,15 +1016,6 @@ class RudeGui(QWidget):
         loop.create_task(self.irc_client.update_available_macros())
 
     def open_color_selector(self):
-        def after_selector_window_close():
-            pass # TODO
-
-        def close_window():
-            pass # TODO
-        
-        def on_selector_window_close():
-            pass # TODO
-
         self.color_selector = RudeColours()
 
         self.color_selector.show()
