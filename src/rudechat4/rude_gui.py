@@ -717,6 +717,7 @@ class RudeGui(QWidget):
         self.tray_icon.show()
 
     def quit_from_tray(self):
+        self.restore_from_tray()
         self.irc_client.loop.create_task(self.irc_client.tray_quit())
 
     def restore_from_tray(self):
