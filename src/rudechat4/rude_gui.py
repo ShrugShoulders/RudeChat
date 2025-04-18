@@ -24,49 +24,58 @@ class TabEventFilter(QObject):
 
     def handle_tab_complete(self):
         try:
-            current_text = self.gui.text_field.text().strip()
+            current_text = self.gui.text_field.text()
+            cursor_pos = self.gui.text_field.cursorPosition()
 
-            if not current_text:
+            # Find the last word before the cursor
+            before_cursor = current_text[:cursor_pos]
+            last_word = before_cursor.split()[-1] if before_cursor else ""
+
+            if not last_word:
                 return
 
             # Get list of usernames from QListWidget
             user_list = [self.gui.user_selector_list.item(i).text() for i in range(self.gui.user_selector_list.count())]
 
             # Find the closest match
-            matched_name = self.find_closest_match(current_text, user_list)
+            matched_name = self.find_closest_match(last_word, user_list)
 
-            # Replace text field with matched nickname
+            # Replace the last word with the matched nickname
             if matched_name:
-                self.gui.text_field.setText(matched_name + f"{self.gui.tab_complete_terminator} ")
+                prefix = before_cursor[:-len(last_word)]
+                new_text = prefix + matched_name + f"{self.gui.tab_complete_terminator} "
+                self.gui.text_field.setText(new_text)
+                self.gui.text_field.setCursorPosition(len(new_text)) # Move cursor to the end
         except Exception as e:
             logging.error(f"Error in TabEventFilter.handle_tab_complete: {e}")
             return
 
     def find_closest_match(self, input_text, user_list):
         """Returns the closest match to input_text from user_list (case insensitive), after stripping mode prefixes."""
-        
+
         input_text = input_text.lower()
-        
+
         # Strip any mode characters
         modes_to_strip = ''.join(self.gui.irc_client.mode_values)
-        
+
         # Remove any leading modes from each username in the list
         def strip_modes(username):
             for mode in modes_to_strip:
                 if username.startswith(mode):
                     username = username[1:]
             return username
-        
+
         # Get matches after stripping modes
         matches = [
-            user for user in user_list 
+            user for user in user_list
             if strip_modes(user).lower().startswith(input_text)
         ]
-        
+
         # Strip modes from the match
         matched_nick = matches[0] if matches else None
         if matched_nick is None:
             return
+
         plain_nickname = matched_nick.lstrip(modes_to_strip)
 
         return plain_nickname
