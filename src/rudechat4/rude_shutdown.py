@@ -1,0 +1,44 @@
+from rudechat4.shared_imports import *
+from rudechat4.global_variables import *
+
+class RudeShutdown(QWidget):
+    def __init__(self, master):
+        super().__init__()
+        self.master = master
+
+        self.read_config()
+
+        self.init_layout()
+    
+    def read_config(self): 
+        config_file = os.path.join(G_CONFIG_DIR, 'gui_config.ini')
+
+        if os.path.exists(config_file):
+            config = configparser.ConfigParser()
+            config.read(config_file)
+
+            self.window_bg = config.get('Chat', 'window_bg', fallback='#1b1e20')
+            self.window_fg = config.get('Chat', 'window_fg', fallback='#C0FFEE')
+
+    def center(self):
+        screen = QGuiApplication.primaryScreen().geometry()
+
+        width = (screen.width() / 2) - 100
+        height = (screen.height() / 2) - 75
+
+        self.master.move(int(width), int(height))
+
+    def init_layout(self):
+        layout = QVBoxLayout()
+
+        self.label = QLabel("Closing RudeChat...")
+
+        layout.addWidget(self.label)
+
+        layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+        self.setLayout(layout)
+
+        self.master.resize(200, 100)
+
+        self.center()
