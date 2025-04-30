@@ -2461,10 +2461,25 @@ class RudeChatClient:
             return
         except Exception as e:
             logging.error(f"Error in get_mode_lists: {e}")
+            return
                        
     def handle_isupport(self, tokens):
         try:
-            params = tokens.params[:-1]  # Exclude the trailing "are supported by this server" message
+            # Set default values
+            self.mode_to_symbol = {'o': '@', 'v': '+'}
+            self.chantypes = ['#', '&']
+            self.nicknamelen = 16
+            self.chan_limit = 250
+            self.channellen = 50
+            self.topiclen = 390
+            self.chanmodes = {
+                'list': ['e', 'I', 'b', 'q'],
+                'parameter': ['k'],
+                'setting': ['f', 'l', 'j'],
+                'no_parameter': ['C', 'F', 'L', 'M', 'P', 'Q', 'R', 'S', 'T', 'c', 'g', 'i', 'm', 'n', 'p', 'r', 's', 't', 'u', 'z']
+            }
+
+            params = tokens.params[:-1]  # Exclude trailing "are supported by this server"
             isupport_message = " ".join(params)
 
             # Parse ISUPPORT parameters
@@ -2473,30 +2488,41 @@ class RudeChatClient:
                     _, mappings = param.split("=")
                     modes, symbols = mappings[1:].split(")")
                     self.mode_to_symbol = dict(zip(modes, symbols))
+
                 elif param.startswith("CHANTYPES="):
                     _, channel_types = param.split("=")
                     self.chantypes = list(channel_types)
+
                 elif param.startswith("NICKLEN="):
                     _, nick_len = param.split("=")
                     self.nicknamelen = int(nick_len)
+
                 elif param.startswith("CHANLIMIT="):
                     _, chan_limit = param.split("=")
-                    self.chan_limit = int(chan_limit.split(":")[1])
+                    # Handle multiple limits: e.g., CHANLIMIT=#&:10
+                    parts = chan_limit.split(":")
+                    if len(parts) == 2 and parts[1].isdigit():
+                        self.chan_limit = int(parts[1])
+
                 elif param.startswith("CHANNELLEN="):
                     _, channel_len = param.split("=")
                     self.channellen = int(channel_len)
+
                 elif param.startswith("TOPICLEN="):
                     _, topic_len = param.split("=")
                     self.topiclen = int(topic_len)
+
                 elif param.startswith("CHANMODES="):
                     _, chan_modes = param.split("=")
                     mode_categories = chan_modes.split(',')
-                    self.chanmodes = {
-                        'list': list(mode_categories[0]),
-                        'parameter': list(mode_categories[1]),
-                        'setting': list(mode_categories[2]),
-                        'no_parameter': list(mode_categories[3])
-                    }
+                    if len(mode_categories) == 4:
+                        self.chanmodes = {
+                            'list': list(mode_categories[0]),
+                            'parameter': list(mode_categories[1]),
+                            'setting': list(mode_categories[2]),
+                            'no_parameter': list(mode_categories[3])
+                        }
+
         except Exception as e:
             logging.error(f"Error in handle_isupport: {e}")
 
