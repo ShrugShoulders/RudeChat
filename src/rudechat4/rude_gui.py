@@ -801,15 +801,17 @@ class RudeGui(QWidget):
         if not self.minimize_to_tray:
             return
         else:
-            self.tray_icon.showMessage(
-                "RudeChat",
-                "Minimized to tray. Right-Click to show",
-                QSystemTrayIcon.MessageIcon.Information,
-                3000
-            )
+            self.tray_icon.showMessage("RudeChat", "Minimized to tray. Right-Click to show", QSystemTrayIcon.MessageIcon.Information, 3000)
             self.master.hide()  # Hide the window
             self.iconed = True
 
+    def trigger_desktop_notification(self, sender, usrchan, message):
+        if message == None:
+            return
+        if sender != None:
+            self.tray_icon.showMessage("RudeChat", f"{usrchan}/{sender}: {message}", QSystemTrayIcon.MessageIcon.Information, 3000)
+        else:
+            self.tray_icon.showMessage("RudeChat", f"{usrchan}: {message}", QSystemTrayIcon.MessageIcon.Information, 3000)
     # Client Management
     def add_client(self, server_name, irc_client):
         self.clients[server_name] = irc_client # Store clients here.

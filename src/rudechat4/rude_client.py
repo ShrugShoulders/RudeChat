@@ -1484,7 +1484,7 @@ class RudeChatClient:
 
         # Play the beep sound/notification
         if self.use_beep_noise == True:
-            await self.trigger_beep_notification(channel_name=channel, message_content=notification_msg)
+            await self.trigger_beep_notification(sender=sender, channel_name=channel, message_content=notification_msg)
 
     def highlight_channel(self, channel):
         try:
@@ -1514,7 +1514,7 @@ class RudeChatClient:
                     self.gui.server_colors[idx] = {'fg': self.gui.list_server_fg, 'bg': self.mention_note_color}
                 break
 
-    async def trigger_beep_notification(self, channel_name=None, message_content=None):
+    async def trigger_beep_notification(self, sender=None, channel_name=None, message_content=None):
         """
         You've been pinged! Plays a beep or noise on mention.
         """
@@ -1537,6 +1537,7 @@ class RudeChatClient:
 
             # Trigger desktop notification
             #await self.gui.trigger_desktop_notification(channel_name, message_content=message_content)
+            self.gui.trigger_desktop_notification(sender, channel_name, message_content)
         except Exception as e:
             logging.error(f"Error triggering desktop notification: {e}")
 
@@ -1782,7 +1783,6 @@ class RudeChatClient:
                 if not user_mention:
                     self.highlight_channel_if_not_current(target, sender, user_mention)
                 elif user_mention:
-                    await self.trigger_beep_notification(channel_name=sender, message_content=f"Message From {sender}")
                     self.highlight_channel_if_not_current(target, sender, user_mention)
 
             else:
@@ -1823,7 +1823,6 @@ class RudeChatClient:
                     if not user_mention:
                         self.highlight_channel_if_not_current(target, sender, user_mention)
                     elif user_mention:
-                        await self.trigger_beep_notification(channel_name=sender, message_content=f"Message From {sender}")
                         self.highlight_channel_if_not_current(target, sender, user_mention)
 
                 elif sender != self.current_channel and self.server_name in self.gui.popped_out_channels and sender not in self.gui.popped_out_channels[self.server_name]:
@@ -1832,7 +1831,6 @@ class RudeChatClient:
                     if not user_mention:
                         self.highlight_channel_if_not_current(target, sender, user_mention)
                     elif user_mention:
-                        await self.trigger_beep_notification(channel_name=sender, message_content=f"Message From {sender}")
                         self.highlight_channel_if_not_current(target, sender, user_mention)
 
                 else:
