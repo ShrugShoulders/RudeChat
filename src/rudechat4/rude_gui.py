@@ -18,15 +18,20 @@ class CustomLineEdit(QLineEdit):
         self.add_shortcuts()
 
     def add_shortcuts(self):
-        is_mac = sys.platform == "darwin"
-        
+        platform = sys.platform
+        is_mac = platform == "darwin"
+        is_windows = platform.startswith("win")
+
         # Add shortcuts
         QShortcut(QKeySequence("Ctrl+B"), self, activated=lambda: self.apply_irc_format("\x02"))  # Bold
         QShortcut(QKeySequence("Ctrl+I"), self, activated=lambda: self.apply_irc_format("\x1D"))  # Italic
-        QShortcut(QKeySequence("Ctrl+-" if not is_mac else "Ctrl+U"), self, activated=lambda: self.apply_irc_format("\x1F"))  # Underline
+
+        # Underline → Ctrl+U for Windows + Mac, Ctrl+- otherwise
+        underline_key = "Ctrl+U" if is_mac or is_windows else "Ctrl+N"
+        QShortcut(QKeySequence(underline_key), self, activated=lambda: self.apply_irc_format("\x1F"))
+
         QShortcut(QKeySequence("Ctrl+S"), self, activated=lambda: self.apply_irc_format("\x1E"))  # Strike Through
         QShortcut(QKeySequence("Ctrl+/"), self, activated=lambda: self.apply_irc_format("\x16"))  # Inverse
-        #("Ctrl+Tab" if not is_mac else "Meta+Tab")
 
     def contextMenuEvent(self, event):
         menu = self.createStandardContextMenu()
@@ -603,9 +608,6 @@ class RudeGui(QWidget):
         # Windows
         QShortcut(QKeySequence("Ctrl+W"), self, activated=self.open_gui_config_window)
         QShortcut(QKeySequence("Ctrl+E"), self, activated=self.open_client_config_window)
-
-    def test_method(self):
-        print("Test complete")
 
     def cycle_channel_selection_up(self):
         count = self.channel_selector_list.count()
