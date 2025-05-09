@@ -106,7 +106,7 @@ def __main__():
     CopyConfigs()
     app = QApplication(sys.argv)
     app.setApplicationName("RudeChat")
-    app.setApplicationVersion("4.0.0")
+    app.setApplicationVersion("4.1.0")
     first_run = FirstRun(app)
     if first_run.first_run_detect == 0:
         first_run.open_client_config_window()
