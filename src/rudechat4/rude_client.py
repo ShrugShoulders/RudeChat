@@ -5078,6 +5078,8 @@ class RudeChatClient:
                 "_________",
             ],
             "Key Bindings": [
+                "PgUp - Cycle channels up"
+                "PgDown - Cycle channels down"
                 "Ctrl+tab - Cycles to the next channel"
                 "Ctrl+Q - Cycles Server selection"
                 "Ctrl+I - Insert Italic formatting to selected text",

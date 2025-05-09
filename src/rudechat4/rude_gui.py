@@ -586,10 +586,19 @@ class RudeGui(QWidget):
         self.set_shortcuts()
 
     def set_shortcuts(self):
-        QShortcut(QKeySequence("Ctrl+tab"), self, activated=self.cycle_channel_selection_down)
-        QShortcut(QKeySequence("Ctrl+Q"), self, activated=self.cycle_server_selection)
+        is_mac = sys.platform == "darwin"
+
+        # Channels
+        QShortcut(QKeySequence("Ctrl+Tab" if not is_mac else "Meta+Tab"), self, activated=self.cycle_channel_selection_down)
         QShortcut(QKeySequence("PgUp"), self, activated=self.cycle_channel_selection_up)
-        QShortcut(QKeySequence("PgDown"), self, activated=self.cycle_channel_selection_down) 
+        QShortcut(QKeySequence("PgDown"), self, activated=self.cycle_channel_selection_down)
+
+        # Servers
+        QShortcut(QKeySequence("Ctrl+Q" if not is_mac else "Meta+Q"), self, activated=self.cycle_server_selection)
+
+        # Windows
+        QShortcut(QKeySequence("Ctrl+W" if not is_mac else "Meta+W"), self, activated=self.open_gui_config_window)
+        QShortcut(QKeySequence("Ctrl+E" if not is_mac else "Meta+E"), self, activated=self.open_client_config_window)
 
     def test_method(self):
         print("Test complete")
