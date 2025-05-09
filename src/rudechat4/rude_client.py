@@ -5078,11 +5078,13 @@ class RudeChatClient:
                 "_________",
             ],
             "Key Bindings": [
-                "ctrl+i - Insert Italic formatting to selected text",
-                "ctrl+b - Insert Bold formatting to selected text",
-                "ctrl+- - Insert Underline formatting to selected text",
-                "ctrl+s - Insert Strike-Through formatting to selected text",
-                "ctrl+/ - Insert Inverse formatting to selected text",
+                "Ctrl+tab - Cycles to the next channel"
+                "Ctrl+Q - Cycles Server selection"
+                "Ctrl+I - Insert Italic formatting to selected text",
+                "Ctrl+B - Insert Bold formatting to selected text",
+                "Ctrl+- - Insert Underline formatting to selected text",
+                "Ctrl+S - Insert Strike-Through formatting to selected text",
+                "Ctrl+/ - Insert Inverse formatting to selected text",
                 "_________",
             ],
             "Fun": [
