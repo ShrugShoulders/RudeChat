@@ -105,8 +105,11 @@ class Window(QMainWindow):
 def __main__():
     CopyConfigs()
     app = QApplication(sys.argv)
-    app.setApplicationName("RudeChat")
+    app.setApplicationName("RudeChat4")
+    app.setApplicationDisplayName("RudeChat4")
     app.setApplicationVersion("4.1.0")
+    app.setWindowIcon(QIcon(ICON_FILE))
+    app.setDesktopFileName("RudeChat4.desktop")
     first_run = FirstRun(app)
     if first_run.first_run_detect == 0:
         first_run.open_client_config_window()

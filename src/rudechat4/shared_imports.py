@@ -12,7 +12,6 @@ import json
 import logging
 import os
 import platform
-from plyer import notification as plyer_notification
 import pytz
 import random
 import re

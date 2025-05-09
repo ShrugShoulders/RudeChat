@@ -26,5 +26,3 @@ def CopyConfigs():
     if not existing_icon_files:
         for image in icon_files:
             shutil.copy(os.path.join(G_SOURCE_DIR, image), os.path.join(G_CONFIG_DIR, image))
-
-    create_desktop_file()
