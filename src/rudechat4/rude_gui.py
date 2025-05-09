@@ -15,13 +15,18 @@ from rudechat4.rude_shutdown import RudeShutdown
 class CustomLineEdit(QLineEdit):
     def __init__(self, parent=None):
         super().__init__(parent)
+        self.add_shortcuts()
+
+    def add_shortcuts(self):
+        is_mac = sys.platform == "darwin"
+        modifier = "Meta+" if is_mac else "Ctrl+"
 
         # Add shortcuts
-        QShortcut(QKeySequence("Ctrl+B"), self, activated=lambda: self.apply_irc_format("\x02"))  # Bold
-        QShortcut(QKeySequence("Ctrl+I"), self, activated=lambda: self.apply_irc_format("\x1D"))  # Italic
-        QShortcut(QKeySequence("Ctrl+-"), self, activated=lambda: self.apply_irc_format("\x1F"))  # Underline
-        QShortcut(QKeySequence("Ctrl+S"), self, activated=lambda: self.apply_irc_format("\x1E"))  # Strike Through
-        QShortcut(QKeySequence("Ctrl+/"), self, activated=lambda: self.apply_irc_format("\x16"))  # Inverse
+        QShortcut(QKeySequence(modifier + "B"), self, activated=lambda: self.apply_irc_format("\x02"))  # Bold
+        QShortcut(QKeySequence(modifier + "I"), self, activated=lambda: self.apply_irc_format("\x1D"))  # Italic
+        QShortcut(QKeySequence(modifier + "-"), self, activated=lambda: self.apply_irc_format("\x1F"))  # Underline
+        QShortcut(QKeySequence(modifier + "S"), self, activated=lambda: self.apply_irc_format("\x1E"))  # Strike Through
+        QShortcut(QKeySequence(modifier + "/"), self, activated=lambda: self.apply_irc_format("\x16"))  # Inverse
 
     def contextMenuEvent(self, event):
         menu = self.createStandardContextMenu()
@@ -590,11 +595,12 @@ class RudeGui(QWidget):
 
         # Channels
         QShortcut(QKeySequence("Ctrl+Tab" if not is_mac else "Meta+Tab"), self, activated=self.cycle_channel_selection_down)
+        QShortcut(QKeySequence("Ctrl+Shift+Tab" if not is_mac else "Meta+Shift+Tab"), self, activated=self.cycle_channel_selection_up)
         QShortcut(QKeySequence("PgUp"), self, activated=self.cycle_channel_selection_up)
         QShortcut(QKeySequence("PgDown"), self, activated=self.cycle_channel_selection_down)
 
         # Servers
-        QShortcut(QKeySequence("Ctrl+Q" if not is_mac else "Meta+Q"), self, activated=self.cycle_server_selection)
+        QShortcut(QKeySequence("Ctrl+`" if not is_mac else "Meta+`"), self, activated=self.cycle_server_selection)
 
         # Windows
         QShortcut(QKeySequence("Ctrl+W" if not is_mac else "Meta+W"), self, activated=self.open_gui_config_window)
@@ -618,10 +624,10 @@ class RudeGui(QWidget):
                     current_index = i
                     break
 
-        # Move to previous index (wrap around)
+        # Move to previous index
         previous_index = (current_index - 1 + count) % count
 
-        self.channel_selector_list.scrollToItem(self.channel_selector_list.item(next_index))
+        self.channel_selector_list.scrollToItem(self.channel_selector_list.item(previous_index))
 
         # Simulate a click on previous item
         self.the_force_click(previous_index)
