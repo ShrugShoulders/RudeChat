@@ -884,17 +884,13 @@ class RudeChatClient:
                 BrokenPipeError, TimeoutError, OSError) as e:
             logging.error(f"{type(e).__name__} in send_message: {e}")
             self.gui.insert_text_widget(f"Connection Error: {e}: Cannot send message.\n")
-            await self.reconnect(self.config)
 
         except AttributeError as e:
             logging.error(f"AttributeError in send_message: {e}")
-            # Optional: Reconnect on writer being None
-            await self.reconnect(self.config)
 
         except Exception as e:
             logging.error(f"Unexpected exception in send_message: {e}")
             self.gui.insert_text_widget(f"Unexpected Error: {e}: Cannot send message.\n")
-            await self.reconnect(self.config)
 
     def is_valid_channel(self, channel):
         return any(channel.startswith(prefix) for prefix in self.chantypes)
@@ -2480,7 +2476,6 @@ class RudeChatClient:
             }
 
             params = tokens.params[:-1]  # Exclude trailing "are supported by this server"
-            isupport_message = " ".join(params)
 
             # Parse ISUPPORT parameters
             for param in params:
