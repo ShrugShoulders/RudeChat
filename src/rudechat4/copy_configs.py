@@ -1,6 +1,5 @@
 from rudechat4.global_variables import *
 from rudechat4.shared_imports import *
-from rudechat4.rude_desktop_generate import create_desktop_file
 
 def CopyConfigs():
     source_file = os.path.join(G_SOURCE_DIR, 'gui_config.ini')
