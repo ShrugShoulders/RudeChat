@@ -5080,8 +5080,8 @@ class RudeChatClient:
             "Key Bindings": [
                 "PgUp - Cycle channels up"
                 "PgDown - Cycle channels down"
-                "Ctrl+tab - Cycles to the next channel"
-                "Ctrl+Shift+Tab - Cycles to the previous channel"
+                "Ctrl+tab or Cmd+tab - Cycles to the next channel"
+                "Ctrl+Shift+Tab or Cmd+Shift+Tab - Cycles to the previous channel"
                 "Ctrl+` or Cmd+`- Cycles Server selection"
                 "Ctrl+I or Cmd+I - Insert Italic formatting to selected text",
                 "Ctrl+B or Cmd+B - Insert Bold formatting to selected text",
