@@ -2,21 +2,21 @@
 - [x] Complete / Has base function
 - [ ] Needs to be done / all child goals need to be completed
 
-**Tasks Complete: (4/13 - 30.77%)**
+**Tasks Complete: (7/13 - 53.85%)**
 - [ ] Small Bugfixes
 	- [ ] Make clicking on the app reopen the window (MacOS)
 	- [x] Implement full notification support for mentions and DMs.
 - [x] Implement "Closing" screen - replaces the main window while the program shuts down
 - [ ] OS Builds
 	- [ ] `Linux`
-		- [ ] Debian/Ubuntu
+		- [x] Debian/Ubuntu
 		- [ ] Fedora
 		- [ ] Gentoo(ebuild)
 		- [x] Universal Stand-alone
 	- [x] `MacOS`
 		- [x] Application.app 
-	- [ ] `Windows`
-		- [ ] Installer
+	- [x] `Windows`
+		- [x] Installer
 
 # RudeChat IRC Client: For Fun & Reasons.
 ## How to Install
