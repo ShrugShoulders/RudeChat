@@ -10,6 +10,7 @@ from rudechat4.nick_cleaner import clean_nicknames
 from rudechat4.rude_logger import configure_logging
 from rudechat4.rude_text_browser import RudeTextBrowser
 from rudechat4.user_data_display import RudeUserData
+from rudechat4.rude_shutdown import RudeShutdown
 
 class TabEventFilter(QObject):
     def __init__(self, gui):
@@ -615,7 +616,12 @@ class RudeGui(QWidget):
         """)
 
         # Apply Labels (User, Server, and Channel Sections)
-        self.user_selector_label.setStyleSheet(f"color: {self.window_fg}; background-color: {self.window_bg};")
+        #self.user_selector_label.setStyleSheet(f"color: {self.window_fg}; background-color: {self.window_bg};")
+
+        #QPalette testing - seems like a more direct way to set these instead of stylesheets.
+        usrpalette = self.user_selector_label.palette()
+        usrpalette.setColor(self.user_selector_label.foregroundRole(), QColor(self.window_fg))
+        self.user_selector_label.setPalette(usrpalette)
         self.server_selector_label.setStyleSheet(f"color: {self.window_fg}; background-color: {self.window_bg};")
         self.channel_selector_label.setStyleSheet(f"color: {self.window_fg}; background-color: {self.window_bg};")
 
@@ -651,6 +657,7 @@ class RudeGui(QWidget):
         self.url_pattern = re.compile(r'(\w+://[^\s()<>]*\([^\s()<>]*\)[^\s()<>]*(?<![.,;!?])|www\.[^\s()<>]*\([^\s()<>]*\)[^\s()<>]*(?<![.,;!?])|\w+://[^\s()<>]+(?<![.,;!?])|www\.[^\s()<>]+(?<![.,;!?]))')
         self.nickname_pattern = re.compile(r'<([\S]+)>')
         self.users_nickname_pattern = lambda nickname: re.compile(r"\b" + re.escape(nickname) + r"\b")
+        self.rude_shutdown = RudeShutdown(self)
 
     def init_client(self):
         self.irc_client = RudeChatClient(self.chat_box, self.text_field, self.master, self)
@@ -943,26 +950,30 @@ class RudeGui(QWidget):
 
     def client_shutdown(self):
         if self.log_on:
-            logging.info(f"Attempting Client Shutdown.")
+            logging.info("Attempting Client Shutdown.")
+
+        # Show shutdown window
+        self.rude_shutdown = RudeShutdown(self)
+        self.rude_shutdown.show()
+        self.rude_shutdown.setFocus()
+        self.rude_shutdown.raise_()
+        self.rude_shutdown.activateWindow()
+        QApplication.processEvents()
 
         try:
-            # Shutdown the clients
             self.quit_clients()
         except Exception as e:
             logging.error(f"Error quitting Clients: {e}")
 
-        try:
-            # Destroy the GUI
-            self.destroy_client()
-        except Exception as e:
-            logging.error(f"Error destroying clients: {e}")
+        QTimer.singleShot(2000, self.destroy_client)
 
     def destroy_client(self):
         try:
+            if hasattr(self, 'rude_shutdown'):
+                self.rude_shutdown.close()
+
             self.master.close()
-            sys.exit()
-        except SystemExit:
-            logging.info("SystemExit caught: Client Quit")
+            QApplication.quit()  # Better than sys.exit() for Qt cleanup
         except Exception as e:
             logging.error(f"Error When Destroying Client: {e}")
 

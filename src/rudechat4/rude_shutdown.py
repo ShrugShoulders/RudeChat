@@ -32,13 +32,15 @@ class RudeShutdown(QWidget):
         layout = QVBoxLayout()
 
         self.label = QLabel("Closing RudeChat...")
-
         layout.addWidget(self.label)
-
         layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
-
         self.setLayout(layout)
 
         self.master.resize(200, 100)
-
         self.center()
+
+        # Ensure the shutdown window is focused and on top
+        self.setWindowFlags(Qt.WindowType.WindowStaysOnTopHint | Qt.WindowType.CustomizeWindowHint)
+        self.setFocus()
+        self.raise_()
+        self.activateWindow()

@@ -3965,7 +3965,7 @@ class RudeChatClient:
         quit_message = "Client Quit"
         self.gui.quit_clients_with_message(quit_message)
         self.loop_running = False
-        self.gui.destroy_client()
+        self.gui.client_shutdown()
         return
 
     async def command_parser(self, user_input):

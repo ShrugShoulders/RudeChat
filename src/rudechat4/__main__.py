@@ -32,8 +32,6 @@ from rudechat4.global_variables import *
 # Logging
 from rudechat4.rude_logger import configure_logging
 
-from rudechat4.rude_shutdown import RudeShutdown
-
 class Window(QMainWindow):
     def __init__(self):
         super().__init__()
@@ -115,11 +113,8 @@ def __main__():
 
     root = Window()
     gui = RudeGui(root)
-    # shutdown = RudeShutdown(root)
     root.set_gui(gui)
     root.setCentralWidget(gui)
-
-    # root.setCentralWidget(shutdown)
 
     new_loop = asyncio.new_event_loop()
     asyncio.set_event_loop(new_loop)
