@@ -586,13 +586,38 @@ class RudeGui(QWidget):
         self.set_shortcuts()
 
     def set_shortcuts(self):
-        QShortcut(QKeySequence("Ctrl+tab"), self, activated=lambda: self.cycle_channel_selection()) 
-        QShortcut(QKeySequence("Ctrl+Q"), self, activated=lambda: self.cycle_server_selection()) 
+        QShortcut(QKeySequence("Ctrl+tab"), self, activated=self.cycle_channel_selection_down)
+        QShortcut(QKeySequence("Ctrl+Q"), self, activated=self.cycle_server_selection)
+        QShortcut(QKeySequence("PgUp"), self, activated=self.cycle_channel_selection_up)
+        QShortcut(QKeySequence("PgDown"), self, activated=self.cycle_channel_selection_down) 
 
     def test_method(self):
         print("Test complete")
 
-    def cycle_channel_selection(self):
+    def cycle_channel_selection_up(self):
+        count = self.channel_selector_list.count()
+        if count == 0:
+            return 
+
+        current_index = -1
+        current_channel = self.irc_client.current_channel
+
+        if current_channel:
+            for i in range(count):
+                item = self.channel_selector_list.item(i)
+                if item.text() == current_channel:
+                    current_index = i
+                    break
+
+        # Move to previous index (wrap around)
+        previous_index = (current_index - 1 + count) % count
+
+        self.channel_selector_list.scrollToItem(self.channel_selector_list.item(next_index))
+
+        # Simulate a click on previous item
+        self.the_force_click(previous_index)
+
+    def cycle_channel_selection_down(self):
         count = self.channel_selector_list.count()
         if count == 0:
             return 
@@ -609,6 +634,8 @@ class RudeGui(QWidget):
 
         # Move to next index
         next_index = (current_index + 1) % count
+
+        self.channel_selector_list.scrollToItem(self.channel_selector_list.item(next_index))
 
         # Simulate a click on next item
         self.the_force_click(next_index)
