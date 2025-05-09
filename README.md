@@ -2,11 +2,11 @@
 - [x] Complete / Has base function
 - [ ] Needs to be done / all child goals need to be completed
 
-**Tasks Complete: (3/13 - 23.08%)**
+**Tasks Complete: (4/13 - 30.77%)**
 - [ ] Small Bugfixes
 	- [ ] Make clicking on the app reopen the window (MacOS)
 	- [x] Implement full notification support for mentions and DMs.
-- [ ] Implement "Closing" screen - replaces the main window while the program shuts down
+- [x] Implement "Closing" screen - replaces the main window while the program shuts down
 - [ ] OS Builds
 	- [ ] `Linux`
 		- [ ] Debian/Ubuntu
