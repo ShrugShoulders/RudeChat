@@ -4134,7 +4134,7 @@ class RudeChatClient:
                 self.gui.quit_clients_with_message(quit_message)
                 self.loop_running = False
                 await self.stop_async_loop()
-                self.gui.destroy_client()
+                self.gui.client_shutdown()
                 return
 
             case "help":

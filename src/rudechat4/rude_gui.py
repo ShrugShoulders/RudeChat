@@ -12,6 +12,61 @@ from rudechat4.rude_text_browser import RudeTextBrowser
 from rudechat4.user_data_display import RudeUserData
 from rudechat4.rude_shutdown import RudeShutdown
 
+class CustomLineEdit(QLineEdit):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+
+    def contextMenuEvent(self, event):
+        menu = self.createStandardContextMenu()
+
+        color_menu = menu.addMenu("Colors")
+        format_menu = menu.addMenu("Formatting")
+
+        # Group them by 10s
+        grouped_colors = {}
+        for name, code in IRC_COLORS.items():
+            group_label = f"{(int(code) // 10) * 10:02d}–{(int(code) // 10) * 10 + 9:02d}"
+            grouped_colors.setdefault(group_label, []).append((name, code))
+
+        for group, items in grouped_colors.items():
+            group_menu = color_menu.addMenu(group)
+            for name, code in items:
+                action = QAction(name, self)
+                action.triggered.connect(lambda checked, c=code: self.apply_irc_color(c))
+                group_menu.addAction(action)
+
+        for label, code in IRC_FORMAT:
+            action = QAction(label, self)
+            action.triggered.connect(lambda checked, c=code: self.apply_irc_format(c))
+            format_menu.addAction(action)
+
+        menu.exec(event.globalPos())
+
+    def apply_irc_color(self, color_code):
+        cursor = self.cursorPosition()
+        selected_text = self.selectedText()
+
+        if selected_text:
+            color_tagged = f"\x03{color_code}{selected_text}\x03"
+            current_text = self.text()
+            start = self.selectionStart()
+            end = start + len(selected_text)
+            new_text = current_text[:start] + color_tagged + current_text[end:]
+            self.setText(new_text)
+            self.setCursorPosition(start + len(color_tagged))
+
+    def apply_irc_format(self, format_code):
+        selected_text = self.selectedText()
+
+        if selected_text:
+            formatted = f"{format_code}{selected_text}{format_code}"
+            current_text = self.text()
+            start = self.selectionStart()
+            end = start + len(selected_text)
+            new_text = current_text[:start] + formatted + current_text[end:]
+            self.setText(new_text)
+            self.setCursorPosition(start + len(formatted))
+
 class TabEventFilter(QObject):
     def __init__(self, gui):
         super().__init__()
@@ -451,7 +506,7 @@ class RudeGui(QWidget):
         self.id_label = QLabel(self, text="Nickname | #Channel ▶")
         self.message_bar.addWidget(self.id_label)
 
-        self.text_field = QLineEdit(self)
+        self.text_field = CustomLineEdit(self)
         self.text_field.setFrame(False)
         self.arrow_key_filter = ArrowKeyEventFilter(self)
         self.text_field.installEventFilter(self.arrow_key_filter)
