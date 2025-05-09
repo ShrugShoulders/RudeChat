@@ -88,7 +88,10 @@ from PyQt6.QtGui import (
     QIcon,
     QKeyEvent,
     QMouseEvent,
-    QPixmap
+    QPixmap,
+    QPalette, 
+    QShortcut, 
+    QKeySequence
 )
 
 if platform.system() == "Darwin":

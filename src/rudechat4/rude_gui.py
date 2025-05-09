@@ -10,6 +10,79 @@ from rudechat4.nick_cleaner import clean_nicknames
 from rudechat4.rude_logger import configure_logging
 from rudechat4.rude_text_browser import RudeTextBrowser
 from rudechat4.user_data_display import RudeUserData
+from rudechat4.rude_shutdown import RudeShutdown
+
+class CustomLineEdit(QLineEdit):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.add_shortcuts()
+
+    def add_shortcuts(self):
+        platform = sys.platform
+        is_mac = platform == "darwin"
+        is_windows = platform.startswith("win")
+
+        # Add shortcuts
+        QShortcut(QKeySequence("Ctrl+B"), self, activated=lambda: self.apply_irc_format("\x02"))  # Bold
+        QShortcut(QKeySequence("Ctrl+I"), self, activated=lambda: self.apply_irc_format("\x1D"))  # Italic
+
+        # Underline → Ctrl+U for Windows + Mac, Ctrl+- otherwise
+        underline_key = "Ctrl+U" if is_mac or is_windows else "Ctrl+N"
+        QShortcut(QKeySequence(underline_key), self, activated=lambda: self.apply_irc_format("\x1F"))
+
+        QShortcut(QKeySequence("Ctrl+S"), self, activated=lambda: self.apply_irc_format("\x1E"))  # Strike Through
+        QShortcut(QKeySequence("Ctrl+/"), self, activated=lambda: self.apply_irc_format("\x16"))  # Inverse
+
+    def contextMenuEvent(self, event):
+        menu = self.createStandardContextMenu()
+
+        color_menu = menu.addMenu("Colors")
+        format_menu = menu.addMenu("Formatting")
+
+        # Group them by 10s
+        grouped_colors = {}
+        for name, code in IRC_COLORS.items():
+            group_label = f"{(int(code) // 10) * 10:02d}–{(int(code) // 10) * 10 + 9:02d}"
+            grouped_colors.setdefault(group_label, []).append((name, code))
+
+        for group, items in grouped_colors.items():
+            group_menu = color_menu.addMenu(group)
+            for name, code in items:
+                action = QAction(name, self)
+                action.triggered.connect(lambda checked, c=code: self.apply_irc_color(c))
+                group_menu.addAction(action)
+
+        for label, code in IRC_FORMAT:
+            action = QAction(label, self)
+            action.triggered.connect(lambda checked, c=code: self.apply_irc_format(c))
+            format_menu.addAction(action)
+
+        menu.exec(event.globalPos())
+
+    def apply_irc_color(self, color_code):
+        cursor = self.cursorPosition()
+        selected_text = self.selectedText()
+
+        if selected_text:
+            color_tagged = f"\x03{color_code}{selected_text}\x03"
+            current_text = self.text()
+            start = self.selectionStart()
+            end = start + len(selected_text)
+            new_text = current_text[:start] + color_tagged + current_text[end:]
+            self.setText(new_text)
+            self.setCursorPosition(start + len(color_tagged))
+
+    def apply_irc_format(self, format_code):
+        selected_text = self.selectedText()
+
+        if selected_text:
+            formatted = f"{format_code}{selected_text}\x0F"
+            current_text = self.text()
+            start = self.selectionStart()
+            end = start + len(selected_text)
+            new_text = current_text[:start] + formatted + current_text[end:]
+            self.setText(new_text)
+            self.setCursorPosition(start + len(formatted))
 
 class TabEventFilter(QObject):
     def __init__(self, gui):
@@ -24,49 +97,58 @@ class TabEventFilter(QObject):
 
     def handle_tab_complete(self):
         try:
-            current_text = self.gui.text_field.text().strip()
+            current_text = self.gui.text_field.text()
+            cursor_pos = self.gui.text_field.cursorPosition()
 
-            if not current_text:
+            # Find the last word before the cursor
+            before_cursor = current_text[:cursor_pos]
+            last_word = before_cursor.split()[-1] if before_cursor else ""
+
+            if not last_word:
                 return
 
             # Get list of usernames from QListWidget
             user_list = [self.gui.user_selector_list.item(i).text() for i in range(self.gui.user_selector_list.count())]
 
             # Find the closest match
-            matched_name = self.find_closest_match(current_text, user_list)
+            matched_name = self.find_closest_match(last_word, user_list)
 
-            # Replace text field with matched nickname
+            # Replace the last word with the matched nickname
             if matched_name:
-                self.gui.text_field.setText(matched_name + f"{self.gui.tab_complete_terminator} ")
+                prefix = before_cursor[:-len(last_word)]
+                new_text = prefix + matched_name + f"{self.gui.tab_complete_terminator} "
+                self.gui.text_field.setText(new_text)
+                self.gui.text_field.setCursorPosition(len(new_text)) # Move cursor to the end
         except Exception as e:
             logging.error(f"Error in TabEventFilter.handle_tab_complete: {e}")
             return
 
     def find_closest_match(self, input_text, user_list):
         """Returns the closest match to input_text from user_list (case insensitive), after stripping mode prefixes."""
-        
+
         input_text = input_text.lower()
-        
+
         # Strip any mode characters
         modes_to_strip = ''.join(self.gui.irc_client.mode_values)
-        
+
         # Remove any leading modes from each username in the list
         def strip_modes(username):
             for mode in modes_to_strip:
                 if username.startswith(mode):
                     username = username[1:]
             return username
-        
+
         # Get matches after stripping modes
         matches = [
-            user for user in user_list 
+            user for user in user_list
             if strip_modes(user).lower().startswith(input_text)
         ]
-        
+
         # Strip modes from the match
         matched_nick = matches[0] if matches else None
         if matched_nick is None:
             return
+
         plain_nickname = matched_nick.lstrip(modes_to_strip)
 
         return plain_nickname
@@ -441,7 +523,7 @@ class RudeGui(QWidget):
         self.id_label = QLabel(self, text="Nickname | #Channel ▶")
         self.message_bar.addWidget(self.id_label)
 
-        self.text_field = QLineEdit(self)
+        self.text_field = CustomLineEdit(self)
         self.text_field.setFrame(False)
         self.arrow_key_filter = ArrowKeyEventFilter(self)
         self.text_field.installEventFilter(self.arrow_key_filter)
@@ -511,6 +593,84 @@ class RudeGui(QWidget):
 
         self.layout().addLayout(self.sidebar)
         self.create_tray_icon()
+        self.set_shortcuts()
+
+    def set_shortcuts(self):
+        # Channels
+        QShortcut(QKeySequence("Ctrl+Tab"), self, activated=self.cycle_channel_selection_down)
+        QShortcut(QKeySequence("Ctrl+Shift+Tab"), self, activated=self.cycle_channel_selection_up)
+        QShortcut(QKeySequence("PgUp"), self, activated=self.cycle_channel_selection_up)
+        QShortcut(QKeySequence("PgDown"), self, activated=self.cycle_channel_selection_down)
+
+        # Servers
+        QShortcut(QKeySequence("Ctrl+`"), self, activated=self.cycle_server_selection)
+
+        # Windows
+        QShortcut(QKeySequence("Ctrl+W"), self, activated=self.open_gui_config_window)
+        QShortcut(QKeySequence("Ctrl+E"), self, activated=self.open_client_config_window)
+
+    def cycle_channel_selection_up(self):
+        count = self.channel_selector_list.count()
+        if count == 0:
+            return 
+
+        current_index = -1
+        current_channel = self.irc_client.current_channel
+
+        if current_channel:
+            for i in range(count):
+                item = self.channel_selector_list.item(i)
+                if item.text() == current_channel:
+                    current_index = i
+                    break
+
+        # Move to previous index
+        previous_index = (current_index - 1 + count) % count
+
+        self.channel_selector_list.scrollToItem(self.channel_selector_list.item(previous_index))
+
+        # Simulate a click on previous item
+        self.the_force_click(previous_index)
+
+    def cycle_channel_selection_down(self):
+        count = self.channel_selector_list.count()
+        if count == 0:
+            return 
+
+        current_index = -1
+        current_channel = self.irc_client.current_channel
+
+        if current_channel:
+            for i in range(count):
+                item = self.channel_selector_list.item(i)
+                if item.text() == current_channel:
+                    current_index = i
+                    break
+
+        # Move to next index
+        next_index = (current_index + 1) % count
+
+        self.channel_selector_list.scrollToItem(self.channel_selector_list.item(next_index))
+
+        # Simulate a click on next item
+        self.the_force_click(next_index)
+
+    def cycle_server_selection(self):
+        count = self.server_selector_list.count()
+        if count == 0:
+            return
+
+        current_index = self.server_selector_list.currentRow()
+
+        # Move to next index
+        next_index = (current_index + 1) % count
+
+        # Select and scroll to next item
+        self.server_selector_list.clearSelection()
+        self.server_selector_list.setCurrentRow(next_index)
+        self.server_selector_list.scrollToItem(self.server_selector_list.item(next_index))
+
+        self.on_server_change(None)
 
     def select_first_server(self):
         server_count = self.server_selector_list.count()
@@ -606,7 +766,12 @@ class RudeGui(QWidget):
         """)
 
         # Apply Labels (User, Server, and Channel Sections)
-        self.user_selector_label.setStyleSheet(f"color: {self.window_fg}; background-color: {self.window_bg};")
+        #self.user_selector_label.setStyleSheet(f"color: {self.window_fg}; background-color: {self.window_bg};")
+
+        #QPalette testing - seems like a more direct way to set these instead of stylesheets.
+        self.usrpalette = self.user_selector_label.palette()
+        self.usrpalette.setColor(self.user_selector_label.foregroundRole(), QColor(self.window_fg))
+        self.user_selector_label.setPalette(self.usrpalette)
         self.server_selector_label.setStyleSheet(f"color: {self.window_fg}; background-color: {self.window_bg};")
         self.channel_selector_label.setStyleSheet(f"color: {self.window_fg}; background-color: {self.window_bg};")
 
@@ -642,14 +807,12 @@ class RudeGui(QWidget):
         self.url_pattern = re.compile(r'(\w+://[^\s()<>]*\([^\s()<>]*\)[^\s()<>]*(?<![.,;!?])|www\.[^\s()<>]*\([^\s()<>]*\)[^\s()<>]*(?<![.,;!?])|\w+://[^\s()<>]+(?<![.,;!?])|www\.[^\s()<>]+(?<![.,;!?]))')
         self.nickname_pattern = re.compile(r'<([\S]+)>')
         self.users_nickname_pattern = lambda nickname: re.compile(r"\b" + re.escape(nickname) + r"\b")
+        self.rude_shutdown = RudeShutdown(self)
 
     def init_client(self):
         self.irc_client = RudeChatClient(self.chat_box, self.text_field, self.master, self)
-        self.init_input_menu()
         self.apply_settings()
         self.show_startup_art()
-
-    def init_input_menu(self): pass #TODO
 
     def apply_settings(self):
         self.highlight_nicknames()
@@ -708,6 +871,7 @@ class RudeGui(QWidget):
         self.tray_icon.show()
 
     def quit_from_tray(self):
+        self.restore_from_tray()
         self.irc_client.loop.create_task(self.irc_client.tray_quit())
 
     def restore_from_tray(self):
@@ -722,14 +886,17 @@ class RudeGui(QWidget):
         if not self.minimize_to_tray:
             return
         else:
-            self.tray_icon.showMessage(
-                "RudeChat",
-                "Minimized to tray. Right-Click to show",
-                QSystemTrayIcon.MessageIcon.Information,
-                3000
-            )
+            self.tray_icon.showMessage("RudeChat", "Minimized to tray. Right-Click to show", QSystemTrayIcon.MessageIcon.Information, 3000)
             self.master.hide()  # Hide the window
             self.iconed = True
+
+    def trigger_desktop_notification(self, sender, usrchan, message):
+        if message == None:
+            return
+        if sender != None:
+            self.tray_icon.showMessage("RudeChat", f"{usrchan}/{sender}: {message}", QSystemTrayIcon.MessageIcon.Information, 3000)
+        else:
+            self.tray_icon.showMessage("RudeChat", f"{usrchan}: {message}", QSystemTrayIcon.MessageIcon.Information, 3000)
 
     # Client Management
     def add_client(self, server_name, irc_client):
@@ -933,26 +1100,30 @@ class RudeGui(QWidget):
 
     def client_shutdown(self):
         if self.log_on:
-            logging.info(f"Attempting Client Shutdown.")
+            logging.info("Attempting Client Shutdown.")
+
+        # Show shutdown window
+        self.rude_shutdown = RudeShutdown(self)
+        self.rude_shutdown.show()
+        self.rude_shutdown.setFocus()
+        self.rude_shutdown.raise_()
+        self.rude_shutdown.activateWindow()
+        QApplication.processEvents()
 
         try:
-            # Shutdown the clients
             self.quit_clients()
         except Exception as e:
             logging.error(f"Error quitting Clients: {e}")
 
-        try:
-            # Destroy the GUI
-            self.destroy_client()
-        except Exception as e:
-            logging.error(f"Error destroying clients: {e}")
+        QTimer.singleShot(2000, self.destroy_client)
 
     def destroy_client(self):
         try:
+            if hasattr(self, 'rude_shutdown'):
+                self.rude_shutdown.close()
+
             self.master.close()
-            sys.exit()
-        except SystemExit:
-            logging.info("SystemExit caught: Client Quit")
+            QApplication.quit()  # Better than sys.exit() for Qt cleanup
         except Exception as e:
             logging.error(f"Error When Destroying Client: {e}")
 
@@ -979,7 +1150,7 @@ class RudeGui(QWidget):
 
                 back_text = f"Users ({user_num})"
                 self.user_selector_label.setText(back_text)
-                self.user_selector_label.setStyleSheet(f"color: white")
+                self.user_selector_label.setPalette(self.usrpalette)
                 
                 if self.irc_client.server_name in self.irc_client.away_servers:
                     self.irc_client.away_servers.remove(self.irc_client.server_name)
@@ -1533,7 +1704,8 @@ class RudeGui(QWidget):
             fmt.setFontPointSize(int(self.chat_font_size))
             
             if attr["bold"]:
-                fmt.setFontWeight(2)
+                #fmt.setFontFamily("Courier") # For bold testing
+                fmt.setFontWeight(QFont.Weight.Bold)
             if attr["italic"]:
                 fmt.setFontItalic(True)
             if attr["underline"]:

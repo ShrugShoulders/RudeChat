@@ -1355,11 +1355,11 @@ class RudeChatClient:
                     match ctcp_command:
                         case "VERSION" | "version":
                             if tokens.command == "PRIVMSG":
-                                await self.send_message(f'NOTICE {sender} :\x01VERSION RudeChat4.0.0\x01')
+                                await self.send_message(f'NOTICE {sender} :\x01VERSION RudeChat4.1.0\x01')
                                 self.add_server_message(f"CTCP: {sender} {target}: {ctcp_command}\n")
                         case "MOO" | "moo":
                             if tokens.command == "PRIVMSG":
-                                await self.send_message(f'NOTICE {sender} :\x01MoooOOO! Hi Cow!! RudeChat4.0.0\x01')
+                                await self.send_message(f'NOTICE {sender} :\x01MoooOOO! Hi Cow!! RudeChat4.1.0\x01')
                                 self.add_server_message(f"CTCP: {sender} {target}: {ctcp_command}\n")
                         case "PING" | "ping":
                             if tokens.command == "PRIVMSG":
@@ -1368,7 +1368,7 @@ class RudeChatClient:
                                 self.add_server_message(f"CTCP: {sender} {target}: {ctcp_command}\n")
                         case "FINGER" | "finger":
                             if tokens.command == "PRIVMSG":
-                                await self.send_message(f'NOTICE {sender} :\x01FINGER: {self.nickname} {self.server_name} RudeChat4.0.0\x01')
+                                await self.send_message(f'NOTICE {sender} :\x01FINGER: {self.nickname} {self.server_name} RudeChat4.1.0\x01')
                                 self.add_server_message(f"CTCP: {sender} {target}: {ctcp_command}\n")
                         case "CLIENTINFO" | "clientinfo":
                             if tokens.command == "PRIVMSG":
@@ -1483,7 +1483,7 @@ class RudeChatClient:
 
         # Play the beep sound/notification
         if self.use_beep_noise == True:
-            await self.trigger_beep_notification(channel_name=channel, message_content=notification_msg)
+            await self.trigger_beep_notification(sender=sender, channel_name=channel, message_content=notification_msg)
 
     def highlight_channel(self, channel):
         try:
@@ -1513,7 +1513,7 @@ class RudeChatClient:
                     self.gui.server_colors[idx] = {'fg': self.gui.list_server_fg, 'bg': self.mention_note_color}
                 break
 
-    async def trigger_beep_notification(self, channel_name=None, message_content=None):
+    async def trigger_beep_notification(self, sender=None, channel_name=None, message_content=None):
         """
         You've been pinged! Plays a beep or noise on mention.
         """
@@ -1536,6 +1536,7 @@ class RudeChatClient:
 
             # Trigger desktop notification
             #await self.gui.trigger_desktop_notification(channel_name, message_content=message_content)
+            self.gui.trigger_desktop_notification(sender, channel_name, message_content)
         except Exception as e:
             logging.error(f"Error triggering desktop notification: {e}")
 
@@ -1781,7 +1782,6 @@ class RudeChatClient:
                 if not user_mention:
                     self.highlight_channel_if_not_current(target, sender, user_mention)
                 elif user_mention:
-                    await self.trigger_beep_notification(channel_name=sender, message_content=f"Message From {sender}")
                     self.highlight_channel_if_not_current(target, sender, user_mention)
 
             else:
@@ -1822,7 +1822,6 @@ class RudeChatClient:
                     if not user_mention:
                         self.highlight_channel_if_not_current(target, sender, user_mention)
                     elif user_mention:
-                        await self.trigger_beep_notification(channel_name=sender, message_content=f"Message From {sender}")
                         self.highlight_channel_if_not_current(target, sender, user_mention)
 
                 elif sender != self.current_channel and self.server_name in self.gui.popped_out_channels and sender not in self.gui.popped_out_channels[self.server_name]:
@@ -1831,7 +1830,6 @@ class RudeChatClient:
                     if not user_mention:
                         self.highlight_channel_if_not_current(target, sender, user_mention)
                     elif user_mention:
-                        await self.trigger_beep_notification(channel_name=sender, message_content=f"Message From {sender}")
                         self.highlight_channel_if_not_current(target, sender, user_mention)
 
                 else:
@@ -3960,7 +3958,7 @@ class RudeChatClient:
         quit_message = "Client Quit"
         self.gui.quit_clients_with_message(quit_message)
         self.loop_running = False
-        self.gui.destroy_client()
+        self.gui.client_shutdown()
         return
 
     async def command_parser(self, user_input):
@@ -4129,7 +4127,7 @@ class RudeChatClient:
                 self.gui.quit_clients_with_message(quit_message)
                 self.loop_running = False
                 await self.stop_async_loop()
-                self.gui.destroy_client()
+                self.gui.client_shutdown()
                 return
 
             case "help":
@@ -5079,15 +5077,18 @@ class RudeChatClient:
                 "_________",
             ],
             "Key Bindings": [
-                "Alt+num(0,9) - switches to that channels index in the channel list.",
-                "Alt+s - Cycles through the servers",
-                "ctrl+pgup - Cycles through the channels up",
-                "ctrl+pgdwn - Cycles through the channels down",
-                "ctrl+i - Insert Italic formatting to selected text",
-                "ctrl+b - Insert Bold formatting to selected text",
-                "ctrl+u - Insert Underline formatting to selected text",
-                "ctrl+s - Insert Strike-Through formatting to selected text",
-                "ctrl+/ - Insert Inverse formatting to selected text",
+                "PgUp - Cycle channels up"
+                "PgDown - Cycle channels down"
+                "Ctrl+Tab - Cycles to the next channel"
+                "Ctrl+Shift+Tab - Cycles to the previous channel"
+                "Ctrl+` - Cycles Server selection"
+                "Ctrl+I - Insert Italic formatting to selected text",
+                "Ctrl+B - Insert Bold formatting to selected text",
+                "Ctrl+N(linux) or Ctrl+U(mac/win) - Insert Underline formatting to selected text",
+                "Ctrl+S - Insert Strike-Through formatting to selected text",
+                "Ctrl+/ - Insert Inverse formatting to selected text",
+                "Ctrl+W - Opens GUI Config"
+                "Ctrl+E - Opens Server Config"
                 "_________",
             ],
             "Fun": [
