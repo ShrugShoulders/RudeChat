@@ -12,7 +12,7 @@
 		- [ ] Debian/Ubuntu
 		- [ ] Fedora
 		- [ ] Gentoo(ebuild)
-		- [ ] Universal Stand-alone
+		- [x] Universal Stand-alone
 	- [x] `MacOS`
 		- [x] Application.app 
 	- [ ] `Windows`
@@ -23,7 +23,8 @@
 ### Windows (Installer)
 Download the installer. Windows installs to `%LOCALAPPDATA%\Programs\RudeChat4`.
 ### Linux (Binary/.deb)
-- Not Available Yet.
+- Linux Stand Alone tar file. 
+	- Update .desktop file to the executable path. 
 
 ### Linux (Build from Source)
 - Clone the repo.

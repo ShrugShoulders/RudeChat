@@ -19,7 +19,7 @@ a = Analysis(
         ('src/rudechat4/Fortune Lists/*', 'rudechat4/Fortune Lists'),
         ('/home/irish/.local/lib/python3.13/site-packages/emoji/unicode_codes/emoji.json', 'emoji/unicode_codes')
     ],
-    hiddenimports=['plyer.platforms', 'plyer.platforms.linux', 'plyer.platforms.linux.notification', 'emoji'],
+    hiddenimports=['emoji'],
     hookspath=[],
     runtime_hooks=[],
     excludes=[],
