@@ -2,10 +2,10 @@
 - [x] Complete / Has base function
 - [ ] Needs to be done / all child goals need to be completed
 
-**Tasks Complete: (2/13 - 15.38%)**
+**Tasks Complete: (3/13 - 23.08%)**
 - [ ] Small Bugfixes
 	- [ ] Make clicking on the app reopen the window (MacOS)
-	- [ ] Implement full notification support for mentions and DMs.
+	- [x] Implement full notification support for mentions and DMs.
 - [ ] Implement "Closing" screen - replaces the main window while the program shuts down
 - [ ] OS Builds
 	- [ ] `Linux`
@@ -23,10 +23,7 @@
 ### Windows (Installer)
 Download the installer. Windows installs to `%LOCALAPPDATA%\Programs\RudeChat4`.
 ### Linux (Binary/.deb)
-- Download the binary and extract (recommended for Fedora Users).
-- CD to the extracted directory and use `./rudechat`.
-- Download the .deb & use your debians package manager to install.
-- If you used dpkg you will need to manually install some deps. 
+- Not Available Yet.
 
 ### Linux (Build from Source)
 - Clone the repo.
@@ -36,6 +33,12 @@ Download the installer. Windows installs to `%LOCALAPPDATA%\Programs\RudeChat4`.
 pip install -r requirements.txt .
 ```
 - use `rudechat`.
+
+### MacOS (.app)
+
+- Download the zip file, unzip.
+- Move .app file to applications. 
+- You may have to authorize its use as the .app is yet to be signed.
 
 ### MacOS (Build from Source)
 
