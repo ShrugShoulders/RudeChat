@@ -1616,7 +1616,8 @@ class RudeGui(QWidget):
             fmt.setFontPointSize(int(self.chat_font_size))
             
             if attr["bold"]:
-                fmt.setFontWeight(2)
+                #fmt.setFontFamily("Courier") # For bold testing
+                fmt.setFontWeight(QFont.Weight.Bold)
             if attr["italic"]:
                 fmt.setFontItalic(True)
             if attr["underline"]:
