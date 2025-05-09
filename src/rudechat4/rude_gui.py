@@ -16,6 +16,13 @@ class CustomLineEdit(QLineEdit):
     def __init__(self, parent=None):
         super().__init__(parent)
 
+        # Add shortcuts
+        QShortcut(QKeySequence("Ctrl+B"), self, activated=lambda: self.apply_irc_format("\x02"))  # Bold
+        QShortcut(QKeySequence("Ctrl+I"), self, activated=lambda: self.apply_irc_format("\x1D"))  # Italic
+        QShortcut(QKeySequence("Ctrl+-"), self, activated=lambda: self.apply_irc_format("\x1F"))  # Underline
+        QShortcut(QKeySequence("Ctrl+S"), self, activated=lambda: self.apply_irc_format("\x1E"))  # Strike Through
+        QShortcut(QKeySequence("Ctrl+/"), self, activated=lambda: self.apply_irc_format("\x16"))  # Inverse
+
     def contextMenuEvent(self, event):
         menu = self.createStandardContextMenu()
 
@@ -674,9 +681,9 @@ class RudeGui(QWidget):
         #self.user_selector_label.setStyleSheet(f"color: {self.window_fg}; background-color: {self.window_bg};")
 
         #QPalette testing - seems like a more direct way to set these instead of stylesheets.
-        usrpalette = self.user_selector_label.palette()
-        usrpalette.setColor(self.user_selector_label.foregroundRole(), QColor(self.window_fg))
-        self.user_selector_label.setPalette(usrpalette)
+        self.usrpalette = self.user_selector_label.palette()
+        self.usrpalette.setColor(self.user_selector_label.foregroundRole(), QColor(self.window_fg))
+        self.user_selector_label.setPalette(self.usrpalette)
         self.server_selector_label.setStyleSheet(f"color: {self.window_fg}; background-color: {self.window_bg};")
         self.channel_selector_label.setStyleSheet(f"color: {self.window_fg}; background-color: {self.window_bg};")
 
@@ -1055,7 +1062,7 @@ class RudeGui(QWidget):
 
                 back_text = f"Users ({user_num})"
                 self.user_selector_label.setText(back_text)
-                self.user_selector_label.setStyleSheet(f"color: white")
+                self.user_selector_label.setPalette(self.usrpalette)
                 
                 if self.irc_client.server_name in self.irc_client.away_servers:
                     self.irc_client.away_servers.remove(self.irc_client.server_name)
