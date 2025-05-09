@@ -812,6 +812,7 @@ class RudeGui(QWidget):
             self.tray_icon.showMessage("RudeChat", f"{usrchan}/{sender}: {message}", QSystemTrayIcon.MessageIcon.Information, 3000)
         else:
             self.tray_icon.showMessage("RudeChat", f"{usrchan}: {message}", QSystemTrayIcon.MessageIcon.Information, 3000)
+            
     # Client Management
     def add_client(self, server_name, irc_client):
         self.clients[server_name] = irc_client # Store clients here.

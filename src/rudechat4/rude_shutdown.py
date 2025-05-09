@@ -29,9 +29,11 @@ class RudeShutdown(QWidget):
         self.master.move(int(width), int(height))
 
     def init_layout(self):
+        shutdown_messages = ["Closing RudeChat...", "Shutting Down...", "Goodbye <3...", "Exiting RudeChat...", "Hang on to your butts...", "racko says hi!", "All fear Irish!", "Sleep well...!", "please hire racko :("]
+        chosen_message = random.choice(shutdown_messages)
         layout = QVBoxLayout()
 
-        self.label = QLabel("Closing RudeChat...")
+        self.label = QLabel(chosen_message)
         layout.addWidget(self.label)
         layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.setLayout(layout)
