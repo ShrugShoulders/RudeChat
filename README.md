@@ -25,6 +25,7 @@ Download the installer. Windows installs to `%LOCALAPPDATA%\Programs\RudeChat4`.
 ### Linux (Binary/.deb)
 - Linux Stand Alone tar file. 
 	- Update .desktop file to the executable path. 
+- Deb package available for Debian based sysems. 
 
 ### Linux (Build from Source)
 - Clone the repo.
