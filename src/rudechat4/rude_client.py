@@ -5082,12 +5082,12 @@ class RudeChatClient:
                 "PgDown - Cycle channels down"
                 "Ctrl+tab - Cycles to the next channel"
                 "Ctrl+Shift+Tab - Cycles to the previous channel"
-                "Ctrl+` - Cycles Server selection"
-                "Ctrl+I or cmd+I - Insert Italic formatting to selected text",
+                "Ctrl+` or Cmd+`- Cycles Server selection"
+                "Ctrl+I or Cmd+I - Insert Italic formatting to selected text",
                 "Ctrl+B or Cmd+B - Insert Bold formatting to selected text",
                 "Ctrl+- or Cmd+u - Insert Underline formatting to selected text",
                 "Ctrl+S or Cmd+S - Insert Strike-Through formatting to selected text",
-                "Ctrl+/ or cmd +/ - Insert Inverse formatting to selected text",
+                "Ctrl+/ or Cmd +/ - Insert Inverse formatting to selected text",
                 "Ctrl+W or Cmd+W - Opens GUI Config"
                 "Ctrl+E or Cmd+E - Opens Server Config"
                 "_________",
