@@ -66,7 +66,7 @@ class CustomLineEdit(QLineEdit):
         selected_text = self.selectedText()
 
         if selected_text:
-            formatted = f"{format_code}{selected_text}{format_code}"
+            formatted = f"{format_code}{selected_text}\x0F"
             current_text = self.text()
             start = self.selectionStart()
             end = start + len(selected_text)
@@ -583,6 +583,52 @@ class RudeGui(QWidget):
 
         self.layout().addLayout(self.sidebar)
         self.create_tray_icon()
+        self.set_shortcuts()
+
+    def set_shortcuts(self):
+        QShortcut(QKeySequence("Ctrl+tab"), self, activated=lambda: self.cycle_channel_selection()) 
+        QShortcut(QKeySequence("Ctrl+Q"), self, activated=lambda: self.cycle_server_selection()) 
+
+    def test_method(self):
+        print("Test complete")
+
+    def cycle_channel_selection(self):
+        count = self.channel_selector_list.count()
+        if count == 0:
+            return 
+
+        current_index = -1
+        current_channel = self.irc_client.current_channel
+
+        if current_channel:
+            for i in range(count):
+                item = self.channel_selector_list.item(i)
+                if item.text() == current_channel:
+                    current_index = i
+                    break
+
+        # Move to next index
+        next_index = (current_index + 1) % count
+
+        # Simulate a click on next item
+        self.the_force_click(next_index)
+
+    def cycle_server_selection(self):
+        count = self.server_selector_list.count()
+        if count == 0:
+            return
+
+        current_index = self.server_selector_list.currentRow()
+
+        # Move to next index
+        next_index = (current_index + 1) % count
+
+        # Select and scroll to next item
+        self.server_selector_list.clearSelection()
+        self.server_selector_list.setCurrentRow(next_index)
+        self.server_selector_list.scrollToItem(self.server_selector_list.item(next_index))
+
+        self.on_server_change(None)
 
     def select_first_server(self):
         server_count = self.server_selector_list.count()
@@ -723,11 +769,8 @@ class RudeGui(QWidget):
 
     def init_client(self):
         self.irc_client = RudeChatClient(self.chat_box, self.text_field, self.master, self)
-        self.init_input_menu()
         self.apply_settings()
         self.show_startup_art()
-
-    def init_input_menu(self): pass #TODO
 
     def apply_settings(self):
         self.highlight_nicknames()
@@ -812,7 +855,7 @@ class RudeGui(QWidget):
             self.tray_icon.showMessage("RudeChat", f"{usrchan}/{sender}: {message}", QSystemTrayIcon.MessageIcon.Information, 3000)
         else:
             self.tray_icon.showMessage("RudeChat", f"{usrchan}: {message}", QSystemTrayIcon.MessageIcon.Information, 3000)
-            
+
     # Client Management
     def add_client(self, server_name, irc_client):
         self.clients[server_name] = irc_client # Store clients here.
