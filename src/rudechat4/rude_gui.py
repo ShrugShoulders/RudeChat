@@ -19,14 +19,14 @@ class CustomLineEdit(QLineEdit):
 
     def add_shortcuts(self):
         is_mac = sys.platform == "darwin"
-        modifier = "Meta+" if is_mac else "Ctrl+"
-
+        
         # Add shortcuts
-        QShortcut(QKeySequence(modifier + "B"), self, activated=lambda: self.apply_irc_format("\x02"))  # Bold
-        QShortcut(QKeySequence(modifier + "I"), self, activated=lambda: self.apply_irc_format("\x1D"))  # Italic
-        QShortcut(QKeySequence(modifier + "-"), self, activated=lambda: self.apply_irc_format("\x1F"))  # Underline
-        QShortcut(QKeySequence(modifier + "S"), self, activated=lambda: self.apply_irc_format("\x1E"))  # Strike Through
-        QShortcut(QKeySequence(modifier + "/"), self, activated=lambda: self.apply_irc_format("\x16"))  # Inverse
+        QShortcut(QKeySequence("Ctrl+B"), self, activated=lambda: self.apply_irc_format("\x02"))  # Bold
+        QShortcut(QKeySequence("Ctrl+I"), self, activated=lambda: self.apply_irc_format("\x1D"))  # Italic
+        QShortcut(QKeySequence("Ctrl+-" if not is_mac else "Ctrl+U"), self, activated=lambda: self.apply_irc_format("\x1F"))  # Underline
+        QShortcut(QKeySequence("Ctrl+S"), self, activated=lambda: self.apply_irc_format("\x1E"))  # Strike Through
+        QShortcut(QKeySequence("Ctrl+/"), self, activated=lambda: self.apply_irc_format("\x16"))  # Inverse
+        #("Ctrl+Tab" if not is_mac else "Meta+Tab")
 
     def contextMenuEvent(self, event):
         menu = self.createStandardContextMenu()
@@ -591,20 +591,18 @@ class RudeGui(QWidget):
         self.set_shortcuts()
 
     def set_shortcuts(self):
-        is_mac = sys.platform == "darwin"
-
         # Channels
-        QShortcut(QKeySequence("Ctrl+Tab" if not is_mac else "Meta+Tab"), self, activated=self.cycle_channel_selection_down)
-        QShortcut(QKeySequence("Ctrl+Shift+Tab" if not is_mac else "Meta+Shift+Tab"), self, activated=self.cycle_channel_selection_up)
+        QShortcut(QKeySequence("Ctrl+Tab"), self, activated=self.cycle_channel_selection_down)
+        QShortcut(QKeySequence("Ctrl+Shift+Tab"), self, activated=self.cycle_channel_selection_up)
         QShortcut(QKeySequence("PgUp"), self, activated=self.cycle_channel_selection_up)
         QShortcut(QKeySequence("PgDown"), self, activated=self.cycle_channel_selection_down)
 
         # Servers
-        QShortcut(QKeySequence("Ctrl+`" if not is_mac else "Meta+`"), self, activated=self.cycle_server_selection)
+        QShortcut(QKeySequence("Ctrl+`"), self, activated=self.cycle_server_selection)
 
         # Windows
-        QShortcut(QKeySequence("Ctrl+W" if not is_mac else "Meta+W"), self, activated=self.open_gui_config_window)
-        QShortcut(QKeySequence("Ctrl+E" if not is_mac else "Meta+E"), self, activated=self.open_client_config_window)
+        QShortcut(QKeySequence("Ctrl+W"), self, activated=self.open_gui_config_window)
+        QShortcut(QKeySequence("Ctrl+E"), self, activated=self.open_client_config_window)
 
     def test_method(self):
         print("Test complete")

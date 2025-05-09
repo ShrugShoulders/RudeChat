@@ -5080,16 +5080,16 @@ class RudeChatClient:
             "Key Bindings": [
                 "PgUp - Cycle channels up"
                 "PgDown - Cycle channels down"
-                "Ctrl+tab or Cmd+tab - Cycles to the next channel"
-                "Ctrl+Shift+Tab or Cmd+Shift+Tab - Cycles to the previous channel"
-                "Ctrl+` or Cmd+`- Cycles Server selection"
-                "Ctrl+I or Cmd+I - Insert Italic formatting to selected text",
-                "Ctrl+B or Cmd+B - Insert Bold formatting to selected text",
-                "Ctrl+- or Cmd+u - Insert Underline formatting to selected text",
-                "Ctrl+S or Cmd+S - Insert Strike-Through formatting to selected text",
-                "Ctrl+/ or Cmd +/ - Insert Inverse formatting to selected text",
-                "Ctrl+W or Cmd+W - Opens GUI Config"
-                "Ctrl+E or Cmd+E - Opens Server Config"
+                "Ctrl+tab - Cycles to the next channel"
+                "Ctrl+Shift+Tab - Cycles to the previous channel"
+                "Ctrl+` - Cycles Server selection"
+                "Ctrl+I - Insert Italic formatting to selected text",
+                "Ctrl+B - Insert Bold formatting to selected text",
+                "Ctrl+- or Ctrl+u(mac) - Insert Underline formatting to selected text",
+                "Ctrl+S - Insert Strike-Through formatting to selected text",
+                "Ctrl+/ - Insert Inverse formatting to selected text",
+                "Ctrl+W - Opens GUI Config"
+                "Ctrl+E - Opens Server Config"
                 "_________",
             ],
             "Fun": [
