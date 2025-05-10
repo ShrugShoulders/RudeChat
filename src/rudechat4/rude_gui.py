@@ -766,12 +766,7 @@ class RudeGui(QWidget):
         """)
 
         # Apply Labels (User, Server, and Channel Sections)
-        #self.user_selector_label.setStyleSheet(f"color: {self.window_fg}; background-color: {self.window_bg};")
-
-        #QPalette testing - seems like a more direct way to set these instead of stylesheets.
-        self.usrpalette = self.user_selector_label.palette()
-        self.usrpalette.setColor(self.user_selector_label.foregroundRole(), QColor(self.window_fg))
-        self.user_selector_label.setPalette(self.usrpalette)
+        self.user_selector_label.setStyleSheet(f"color: {self.window_fg}; background-color: {self.window_bg};")
         self.server_selector_label.setStyleSheet(f"color: {self.window_fg}; background-color: {self.window_bg};")
         self.channel_selector_label.setStyleSheet(f"color: {self.window_fg}; background-color: {self.window_bg};")
 
@@ -891,9 +886,15 @@ class RudeGui(QWidget):
             self.iconed = True
 
     def trigger_desktop_notification(self, sender, usrchan, message):
-        if message == None:
+        if message is None:
             return
-        if sender != None:
+
+        # Check if app is in focus
+        if QApplication.activeWindow() is not None:
+            return  # App is in focus; skip notification
+
+        # Check is a sender is given to determine message type.
+        if sender is not None:
             self.tray_icon.showMessage("RudeChat", f"{usrchan}/{sender}: {message}", QSystemTrayIcon.MessageIcon.Information, 3000)
         else:
             self.tray_icon.showMessage("RudeChat", f"{usrchan}: {message}", QSystemTrayIcon.MessageIcon.Information, 3000)
@@ -1150,10 +1151,11 @@ class RudeGui(QWidget):
 
                 back_text = f"Users ({user_num})"
                 self.user_selector_label.setText(back_text)
-                self.user_selector_label.setPalette(self.usrpalette)
+                self.user_selector_label.setStyleSheet(f"color: {self.window_fg};")
                 
                 if self.irc_client.server_name in self.irc_client.away_servers:
                     self.irc_client.away_servers.remove(self.irc_client.server_name)
+                    
         except AttributeError as e:
             logging.error(f"AttributeError in update_users_label: {e}")
             return
