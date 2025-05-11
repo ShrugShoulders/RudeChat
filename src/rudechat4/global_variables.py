@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 from rudechat4.shared_imports import *
 
 G_SOURCE_DIR = os.path.dirname(os.path.abspath(__file__))

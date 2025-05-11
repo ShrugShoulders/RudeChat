@@ -1,13 +1,8 @@
 pytz
 asyncio
 irctokens
-plyer
 aiofiles
-colorchooser
 tzlocal
-tkcolorpicker
-pillow
-pystray
 emoji
 py2app
 PyQt6

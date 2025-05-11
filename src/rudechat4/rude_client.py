@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 from rudechat4.rude_pronouns import replace_pronouns
 from rudechat4.rude_auto_away import AutoAway
 from rudechat4.rude_friends import RudeFriends

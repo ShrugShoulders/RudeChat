@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 from rudechat4.shared_imports import *
 
 class AutoAway:
