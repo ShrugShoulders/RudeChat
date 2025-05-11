@@ -1340,7 +1340,7 @@ class RudeGui(QWidget):
             config_window.create_widgets()
 
         # Instruction label
-        instruction_label = QLabel("To create a new config file change the Server Name, then change the data in the fields to match the new server, when apply is clicked the file is saved. Any newly added server(s) connects automatically.")
+        instruction_label = QLabel("To create a new config file change the Server Name, then change the data in the fields to match the new server, when apply is clicked the file is saved. Any newly added server(s) connects automatically. Please do not use spaces or periods in server names, you'll have a bad time.")
         instruction_label.setWordWrap(True)
         self.main_window.layout.addWidget(instruction_label)
 
