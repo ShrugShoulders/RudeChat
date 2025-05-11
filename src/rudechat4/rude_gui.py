@@ -907,12 +907,9 @@ class RudeGui(QWidget):
     # Client Management
     def server_checker(self, server):
         item_texts = [self.server_selector_list.item(i).text().lower() for i in range(self.server_selector_list.count())]
-        logging.info(f"server_checker: Items: {item_texts}")
         if server in item_texts:
-            logging.info(f"Returned True: {server}")
             return True
         else:
-            logging.info(f"Returned False: {server}")
             return False
 
     def add_client(self, server_name, irc_client):
@@ -1299,7 +1296,6 @@ class RudeGui(QWidget):
         config_files.sort()
         for config in config_files:
             server_name = config.rsplit(".", 1)[0]
-            logging.info(f"new_server_config_connect: Server Name: {server_name}")
             exists = self.server_checker(server_name.lower())
             if not exists:
                 self.irc_client.loop.create_task(self.irc_client.connect_to_specific_server(server_name))
