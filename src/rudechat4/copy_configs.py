@@ -16,9 +16,7 @@ def CopyConfigs():
 
     # Check for .png files
     icon_files = [f for f in os.listdir(G_SOURCE_DIR) if f.endswith('.png')]
-    print(icon_files)
     existing_icon_files = [f for f in os.listdir(G_CONFIG_DIR) if f.endswith('.png')]
-    print(existing_icon_files)
 
     if not existing_rudeserver_files:
         for file in rudeserver_files:
