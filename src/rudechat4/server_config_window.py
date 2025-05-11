@@ -115,7 +115,7 @@ class ServerConfigWindow(QScrollArea):
             self.widget.layout.addWidget(section_frame)
 
     def expand_channels_list(self):
-        channels = self.channels
+        channels = self.config.get('IRC', 'auto_join_channels')
         if channels:
             self.expander = ChannelExp(channels, self.set_channels )
 

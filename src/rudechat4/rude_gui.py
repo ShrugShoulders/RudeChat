@@ -1303,7 +1303,18 @@ class RudeGui(QWidget):
     def open_client_config_window(self):
         def after_config_window_close():
             # Reload configuration after the configuration window is closed
-            self.irc_client.reload_config(config_window.config_file)
+            files = os.listdir(G_CONFIG_DIR)
+            config_files = sorted(f for f in files if f.endswith(".rudeserver"))
+
+            for config in config_files:
+                config_server_name = config.rsplit(".", 1)[0].lower()
+                config_path = os.path.join(G_CONFIG_DIR, config)
+
+                for server_name, irc_client in self.clients.items():
+                    if server_name.lower() == config_server_name:
+                        irc_client.reload_config(config_path)
+
+            # Connect to new servers, if any
             self.new_server_config_connect()
 
         def close_window():

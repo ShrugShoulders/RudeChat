@@ -146,6 +146,9 @@ class RudeChatClient:
         self.watcher = AutoAway(self.config)
         self.watcher.reload_config()
         self.gui.update_nick_channel_label()
+        self.join_new_channels()
+
+    def join_new_channels(self):
         for channel in self.auto_join_channels:
             if channel not in self.joined_channels:
                 self.loop.create_task(self.join_channel(channel))
