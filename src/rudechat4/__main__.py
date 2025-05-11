@@ -111,7 +111,7 @@ def __main__():
     app.setApplicationDisplayName("RudeChat4")
     app.setApplicationVersion("4.1.0")
     app.setWindowIcon(QIcon(ICON_FILE))
-    app.setDesktopFileName("rudechat4.desktop")
+    app.setDesktopFileName("rudechat4")
     first_run = FirstRun(app)
     if first_run.first_run_detect == 0:
         first_run.open_client_config_window()

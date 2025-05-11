@@ -1291,28 +1291,34 @@ class RudeGui(QWidget):
             logging.error(f"Error on open_user_info: {e}")
 
     def new_server_config_connect(self):
-        files = os.listdir(G_CONFIG_DIR)
-        config_files = [f for f in files if f.endswith(".rudeserver")]
-        config_files.sort()
-        for config in config_files:
-            server_name = config.rsplit(".", 1)[0]
-            exists = self.server_checker(server_name.lower())
-            if not exists:
-                self.irc_client.loop.create_task(self.irc_client.connect_to_specific_server(server_name))
+        try:
+            files = os.listdir(G_CONFIG_DIR)
+            config_files = [f for f in files if f.endswith(".rudeserver")]
+            config_files.sort()
+            for config in config_files:
+                server_name = config.rsplit(".", 1)[0]
+                exists = self.server_checker(server_name.lower())
+                if not exists:
+                    self.irc_client.loop.create_task(self.irc_client.connect_to_specific_server(server_name))
+        except Exception as e:
+            logging.error(f"Error in new_server_config_connect: {e}")
 
     def open_client_config_window(self):
         def after_config_window_close():
             # Reload configuration after the configuration window is closed
-            files = os.listdir(G_CONFIG_DIR)
-            config_files = sorted(f for f in files if f.endswith(".rudeserver"))
+            try:
+                files = os.listdir(G_CONFIG_DIR)
+                config_files = sorted(f for f in files if f.endswith(".rudeserver"))
 
-            for config in config_files:
-                config_server_name = config.rsplit(".", 1)[0].lower()
-                config_path = os.path.join(G_CONFIG_DIR, config)
+                for config in config_files:
+                    config_server_name = config.rsplit(".", 1)[0].lower()
+                    config_path = os.path.join(G_CONFIG_DIR, config)
 
-                for server_name, irc_client in self.clients.items():
-                    if server_name.lower() == config_server_name:
-                        irc_client.reload_config(config_path)
+                    for server_name, irc_client in self.clients.items():
+                        if server_name.lower() == config_server_name:
+                            irc_client.reload_config(config_path)
+            except Exception as e:
+                logging.error(f"Error in after_config_window_close: {e}")
 
             # Connect to new servers, if any
             self.new_server_config_connect()
