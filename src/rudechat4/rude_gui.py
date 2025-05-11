@@ -905,6 +905,16 @@ class RudeGui(QWidget):
             self.tray_icon.showMessage("RudeChat", f"{usrchan}: {message}", QSystemTrayIcon.MessageIcon.Information, 3000)
 
     # Client Management
+    def server_checker(self, server):
+        item_texts = [self.server_selector_list.item(i).text().lower() for i in range(self.server_selector_list.count())]
+        logging.info(f"server_checker: Items: {item_texts}")
+        if server in item_texts:
+            logging.info(f"Returned True: {server}")
+            return True
+        else:
+            logging.info(f"Returned False: {server}")
+            return False
+
     def add_client(self, server_name, irc_client):
         self.clients[server_name] = irc_client # Store clients here.
 
@@ -1283,10 +1293,22 @@ class RudeGui(QWidget):
         except Exception as e:
             logging.error(f"Error on open_user_info: {e}")
 
+    def new_server_config_connect(self):
+        files = os.listdir(G_CONFIG_DIR)
+        config_files = [f for f in files if f.endswith(".rudeserver")]
+        config_files.sort()
+        for config in config_files:
+            server_name = config.rsplit(".", 1)[0]
+            logging.info(f"new_server_config_connect: Server Name: {server_name}")
+            exists = self.server_checker(server_name.lower())
+            if not exists:
+                self.irc_client.loop.create_task(self.irc_client.connect_to_specific_server(server_name))
+
     def open_client_config_window(self):
         def after_config_window_close():
             # Reload configuration after the configuration window is closed
             self.irc_client.reload_config(config_window.config_file)
+            self.new_server_config_connect()
 
         def close_window():
             self.main_window.close()
@@ -1322,7 +1344,7 @@ class RudeGui(QWidget):
             config_window.create_widgets()
 
         # Instruction label
-        instruction_label = QLabel("To create a new config file, change the data in the fields, then edit the file name in the file selection above.\nConfiguration files must follow exampleserver.rudeserver format.")
+        instruction_label = QLabel("To create a new config file change the Server Name, then change the data in the fields to match the new server, when apply is clicked the file is saved.\nAny newly added server connect automatically.")
         instruction_label.setWordWrap(True)
         self.main_window.layout.addWidget(instruction_label)
 
