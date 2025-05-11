@@ -2028,7 +2028,8 @@ class RudeChatClient:
             user_info = tokens.hostmask.nickname
             user_mask = tokens.hostmask
             channel = tokens.params[0]
-            if self.extended_join:
+            param_len = len(tokens.params)
+            if self.extended_join and param_len != 1:
                 account = tokens.params[1]
                 self.cache_accountname(user_info, account)
 
@@ -2037,8 +2038,7 @@ class RudeChatClient:
                 self.gui.insert_text_widget(f"{friends_here}\n")
                 if user_info not in self.friends.online_friends:
                     try:
-                        pass
-                        #self.loop.create_task(self.gui.trigger_desktop_notification(channel_name=user_info, message_content="is Online!"))
+                        self.gui.trigger_desktop_notification(channel_name=user_info, message_content="is Online!")
                     except Exception as e:
                         logging.error(f"Exception Caught in handle_join.trigger_desktop_notification: {e}")
                         
@@ -3434,12 +3434,23 @@ class RudeChatClient:
     def handle_263(self, tokens):
         try:
             source = tokens.source
-            issued_command = tokens.params[1]
-            message = tokens.params[2]
-            data = f"{source}: {issued_command} - {message}\n"
+            param_len = len(tokens.params)
+
+            if param_len == 3:
+                issued_command = tokens.params[1]
+                message = tokens.params[2]
+                data = f"{source}: {issued_command} - {message}\n"
+            elif param_len == 2:
+                issued_command = tokens.params[0]
+                message = tokens.params[1]
+                data = f"{source}: {issued_command} - {message}\n"
+            else:
+                data = f"{source}: Unexpected parameter count ({param_len})\n"
+
             self.add_server_message(data)
         except Exception as e:
             logging.error(f"Error in handle_263: {e}")
+            logging.info(f"Token: {tokens}")
 
     def command_404(self, tokens):
         try:
@@ -5125,6 +5136,8 @@ class RudeChatClient:
                     self.channel_messages[self.server][help_channel].append(f"{category}:\n")
                     for cmd in commands:
                         self.channel_messages[self.server][help_channel].append(f"{cmd}\n")
+
+                self.gui.channel_topics[self.server_name][help_channel] = "HELP"
 
             # Update the GUI
             self.gui.insert_and_scroll()

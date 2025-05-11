@@ -183,13 +183,16 @@ class RudeChannelListWidget(QListWidget):
         if not selected_item:
             return
 
-        for i in self.gui.irc_client.chantypes:
-            if not selected_item.text().startswith(i):
-                remove_action = QAction("Close DM", self)
-                remove_action.triggered.connect(lambda _, item=selected_item.text(): self.exit_dm(item))
-            else:
-                remove_action = QAction("Leave Channel", self)
-                remove_action.triggered.connect(lambda _, item=selected_item.text(): self.exit_channel(item))
+        if any(selected_item.text().startswith(prefix) for prefix in self.gui.irc_client.chantypes):
+            remove_action = QAction("Leave Channel", self)
+            remove_action.triggered.connect(lambda _, item=selected_item.text(): self.exit_channel(item))
+        elif selected_item.text().startswith("!"):
+            remove_action = QAction("Close Info", self)
+            remove_action.triggered.connect(lambda _, item=selected_item.text(): self.exit_dm(item))
+        else:
+            remove_action = QAction("Close DM", self)
+            remove_action.triggered.connect(lambda _, item=selected_item.text(): self.exit_dm(item))
+
 
         # Pop Out Window
         pop_out_action = QAction("Pop Out", self)
@@ -1155,7 +1158,7 @@ class RudeGui(QWidget):
                 
                 if self.irc_client.server_name in self.irc_client.away_servers:
                     self.irc_client.away_servers.remove(self.irc_client.server_name)
-                    
+
         except AttributeError as e:
             logging.error(f"AttributeError in update_users_label: {e}")
             return

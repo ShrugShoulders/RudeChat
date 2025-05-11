@@ -636,9 +636,12 @@ class RudePopout(QObject):
     def set_topic(self):
         try:
             topic = self.parentGui.channel_topics[self.parentGui.irc_client.server_name][self.channel]
-            self.topic_label.setText(str(topic))
+            if topic:
+                self.topic_label.setText(str(topic))
         except Exception as e:
             logging.error(f"Error setting topic: {e}")
+            self.topic_label.setText(str(self.channel))
+            return
 
     def send_message(self, text):
         try:
