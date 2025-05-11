@@ -906,11 +906,11 @@ class RudeGui(QWidget):
 
     # Client Management
     def server_checker(self, server):
-        item_texts = [self.server_selector_list.item(i).text().lower() for i in range(self.server_selector_list.count())]
-        if server in item_texts:
-            return True
-        else:
-            return False
+        cleaned_items = [
+            self.server_selector_list.item(i).text().lower().split(" ")[0]
+            for i in range(self.server_selector_list.count())
+        ]
+        return server in cleaned_items
 
     def add_client(self, server_name, irc_client):
         self.clients[server_name] = irc_client # Store clients here.
