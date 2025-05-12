@@ -10,7 +10,7 @@
 - [ ] OS Builds
 	- [ ] `Linux`
 		- [x] Debian/Ubuntu
-		- [ ] Fedora
+		- [x] Fedora(Needs testing)
 		- [ ] Gentoo(ebuild)
 		- [x] Universal Stand-alone
 	- [x] `MacOS`
