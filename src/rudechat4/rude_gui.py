@@ -2004,9 +2004,6 @@ class RudeGui(QWidget):
                     if current_bg_color not in preserve_colors:
                         channel_item.setBackground(QColor(self.list_bg))
 
-            # Update the UI to reflect changes
-            self.channel_selector_list.update()
-
         except Exception as e:
             logging.error(f"Exception in highlight_who_channels: {e}")
 

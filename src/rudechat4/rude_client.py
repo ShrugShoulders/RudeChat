@@ -999,10 +999,13 @@ class RudeChatClient:
             for chan in sorted_channels:
                 self.gui.channel_selector_list.addItem(chan)
         except Exception as e:
-            logging.error(f"Error in update_gui_channel_list: {e}")
+            logging.error(f"Error1 in update_gui_channel_list: {e}")
 
         self.gui.highlight_who_channels()
-        self.restore_channel_bg_colors()
+        try:
+            self.restore_channel_bg_colors()
+        except Exception as e:
+            logging.error(f"Error2 in update_gui_channel_list: {e}")
 
     def update_gui_user_list(self, channel):
         self.gui.user_selector_list.clear()
