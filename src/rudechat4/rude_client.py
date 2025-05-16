@@ -62,6 +62,8 @@ class RudeChatClient:
         self.account_notify = False
         self.who_for_chan_complete = False
         self.whois_gathering_complete = False
+        self.is_connected = False
+        self.disconnect_requested = False
         self.delete_lock_files()
         self.loop = asyncio.get_event_loop()
         self.time_zone = get_localzone()
@@ -107,6 +109,7 @@ class RudeChatClient:
         self.green_text = config.getboolean('IRC', 'green_text', fallback=True)
         self.auto_join_invite = config.getboolean('IRC', 'auto_join_invite', fallback=True)
         self.log_on = config.getboolean('IRC', 'log_on', fallback=False)
+        self.auto_connect_to_networks = config.getboolean('IRC', 'auto_connect_to_networks', fallback=False)
         await self.load_channel_messages()
         self.load_away_users_from_file()
         self.load_ignore_list()
@@ -901,6 +904,8 @@ class RudeChatClient:
         return any(channel.startswith(prefix) for prefix in self.chantypes)
 
     async def join_channel(self, channel):
+        if not self.is_connected:
+            return
         if not self.is_valid_channel(channel):
             self.gui.insert_text_widget(f"Invalid channel name {channel}.\n")
             return
@@ -1029,7 +1034,7 @@ class RudeChatClient:
         # Gather tasks to ensure they are properly cancelled
         await asyncio.gather(*tasks, return_exceptions=True)
 
-    async def reset_state(self):
+    def reset_state(self):
         self.motd_dict.clear()
         self.joined_channels.clear()
         self.motd_lines.clear()
@@ -1067,8 +1072,11 @@ class RudeChatClient:
         MAX_RETRIES = 5
         RETRY_DELAY = 15 if not self.znc_connection else 5
         retries = 0
+        if self.disconnect_requested:
+            return
+
         self.add_server_message(f"****Resetting State\n")
-        await self.reset_state()
+        self.reset_state()
         self.gui.insert_text_widget(f"You have been \x0304DISCONNECTED\x0F Auto Reconnecting In Progress\x0303... in {RETRY_DELAY} seconds\x0F \n")
         self.add_server_message(f"You have been \x0304DISCONNECTED\x0F Auto Reconnecting In Progress\x0303... in {RETRY_DELAY} seconds\x0F \n")
 
@@ -3861,10 +3869,17 @@ class RudeChatClient:
             if matching_key:
                 client = self.gui.clients.get(matching_key)
                 if client:
-                    await client.send_message("QUIT")
-                    client.loop_running = False
-                    del self.gui.clients[matching_key]
-                    self.gui.insert_text_widget("Disconnected\n")
+                    if not client.is_connected:
+                        self.gui.insert_text_widget(f"You're not connected to: {client.server_name}\n")
+                        return
+                    else:
+                        await client.send_message("QUIT")
+                        client.loop_running = False
+                        client.is_connected = False
+                        client.disconnect_requested = True
+                        self.gui.update_server_ping(server_name, ping_time=None)
+                        self.reset_state()
+                        self.gui.insert_text_widget("Disconnected\n")
             else:
                 self.gui.insert_text_widget(f"No client found for server {server_name}\n")
 
@@ -4183,10 +4198,8 @@ class RudeChatClient:
                 server_name = args[1] if len(args) > 1 else None
                 lserver_name = server_name.lower()
                 if server_name:
-                    if not self.gui.server_checker(lserver_name):
-                        await self.connect_to_specific_server(lserver_name)
-                    else:
-                        self.gui.insert_text_widget(f"You are already connected to that server.")
+                    await self.gui.client_connect(lserver_name)
+
                 else:
                     data = "Please Enter A Server Name"
                     self.add_server_message(data)
@@ -4196,7 +4209,6 @@ class RudeChatClient:
                 server = args[1] if len(args) > 1 else None
                 if server:
                     await self.disconnect(server)
-                    self.gui.remove_server_from_listbox(server)
                 else:
                     self.gui.insert_text_widget("Please Enter a Server Name")
 
@@ -5088,7 +5100,7 @@ class RudeChatClient:
                 "/quit - Closes connection and client",
                 "/help - Redisplays this message",
                 "/disconnect - Will disconnect you from the currently connected servers",
-                "/connect <server_name> - Will connect you to the given server, is case sensitive.",
+                "/connect <server_name> - Will connect you to the given server",
                 "_________",
             ],
             "ZNC Commands": [
@@ -5173,7 +5185,7 @@ class RudeChatClient:
 
     def display_server_motd(self, server_name=None):
         if server_name:
-            messages = self.motd_dict.get(server_name, [])
+            messages = self.motd_dict.get(server_name, f"You're not connected to: {self.server_name}")
             self.gui.insert_text_widget(f"{messages}\n")
 
     async def handle_upload(self):

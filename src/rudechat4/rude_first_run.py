@@ -116,7 +116,7 @@ class FirstRun:
             config_window.config.read(config_window.config_file)
             config_window.create_widgets()
 
-        instruction_label = QLabel("Welcome to RudeChat's First Run Configuration. Please adjust your settings to your liking, then click Apply to start RudeChat. This will be the only time you see this menu.")
+        instruction_label = QLabel("To create a new config file change the Server Name, then change the data in the fields to match the new server, when apply is clicked the file is saved. Any newly added server(s) connects automatically. Please do not use spaces or periods in server names, you'll have a bad time.")
         instruction_label.setWordWrap(True)
         self.main_window.layout.addWidget(instruction_label)
 

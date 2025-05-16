@@ -62,14 +62,19 @@ class ServerConfigWindow(QScrollArea):
             'auto_join_invite': ['Auto Join On Invite?', 'bool'],
             'log_on': ['Turn Client Debug Logging On', 'bool'],
             'use_emojis': ['Turn Emoji filters on/off', 'bool'],
+            'auto_connect_to_networks': ['Turn Server auto-connect on/off', 'bool'],
         }
         configure_logging()
         self.entries = {}
         self.create_widgets()
+        self.reload_channels()
 
     def create_widgets(self):
         self.entries = {}
         self.create_config_widgets()
+
+    def reload_channels(self):
+        self.channels = self.config.get('IRC', 'auto_join_channels')
 
     def create_config_widgets(self):
         row_count = 0  # Track row number for grid positioning
@@ -110,14 +115,14 @@ class ServerConfigWindow(QScrollArea):
             try:
                 self.widget.layout.itemAt(0).widget().setParent(None)
             except:
-                print("No widget to remove")
+                logging.info("No widget to remove")
 
             self.widget.layout.addWidget(section_frame)
 
     def expand_channels_list(self):
-        channels = self.config.get('IRC', 'auto_join_channels')
+        channels = self.channels
         if channels:
-            self.expander = ChannelExp(channels, self.set_channels )
+            self.expander = ChannelExp(channels, self.set_channels)
 
             self.expander.show()
 

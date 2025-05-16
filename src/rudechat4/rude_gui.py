@@ -221,6 +221,39 @@ class RudeChannelListWidget(QListWidget):
             return
         self.gui.irc_client.close_dm(item)
 
+class RudeServerListWidget(QListWidget):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self.customContextMenuRequested.connect(self.show_context_menu)
+        self.gui = parent
+
+    def show_context_menu(self, pos: QPoint):
+        menu = QMenu(self)
+
+        connect_to_server = QAction("Connect", self)
+        disconnect_from_server = QAction("Disconnect", self)
+
+        connect_to_server.triggered.connect(self.server_connect)
+        disconnect_from_server.triggered.connect(self.server_disconnect)
+
+        menu.addAction(connect_to_server)
+        menu.addAction(disconnect_from_server)
+
+        menu.exec(self.mapToGlobal(pos))
+
+    def server_connect(self):
+        selected_item = self.currentItem()
+        if selected_item:
+            server_name = selected_item.text()
+            self.gui.irc_client.loop.create_task(self.gui.client_connect(server_name))
+
+    def server_disconnect(self):
+        selected_item = self.currentItem()
+        if selected_item:
+            server_name = selected_item.text()
+            self.gui.irc_client.loop.create_task(self.gui.irc_client.disconnect(server_name))
+
 class RudeUserListWidget(QListWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -396,6 +429,8 @@ class RudeGui(QWidget):
             "⚰": 0,
             "💩": 1,
             "❤": 0,
+            "⚾": 0,
+            "⚽": 0,
         }
 
         # Initialise layout
@@ -567,7 +602,7 @@ class RudeGui(QWidget):
         self.server_selector_label.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Preferred)
         self.server_selector.addWidget(self.server_selector_label)
 
-        self.server_selector_list = QListWidget(self)
+        self.server_selector_list = RudeServerListWidget(self)
         self.server_selector_list.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Expanding)
         self.server_selector_list.setSizeAdjustPolicy(QAbstractScrollArea.SizeAdjustPolicy.AdjustToContents)
         self.server_selector_list.itemClicked.connect(self.on_server_change)
@@ -892,18 +927,21 @@ class RudeGui(QWidget):
             self.iconed = True
 
     def trigger_desktop_notification(self, sender, usrchan, message):
-        if message is None:
-            return
+        try:
+            if message is None:
+                return
 
-        # Check if app is in focus
-        if QApplication.activeWindow() is not None:
-            return  # App is in focus; skip notification
+            # Check if app is in focus
+            if QApplication.activeWindow() is not None:
+                return  # App is in focus; skip notification
 
-        # Check is a sender is given to determine message type.
-        if sender is not None:
-            self.tray_icon.showMessage("RudeChat", f"{usrchan}/{sender}: {message}", QSystemTrayIcon.MessageIcon.Information, 3000)
-        else:
-            self.tray_icon.showMessage("RudeChat", f"{usrchan}: {message}", QSystemTrayIcon.MessageIcon.Information, 3000)
+            # Check is a sender is given to determine message type.
+            if sender is not None:
+                self.tray_icon.showMessage("RudeChat", f"{usrchan}/{sender}: {message}", QSystemTrayIcon.MessageIcon.Information, 3000)
+            else:
+                self.tray_icon.showMessage("RudeChat", f"{usrchan}: {message}", QSystemTrayIcon.MessageIcon.Information, 3000)
+        except Exception as e:
+            logging.error(f"Exception triggering notification: {e}")
 
     # Client Management
     def server_checker(self, server):
@@ -956,16 +994,28 @@ class RudeGui(QWidget):
             logging.error(f"Error reading configuration from {config_file}: {e}")
 
         try:
-            await irc_client.connect(config_file)
-        except Exception as e:
-            logging.error(f"Error connecting with configuration {config_file}: {e}")
-
-        try:
             # Use the server_name from config, otherwise fallback
             server_name = irc_client.server_name if irc_client.server_name else fallback_server_name
             self.add_client(server_name, irc_client)
         except Exception as e:
             logging.error(f"Error adding client {server_name}: {e}")
+
+        if not irc_client.auto_connect_to_networks:
+            return
+
+        else:
+            await self.create_tasks(irc_client, config_file)
+
+        if self.log_on:
+            logging.info("Finished Creating Client Tasks.")
+            logging.info("Client initializing completed.")
+
+    async def create_tasks(self, irc_client, config_file):
+        try:
+            irc_client.is_connected = True
+            await irc_client.connect(config_file)
+        except Exception as e:
+            logging.error(f"Error connecting with configuration {config_file}: {e}")
 
         try:
             # Create and store references to tasks
@@ -1026,13 +1076,64 @@ class RudeGui(QWidget):
         if self.log_on:
             logging.info("Finished Creating Client Tasks.")
             logging.info("Client initializing completed.")
+        return
+
+    async def client_connect(self, server_name):
+        try:
+            files = os.listdir(G_CONFIG_DIR)
+            config_files = [f for f in files if f.endswith(".rudeserver")]
+            config_files.sort()
+
+            lower_server_name = server_name.lower()
+
+            for actual_server_name, client in self.clients.items():
+                if lower_server_name == actual_server_name.lower():
+                    config_file_name = f"{lower_server_name}.rudeserver"
+                    if config_file_name in config_files:
+                        if not client.is_connected:
+                            await self.create_tasks(client, os.path.join(G_CONFIG_DIR, config_file_name))
+                            client.disconnect_requested = False
+                            client.loop_running = True
+                            self.find_and_select_server(actual_server_name)
+                            return
+                        else:
+                            self.insert_text_widget(f"Client '{actual_server_name}' is already connected.")
+                            return
+
+                    else:
+                        logging.warning(f"Configuration file '{config_file_name}' not found for server '{actual_server_name}'.")
+                        return  # Exit as no config found for this server
+
+        except Exception as e:
+            logging.error(f"Error in client_connect for server '{server_name}': {e}")
+
+    def find_and_select_server(self, server_name):
+        """
+        Finds an item in the server selection list with the given name and selects it.
+
+        Args:
+            server_name (str): The name of the server to find and select.
+        """
+        items = self.server_selector_list.findItems(server_name, Qt.MatchFlag.MatchExactly)
+        if items:
+            item_to_select = items[0]  # Select the first matching item
+            row_index = self.server_selector_list.row(item_to_select)
+            self.server_selector_list.clearSelection()
+            self.server_selector_list.setCurrentRow(row_index)
+            self.server_selector_list.scrollToItem(item_to_select)
+            self.on_server_change(None)
+        else:
+            logging.error(f"Server '{server_name}' not found in the list.")
 
     def update_server_ping(self, server_name, ping_time):
         """Update the entry for a server in the QListWidget with the new ping time."""
         for index in range(self.server_selector_list.count()):
             item = self.server_selector_list.item(index)
             if item.text().startswith(server_name):  # Find the matching server entry
-                item.setText(f"{server_name} - {ping_time}")
+                if ping_time is not None:
+                    item.setText(f"{server_name} - {ping_time}")
+                else:
+                    item.setText(f"{server_name}")
                 return
 
     def send_away_to_clients(self, away_message=None):
@@ -1356,6 +1457,7 @@ class RudeGui(QWidget):
             config_window.config_file = os.path.join(G_CONFIG_DIR, selected_config_file)
             config_window.config.read(config_window.config_file)
             config_window.create_widgets()
+            config_window.reload_channels()
 
         # Instruction label
         instruction_label = QLabel("To create a new config file change the Server Name, then change the data in the fields to match the new server, when apply is clicked the file is saved. Any newly added server(s) connects automatically. Please do not use spaces or periods in server names, you'll have a bad time.")
