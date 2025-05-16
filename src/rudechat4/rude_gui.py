@@ -431,6 +431,7 @@ class RudeGui(QWidget):
             "❤": 0,
             "⚾": 0,
             "⚽": 0,
+            "☝": 0,
         }
 
         # Initialise layout
