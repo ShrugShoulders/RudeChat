@@ -432,6 +432,7 @@ class RudeGui(QWidget):
             "⚾": 0,
             "⚽": 0,
             "☝": 0,
+            "⭐": 0,
         }
 
         # Initialise layout
@@ -1085,7 +1086,7 @@ class RudeGui(QWidget):
             config_files = [f for f in files if f.endswith(".rudeserver")]
             config_files.sort()
 
-            lower_server_name = server_name.lower()
+            lower_server_name = server_name.lower().split(" ")[0]
 
             for actual_server_name, client in self.clients.items():
                 if lower_server_name == actual_server_name.lower():
@@ -1126,7 +1127,7 @@ class RudeGui(QWidget):
         else:
             logging.error(f"Server '{server_name}' not found in the list.")
 
-    def update_server_ping(self, server_name, ping_time):
+    def update_server_ping(self, server_name, ping_time=None):
         """Update the entry for a server in the QListWidget with the new ping time."""
         for index in range(self.server_selector_list.count()):
             item = self.server_selector_list.item(index)

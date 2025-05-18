@@ -3863,8 +3863,9 @@ class RudeChatClient:
 
     async def disconnect(self, server_name=None):
         if server_name:
+            normalized_server_name = server_name.split(" ")[0]
             # Perform a case-insensitive search for the server_name
-            matching_key = next((key for key in self.gui.clients if key.lower() == server_name.lower()), None)
+            matching_key = next((key for key in self.gui.clients if key.lower() == normalized_server_name.lower()), None)
 
             if matching_key:
                 client = self.gui.clients.get(matching_key)
@@ -3877,11 +3878,11 @@ class RudeChatClient:
                         client.loop_running = False
                         client.is_connected = False
                         client.disconnect_requested = True
-                        self.gui.update_server_ping(server_name, ping_time=None)
+                        self.gui.update_server_ping(normalized_server_name, ping_time=None)
                         self.reset_state()
                         self.gui.insert_text_widget("Disconnected\n")
             else:
-                self.gui.insert_text_widget(f"No client found for server {server_name}\n")
+                self.gui.insert_text_widget(f"No client found for server {normalized_server_name}\n")
 
     def handle_mentions_command(self):
         mentions_channel = f"!MENTIONS!"
