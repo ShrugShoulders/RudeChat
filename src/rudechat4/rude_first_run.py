@@ -2,7 +2,7 @@
 
 from rudechat4.shared_imports import *
 from rudechat4.global_variables import *
-from rudechat4.server_config_window import ServerConfigWindow
+from rudechat4.rude_config_server import RudeConfigServer
 
 class FirstRun:
     def __init__(self, app):
@@ -108,7 +108,7 @@ class FirstRun:
         self.main_window.layout = QVBoxLayout(self.main_window)
         self.main_window.setContentsMargins(0, 0, 0, 0)
 
-        config_window = ServerConfigWindow(self.main_window, os.path.join(G_CONFIG_DIR, config_files[0]), on_config_window_close)
+        config_window = RudeConfigServer(self.main_window, os.path.join(G_CONFIG_DIR, config_files[0]), on_config_window_close)
 
         def on_config_change():
             selected_config_file = selected_config_file_var.currentText()
