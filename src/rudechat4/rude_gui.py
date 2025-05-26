@@ -5,8 +5,8 @@ from rudechat4.global_variables import *
 from rudechat4.rude_client import RudeChatClient
 from rudechat4.rude_popout import RudePopout
 from rudechat4.rude_colours import RudeColours
-from rudechat4.server_config_window import ServerConfigWindow
-from rudechat4.gui_config_window import GuiConfigWindow
+from rudechat4.rude_config_gui import RudeConfigGui
+from rudechat4.rude_config_server import RudeConfigServer
 from rudechat4.list_window import ChannelListWindow
 from rudechat4.nick_cleaner import clean_nicknames
 from rudechat4.rude_logger import configure_logging
@@ -1452,13 +1452,13 @@ class RudeGui(QWidget):
         self.main_window.layout = QVBoxLayout(self.main_window)
         self.main_window.setContentsMargins(0, 0, 0, 0)
 
-        config_window = ServerConfigWindow(self.main_window, os.path.join(G_CONFIG_DIR, config_files[0]), on_config_window_close)
+        config_window = RudeConfigServer(self.main_window, os.path.join(G_CONFIG_DIR, config_files[0]), on_config_window_close)
 
         def on_config_change(event):
             selected_config_file = selected_config_file_var.currentText()
             config_window.config_file = os.path.join(G_CONFIG_DIR, selected_config_file)
+            print(config_window.config_file)
             config_window.config.read(config_window.config_file)
-            config_window.create_widgets()
             config_window.reload_channels()
 
         # Instruction label
@@ -1503,7 +1503,7 @@ class RudeGui(QWidget):
         self.main_window.layout = QVBoxLayout(self.main_window)
         self.main_window.setContentsMargins(0, 0, 0, 0)
 
-        config_window = GuiConfigWindow(self.main_window, config_file, on_config_window_close)
+        config_window = RudeConfigGui(self.main_window, config_file, on_config_window_close)
 
         self.main_window.layout.addWidget(config_window)
 
