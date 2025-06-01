@@ -5,9 +5,40 @@ from rudechat4.global_variables import *
 from rudechat4.rude_logger import configure_logging
 from rudechat4.channel_expand import ChannelExp
 
+class RudeColorOption(QWidget):
+    def __init__(self, parent):
+        super().__init__(parent)
+
+        self.setLayout(QHBoxLayout())
+
+        self.layout().setContentsMargins(0, 0, 0, 0)
+
+        self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
+
+        self.inputField = QLineEdit(self)
+        self.inputField.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
+        self.editButton = QToolButton(self)
+        self.editButton.setText('Pick...')
+        self.editButton.clicked.connect(self.pickColor)
+
+        self.layout().addWidget(self.inputField)
+        self.layout().addWidget(self.editButton)
+
+    def setText(self, text):
+        self.inputField.setText(text)
+
+    def text(self):
+        return self.inputField.text()
+    
+    def pickColor(self):
+        newColor = QColorDialog.getColor(QColor(self.text()))
+
+        if newColor.isValid():
+            self.setText(newColor.name())
+
 class RudeConfigGui(QScrollArea):
     def __init__(self, parent, config_file, close_callback):
-        super().__init__()
+        super().__init__(parent)
         self.config_file = config_file
         self.close_callback = close_callback
         self.setViewportMargins(-10, 0, -10, -10)
@@ -18,6 +49,8 @@ class RudeConfigGui(QScrollArea):
         self.widget = QWidget()
         self.widget.layout = QVBoxLayout(self.widget)
         self.setWidget(self.widget)
+
+        self.parent().setFixedSize(450, 500)
 
         self.config = configparser.ConfigParser()
         self.config.read(config_file)
@@ -103,24 +136,10 @@ class RudeConfigGui(QScrollArea):
                         section_frame.layout.addWidget(entry, row_count, 1, 1, 2)
 
                     case 'color':
-                        entry = QLineEdit(section_frame)
+                        entry = RudeColorOption(section_frame)
                         entry.setText(self.config.get(section, option))
 
-                        section_frame.layout.addWidget(entry, row_count, 1, 1, 1)
-
-                        editButton = QPushButton(section_frame)
-                        editButton.setText("Edit...")
-
-                        def pick(sender):
-                            field = sender.parent().layout.itemAtPosition(sender.property("current_row"), 1).widget()
-
-                            field.setText(QColorDialog.getColor(QColor(field.text())).name())
-
-                        editButton.setProperty("current_row", row_count)
-
-                        editButton.clicked.connect(lambda: pick(editButton.sender()))
-
-                        section_frame.layout.addWidget(editButton, row_count, 2, 1, 1)
+                        section_frame.layout.addWidget(entry, row_count, 1, 1, 2)
 
                     case 'channels':
                         button = QPushButton(section_frame, text='Edit Channels...')

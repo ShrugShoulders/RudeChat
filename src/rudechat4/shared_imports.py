@@ -57,6 +57,7 @@ from PyQt6.QtWidgets import (
     QTableWidgetItem,
     QTextEdit,
     QTextBrowser,
+    QToolButton,
     QVBoxLayout,
     QWidget,
     QDialog,
