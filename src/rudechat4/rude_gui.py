@@ -5,8 +5,8 @@ from rudechat4.global_variables import *
 from rudechat4.rude_client import RudeChatClient
 from rudechat4.rude_popout import RudePopout
 from rudechat4.rude_colours import RudeColours
-from rudechat4.server_config_window import ServerConfigWindow
-from rudechat4.gui_config_window import GuiConfigWindow
+from rudechat4.rude_config_gui import RudeConfigGui
+from rudechat4.rude_config_server import RudeConfigServer
 from rudechat4.list_window import ChannelListWindow
 from rudechat4.nick_cleaner import clean_nicknames
 from rudechat4.rude_logger import configure_logging
@@ -1452,13 +1452,13 @@ class RudeGui(QWidget):
         self.main_window.layout = QVBoxLayout(self.main_window)
         self.main_window.setContentsMargins(0, 0, 0, 0)
 
-        config_window = ServerConfigWindow(self.main_window, os.path.join(G_CONFIG_DIR, config_files[0]), on_config_window_close)
+        config_window = RudeConfigServer(self.main_window, os.path.join(G_CONFIG_DIR, config_files[0]), on_config_window_close)
 
         def on_config_change(event):
             selected_config_file = selected_config_file_var.currentText()
             config_window.config_file = os.path.join(G_CONFIG_DIR, selected_config_file)
+            print(config_window.config_file)
             config_window.config.read(config_window.config_file)
-            config_window.create_widgets()
             config_window.reload_channels()
 
         # Instruction label
@@ -1503,7 +1503,7 @@ class RudeGui(QWidget):
         self.main_window.layout = QVBoxLayout(self.main_window)
         self.main_window.setContentsMargins(0, 0, 0, 0)
 
-        config_window = GuiConfigWindow(self.main_window, config_file, on_config_window_close)
+        config_window = RudeConfigGui(self.main_window, config_file, on_config_window_close)
 
         self.main_window.layout.addWidget(config_window)
 
@@ -1930,7 +1930,7 @@ class RudeGui(QWidget):
             # Precompute emoji offsets once for the entire text
             emoji_offset_start, emoji_offset_end = {}, {}
             font = self.chat_box.font()
-            emoji_widths = self.estimate_emoji_offset(text, font)
+            emoji_widths = self.get_unicode_offset(text, font)
 
             # Precompute cumulative emoji offsets for faster lookup
             emoji_offset_start, emoji_offset_end = self.build_emoji_offset_map(text, emoji_widths)
@@ -1999,7 +1999,9 @@ class RudeGui(QWidget):
 
             # Apply formatting
             cursor = self.chat_box.textCursor()
+            
             cursor.setPosition(start_position)
+
             cursor.setPosition(end_position, QTextCursor.MoveMode.KeepAnchor)
             cursor.setCharFormat(format_nick)
 
@@ -2016,29 +2018,18 @@ class RudeGui(QWidget):
         self.emoji_width_cache[text] = width  # Cache result
         return width
 
-    def estimate_emoji_offset(self, text, font):
-        """Estimate emoji offset based on their visual width, using caching."""
-        normal_char_width = self.get_text_width("A", font)  # Reference width
-
-        emoji_offsets = {}
+    def get_unicode_offset(self, text, font):
+        """Estimate unicode offset based on their visual width, using caching."""
+        uni_offsets = {}
 
         for char in set(text):  # Process only unique characters
-            if self.is_emoji(char):  # Only measure emojis
-                width = self.get_text_width(char, font)
-                raw_offset = width / normal_char_width
+            if (len(str(ord(char))) == 6):  # Only measure unicode characters
 
-                if char in self.SPECIAL_EMO_CASES:
-                    offset = self.SPECIAL_EMO_CASES[char]
-                else:
-                    offset = max(0, round(raw_offset) - 1)
+                offset = 1
 
-                emoji_offsets[char] = offset
+                uni_offsets[char] = offset
 
-        return emoji_offsets
-
-    def is_emoji(self, char):
-        """Check if a character is an emoji using the emoji library."""
-        return char in emoji.EMOJI_DATA
+        return uni_offsets
 
     def generate_random_color(self):
         while True:
