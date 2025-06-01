@@ -1999,7 +1999,9 @@ class RudeGui(QWidget):
 
             # Apply formatting
             cursor = self.chat_box.textCursor()
+            
             cursor.setPosition(start_position)
+
             cursor.setPosition(end_position, QTextCursor.MoveMode.KeepAnchor)
             cursor.setCharFormat(format_nick)
 
@@ -2023,6 +2025,18 @@ class RudeGui(QWidget):
         emoji_offsets = {}
 
         for char in set(text):  # Process only unique characters
+            ### HEY EIRE!! This 'if' statement prints to console if a character has a unicode code point number longer than 6 digits.
+            """ 
+            HEY EIRE!!
+
+            This 'if' statement prints to console if a character has a unicode code point number longer than 6 digits.
+            Letters, numbers, etc. only have 3 digits.
+            Emojis and strange unicode characters have 6!
+
+            Maybe we can use this to account for the glitching? 
+            """
+            if (len(str(ord(char))) == 6):
+                print(f"{char} OR {ord(char)}")
             if self.is_emoji(char):  # Only measure emojis
                 width = self.get_text_width(char, font)
                 raw_offset = width / normal_char_width
