@@ -109,7 +109,7 @@ def __main__():
     app = QApplication(sys.argv)
     app.setApplicationName("RudeChat4")
     app.setApplicationDisplayName("RudeChat4")
-    app.setApplicationVersion("4.1.0")
+    app.setApplicationVersion("4.1.1")
     app.setWindowIcon(QIcon(ICON_FILE))
     app.setDesktopFileName("rudechat4")
     first_run = FirstRun(app)
