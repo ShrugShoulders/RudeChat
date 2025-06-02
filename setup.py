@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 import platform
 
 if platform.system() == "Darwin":
-    VERSION = '4.1.0'
+    VERSION = '4.1.1'
 
     APP = ['src/rudechat4/__main__.py']
     DATA_FILES = []

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "RudeChat"
-version = "4.1.0"
+version = "4.1.1"
 description = "Python IRC client designed to be fast, portable, and fun."
 authors = [
     { name = "Irish" },

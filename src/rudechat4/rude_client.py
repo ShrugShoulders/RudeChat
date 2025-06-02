@@ -1371,11 +1371,11 @@ class RudeChatClient:
                     match ctcp_command:
                         case "VERSION" | "version":
                             if tokens.command == "PRIVMSG":
-                                await self.send_message(f'NOTICE {sender} :\x01VERSION RudeChat4.1.0\x01')
+                                await self.send_message(f'NOTICE {sender} :\x01VERSION RudeChat4.1.1\x01')
                                 self.add_server_message(f"CTCP: {sender} {target}: {ctcp_command}\n")
                         case "MOO" | "moo":
                             if tokens.command == "PRIVMSG":
-                                await self.send_message(f'NOTICE {sender} :\x01MoooOOO! Hi Cow!! RudeChat4.1.0\x01')
+                                await self.send_message(f'NOTICE {sender} :\x01MoooOOO! Hi Cow!! RudeChat4.1.1\x01')
                                 self.add_server_message(f"CTCP: {sender} {target}: {ctcp_command}\n")
                         case "PING" | "ping":
                             if tokens.command == "PRIVMSG":
@@ -1384,7 +1384,7 @@ class RudeChatClient:
                                 self.add_server_message(f"CTCP: {sender} {target}: {ctcp_command}\n")
                         case "FINGER" | "finger":
                             if tokens.command == "PRIVMSG":
-                                await self.send_message(f'NOTICE {sender} :\x01FINGER: {self.nickname} {self.server_name} RudeChat4.1.0\x01')
+                                await self.send_message(f'NOTICE {sender} :\x01FINGER: {self.nickname} {self.server_name} RudeChat4.1.1\x01')
                                 self.add_server_message(f"CTCP: {sender} {target}: {ctcp_command}\n")
                         case "CLIENTINFO" | "clientinfo":
                             if tokens.command == "PRIVMSG":
