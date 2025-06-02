@@ -788,7 +788,7 @@ class RudePopout(QObject):
             # Precompute emoji offsets once for the entire text
             emoji_offset_start, emoji_offset_end = {}, {}
             font = self.display_text.font()
-            emoji_widths = self.estimate_emoji_offset(text, font)
+            emoji_widths = self.get_unicode_offset(text, font)
 
             # Precompute cumulative emoji offsets for faster lookup
             emoji_offset_start, emoji_offset_end = self.build_emoji_offset_map(text, emoji_widths)
@@ -874,29 +874,18 @@ class RudePopout(QObject):
         self.emoji_width_cache[text] = width  # Cache result
         return width
 
-    def estimate_emoji_offset(self, text, font):
-        """Estimate emoji offset based on their visual width, using caching."""
-        normal_char_width = self.get_text_width("A", font)  # Reference width
-
-        emoji_offsets = {}
+    def get_unicode_offset(self, text, font):
+        """Estimate unicode offset based on their visual width, using caching."""
+        uni_offsets = {}
 
         for char in set(text):  # Process only unique characters
-            if self.is_emoji(char):  # Only measure emojis
-                width = self.get_text_width(char, font)
-                raw_offset = width / normal_char_width
+            if (len(str(ord(char))) == 6):  # Only measure unicode characters
 
-                if char in self.SPECIAL_EMO_CASES:
-                    offset = self.SPECIAL_EMO_CASES[char]
-                else:
-                    offset = max(0, round(raw_offset) - 1)
+                offset = 1
 
-                emoji_offsets[char] = offset
+                uni_offsets[char] = offset
 
-        return emoji_offsets
-
-    def is_emoji(self, char):
-        """Check if a character is an emoji using the emoji library."""
-        return char in emoji.EMOJI_DATA
+        return uni_offsets
 
     def generate_random_color(self):
         while True:
