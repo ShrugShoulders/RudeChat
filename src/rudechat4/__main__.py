@@ -1,5 +1,15 @@
 #!/usr/bin/env python3
+from rudechat4.shared_imports import *
+from rudechat4.global_variables import *
 
+from rudechat4.rude_gui import RudeGui # GUI
+
+from rudechat4.Client.init_clients import initialize_clients # Client Initialiser
+
+from rudechat4.GUI.rude_first_run import FirstRun # First Run Config Window
+
+from rudechat4.Util.copy_configs import CopyConfigs # Config Copy Function
+from rudechat4.Util.rude_logger import configure_logging # Logging Initialiser
 """
 GPL-3.0 License
 
@@ -16,23 +26,6 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
-
-# Import Config Copy Function
-from rudechat4.Util.copy_configs import CopyConfigs
-# Import First Run Configs
-from rudechat4.GUI.rude_first_run import FirstRun
-# Import GUI
-from rudechat4.GUI.rude_gui import RudeGui
-# Import Client
-from rudechat4.Client.rude_client import RudeChatClient
-# Import Initializer
-from rudechat4.Client.init_clients import initialize_clients
-# Everything else.
-from rudechat4.shared_imports import *
-# Global variables
-from rudechat4.global_variables import *
-# Logging
-from rudechat4.Util.rude_logger import configure_logging
 
 class Window(QMainWindow):
     def __init__(self):

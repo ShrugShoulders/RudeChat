@@ -1,11 +1,6 @@
 #!/usr/bin/env python3
-
-from rudechat4.global_variables import *
 from rudechat4.shared_imports import *
-
-def_dir = G_SOURCE_DIR + "/DefaultConfig"
-
-print(def_dir)
+from rudechat4.global_variables import *
 
 def CopyConfigs():
     source_dir = G_SOURCE_DIR + "/DefaultConfig"

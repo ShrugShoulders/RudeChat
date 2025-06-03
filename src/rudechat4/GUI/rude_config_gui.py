@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
-
 from rudechat4.shared_imports import *
 from rudechat4.global_variables import *
-from rudechat4.Util.rude_logger import configure_logging
-from rudechat4.GUI.channel_expand import ChannelExp
+
 from rudechat4.Components.rude_color_option import RudeColorOption
+
+from rudechat4.GUI.channel_expand import ChannelExp
+
+from rudechat4.Util.rude_logger import configure_logging
 
 class RudeConfigGui(QScrollArea):
     def __init__(self, parent, config_file, close_callback):

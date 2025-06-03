@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-
 from rudechat4.shared_imports import *
+from rudechat4.global_variables import *
 
 class RudeTextBrowser(QTextBrowser):
     def __init__(self, parent=None):
