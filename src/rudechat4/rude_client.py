@@ -178,7 +178,7 @@ class RudeChatClient:
                         if not away_message:
                             if self.log_on:
                                 logging.info(f"Sending WHOIS for {nickname}")
-                            await self.whois(nickname)
+                            await self.cmd_whois(nickname)
                             await asyncio.sleep(5)
                     break
                 except RuntimeError:
@@ -339,35 +339,6 @@ class RudeChatClient:
             await self.send_message(f'NICK {self.nickname}')
             await self.send_message(f'USER {self.nickname} 0 * :{self.nickname}')
 
-    def prtcl_372(self, tokens):
-        try:
-            motd_line = tokens.params[-1]  # Assumes the MOTD line is the last parameter
-            self.motd_lines.append(motd_line)
-        except Exception as e:
-            logging.error(f"Error in handle_motd_line: {e}")
-
-    def prtcl_375(self, tokens):
-        try:
-            self.motd_lines.clear()
-            motd_start_line = tokens.params[-1]  # Assumes the introductory line is the last parameter
-            self.motd_lines.append(motd_start_line)
-        except Exception as e:
-            logging.error(f"Error in handle_motd_start: {e}")
-
-    def prtcl_376(self, tokens):
-        try:
-            full_motd = "\n".join(self.motd_lines)
-            
-            if self.server_name in self.motd_dict:
-                self.motd_dict[self.server_name] += full_motd + "\n"
-            else:
-                self.motd_dict[self.server_name] = full_motd + "\n"
-
-            self.gui.insert_text_widget(f"Message of the Day:\n{full_motd}\n")
-            self.motd_lines.clear()
-        except Exception as e:
-            logging.error(f"Error in handle_motd_end: {e}")
-            
     async def wait_for_welcome(self, config_file):
         try:
             await self._await_welcome_message()
@@ -375,20 +346,6 @@ class RudeChatClient:
         except (OSError, ConnectionError) as e:
             logging.error(f"Error occurred in wait_for_welcome: {e}.\n")
             return
-
-    def prtcl_250(self, tokens):
-        try:
-            connection_info = tokens.params[-1]  # Assumes the connection info is the last parameter
-            self.gui.insert_text_widget(f"Server Info: {connection_info}\n")
-        except Exception as e:
-            logging.error(f"Error in handle_connection_info: {e}")
-
-    def prtcl_266(self, tokens):
-        try:
-            global_users_info = tokens.params[-1]  # Assumes the global users info is the last parameter
-            self.gui.insert_text_widget(f"Server Users Info: {global_users_info}\n")
-        except Exception as e:
-            logging.error(f"Error in handle_global_users_info: {e}")
 
     async def handle_nickname_conflict(self, tokens):
         try:
@@ -508,7 +465,7 @@ class RudeChatClient:
                         for token in TOPICTOKENS:
                             self.prtcl_TOPIC(token)
                         for tokens in NAMESTOKENS:
-                            self.m_prtcl_NamesList(tokens)
+                            self.prtcl_353(tokens)
                         await process_PRIVMSG_tokens(PRIVMSGTOKENS)
                         return
 
@@ -612,14 +569,14 @@ class RudeChatClient:
                             NAMESTOKENS.append(tokens)
                             reset_timer("")
                         else:
-                            self.m_prtcl_NamesList(tokens)
+                            self.prtcl_353(tokens)
                     case "366":  # End of NAMES list
                         count_366 += 1
                         if not self.use_auto_join:
                             NAMESTOKENS.append(tokens)
                             reset_timer("")
                         elif self.use_auto_join:
-                            self.m_prtcl_NamesList(tokens)
+                            self.prtcl_353(tokens)
                             if count_366 >= len(self.joined_channels) and got_topic >= len(self.joined_channels) and znc_connected:
                                 await self.send_message("AWAY")
                                 self.gui.clear_text_widget()
@@ -700,7 +657,7 @@ class RudeChatClient:
                         for token in TOPICTOKENS:
                             self.prtcl_TOPIC(token)
                         for tokens in NAMESTOKENS:
-                            self.m_prtcl_NamesList(tokens)
+                            self.prtcl_353(tokens)
                         await process_PRIVMSG_tokens(PRIVMSGTOKENS)
                         return
 
@@ -712,25 +669,12 @@ class RudeChatClient:
                     for token in TOPICTOKENS:
                         self.prtcl_TOPIC(token)
                     for token in NAMESTOKENS:
-                        self.m_prtcl_NamesList(token)
+                        self.prtcl_353(token)
                     await process_PRIVMSG_tokens(PRIVMSGTOKENS)
                     return
                 else:
                     self.gui.insert_text_widget("\nMaximum sync time exceeded\n")
                     return
-
-    async def prtcl_903(self):
-        if not self.sasl_enabled:
-            self.gui.insert_text_widget(f"SASL is not enabled.\n")
-            return  # Skip SASL if it's not enabled
-        self.gui.insert_text_widget(f"SASL authentication successful.\n")
-        await self.send_message("CAP END")
-
-    def prtcl_904(self):
-        if not self.sasl_enabled:
-            self.gui.insert_text_widget(f"SASL is not enabled.\n")
-            return
-        self.gui.insert_text_widget(f"SASL authentication failed. Disconnecting.\n")
 
     async def send_message(self, message):
         try:
@@ -1943,70 +1887,6 @@ class RudeChatClient:
         except Exception as e:
             logging.error(f"Error in get_mode_lists: {e}")
             return
-                       
-    def prtcl_005(self, tokens):
-        try:
-            # Set default values
-            self.mode_to_symbol = {'o': '@', 'v': '+'}
-            self.chantypes = ['#', '&']
-            self.nicknamelen = 16
-            self.chan_limit = 250
-            self.channellen = 50
-            self.topiclen = 390
-            self.chanmodes = {
-                'list': ['e', 'I', 'b', 'q'],
-                'parameter': ['k'],
-                'setting': ['f', 'l', 'j'],
-                'no_parameter': ['C', 'F', 'L', 'M', 'P', 'Q', 'R', 'S', 'T', 'c', 'g', 'i', 'm', 'n', 'p', 'r', 's', 't', 'u', 'z']
-            }
-
-            params = tokens.params[:-1]  # Exclude trailing "are supported by this server"
-
-            # Parse ISUPPORT parameters
-            for param in params:
-                if param.startswith("PREFIX="):
-                    _, mappings = param.split("=")
-                    modes, symbols = mappings[1:].split(")")
-                    self.mode_to_symbol = dict(zip(modes, symbols))
-
-                elif param.startswith("CHANTYPES="):
-                    _, channel_types = param.split("=")
-                    self.chantypes = list(channel_types)
-
-                elif param.startswith("NICKLEN="):
-                    _, nick_len = param.split("=")
-                    self.nicknamelen = int(nick_len)
-
-                elif param.startswith("CHANLIMIT="):
-                    _, chan_limit = param.split("=")
-                    # Handle multiple limits: e.g., CHANLIMIT=#&:10
-                    parts = chan_limit.split(":")
-                    if len(parts) == 2 and parts[1].isdigit():
-                        self.chan_limit = int(parts[1])
-
-                elif param.startswith("CHANNELLEN="):
-                    _, channel_len = param.split("=")
-                    self.channellen = int(channel_len)
-
-                elif param.startswith("TOPICLEN="):
-                    _, topic_len = param.split("=")
-                    self.topiclen = int(topic_len)
-
-                elif param.startswith("CHANMODES="):
-                    _, chan_modes = param.split("=")
-                    mode_categories = chan_modes.split(',')
-                    if len(mode_categories) == 4:
-                        self.chanmodes = {
-                            'list': list(mode_categories[0]),
-                            'parameter': list(mode_categories[1]),
-                            'setting': list(mode_categories[2]),
-                            'no_parameter': list(mode_categories[3])
-                        }
-
-        except Exception as e:
-            logging.error(f"Error in handle_isupport: {e}")
-
-        self.get_mode_lists()
 
     def cache_accountname(self, nick, accountname):
         """
@@ -2022,240 +1902,6 @@ class RudeChatClient:
         # Remove the user from the away dictionary if they are marked as Active
         if away_status == "Active" and nickname in self.away_users_dict:
             del self.away_users_dict[nickname]
-
-    async def m_prtcl_WhoReplies(self, tokens):
-        """
-        Handle the WHO reply from the server.
-        """
-        if self.log_on:
-            logging.debug(f"WHO Tokens: {tokens}")
-        if not hasattr(self, 'who_details'):
-            self.who_details = []
-
-        # Helper method to compile WHO data.
-        def update_user_data(nickname, new_data):
-            # Check if the user already exists in who_user_data
-            if nickname in self.who_user_data:
-                user_data = self.who_user_data[nickname]
-                
-                # Update the "shared-channels"
-                if "channel" in new_data:
-                    # Ensure "shared-channels" is a string
-                    if "shared-channels" not in user_data:
-                        user_data["shared-channels"] = user_data.get("channel", new_data["channel"])
-                    elif new_data["channel"] not in user_data["shared-channels"].split(", "):
-                        # Append the new channel to the string if it's not already included
-                        user_data["shared-channels"] += f", {new_data['channel']}"
-
-                # Update other fields in user_data
-                for key, value in new_data.items():
-                    if key not in {"shared-channels", "mode"} and (key not in user_data or user_data[key] != value):
-                        user_data[key] = value
-                
-                # Update the "mode" field
-                if "mode" in new_data and "channel" in new_data:
-                    # Only proceed if the mode is not empty
-                    if new_data["mode"]:
-                        channel_mode = f"{new_data['channel']}({new_data['mode']})"
-                        
-                        # Initialize "mode" as an empty string if not already present or inconsistently formatted
-                        if "mode" not in user_data or user_data["mode"] == "":
-                            data = f"No Modes"
-                            user_data["mode"] = data
-                        else:
-                            existing_modes = user_data["mode"].split(", ")
-                            # Append only if this channel_mode isn't already present
-                            if channel_mode not in existing_modes:
-                                user_data["mode"] += f", {channel_mode}"
-
-            else:
-                # Initialize new user data with "shared-channels" and "mode" as strings
-                new_data["shared-channels"] = new_data.get("channel", "")
-                new_data["mode"] = f"{new_data['channel']}({new_data['mode']})" if "mode" in new_data else ""
-                self.who_user_data[nickname] = new_data
-
-        if tokens.command == "352":  # Standard WHO reply
-            try:
-                # Parse the WHO reply
-                channel = tokens.params[1]
-                username = tokens.params[2]
-                host = tokens.params[3]
-                server = tokens.params[4]
-                nickname = tokens.params[5]
-                status = tokens.params[6]
-                mode_state = status[1:] if len(status) > 1 else ""
-                who_message = tokens.params[7]
-
-                # Determine if the user is away
-                away_status = "Away" if status.startswith('G') else "Active"
-                self._who_reply_data_handler(away_status, nickname)
-
-                user_details = {
-                    "nickname": nickname,
-                    "username": username,
-                    "host": host,
-                    "server": server,
-                    "channel": channel,
-                    "status": away_status,
-                    "mode": mode_state,
-                    "who_message": who_message
-                }
-                
-                update_user_data(nickname, user_details)
-                self.who_details.append(user_details)
-
-            except Exception as e:
-                logging.error(f"Error in handle_who_reply command 352: {e}")
-
-        elif tokens.command == "354":  # WHOX %nuhsrcdfa
-            try:
-                # Parse the WHOX reply
-                channel = tokens.params[1]
-                username = tokens.params[2]
-                host = tokens.params[3]
-                server = tokens.params[4]
-                nickname = tokens.params[5]
-                status = tokens.params[6]
-                mode_state = status[1:] if len(status) > 1 else ""
-                account = tokens.params[8]
-                who_message = tokens.params[9]
-
-                # Determine if the user is away
-                away_status = "Away" if status.startswith('G') else "Active"
-                self._who_reply_data_handler(away_status, nickname)
-
-                user_details = {
-                    "nickname": nickname,
-                    "username": username,
-                    "host": host,
-                    "server": server,
-                    "channel": channel,
-                    "status": away_status,
-                    "mode": mode_state,
-                    "account": account,
-                    "who_message": who_message
-                }
-                
-                update_user_data(nickname, user_details)
-                self.who_details.append(user_details)
-                self.cache_accountname(nickname, account)
-
-            except Exception as e:
-                logging.error(f"Error in handle_who_reply command 354: {e}")
-
-        elif tokens.command == "315":  # End of WHO list
-            try:
-                messages = []
-                for details in self.who_details:
-                    message = f"User {details['nickname']} ({details['username']}@{details['host']}) on {details['server']} in {details['channel']} - Status: {details['status']} ({details['mode']}) {details['who_message']}"
-                    messages.append(message)
-                
-                final_message = "\n".join(messages)
-                if self.who_user_request:
-                    self.gui.insert_text_widget(f"{final_message}\n")
-                    self.who_user_request = False
-
-                # Reset the who_details for future use
-                self.who_details = []
-
-            except Exception as e:
-                logging.error(f"Error in handle_who_reply command 315: {e}")
-
-    async def m_prtcl_WhoisReplies(self, command, tokens):
-            nickname = tokens.params[1] 
-
-            if command == "311":
-                try:
-                    username = tokens.params[2]
-                    hostname = tokens.params[3]
-                    realname = tokens.params[5]
-                    self.whois_data[nickname] = {"Username": username, "Hostname": hostname, "Realname": realname}
-                except Exception as e:
-                    logging.error(f"Error in handle_whois_replies command 311: {e}")
-
-            elif command == "312":
-                try:
-                    server_info = tokens.params[2]
-                    if self.whois_data.get(nickname):
-                        self.whois_data[nickname]["Server"] = server_info
-                except Exception as e:
-                    logging.error(f"Error in handle_whois_replies command 312: {e}")
-
-            elif command == "313":
-                try:
-                    operator_info = tokens.params[2]
-                    if self.whois_data.get(nickname):
-                        self.whois_data[nickname]["Operator"] = operator_info
-                except Exception as e:
-                    logging.error(f"Error in handle_whois_replies command 313: {e}")
-
-            elif command == "317":
-                try:
-                    idle_time_seconds = int(tokens.params[2])
-                    idle_time = str(timedelta(seconds=idle_time_seconds))
-                    if self.whois_data.get(nickname):
-                        self.whois_data[nickname]["Idle Time"] = idle_time
-                except Exception as e:
-                    logging.error(f"Error in handle_whois_replies command 317: {e}")
-
-            elif command == "319":
-                try:
-                    channels = tokens.params[2]
-                    self.whois_data[nickname]["Channels"] = channels
-                except Exception as e:
-                    logging.error(f"Error in handle_whois_replies command 319: {e}")
-
-            elif command == "301":
-                try:
-                    away_message = tokens.params[2]
-                    if nickname not in self.whois_data:
-                        self.whois_data[nickname] = {}  
-                    self.whois_data[nickname]["Away"] = away_message
-                    if nickname in self.away_users_dict:
-                        self.away_users_dict[nickname] = away_message
-                except Exception as e:
-                    logging.error(f"Error in handle_whois_replies command 301: {e}")
-
-            elif command == "671":
-                try:
-                    secure_message = tokens.params[2]
-                    self.whois_data[nickname]["Secure Connection"] = secure_message
-                except Exception as e:
-                    logging.error(f"Error in handle_whois_replies command 671: {e}")
-
-            elif command == "330":
-                try:
-                    logged_in_as = tokens.params[2]
-                    if nickname not in self.whois_data:
-                        self.whois_data[nickname] = {}
-                    self.whois_data[nickname]["Logged In As"] = logged_in_as
-                except Exception as e:
-                    logging.error(f"Error in handle_whois_replies command 330: {e}")
-
-            elif command == "338":
-                try:
-                    ip_address = tokens.params[2]
-                    self.whois_data[nickname]["Actual IP"] = ip_address
-                except Exception as e:
-                    logging.error(f"Error in handle_whois_replies command 338: {e}")
-
-            elif command == "318":
-                try:
-                    if self.whois_user_request:
-                        if self.whois_data.get(nickname):
-                            whois_response = f"WHOIS for {nickname}:\n"
-                            for key, value in self.whois_data[nickname].items():
-                                whois_response += f"{key}: {value}\n"
-
-                            # Generate and append the /ignore suggestion
-                            ignore_suggestion = f"*!{self.whois_data[nickname]['Username']}@{self.whois_data[nickname]['Hostname']}"
-                            whois_response += f"\nSuggested /ignore mask: {ignore_suggestion}\n"
-
-                            self.whois_display(whois_response)
-                            await self.save_whois_to_file(nickname)
-
-                except Exception as e:
-                    logging.error(f"Error in handle_whois_replies command 318: {e}")
 
     def whois_display(self, whois_response):
         try:
@@ -2297,19 +1943,6 @@ class RudeChatClient:
             ignore_suggestion = f"*!{self.whois_data[nickname]['Username']}@{self.whois_data[nickname]['Hostname']}"
             file.write(f"\nSuggested /ignore mask: {ignore_suggestion}\n")
 
-    def prtcl_391(self, tokens):
-        """
-        Handle the server's response for the TIME command.
-        """
-        try:
-            server_name = tokens.params[0]  # The server's name
-            local_time = tokens.params[1]   # The local time on the server
-
-            message = f"Server Time from {server_name}: {local_time}"
-            self.gui.insert_text_widget(message)
-        except Exception as e:
-            logging.error(f"Error in handle_time_request: {e}")
-
     async def remove_kicked_channel(self, channel):
         if channel in self.joined_channels:
             self.joined_channels.remove(channel)
@@ -2326,83 +1959,6 @@ class RudeChatClient:
         await asyncio.sleep(1)
         await self.join_channel(channel)
 
-    async def prtcl_322(self, tokens):
-        try:
-            channel_name = tokens.params[1]
-            user_count = tokens.params[2]
-            topic = tokens.params[3]
-            # Add the channel information to a dictionary or list (to be implemented)
-            self.gui.download_channel_list[channel_name] = {
-                'user_count': user_count,
-                'topic': topic
-            }
-        except Exception as e:
-            logging.error(f"Error in handle_list_response: {e}")
-
-    async def prtcl_323(self):
-        try:
-            channel_list_path = os.path.join(G_CONFIG_DIR, "channel_list.txt")
-
-            with open(channel_list_path, "w", encoding='utf-8') as f:
-                for channel, info in self.gui.download_channel_list.items():
-                    f.write(f"{channel} - Users: {info['user_count']} - Topic: {info['topic']}\n")
-        except Exception as e:
-            logging.error(f"Error in save_channel_list_to_file: {e}")
-
-    def m_prtcl_NamesList(self, tokens):
-        command = tokens.command
-
-        if command == "353":
-            try:
-                current_channel = tokens.params[2]
-                users = tokens.params[3].split(" ")
-                # If this channel isn't in channel_users, initialize it with an empty list
-                if current_channel not in self.channel_users:
-                    self.channel_users[current_channel] = []
-
-                # Append the users to the channel's list only if they are not already in it
-                for user in users:
-                    if user not in self.channel_users[current_channel]:
-                        self.channel_users[current_channel].append(user)
-
-            except Exception as e:
-                logging.error(f"Error in handle_names_list command 353: {e}")
-
-        if command == "366":
-            try:
-                current_channel = tokens.params[1]
-                if current_channel:
-                    # Get the list of users for the current channel or an empty list if the key doesn't exist
-                    channel_users = self.channel_users.get(current_channel, [])
-                    # Sort the list of users
-                    sorted_users = self.sort_users(channel_users, current_channel)
-                    # Update the channel users with the sorted list
-                    self.channel_users[current_channel] = sorted_users
-                    # Update the user listbox
-                    self.update_user_selector_list(current_channel)
-
-            except Exception as e:
-                logging.error(f"Error in handle_names_list command 366: {e}")
-
-    def prtcl_401(self, tokens):
-        """
-        Handle the "401" response, which indicates that a given nickname doesn't exist on the server.
-        """
-        try:
-            if len(tokens.params) >= 2:
-                # Extract the nickname from the second element of the list
-                nickname = tokens.params[1]
-                if nickname in self.away_users_dict:
-                    del self.away_users_dict[nickname]
-                
-                self.gui.insert_text_widget(f"The nickname '{nickname}' doesn't exist on the server.\n")
-            else:
-                if self.log_on:
-                    logging.info("Invalid response format for '401'.")
-                pass
-        except Exception as e:
-            logging.error(f"Error in handle_nickname_doesnt_exist: {e}")
-
     def parse_prefix(self, prefix):
         """
         Parse :nick!user@host into (nick, user_host)
@@ -2412,26 +1968,6 @@ class RudeChatClient:
             return nick, user_host
         except Exception as e:
             logging.error(f"Error in parse_prefix: {e}")
-
-    def prtcl_716(self, tokens): # 716
-        msg = f"{tokens.source}: {tokens.params[1]} {tokens.params[2]}\n"
-        self.add_server_message(msg)
-
-    def prtcl_464(self, tokens): 
-        msg = f"{tokens.source} {tokens.params[0]} {tokens.params[1]}\n"
-        self.add_server_message(msg)
-
-    def prtcl_341(self, tokens): # 341
-        msg = f"{tokens.source} {' '.join(tokens.params)}\n"
-        self.add_server_message(msg)
-
-    def prtcl_431(self, tokens): # 431
-        msg = f"{tokens.source} {" ".join(tokens.params)}\n"
-        self.gui.insert_text_widget(msg)
-
-    def prtcl_461(self, tokens): # 461
-        msg = f"{tokens.source} {" ".join(tokens.params)}\n"
-        self.gui.insert_text_widget(msg)
 
     async def handle_incoming_message(self, config_file):
         buffer = ""
@@ -2541,10 +2077,17 @@ class RudeChatClient:
                         case "251" | "252" | "253" | "254" | "255" | "265": self.server_message_handler(tokens)
                         case "263": self.prtcl_263(tokens)
                         case "266": self.prtcl_266(tokens)
+                        case "301": await self.prtcl_301(tokens)
                         case "305": self.gui.insert_text_widget(f"{self.server_name}: You are no longer marked as being away\n")
                         case "306": self.gui.insert_text_widget(f"{self.server_name}: You have been marked as being away\n")
                         case "307": self.prtcl_307(tokens)
-                        case "311" | "312" | "313" | "317" | "319" | "301" | "671" | "338" | "318" | "330": await self.m_prtcl_WhoisReplies(tokens.command, tokens)
+                        case "311": await self.prtcl_311(tokens)
+                        case "312": await self.prtcl_312(tokens)
+                        case "313": await self.prtcl_313(tokens)
+                        case "315": await self.prtcl_315(tokens)
+                        case "317": await self.prtcl_317(tokens)
+                        case "318": await self.prtcl_318(tokens)
+                        case "319": await self.prtcl_319(tokens)
                         case "321": pass
                         case "322":  
                             await self.prtcl_322(tokens)
@@ -2556,10 +2099,14 @@ class RudeChatClient:
                         case "324": self.prtcl_324(tokens)
                         case "328": self.prtcl_328(tokens)
                         case "329": self.prtcl_329(tokens)
+                        case "330": await self.prtcl_330(tokens)
                         case "332" | "333" | "TOPIC": self.prtcl_TOPIC(tokens)
+                        case "338": await self.prtcl_338(tokens)
                         case "341": self.prtcl_341(tokens)
-                        case "352" | "315" | "354": await self.m_prtcl_WhoReplies(tokens)
-                        case "353" | "366": self.m_prtcl_NamesList(tokens)
+                        case "352": await self.prtcl_352(tokens)
+                        case "353": self.prtcl_353(tokens)
+                        case "354": await self.prtcl_354(tokens)
+                        case "366": self.prtcl_366(tokens)
                         case "367": self.prtcl_367(tokens)     
                         case "368": self.prtcl_368(tokens)
                         case "372": self.prtcl_372(tokens)
@@ -2586,6 +2133,7 @@ class RudeChatClient:
                         case "477": self.prtcl_477(tokens)
                         case "482": self.prtcl_482(tokens)
                         case "487": self.prtcl_487(tokens)
+                        case "671": await self.prtcl_671(tokens)
                         case "716": self.prtcl_716(tokens)
                         case "900": self.prtcl_900(tokens)
                         case _:
@@ -2597,233 +2145,6 @@ class RudeChatClient:
                                 self.handle_server_message(line)
                 except Exception as e:
                     logging.error(f"Unhandled General Error in message handling: {e}")
-
-    def m_prtcl_ChannelJoinUnable(self, tokens):
-        try:
-            channel = tokens.params[1]
-            reason = tokens.params[2] if len(tokens.params) > 2 else ""
-
-            # Combine information into one message
-            message = f"Cannot join channel {channel} - {reason}"
-            self.gui.insert_text_widget(f"{message}\n")
-            self.add_server_message(message)
-
-            # Make sure to remove the channel 
-            if channel in self.joined_channels:
-                self.joined_channels.remove(channel)
-                self.gui.channel_lists[self.server] = self.joined_channels
-                self.update_gui_channel_list()
-        except Exception as e:
-            logging.error(f"Error in unable_to_join_channel: {e}")
-
-    def prtcl_263(self, tokens): # 263
-        try:
-            source = tokens.source
-            param_len = len(tokens.params)
-
-            if param_len == 3:
-                issued_command = tokens.params[1]
-                message = tokens.params[2]
-                data = f"{source}: {issued_command} - {message}\n"
-            elif param_len == 2:
-                issued_command = tokens.params[0]
-                message = tokens.params[1]
-                data = f"{source}: {issued_command} - {message}\n"
-            else:
-                data = f"{source}: Unexpected parameter count ({param_len})\n"
-
-            self.add_server_message(data)
-        except Exception as e:
-            logging.error(f"Error in handle_263: {e}")
-            logging.info(f"Token: {tokens}")
-
-    def prtcl_404(self, tokens): # 404
-        try:
-            channel = tokens.params[1]
-            message = tokens.params[2]
-            data = f"{channel}: {message}"
-            self.add_server_message(data)
-        except Exception as e:
-            logging.error(f"Error in command_404: {e}")
-
-    def prtcl_900(self, tokens):
-        try:
-            logged_in_as = tokens.params[3]
-            data = f"Successfully authenticated as: {logged_in_as}\n"
-            self.add_server_message(data)
-        except Exception as e:
-            logging.error(f"Error in command_900: {e}")
-
-    def prtcl_396(self, tokens): # 396
-        try:
-            hidden_host = tokens.params[1]
-            reason = tokens.params[2]
-            data = f"Your host is now hidden as: {hidden_host}. Reason: {reason}\n"
-            self.add_server_message(data)
-        except Exception as e:
-            logging.error(f"Error in command_396: {e}")
-
-    def prtcl_403(self, tokens): # 403
-        try:
-            target = tokens.params[1]
-            message = tokens.params[2]
-            data = f"{message}: {target}\n"
-            self.add_server_message(data)
-        except Exception as e:
-            logging.error(f"Error in command_403: {e}")
-
-    def prtcl_379(self, tokens): # 379
-        try:
-            source = tokens.source
-            user = tokens.params[0]
-            connecting_user = tokens.params[1]
-            message = tokens.params[2]
-            data = f"{source} {user}: {connecting_user} {message}\n"
-
-            self.add_server_message(data)
-        except Exception as e:
-            logging.error(f"Error in command_379: {e}")
-
-    def prtcl_378(self, tokens): # 378
-        try:
-            source = tokens.source
-            user = tokens.params[0]
-            identified_nick = tokens.params[1]
-            message = tokens.params[2]
-            data = f"{source} {user} {identified_nick}: {message}\n"
-
-            self.add_server_message(data)
-        except Exception as e:
-            logging.error(f"Error in command_378: {e}")
-
-    def prtcl_307(self, tokens):
-        try:
-            source = tokens.source
-            user = tokens.params[0]
-            identified_nick = tokens.params[1]
-            message = tokens.params[2]
-            data = f"{source} {user} {identified_nick}: {message}\n"
-
-            self.add_server_message(data)
-        except Exception as e:
-            logging.error(f"Error in command_307: {e}")
-
-    def prtcl_432(self, tokens): # 432
-        try:
-            source = tokens.source
-            user = tokens.params[0]
-            message = f"""{tokens.params[2]}"""
-            data = f"{source} {user}: {message}\n"
-
-            self.add_server_message(data)
-        except Exception as e:
-            logging.error(f"Error in command_432: {e}")
-
-    def prtcl_487(self, tokens):
-        try:
-            source = tokens.source
-            user = tokens.params[0]
-            message = f"""{tokens.params[1]}"""
-            data = f"{source} {user}: {message}\n"
-
-            self.add_server_message(data)
-        except Exception as e:
-            logging.error(f"Exception in command_487: {e}")
-
-    async def prtcl_433(self, tokens): # 433
-        try:
-            source = tokens.source
-            current_nick = tokens.params[0]
-            user = tokens.params[1]
-            message = f"""{tokens.params[2]}"""
-            data = f"{source} {user}: {message}\n"
-
-            self.add_server_message(data)
-            await self.change_nickname(current_nick, is_from_token=True)
-        except Exception as e:
-            logging.error(f"Error in command_433: {e}")
-
-    def prtcl_443(self, tokens):
-        try:
-            channel = tokens.params[2]
-            message = tokens.params[3]
-            data = f"{channel}: {message}\n"
-
-            self.add_server_message(data)
-        except Exception as e:
-            logging.error(f"Error in handle_already_on_channel: {e}")
-
-    def prtcl_442(self, tokens):
-        try:
-            channel = tokens.params[1]
-            message = tokens.params[2]
-            data = f"{channel}: {message}\n"
-
-            self.add_server_message(data)
-        except Exception as e:
-            logging.error(f"Error in handle_not_on_channel: {e}")
-
-    def prtcl_472(self, tokens):
-        try:
-            channel = tokens.params[1]
-            message = tokens.params[2]
-            data = f"Unknown mode for {channel}: {message}\n"
-
-            self.add_server_message(data)
-        except Exception as e:
-            logging.error(f"Error in handle_unknown_mode: {e}")
-
-    def prtcl_324(self, tokens):
-        try:
-            channel = tokens.params[1]
-            modes = tokens.params[2]
-            data = f"Modes for {channel}: {modes}\n"
-
-            self.add_server_message(data)
-        except Exception as e:
-            logging.error(f"Error in handle_mode_info: {e}")
-
-    def prtcl_329(self, tokens):
-        try:
-            channel = tokens.params[1]
-            timestamp = int(tokens.params[2])  # Convert timestamp to an integer if it's a string
-            creation_date = datetime.utcfromtimestamp(timestamp)
-            formatted_date = creation_date.strftime('%Y-%m-%d %H:%M:%S UTC')  # Format the date as desired
-            data = f"Creation time for {channel}: {formatted_date}\n"
-
-            self.add_server_message(data)
-        except Exception as e:
-            logging.error(f"Exception in handle_creation_time: {e}")
-
-    def prtcl_482(self, tokens):
-        try:
-            channel = tokens.params[1]
-            message = tokens.params[2]
-            data = f"{channel}: {message}\n"
-
-            self.add_server_message(data)
-        except Exception as e:
-            logging.error(f"Error in handle_not_channel_operator: {e}")
-
-    def prtcl_328(self, tokens): # 328
-        try:
-            channel = tokens.params[1]
-            url = tokens.params[2]
-            data = f"URL for {channel} {url}\n"
-
-            self.add_server_message(data)
-        except Exception as e:
-            logging.error(f"Error in handle_328: {e}")
-
-    def prtcl_477(self, tokens):
-        try:
-            channel_name = tokens.params[1]
-            error_message = tokens.params[2]
-            
-            error_text = f"Cannot join channel {channel_name}: {error_message}\n"
-            self.gui.insert_text_widget(error_text)
-        except Exception as e:
-            logging.error(f"Error in handle_cannot_join_channel: {e}")
 
     def sanitize_channel_name(self, channel):
         #gotta remove any characters that are not alphanumeric or allowed special characters
@@ -2878,36 +2199,6 @@ class RudeChatClient:
                 file.write(log_line)
         except Exception as e:
             logging.error(f"Error logging message: {e}")
-
-    async def cmd_query(self, args, timestamp):
-        modes_to_strip = ''.join(self.mode_values)
-        if len(args) < 2:
-            self.gui.insert_text_widget(f"Error: Please provide a nickname for the query command.\n")
-            return
-
-        nickname = args[1]
-        message = " ".join(args[2:])
-        
-        # Remove @ and + symbols from the nickname
-        nickname = nickname.lstrip(modes_to_strip)
-
-        if nickname not in self.joined_channels:
-            self.open_dm(nickname)
-            if message:
-                await self.send_message(f"PRIVMSG {nickname} :{message}")
-                self.query_msg_handler(nickname, message, timestamp)
-        else:
-            self.gui.insert_text_widget(f"You already have a DM open with {nickname}.\n")
-
-    def cmd_cq(self, args):
-        if len(args) < 2:
-            self.gui.insert_text_widget(f"Usage: /cq <nickname>\n")
-        else:
-            nickname = args[1]
-            if nickname in self.joined_channels:
-                self.close_dm(nickname)
-            else:
-                self.gui.insert_text_widget(f"No open private message with {nickname}.\n")
 
     def open_dm(self, nickname):
         # Add the DM to the appropriate lists
@@ -2974,36 +2265,6 @@ class RudeChatClient:
                 except Exception as e:
                     logging.error(f"Exception in leave_channel: {e}")
 
-    async def cmd_kick(self, args):
-        modes_to_strip = ''.join(self.mode_values)
-        if len(args) < 3:
-            self.gui.insert_text_widget("Usage: /kick <user> <channel> [reason]\n")
-            return
-        user = args[1].lstrip(modes_to_strip)
-        channel = args[2]
-        reason = ' '.join(args[3:]) if len(args) > 3 else None
-        kick_message = f'KICK {channel} {user}' + (f' :{reason}' if reason else '')
-        await self.send_message(kick_message)
-        self.gui.insert_text_widget(f"Kicked {user} from {channel} for {reason}\n")
-
-    async def cmd_invite(self, args):
-        if len(args) < 3:
-            self.gui.insert_text_widget("Usage: /invite <user> <channel>\n")
-            return
-        user = args[1]
-        channel = args[2]
-        await self.send_message(f'INVITE {user} {channel}\n')
-        self.gui.insert_text_widget(f"Invited {user} to {channel}\n")
-
-    async def cmd_notice(self, args):
-        if len(args) < 3:
-            self.gui.insert_text_widget("Usage: /notice <target> <message>\n")
-            return
-        target = args[1]
-        message = ' '.join(args[2:])
-        await self.send_message(f'NOTICE {target} :{message}\n')
-        self.gui.insert_text_widget(f"Sent NOTICE to {target}: {message}\n")
-
     async def connect_to_specific_server(self, server_name):
         config_file = f"{server_name}.rudeserver"
         config_path = os.path.join(G_CONFIG_DIR, config_file)
@@ -3041,31 +2302,6 @@ class RudeChatClient:
                         self.gui.insert_text_widget("Disconnected\n")
             else:
                 self.gui.insert_text_widget(f"No client found for server {normalized_server_name}\n")
-
-    def cmd_mentions(self):
-        mentions_channel = f"!MENTIONS!"
-        if mentions_channel not in self.joined_channels:
-            self.joined_channels.append(mentions_channel)
-            self.gui.channel_lists[self.server] = self.joined_channels
-            if mentions_channel not in self.cap_who_for_chan:
-                self.cap_who_for_chan.append(mentions_channel)
-            self.update_gui_channel_list()
-            self.gui.update_channel_label()
-
-        if mentions_channel not in self.channel_messages[self.server]:
-            self.channel_messages[self.server][mentions_channel] = []
-
-        for target, messages in self.mentions.items():
-            mention_header = f"Mentions for {target}:\n"
-            self.channel_messages[self.server][mentions_channel].append(mention_header)
-            for message in messages:
-                mention_message = f" - {message}\n"
-                self.channel_messages[self.server][mentions_channel].append(mention_message)
-
-        self.gui.highlight_nicknames()
-                
-        # Update the GUI to show the new mentions in the mentions channel
-        self.gui.insert_and_scroll()
 
     async def remove_away_status(self):
         """Removes the 'away' status and updates the necessary UI elements."""
@@ -3238,7 +2474,7 @@ class RudeChatClient:
             case "whois": #who is that?
                 self.whois_user_request = True
                 target = user_input.split()[1]
-                await self.whois(target)
+                await self.cmd_whois(target)
             case "part":
                 channel_name = args[1]
                 reason = " ".join(args[2:]) if len(args) > 2 else None
@@ -3334,73 +2570,6 @@ class RudeChatClient:
             case "mock": await self.cmd_mock(args)
             case None: await self.handle_user_input(user_input, timestamp)
         return True
-
-    async def cmd_mock(self, args):
-        try:            
-            if self.use_time_stamp:
-                timestamp = datetime.now().strftime('[%H:%M:%S]')
-            else:
-                timestamp = ""
-            
-            user_mode = self.get_user_mode(self.nickname, self.current_channel)
-            
-            mode_symbol = self.get_mode_symbol(user_mode) if user_mode else ''
-
-            user_input = ' '.join(args[1:])
-            genmock = RudeMock(user_input)
-            
-            mock_em = genmock.generate_mock()
-
-            await self.send_message(f"PRIVMSG {self.current_channel} :{mock_em}")
-            await self.append_to_channel_history(self.current_channel, mock_em, mode_symbol, is_action=False)
-
-            self.gui.insert_text_widget(f"{timestamp} <{mode_symbol}{self.nickname}> {mock_em}\n")
-
-            self.gui.highlight_nicknames()
-        
-        except Exception as e:
-            logging.error(f"Error in mocker: {e}")
-
-    async def cmd_broadcast(self, args):
-        if len(args) > 2:
-            channels = args[1].split(',')
-            message = " ".join(args[2:])
-
-            for channel in channels:
-                if channel.startswith(tuple(self.chantypes)):
-                    if self.use_time_stamp:
-                        timestamp = datetime.now().strftime('[%H:%M:%S]')
-                    else:
-                        timestamp = ""
-                    user_mode = self.get_user_mode(self.nickname, channel)
-                    mode_symbol = self.get_mode_symbol(user_mode) if user_mode else ''
-                    await self.append_to_channel_history(channel, message, mode_symbol, is_action=False)
-                    await self.send_message(f"PRIVMSG {channel} :{message}")
-                    self.gui.insert_text_widget(f"Message Sent To: {channel}\n")
-                    if channel == self.current_channel:
-                        self.gui.insert_text_widget(f"{timestamp} <{mode_symbol}{self.nickname}> {message}\n")
-                        self.gui.highlight_nicknames()
-                else:
-                    self.gui.insert_text_widget(f"Error: bad channel {channel}\n")
-            return
-        else:
-            self.gui.insert_text_widget(f"Error: /broadcast #channel,#channel,#channel <your message here>\n")
-            return
-
-    def cmd_watch(self, args):
-        if len(args) > 1:
-            user = args[1]
-
-            if user.startswith('+'):
-                added_friend = self.friends.add_friend(user[1:])
-                self.gui.insert_text_widget(f"{added_friend}\n")
-            if user.startswith('-'):
-                removed_friend = self.friends.remove_friend(user[1:])
-                self.gui.insert_text_widget(f"{removed_friend}\n")
-        else:
-            watch_list = self.friends.show_friend_list()
-            self.gui.insert_text_widget("Error: /watch [+/-]nickname, Example: /watch +Rude to add, /watch -Rude to remove.\n")
-            self.gui.insert_text_widget(f"{watch_list}\n")
 
     async def send_message_chunks(self, message_chunks, channel, timestamp):
         for chunk in message_chunks:
@@ -3603,34 +2772,6 @@ class RudeChatClient:
             else:
                 window.insert_text(f"Unknown ASCII art macro: {macro_name}. Type '/mac' to see available macros.")
 
-    async def cmd_mac(self, args):
-        if len(args) < 2:
-            available_macros = ", ".join(self.ASCII_ART_MACROS.keys())
-            self.gui.insert_text_widget(f"Available ASCII art macros: {available_macros}\n")
-            self.gui.insert_text_widget("Usage: /mac <macro_name>\n")
-            return
-
-        macro_name = args[1]
-        selected_channel = self.current_channel  # Store the currently selected channel
-        user_mode = self.get_user_mode(self.nickname, selected_channel)
-        mode_symbol = self.get_mode_symbol(user_mode) if user_mode else ''
-
-        if macro_name in self.ASCII_ART_MACROS:
-            current_time = datetime.now().strftime('[%H:%M:%S] ')
-            for line in self.ASCII_ART_MACROS[macro_name].splitlines():
-                formatted_message = self.format_message(line, current_time)
-                await self.send_message(f'PRIVMSG {selected_channel} :{formatted_message}')
-                await asyncio.sleep(0.4)
-                if selected_channel == self.current_channel:
-                    if self.use_time_stamp:
-                        self.gui.insert_text_widget(f"{current_time}<{mode_symbol}{self.nickname}> {formatted_message}")
-                    else:
-                        self.gui.insert_text_widget(f"<{mode_symbol}{self.nickname}> {formatted_message}")
-                    self.gui.highlight_nicknames()
-                await self.append_to_channel_history(selected_channel, line, mode_symbol)
-        else:
-            self.gui.insert_text_widget(f"Unknown ASCII art macro: {macro_name}. Type '/mac' to see available macros.\n")
-
     def format_message(self, line, current_time):
         # Process the whole string and escape color codes
         processed_line = self.escape_color_codes(line)
@@ -3795,37 +2936,6 @@ class RudeChatClient:
         self.load_ignore_list()
         self.gui.insert_text_widget(f"Ignore List reloaded.\n")
 
-    def prtcl_367(self, tokens):
-        """
-        Handle the RPL_BANLIST reply, which provides info about each ban mask.
-        """
-        try:
-            channel = tokens.params[1]
-            banmask = tokens.params[2]
-            setter = tokens.params[3]
-            timestamp = tokens.params[4]
-            
-            # Construct the ban information message
-            ban_info = f"Channel: {channel}, Banmask: {banmask}, Set by: {setter}, Timestamp: {timestamp}\n"
-            
-            # Update the GUI's message text with this ban information
-            self.gui.insert_text_widget(ban_info)
-        except Exception as e:
-            logging.error(f"Error in handle_banlist: {e}")
-
-    def prtcl_368(self, tokens):
-        """
-        Handle the RPL_ENDOFBANLIST reply, signaling the end of the ban list.
-        """
-        try:
-            channel = tokens.params[1]
-            
-            # Notify the user that the ban list has ended
-            end_message = f"End of ban list for channel: {channel}\n"
-            self.gui.insert_text_widget(end_message)
-        except Exception as e:
-            logging.error(f"Error in handle_endofbanlist: {e}") 
-
     async def append_to_channel_history(self, channel, message, mode_symbol, is_action=False):
         timestamp = datetime.now().strftime('[%H:%M:%S] ')
         
@@ -3853,28 +2963,6 @@ class RudeChatClient:
             if channel not in self.channel_messages[server_name]:
                 self.channel_messages[server_name][channel] = []
             self.channel_messages[server_name][channel].append(formatted_message)
-
-    async def cmd_cowsay(self, args):
-        try:
-            user_mode = self.get_user_mode(self.nickname, self.current_channel)
-            mode_symbol = self.get_mode_symbol(user_mode) if user_mode else ''
-
-            if len(args) > 1:
-                file_name_arg = args[1]
-                # Construct the potential file path using the absolute path
-                potential_path = os.path.join(G_SOURCE_DIR, "Fortune Lists", f"{file_name_arg}.txt")
-
-                # Check if the provided argument corresponds to a valid fortune file
-                if os.path.exists(potential_path):
-                    await self.fortune_cowsay(mode_symbol, file_name_arg)
-                else:
-                    # If not a valid file name, consider the rest of the arguments as a custom message
-                    custom_message = ' '.join(args[1:])
-                    await self.cowsay_custom_message(custom_message, mode_symbol)
-            else:
-                await self.fortune_cowsay(mode_symbol)
-        except Exception as e:
-            logging.error(f"Error in Cowsay command: {e}")
 
     def cowsay(self, message):
         """Formats the given message in a 'cowsay' format."""
@@ -3985,30 +3073,6 @@ class RudeChatClient:
                 self.gui.insert_text_widget(formatted_message)
                 self.gui.highlight_nicknames()
 
-    async def cmd_fortune(self, file_name=None):
-        """Choose a random fortune from one of the lists"""
-        selected_channel = self.current_channel
-        user_mode = self.get_user_mode(self.nickname, selected_channel)
-        mode_symbol = self.get_mode_symbol(user_mode) if user_mode else ''
-        timestamp = datetime.now().strftime('[%H:%M:%S] ')
-        file_name = self.get_fortune_file(file_name)
-
-        with open(file_name, 'r', encoding='utf-8') as f:  # Notice the encoding parameter
-            fortunes = f.read().strip().split('%')
-            chosen_fortune = random.choice(fortunes).strip()
-
-        for line in chosen_fortune.split('\n'):
-            if self.use_time_stamp == True:
-                formatted_message = f"{timestamp}<{mode_symbol}{self.nickname}> {line}\n"
-            elif self.use_time_stamp == False:
-                formatted_message = f"<{mode_symbol}{self.nickname}> {line}\n"
-            await self.send_message(f'PRIVMSG {selected_channel} :{line}')
-            await asyncio.sleep(0.4)
-            await self.append_to_channel_history(selected_channel, line, mode_symbol)
-            if selected_channel == self.current_channel:
-                self.gui.insert_text_widget(formatted_message)
-                self.gui.highlight_nicknames()
-
     async def send_ctcp_request(self, target_nick, ctcp_command):
         """Sends a CTCP request to a target."""
         ctcp_message = f"\x01{ctcp_command.upper()}\x01"
@@ -4078,58 +3142,6 @@ class RudeChatClient:
         self.ping_start_time = time.time()
 
         await self.send_message(f'PING {user}')
-
-    async def cmd_who(self, args):
-        """
-        Handle the WHO command entered by the user.
-        """
-        if not args:
-            # General WHO
-            await self.send_message('WHO')
-        elif any(args[0].startswith(prefix) for prefix in self.chantypes):
-            # WHO on a specific channel
-            channel = args[0]
-            await self.send_who(channel)
-
-            if channel not in self.cap_who_for_chan:
-                self.cap_who_for_chan.append(channel)
-        else:
-            # WHO with mask or user host
-            mask = args[0]
-            await self.send_who(mask)
-
-    async def whois(self, target):
-        """
-        Who is this? Sends a whois request
-        """
-        await self.send_message(f'WHOIS {target}')
-
-    async def cmd_me(self, args):
-        action_message = ' '.join(args[1:])
-        escaped_input = self.escape_color_codes(action_message)
-        formatted_message = f"* {self.nickname} {escaped_input}"
-        await self.send_message(f'PRIVMSG {self.current_channel} :\x01ACTION {escaped_input}\x01')
-
-        if self.use_auto_away:
-            self.watcher.update_last_message_time()
-        await self.remove_away_status()
-
-        timestamp = datetime.now().strftime('[%H:%M:%S] ')
-        if self.use_time_stamp == True:
-            self.gui.insert_text_widget(f"{timestamp}{formatted_message}\n")
-        elif self.use_time_stamp == False:
-            self.gui.insert_text_widget(f"{formatted_message}\n")
-        self.gui.highlight_nicknames()
-
-        # Save the action message to the channel_messages dictionary
-        if self.server not in self.channel_messages:
-            self.channel_messages[self.server] = {}
-        if self.current_channel not in self.channel_messages[self.server]:
-            self.channel_messages[self.server][self.current_channel] = []
-        if self.use_time_stamp == True:
-            self.channel_messages[self.server][self.current_channel].append(f"{timestamp}{formatted_message}\n")
-        elif self.use_time_stamp == False:
-            self.channel_messages[self.server][self.current_channel].append(f"{formatted_message}\n")
 
     def display_help(self):
         # Categories and their associated commands
@@ -4339,22 +3351,47 @@ class RudeChatClient:
             QMessageBox.warning(self.gui, "Upload Error", f"An unexpected error occured: {e}")
             return
 
-    async def m_prtcl_BadChannelName(self, tokens):
-        # Extract the channel name and reason from the tokens
-        try:
-            channel = tokens.params[1]
-            reason = tokens.params[2] if len(tokens.params) > 2 else "Invalid channel name"
+    # Helper method to compile WHO data.
+    def update_user_data(self, nickname, new_data):
+        # Check if the user already exists in who_user_data
+        if nickname in self.who_user_data:
+            user_data = self.who_user_data[nickname]
+            
+            # Update the "shared-channels"
+            if "channel" in new_data:
+                # Ensure "shared-channels" is a string
+                if "shared-channels" not in user_data:
+                    user_data["shared-channels"] = user_data.get("channel", new_data["channel"])
+                elif new_data["channel"] not in user_data["shared-channels"].split(", "):
+                    # Append the new channel to the string if it's not already included
+                    user_data["shared-channels"] += f", {new_data['channel']}"
 
-            # Combine information into a message to display to the user
-            message = f"Cannot join channel {channel} - {reason}"
-            self.gui.insert_text_widget(f"{message}\n")
-            if channel in self.joined_channels:
-                await self.send_message(f'PART {channel}')
-                self.joined_channels.remove(channel)
-                self.gui.channel_lists[self.server] = self.joined_channels
-                self.update_gui_channel_list()
-        except Exception as e:
-            logging.error(f"Error in handle_bad_channel_name: {e}")
+            # Update other fields in user_data
+            for key, value in new_data.items():
+                if key not in {"shared-channels", "mode"} and (key not in user_data or user_data[key] != value):
+                    user_data[key] = value
+            
+            # Update the "mode" field
+            if "mode" in new_data and "channel" in new_data:
+                # Only proceed if the mode is not empty
+                if new_data["mode"]:
+                    channel_mode = f"{new_data['channel']}({new_data['mode']})"
+                    
+                    # Initialize "mode" as an empty string if not already present or inconsistently formatted
+                    if "mode" not in user_data or user_data["mode"] == "":
+                        data = f"No Modes"
+                        user_data["mode"] = data
+                    else:
+                        existing_modes = user_data["mode"].split(", ")
+                        # Append only if this channel_mode isn't already present
+                        if channel_mode not in existing_modes:
+                            user_data["mode"] += f", {channel_mode}"
+
+        else:
+            # Initialize new user data with "shared-channels" and "mode" as strings
+            new_data["shared-channels"] = new_data.get("channel", "")
+            new_data["mode"] = f"{new_data['channel']}({new_data['mode']})" if "mode" in new_data else ""
+            self.who_user_data[nickname] = new_data
 
     # Protocol Handlers
     def prtcl_ACCOUNT(self, tokens):
@@ -5076,3 +4113,985 @@ class RudeChatClient:
                 logging.error(f"Error in handle_topic command TOPIC: {e}")
 
     def prtcl_WALLOPS(self, tokens): self.add_server_message(f"{tokens.source}: {tokens.params[0]}\n")
+
+    def prtcl_005(self, tokens):
+        try:
+            # Set default values
+            self.mode_to_symbol = {'o': '@', 'v': '+'}
+            self.chantypes = ['#', '&']
+            self.nicknamelen = 16
+            self.chan_limit = 250
+            self.channellen = 50
+            self.topiclen = 390
+            self.chanmodes = {
+                'list': ['e', 'I', 'b', 'q'],
+                'parameter': ['k'],
+                'setting': ['f', 'l', 'j'],
+                'no_parameter': ['C', 'F', 'L', 'M', 'P', 'Q', 'R', 'S', 'T', 'c', 'g', 'i', 'm', 'n', 'p', 'r', 's', 't', 'u', 'z']
+            }
+
+            params = tokens.params[:-1]  # Exclude trailing "are supported by this server"
+
+            # Parse ISUPPORT parameters
+            for param in params:
+                if param.startswith("PREFIX="):
+                    _, mappings = param.split("=")
+                    modes, symbols = mappings[1:].split(")")
+                    self.mode_to_symbol = dict(zip(modes, symbols))
+
+                elif param.startswith("CHANTYPES="):
+                    _, channel_types = param.split("=")
+                    self.chantypes = list(channel_types)
+
+                elif param.startswith("NICKLEN="):
+                    _, nick_len = param.split("=")
+                    self.nicknamelen = int(nick_len)
+
+                elif param.startswith("CHANLIMIT="):
+                    _, chan_limit = param.split("=")
+                    # Handle multiple limits: e.g., CHANLIMIT=#&:10
+                    parts = chan_limit.split(":")
+                    if len(parts) == 2 and parts[1].isdigit():
+                        self.chan_limit = int(parts[1])
+
+                elif param.startswith("CHANNELLEN="):
+                    _, channel_len = param.split("=")
+                    self.channellen = int(channel_len)
+
+                elif param.startswith("TOPICLEN="):
+                    _, topic_len = param.split("=")
+                    self.topiclen = int(topic_len)
+
+                elif param.startswith("CHANMODES="):
+                    _, chan_modes = param.split("=")
+                    mode_categories = chan_modes.split(',')
+                    if len(mode_categories) == 4:
+                        self.chanmodes = {
+                            'list': list(mode_categories[0]),
+                            'parameter': list(mode_categories[1]),
+                            'setting': list(mode_categories[2]),
+                            'no_parameter': list(mode_categories[3])
+                        }
+
+        except Exception as e:
+            logging.error(f"Error in handle_isupport: {e}")
+
+        self.get_mode_lists()
+
+    def prtcl_250(self, tokens):
+        try:
+            connection_info = tokens.params[-1]  # Assumes the connection info is the last parameter
+            self.gui.insert_text_widget(f"Server Info: {connection_info}\n")
+        except Exception as e:
+            logging.error(f"Error in handle_connection_info: {e}")
+
+    def prtcl_263(self, tokens): # 263
+        try:
+            source = tokens.source
+            param_len = len(tokens.params)
+
+            if param_len == 3:
+                issued_command = tokens.params[1]
+                message = tokens.params[2]
+                data = f"{source}: {issued_command} - {message}\n"
+            elif param_len == 2:
+                issued_command = tokens.params[0]
+                message = tokens.params[1]
+                data = f"{source}: {issued_command} - {message}\n"
+            else:
+                data = f"{source}: Unexpected parameter count ({param_len})\n"
+
+            self.add_server_message(data)
+        except Exception as e:
+            logging.error(f"Error in handle_263: {e}")
+            logging.info(f"Token: {tokens}")
+
+    def prtcl_266(self, tokens):
+        try:
+            global_users_info = tokens.params[-1]  # Assumes the global users info is the last parameter
+            self.gui.insert_text_widget(f"Server Users Info: {global_users_info}\n")
+        except Exception as e:
+            logging.error(f"Error in handle_global_users_info: {e}")
+
+    async def prtcl_301(self, tokens):
+        nickname = tokens.params[1] 
+
+        try:
+            away_message = tokens.params[2]
+            if nickname not in self.whois_data:
+                self.whois_data[nickname] = {}  
+            self.whois_data[nickname]["Away"] = away_message
+            if nickname in self.away_users_dict:
+                self.away_users_dict[nickname] = away_message
+        except Exception as e:
+            logging.error(f"Error in handle_whois_replies command 301: {e}")
+
+    def prtcl_307(self, tokens):
+        try:
+            source = tokens.source
+            user = tokens.params[0]
+            identified_nick = tokens.params[1]
+            message = tokens.params[2]
+            data = f"{source} {user} {identified_nick}: {message}\n"
+
+            self.add_server_message(data)
+        except Exception as e:
+            logging.error(f"Error in command_307: {e}")
+
+    async def prtcl_311(self, tokens):
+        nickname = tokens.params[1]
+
+        try:
+            username = tokens.params[2]
+            hostname = tokens.params[3]
+            realname = tokens.params[5]
+            self.whois_data[nickname] = {"Username": username, "Hostname": hostname, "Realname": realname}
+        except Exception as e:
+            logging.error(f"Error in handle_whois_replies command 311: {e}")
+
+    async def prtcl_312(self, tokens):
+        nickname = tokens.params[1]
+
+        try:
+            server_info = tokens.params[2]
+            if self.whois_data.get(nickname):
+                self.whois_data[nickname]["Server"] = server_info
+        except Exception as e:
+            logging.error(f"Error in handle_whois_replies command 312: {e}")
+
+    async def prtcl_313(self, tokens):
+        nickname = tokens.params[1] 
+
+        try:
+            operator_info = tokens.params[2]
+            if self.whois_data.get(nickname):
+                self.whois_data[nickname]["Operator"] = operator_info
+        except Exception as e:
+            logging.error(f"Error in handle_whois_replies command 313: {e}")
+
+    async def prtcl_315(self, tokens):
+        if self.log_on:
+            logging.debug(f"WHO Tokens: {tokens}")
+        if not hasattr(self, 'who_details'):
+            self.who_details = []
+
+        try:
+            messages = []
+            for details in self.who_details:
+                message = f"User {details['nickname']} ({details['username']}@{details['host']}) on {details['server']} in {details['channel']} - Status: {details['status']} ({details['mode']}) {details['who_message']}"
+                messages.append(message)
+            
+            final_message = "\n".join(messages)
+            if self.who_user_request:
+                self.gui.insert_text_widget(f"{final_message}\n")
+                self.who_user_request = False
+
+            # Reset the who_details for future use
+            self.who_details = []
+
+        except Exception as e:
+            logging.error(f"Error in handle_who_reply command 315: {e}")
+
+    async def prtcl_317(self, tokens):
+        nickname = tokens.params[1] 
+
+        try:
+            idle_time_seconds = int(tokens.params[2])
+            idle_time = str(timedelta(seconds=idle_time_seconds))
+            if self.whois_data.get(nickname):
+                self.whois_data[nickname]["Idle Time"] = idle_time
+        except Exception as e:
+            logging.error(f"Error in handle_whois_replies command 317: {e}")
+
+    async def prtcl_318(self, tokens):
+        nickname = tokens.params[1] 
+
+        try:
+            if self.whois_user_request:
+                if self.whois_data.get(nickname):
+                    whois_response = f"WHOIS for {nickname}:\n"
+                    for key, value in self.whois_data[nickname].items():
+                        whois_response += f"{key}: {value}\n"
+
+                    # Generate and append the /ignore suggestion
+                    ignore_suggestion = f"*!{self.whois_data[nickname]['Username']}@{self.whois_data[nickname]['Hostname']}"
+                    whois_response += f"\nSuggested /ignore mask: {ignore_suggestion}\n"
+
+                    self.whois_display(whois_response)
+                    await self.save_whois_to_file(nickname)
+
+        except Exception as e:
+            logging.error(f"Error in handle_whois_replies command 318: {e}")
+
+    async def prtcl_319(self, tokens):
+        nickname = tokens.params[1] 
+
+        try:
+            channels = tokens.params[2]
+            self.whois_data[nickname]["Channels"] = channels
+        except Exception as e:
+            logging.error(f"Error in handle_whois_replies command 319: {e}")
+
+    async def prtcl_322(self, tokens):
+        try:
+            channel_name = tokens.params[1]
+            user_count = tokens.params[2]
+            topic = tokens.params[3]
+            # Add the channel information to a dictionary or list (to be implemented)
+            self.gui.download_channel_list[channel_name] = {
+                'user_count': user_count,
+                'topic': topic
+            }
+        except Exception as e:
+            logging.error(f"Error in handle_list_response: {e}")
+
+    async def prtcl_323(self):
+        try:
+            channel_list_path = os.path.join(G_CONFIG_DIR, "channel_list.txt")
+
+            with open(channel_list_path, "w", encoding='utf-8') as f:
+                for channel, info in self.gui.download_channel_list.items():
+                    f.write(f"{channel} - Users: {info['user_count']} - Topic: {info['topic']}\n")
+        except Exception as e:
+            logging.error(f"Error in save_channel_list_to_file: {e}")
+
+    def prtcl_324(self, tokens):
+        try:
+            channel = tokens.params[1]
+            modes = tokens.params[2]
+            data = f"Modes for {channel}: {modes}\n"
+
+            self.add_server_message(data)
+        except Exception as e:
+            logging.error(f"Error in handle_mode_info: {e}")
+
+    def prtcl_328(self, tokens): # 328
+        try:
+            channel = tokens.params[1]
+            url = tokens.params[2]
+            data = f"URL for {channel} {url}\n"
+
+            self.add_server_message(data)
+        except Exception as e:
+            logging.error(f"Error in handle_328: {e}")
+
+    def prtcl_329(self, tokens):
+        try:
+            channel = tokens.params[1]
+            timestamp = int(tokens.params[2])  # Convert timestamp to an integer if it's a string
+            creation_date = datetime.utcfromtimestamp(timestamp)
+            formatted_date = creation_date.strftime('%Y-%m-%d %H:%M:%S UTC')  # Format the date as desired
+            data = f"Creation time for {channel}: {formatted_date}\n"
+
+            self.add_server_message(data)
+        except Exception as e:
+            logging.error(f"Exception in handle_creation_time: {e}")
+
+    async def prtcl_330(self, tokens):
+        nickname = tokens.params[1] 
+
+        try:
+            logged_in_as = tokens.params[2]
+            if nickname not in self.whois_data:
+                self.whois_data[nickname] = {}
+            self.whois_data[nickname]["Logged In As"] = logged_in_as
+        except Exception as e:
+            logging.error(f"Error in handle_whois_replies command 330: {e}")
+
+    async def prtcl_338(self, tokens):
+        nickname = tokens.params[1] 
+
+        try:
+            ip_address = tokens.params[2]
+            self.whois_data[nickname]["Actual IP"] = ip_address
+        except Exception as e:
+            logging.error(f"Error in handle_whois_replies command 338: {e}")
+
+    def prtcl_341(self, tokens): self.add_server_message(f"{tokens.source} {' '.join(tokens.params)}\n")
+
+    async def prtcl_352(self, tokens):
+        if self.log_on:
+            logging.debug(f"WHO Tokens: {tokens}")
+        if not hasattr(self, 'who_details'):
+            self.who_details = []
+
+        try:
+            # Parse the WHO reply
+            channel = tokens.params[1]
+            username = tokens.params[2]
+            host = tokens.params[3]
+            server = tokens.params[4]
+            nickname = tokens.params[5]
+            status = tokens.params[6]
+            mode_state = status[1:] if len(status) > 1 else ""
+            who_message = tokens.params[7]
+
+            # Determine if the user is away
+            away_status = "Away" if status.startswith('G') else "Active"
+            self._who_reply_data_handler(away_status, nickname)
+
+            user_details = {
+                "nickname": nickname,
+                "username": username,
+                "host": host,
+                "server": server,
+                "channel": channel,
+                "status": away_status,
+                "mode": mode_state,
+                "who_message": who_message
+            }
+            
+            self.update_user_data(nickname, user_details)
+            self.who_details.append(user_details)
+
+        except Exception as e:
+            logging.error(f"Error in handle_who_reply command 352: {e}")
+
+    def prtcl_353(self, tokens):
+        try:
+            current_channel = tokens.params[2]
+            users = tokens.params[3].split(" ")
+            # If this channel isn't in channel_users, initialize it with an empty list
+            if current_channel not in self.channel_users:
+                self.channel_users[current_channel] = []
+
+            # Append the users to the channel's list only if they are not already in it
+            for user in users:
+                if user not in self.channel_users[current_channel]:
+                    self.channel_users[current_channel].append(user)
+
+        except Exception as e:
+            logging.error(f"Error in handle_names_list command 353: {e}")
+
+    async def prtcl_354(self, tokens):
+        if self.log_on:
+            logging.debug(f"WHO Tokens: {tokens}")
+        if not hasattr(self, 'who_details'):
+            self.who_details = []
+
+        try:
+            # Parse the WHOX reply
+            channel = tokens.params[1]
+            username = tokens.params[2]
+            host = tokens.params[3]
+            server = tokens.params[4]
+            nickname = tokens.params[5]
+            status = tokens.params[6]
+            mode_state = status[1:] if len(status) > 1 else ""
+            account = tokens.params[8]
+            who_message = tokens.params[9]
+
+            # Determine if the user is away
+            away_status = "Away" if status.startswith('G') else "Active"
+            self._who_reply_data_handler(away_status, nickname)
+
+            user_details = {
+                "nickname": nickname,
+                "username": username,
+                "host": host,
+                "server": server,
+                "channel": channel,
+                "status": away_status,
+                "mode": mode_state,
+                "account": account,
+                "who_message": who_message
+            }
+            
+            self.update_user_data(nickname, user_details)
+            self.who_details.append(user_details)
+            self.cache_accountname(nickname, account)
+
+        except Exception as e:
+            logging.error(f"Error in handle_who_reply command 354: {e}")
+
+    def prtcl_366(self, tokens):
+        try:
+            current_channel = tokens.params[1]
+            if current_channel:
+                # Get the list of users for the current channel or an empty list if the key doesn't exist
+                channel_users = self.channel_users.get(current_channel, [])
+                # Sort the list of users
+                sorted_users = self.sort_users(channel_users, current_channel)
+                # Update the channel users with the sorted list
+                self.channel_users[current_channel] = sorted_users
+                # Update the user listbox
+                self.update_user_selector_list(current_channel)
+
+        except Exception as e:
+            logging.error(f"Error in handle_names_list command 366: {e}")
+
+    def prtcl_367(self, tokens):
+        """
+        Handle the RPL_BANLIST reply, which provides info about each ban mask.
+        """
+        try:
+            channel = tokens.params[1]
+            banmask = tokens.params[2]
+            setter = tokens.params[3]
+            timestamp = tokens.params[4]
+            
+            # Construct the ban information message
+            ban_info = f"Channel: {channel}, Banmask: {banmask}, Set by: {setter}, Timestamp: {timestamp}\n"
+            
+            # Update the GUI's message text with this ban information
+            self.gui.insert_text_widget(ban_info)
+        except Exception as e:
+            logging.error(f"Error in handle_banlist: {e}")
+
+    def prtcl_368(self, tokens):
+        """
+        Handle the RPL_ENDOFBANLIST reply, signaling the end of the ban list.
+        """
+        try:
+            channel = tokens.params[1]
+            
+            # Notify the user that the ban list has ended
+            end_message = f"End of ban list for channel: {channel}\n"
+            self.gui.insert_text_widget(end_message)
+        except Exception as e:
+            logging.error(f"Error in handle_endofbanlist: {e}") 
+
+    def prtcl_372(self, tokens):
+        try:
+            motd_line = tokens.params[-1]  # Assumes the MOTD line is the last parameter
+            self.motd_lines.append(motd_line)
+        except Exception as e:
+            logging.error(f"Error in handle_motd_line: {e}")
+
+    def prtcl_375(self, tokens):
+        try:
+            self.motd_lines.clear()
+            motd_start_line = tokens.params[-1]  # Assumes the introductory line is the last parameter
+            self.motd_lines.append(motd_start_line)
+        except Exception as e:
+            logging.error(f"Error in handle_motd_start: {e}")
+
+    def prtcl_376(self, tokens):
+        try:
+            full_motd = "\n".join(self.motd_lines)
+            
+            if self.server_name in self.motd_dict:
+                self.motd_dict[self.server_name] += full_motd + "\n"
+            else:
+                self.motd_dict[self.server_name] = full_motd + "\n"
+
+            self.gui.insert_text_widget(f"Message of the Day:\n{full_motd}\n")
+            self.motd_lines.clear()
+        except Exception as e:
+            logging.error(f"Error in handle_motd_end: {e}")
+
+    def prtcl_378(self, tokens): # 378
+        try:
+            source = tokens.source
+            user = tokens.params[0]
+            identified_nick = tokens.params[1]
+            message = tokens.params[2]
+            data = f"{source} {user} {identified_nick}: {message}\n"
+
+            self.add_server_message(data)
+        except Exception as e:
+            logging.error(f"Error in command_378: {e}")
+
+    def prtcl_379(self, tokens): # 379
+        try:
+            source = tokens.source
+            user = tokens.params[0]
+            connecting_user = tokens.params[1]
+            message = tokens.params[2]
+            data = f"{source} {user}: {connecting_user} {message}\n"
+
+            self.add_server_message(data)
+        except Exception as e:
+            logging.error(f"Error in command_379: {e}")
+
+    def prtcl_391(self, tokens):
+        """
+        Handle the server's response for the TIME command.
+        """
+        try:
+            server_name = tokens.params[0]  # The server's name
+            local_time = tokens.params[1]   # The local time on the server
+
+            message = f"Server Time from {server_name}: {local_time}"
+            self.gui.insert_text_widget(message)
+        except Exception as e:
+            logging.error(f"Error in handle_time_request: {e}")
+
+    def prtcl_396(self, tokens): # 396
+        try:
+            hidden_host = tokens.params[1]
+            reason = tokens.params[2]
+            data = f"Your host is now hidden as: {hidden_host}. Reason: {reason}\n"
+            self.add_server_message(data)
+        except Exception as e:
+            logging.error(f"Error in command_396: {e}")
+
+    def prtcl_401(self, tokens):
+        """
+        Handle the "401" response, which indicates that a given nickname doesn't exist on the server.
+        """
+        try:
+            if len(tokens.params) >= 2:
+                # Extract the nickname from the second element of the list
+                nickname = tokens.params[1]
+                if nickname in self.away_users_dict:
+                    del self.away_users_dict[nickname]
+                
+                self.gui.insert_text_widget(f"The nickname '{nickname}' doesn't exist on the server.\n")
+            else:
+                if self.log_on:
+                    logging.info("Invalid response format for '401'.")
+                pass
+        except Exception as e:
+            logging.error(f"Error in handle_nickname_doesnt_exist: {e}")
+
+    def prtcl_403(self, tokens): # 403
+        try:
+            target = tokens.params[1]
+            message = tokens.params[2]
+            data = f"{message}: {target}\n"
+            self.add_server_message(data)
+        except Exception as e:
+            logging.error(f"Error in command_403: {e}")
+
+    def prtcl_404(self, tokens): # 404
+        try:
+            channel = tokens.params[1]
+            message = tokens.params[2]
+            data = f"{channel}: {message}"
+            self.add_server_message(data)
+        except Exception as e:
+            logging.error(f"Error in command_404: {e}")
+
+    def prtcl_431(self, tokens): self.gui.insert_text_widget(f"{tokens.source} {" ".join(tokens.params)}\n")
+
+    def prtcl_432(self, tokens): # 432
+        try:
+            source = tokens.source
+            user = tokens.params[0]
+            message = f"""{tokens.params[2]}"""
+            data = f"{source} {user}: {message}\n"
+
+            self.add_server_message(data)
+        except Exception as e:
+            logging.error(f"Error in command_432: {e}")
+
+    async def prtcl_433(self, tokens): # 433
+        try:
+            source = tokens.source
+            current_nick = tokens.params[0]
+            user = tokens.params[1]
+            message = f"""{tokens.params[2]}"""
+            data = f"{source} {user}: {message}\n"
+
+            self.add_server_message(data)
+            await self.change_nickname(current_nick, is_from_token=True)
+        except Exception as e:
+            logging.error(f"Error in command_433: {e}")
+
+    def prtcl_442(self, tokens):
+        try:
+            channel = tokens.params[1]
+            message = tokens.params[2]
+            data = f"{channel}: {message}\n"
+
+            self.add_server_message(data)
+        except Exception as e:
+            logging.error(f"Error in handle_not_on_channel: {e}")
+
+    def prtcl_443(self, tokens):
+        try:
+            channel = tokens.params[2]
+            message = tokens.params[3]
+            data = f"{channel}: {message}\n"
+
+            self.add_server_message(data)
+        except Exception as e:
+            logging.error(f"Error in handle_already_on_channel: {e}")
+
+    def prtcl_461(self, tokens): self.gui.insert_text_widget(f"{tokens.source} {" ".join(tokens.params)}\n")
+
+    def prtcl_464(self, tokens): self.add_server_message(f"{tokens.source} {tokens.params[0]} {tokens.params[1]}\n")
+
+    def prtcl_472(self, tokens):
+        try:
+            channel = tokens.params[1]
+            message = tokens.params[2]
+            data = f"Unknown mode for {channel}: {message}\n"
+
+            self.add_server_message(data)
+        except Exception as e:
+            logging.error(f"Error in handle_unknown_mode: {e}")
+
+    def prtcl_477(self, tokens):
+        try:
+            channel_name = tokens.params[1]
+            error_message = tokens.params[2]
+            
+            error_text = f"Cannot join channel {channel_name}: {error_message}\n"
+            self.gui.insert_text_widget(error_text)
+        except Exception as e:
+            logging.error(f"Error in handle_cannot_join_channel: {e}")
+
+    def prtcl_482(self, tokens):
+        try:
+            channel = tokens.params[1]
+            message = tokens.params[2]
+            data = f"{channel}: {message}\n"
+
+            self.add_server_message(data)
+        except Exception as e:
+            logging.error(f"Error in handle_not_channel_operator: {e}")
+
+    def prtcl_487(self, tokens):
+        try:
+            source = tokens.source
+            user = tokens.params[0]
+            message = f"""{tokens.params[1]}"""
+            data = f"{source} {user}: {message}\n"
+
+            self.add_server_message(data)
+        except Exception as e:
+            logging.error(f"Exception in command_487: {e}")
+
+    async def prtcl_671(self, tokens):
+        nickname = tokens.params[1] 
+
+        try:
+            secure_message = tokens.params[2]
+            self.whois_data[nickname]["Secure Connection"] = secure_message
+        except Exception as e:
+            logging.error(f"Error in handle_whois_replies command 671: {e}")
+
+    def prtcl_716(self, tokens): self.add_server_message(f"{tokens.source}: {tokens.params[1]} {tokens.params[2]}\n")
+
+    def prtcl_900(self, tokens):
+        try:
+            logged_in_as = tokens.params[3]
+            data = f"Successfully authenticated as: {logged_in_as}\n"
+            self.add_server_message(data)
+        except Exception as e:
+            logging.error(f"Error in command_900: {e}")
+
+    async def prtcl_903(self):
+        if not self.sasl_enabled:
+            self.gui.insert_text_widget(f"SASL is not enabled.\n")
+            return  # Skip SASL if it's not enabled
+        self.gui.insert_text_widget(f"SASL authentication successful.\n")
+        await self.send_message("CAP END")
+
+    def prtcl_904(self):
+        if not self.sasl_enabled:
+            self.gui.insert_text_widget(f"SASL is not enabled.\n")
+            return
+        self.gui.insert_text_widget(f"SASL authentication failed. Disconnecting.\n")
+
+    async def m_prtcl_BadChannelName(self, tokens):
+        # Extract the channel name and reason from the tokens
+        try:
+            channel = tokens.params[1]
+            reason = tokens.params[2] if len(tokens.params) > 2 else "Invalid channel name"
+
+            # Combine information into a message to display to the user
+            message = f"Cannot join channel {channel} - {reason}"
+            self.gui.insert_text_widget(f"{message}\n")
+            if channel in self.joined_channels:
+                await self.send_message(f'PART {channel}')
+                self.joined_channels.remove(channel)
+                self.gui.channel_lists[self.server] = self.joined_channels
+                self.update_gui_channel_list()
+        except Exception as e:
+            logging.error(f"Error in handle_bad_channel_name: {e}")
+
+    def m_prtcl_ChannelJoinUnable(self, tokens):
+        try:
+            channel = tokens.params[1]
+            reason = tokens.params[2] if len(tokens.params) > 2 else ""
+
+            # Combine information into one message
+            message = f"Cannot join channel {channel} - {reason}"
+            self.gui.insert_text_widget(f"{message}\n")
+            self.add_server_message(message)
+
+            # Make sure to remove the channel 
+            if channel in self.joined_channels:
+                self.joined_channels.remove(channel)
+                self.gui.channel_lists[self.server] = self.joined_channels
+                self.update_gui_channel_list()
+        except Exception as e:
+            logging.error(f"Error in unable_to_join_channel: {e}")
+
+    # Command Handlers
+    async def cmd_broadcast(self, args):
+        if len(args) > 2:
+            channels = args[1].split(',')
+            message = " ".join(args[2:])
+
+            for channel in channels:
+                if channel.startswith(tuple(self.chantypes)):
+                    if self.use_time_stamp:
+                        timestamp = datetime.now().strftime('[%H:%M:%S]')
+                    else:
+                        timestamp = ""
+                    user_mode = self.get_user_mode(self.nickname, channel)
+                    mode_symbol = self.get_mode_symbol(user_mode) if user_mode else ''
+                    await self.append_to_channel_history(channel, message, mode_symbol, is_action=False)
+                    await self.send_message(f"PRIVMSG {channel} :{message}")
+                    self.gui.insert_text_widget(f"Message Sent To: {channel}\n")
+                    if channel == self.current_channel:
+                        self.gui.insert_text_widget(f"{timestamp} <{mode_symbol}{self.nickname}> {message}\n")
+                        self.gui.highlight_nicknames()
+                else:
+                    self.gui.insert_text_widget(f"Error: bad channel {channel}\n")
+            return
+        else:
+            self.gui.insert_text_widget(f"Error: /broadcast #channel,#channel,#channel <your message here>\n")
+            return
+
+    async def cmd_cowsay(self, args):
+        try:
+            user_mode = self.get_user_mode(self.nickname, self.current_channel)
+            mode_symbol = self.get_mode_symbol(user_mode) if user_mode else ''
+
+            if len(args) > 1:
+                file_name_arg = args[1]
+                # Construct the potential file path using the absolute path
+                potential_path = os.path.join(G_SOURCE_DIR, "Fortune Lists", f"{file_name_arg}.txt")
+
+                # Check if the provided argument corresponds to a valid fortune file
+                if os.path.exists(potential_path):
+                    await self.fortune_cowsay(mode_symbol, file_name_arg)
+                else:
+                    # If not a valid file name, consider the rest of the arguments as a custom message
+                    custom_message = ' '.join(args[1:])
+                    await self.cowsay_custom_message(custom_message, mode_symbol)
+            else:
+                await self.fortune_cowsay(mode_symbol)
+        except Exception as e:
+            logging.error(f"Error in Cowsay command: {e}")
+
+    def cmd_cq(self, args):
+        if len(args) < 2:
+            self.gui.insert_text_widget(f"Usage: /cq <nickname>\n")
+        else:
+            nickname = args[1]
+            if nickname in self.joined_channels:
+                self.close_dm(nickname)
+            else:
+                self.gui.insert_text_widget(f"No open private message with {nickname}.\n")
+
+    async def cmd_fortune(self, file_name=None):
+        """Choose a random fortune from one of the lists"""
+        selected_channel = self.current_channel
+        user_mode = self.get_user_mode(self.nickname, selected_channel)
+        mode_symbol = self.get_mode_symbol(user_mode) if user_mode else ''
+        timestamp = datetime.now().strftime('[%H:%M:%S] ')
+        file_name = self.get_fortune_file(file_name)
+
+        with open(file_name, 'r', encoding='utf-8') as f:  # Notice the encoding parameter
+            fortunes = f.read().strip().split('%')
+            chosen_fortune = random.choice(fortunes).strip()
+
+        for line in chosen_fortune.split('\n'):
+            if self.use_time_stamp == True:
+                formatted_message = f"{timestamp}<{mode_symbol}{self.nickname}> {line}\n"
+            elif self.use_time_stamp == False:
+                formatted_message = f"<{mode_symbol}{self.nickname}> {line}\n"
+            await self.send_message(f'PRIVMSG {selected_channel} :{line}')
+            await asyncio.sleep(0.4)
+            await self.append_to_channel_history(selected_channel, line, mode_symbol)
+            if selected_channel == self.current_channel:
+                self.gui.insert_text_widget(formatted_message)
+                self.gui.highlight_nicknames()
+
+    async def cmd_invite(self, args):
+        if len(args) < 3:
+            self.gui.insert_text_widget("Usage: /invite <user> <channel>\n")
+            return
+        user = args[1]
+        channel = args[2]
+        await self.send_message(f'INVITE {user} {channel}\n')
+        self.gui.insert_text_widget(f"Invited {user} to {channel}\n")
+
+    async def cmd_kick(self, args):
+        modes_to_strip = ''.join(self.mode_values)
+        if len(args) < 3:
+            self.gui.insert_text_widget("Usage: /kick <user> <channel> [reason]\n")
+            return
+        user = args[1].lstrip(modes_to_strip)
+        channel = args[2]
+        reason = ' '.join(args[3:]) if len(args) > 3 else None
+        kick_message = f'KICK {channel} {user}' + (f' :{reason}' if reason else '')
+        await self.send_message(kick_message)
+        self.gui.insert_text_widget(f"Kicked {user} from {channel} for {reason}\n")
+
+    async def cmd_mac(self, args):
+        if len(args) < 2:
+            available_macros = ", ".join(self.ASCII_ART_MACROS.keys())
+            self.gui.insert_text_widget(f"Available ASCII art macros: {available_macros}\n")
+            self.gui.insert_text_widget("Usage: /mac <macro_name>\n")
+            return
+
+        macro_name = args[1]
+        selected_channel = self.current_channel  # Store the currently selected channel
+        user_mode = self.get_user_mode(self.nickname, selected_channel)
+        mode_symbol = self.get_mode_symbol(user_mode) if user_mode else ''
+
+        if macro_name in self.ASCII_ART_MACROS:
+            current_time = datetime.now().strftime('[%H:%M:%S] ')
+            for line in self.ASCII_ART_MACROS[macro_name].splitlines():
+                formatted_message = self.format_message(line, current_time)
+                await self.send_message(f'PRIVMSG {selected_channel} :{formatted_message}')
+                await asyncio.sleep(0.4)
+                if selected_channel == self.current_channel:
+                    if self.use_time_stamp:
+                        self.gui.insert_text_widget(f"{current_time}<{mode_symbol}{self.nickname}> {formatted_message}")
+                    else:
+                        self.gui.insert_text_widget(f"<{mode_symbol}{self.nickname}> {formatted_message}")
+                    self.gui.highlight_nicknames()
+                await self.append_to_channel_history(selected_channel, line, mode_symbol)
+        else:
+            self.gui.insert_text_widget(f"Unknown ASCII art macro: {macro_name}. Type '/mac' to see available macros.\n")
+
+    async def cmd_me(self, args):
+        action_message = ' '.join(args[1:])
+        escaped_input = self.escape_color_codes(action_message)
+        formatted_message = f"* {self.nickname} {escaped_input}"
+        await self.send_message(f'PRIVMSG {self.current_channel} :\x01ACTION {escaped_input}\x01')
+
+        if self.use_auto_away:
+            self.watcher.update_last_message_time()
+        await self.remove_away_status()
+
+        timestamp = datetime.now().strftime('[%H:%M:%S] ')
+        if self.use_time_stamp == True:
+            self.gui.insert_text_widget(f"{timestamp}{formatted_message}\n")
+        elif self.use_time_stamp == False:
+            self.gui.insert_text_widget(f"{formatted_message}\n")
+        self.gui.highlight_nicknames()
+
+        # Save the action message to the channel_messages dictionary
+        if self.server not in self.channel_messages:
+            self.channel_messages[self.server] = {}
+        if self.current_channel not in self.channel_messages[self.server]:
+            self.channel_messages[self.server][self.current_channel] = []
+        if self.use_time_stamp == True:
+            self.channel_messages[self.server][self.current_channel].append(f"{timestamp}{formatted_message}\n")
+        elif self.use_time_stamp == False:
+            self.channel_messages[self.server][self.current_channel].append(f"{formatted_message}\n")
+
+    def cmd_mentions(self):
+        mentions_channel = f"!MENTIONS!"
+        if mentions_channel not in self.joined_channels:
+            self.joined_channels.append(mentions_channel)
+            self.gui.channel_lists[self.server] = self.joined_channels
+            if mentions_channel not in self.cap_who_for_chan:
+                self.cap_who_for_chan.append(mentions_channel)
+            self.update_gui_channel_list()
+            self.gui.update_channel_label()
+
+        if mentions_channel not in self.channel_messages[self.server]:
+            self.channel_messages[self.server][mentions_channel] = []
+
+        for target, messages in self.mentions.items():
+            mention_header = f"Mentions for {target}:\n"
+            self.channel_messages[self.server][mentions_channel].append(mention_header)
+            for message in messages:
+                mention_message = f" - {message}\n"
+                self.channel_messages[self.server][mentions_channel].append(mention_message)
+
+        self.gui.highlight_nicknames()
+                
+        # Update the GUI to show the new mentions in the mentions channel
+        self.gui.insert_and_scroll()
+
+    async def cmd_mock(self, args):
+        try:            
+            if self.use_time_stamp:
+                timestamp = datetime.now().strftime('[%H:%M:%S]')
+            else:
+                timestamp = ""
+            
+            user_mode = self.get_user_mode(self.nickname, self.current_channel)
+            
+            mode_symbol = self.get_mode_symbol(user_mode) if user_mode else ''
+
+            user_input = ' '.join(args[1:])
+            genmock = RudeMock(user_input)
+            
+            mock_em = genmock.generate_mock()
+
+            await self.send_message(f"PRIVMSG {self.current_channel} :{mock_em}")
+            await self.append_to_channel_history(self.current_channel, mock_em, mode_symbol, is_action=False)
+
+            self.gui.insert_text_widget(f"{timestamp} <{mode_symbol}{self.nickname}> {mock_em}\n")
+
+            self.gui.highlight_nicknames()
+        
+        except Exception as e:
+            logging.error(f"Error in mocker: {e}")
+
+    async def cmd_notice(self, args):
+        if len(args) < 3:
+            self.gui.insert_text_widget("Usage: /notice <target> <message>\n")
+            return
+        target = args[1]
+        message = ' '.join(args[2:])
+        await self.send_message(f'NOTICE {target} :{message}\n')
+        self.gui.insert_text_widget(f"Sent NOTICE to {target}: {message}\n")
+
+    async def cmd_query(self, args, timestamp):
+        modes_to_strip = ''.join(self.mode_values)
+        if len(args) < 2:
+            self.gui.insert_text_widget(f"Error: Please provide a nickname for the query command.\n")
+            return
+
+        nickname = args[1]
+        message = " ".join(args[2:])
+        
+        # Remove @ and + symbols from the nickname
+        nickname = nickname.lstrip(modes_to_strip)
+
+        if nickname not in self.joined_channels:
+            self.open_dm(nickname)
+            if message:
+                await self.send_message(f"PRIVMSG {nickname} :{message}")
+                self.query_msg_handler(nickname, message, timestamp)
+        else:
+            self.gui.insert_text_widget(f"You already have a DM open with {nickname}.\n")
+
+    def cmd_watch(self, args):
+        if len(args) > 1:
+            user = args[1]
+
+            if user.startswith('+'):
+                added_friend = self.friends.add_friend(user[1:])
+                self.gui.insert_text_widget(f"{added_friend}\n")
+            if user.startswith('-'):
+                removed_friend = self.friends.remove_friend(user[1:])
+                self.gui.insert_text_widget(f"{removed_friend}\n")
+        else:
+            watch_list = self.friends.show_friend_list()
+            self.gui.insert_text_widget("Error: /watch [+/-]nickname, Example: /watch +Rude to add, /watch -Rude to remove.\n")
+            self.gui.insert_text_widget(f"{watch_list}\n")
+
+    async def cmd_who(self, args):
+        """
+        Handle the WHO command entered by the user.
+        """
+        if not args:
+            # General WHO
+            await self.send_message('WHO')
+        elif any(args[0].startswith(prefix) for prefix in self.chantypes):
+            # WHO on a specific channel
+            channel = args[0]
+            await self.send_who(channel)
+
+            if channel not in self.cap_who_for_chan:
+                self.cap_who_for_chan.append(channel)
+        else:
+            # WHO with mask or user host
+            mask = args[0]
+            await self.send_who(mask)
+
+    async def cmd_whois(self, target): await self.send_message(f'WHOIS {target}')
