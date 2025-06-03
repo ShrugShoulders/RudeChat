@@ -465,7 +465,7 @@ class RudeChatClient:
                         for token in TOPICTOKENS:
                             self.prtcl_TOPIC(token)
                         for tokens in NAMESTOKENS:
-                            self.prtcl_353(tokens)
+                            self.prtcl_366(tokens)
                         await process_PRIVMSG_tokens(PRIVMSGTOKENS)
                         return
 
@@ -576,7 +576,7 @@ class RudeChatClient:
                             NAMESTOKENS.append(tokens)
                             reset_timer("")
                         elif self.use_auto_join:
-                            self.prtcl_353(tokens)
+                            self.prtcl_366(tokens)
                             if count_366 >= len(self.joined_channels) and got_topic >= len(self.joined_channels) and znc_connected:
                                 await self.send_message("AWAY")
                                 self.gui.clear_text_widget()
@@ -657,7 +657,7 @@ class RudeChatClient:
                         for token in TOPICTOKENS:
                             self.prtcl_TOPIC(token)
                         for tokens in NAMESTOKENS:
-                            self.prtcl_353(tokens)
+                            self.prtcl_353(tokens) if tokens.command == '353' else self.prtcl_366(tokens)
                         await process_PRIVMSG_tokens(PRIVMSGTOKENS)
                         return
 
@@ -669,7 +669,7 @@ class RudeChatClient:
                     for token in TOPICTOKENS:
                         self.prtcl_TOPIC(token)
                     for token in NAMESTOKENS:
-                        self.prtcl_353(token)
+                        self.prtcl_353(tokens) if tokens.command == '353' else self.prtcl_366(tokens)
                     await process_PRIVMSG_tokens(PRIVMSGTOKENS)
                     return
                 else:
