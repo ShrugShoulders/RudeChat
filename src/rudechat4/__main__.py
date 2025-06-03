@@ -18,21 +18,21 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
 # Import Config Copy Function
-from rudechat4.copy_configs import CopyConfigs
+from rudechat4.Util.copy_configs import CopyConfigs
 # Import First Run Configs
-from rudechat4.rude_first_run import FirstRun
+from rudechat4.GUI.rude_first_run import FirstRun
 # Import GUI
-from rudechat4.rude_gui import RudeGui
+from rudechat4.GUI.rude_gui import RudeGui
 # Import Client
-from rudechat4.rude_client import RudeChatClient
+from rudechat4.Client.rude_client import RudeChatClient
 # Import Initializer
-from rudechat4.init_clients import initialize_clients
+from rudechat4.Client.init_clients import initialize_clients
 # Everything else.
 from rudechat4.shared_imports import *
 # Global variables
 from rudechat4.global_variables import *
 # Logging
-from rudechat4.rude_logger import configure_logging
+from rudechat4.Util.rude_logger import configure_logging
 
 class Window(QMainWindow):
     def __init__(self):

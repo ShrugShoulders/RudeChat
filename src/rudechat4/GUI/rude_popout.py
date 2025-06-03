@@ -2,7 +2,7 @@
 
 from rudechat4.shared_imports import *
 from rudechat4.global_variables import *
-from rudechat4.rude_text_browser import RudeTextBrowser
+from rudechat4.Components.rude_text_browser import RudeTextBrowser
 
 
 class RudeUserListWidget(QListWidget):

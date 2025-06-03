@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 from rudechat4.shared_imports import *
-from rudechat4.rude_logger import configure_logging
+from rudechat4.Util.rude_logger import configure_logging
 
 class RudeMock:
     def __init__(self, line):

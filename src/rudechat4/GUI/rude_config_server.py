@@ -2,8 +2,8 @@
 
 from rudechat4.shared_imports import *
 from rudechat4.global_variables import *
-from rudechat4.rude_logger import configure_logging
-from rudechat4.rude_config_gui import RudeConfigGui
+from rudechat4.Util.rude_logger import configure_logging
+from rudechat4.GUI.rude_config_gui import RudeConfigGui
 
 class RudeConfigServer(RudeConfigGui):
     def __init__(self, parent, config_file, close_callback):

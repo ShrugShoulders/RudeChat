@@ -2,17 +2,17 @@
 
 from rudechat4.shared_imports import *
 from rudechat4.global_variables import *
-from rudechat4.rude_client import RudeChatClient
-from rudechat4.rude_popout import RudePopout
-from rudechat4.rude_colours import RudeColours
-from rudechat4.rude_config_gui import RudeConfigGui
-from rudechat4.rude_config_server import RudeConfigServer
-from rudechat4.list_window import ChannelListWindow
-from rudechat4.nick_cleaner import clean_nicknames
-from rudechat4.rude_logger import configure_logging
-from rudechat4.rude_text_browser import RudeTextBrowser
-from rudechat4.user_data_display import RudeUserData
-from rudechat4.rude_shutdown import RudeShutdown
+from rudechat4.Client.rude_client import RudeChatClient
+from rudechat4.GUI.rude_popout import RudePopout
+from rudechat4.GUI.rude_colours import RudeColours
+from rudechat4.GUI.rude_config_gui import RudeConfigGui
+from rudechat4.GUI.rude_config_server import RudeConfigServer
+from rudechat4.GUI.list_window import ChannelListWindow
+from rudechat4.Util.nick_cleaner import clean_nicknames
+from rudechat4.Util.rude_logger import configure_logging
+from rudechat4.Components.rude_text_browser import RudeTextBrowser
+from rudechat4.GUI.user_data_display import RudeUserData
+from rudechat4.GUI.rude_shutdown import RudeShutdown
 
 class CustomLineEdit(QLineEdit):
     def __init__(self, parent=None):
@@ -888,7 +888,7 @@ class RudeGui(QWidget):
     # Tray Icon Management
     def create_tray_icon(self):
         # Create the tray icon
-        icon_file = os.path.join(G_CONFIG_DIR, 'rude_icon_round_tray.png')
+        icon_file = os.path.join(G_SOURCE_DIR, 'Resources/Icons/rude_icon_round_tray.png')
         self.tray_icon = QSystemTrayIcon()
         self.tray_icon.setIcon(QIcon(icon_file))
 
@@ -1518,7 +1518,7 @@ class RudeGui(QWidget):
         self.channel_window.show()
 
     def show_startup_art(self):
-        splash_directory = os.path.join(G_SOURCE_DIR, "Splash")
+        splash_directory = os.path.join(G_SOURCE_DIR, "Resources/Splashes")
 
         try:
             # List all .txt files in the Splash directory

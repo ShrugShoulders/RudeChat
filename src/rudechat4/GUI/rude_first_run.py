@@ -2,7 +2,7 @@
 
 from rudechat4.shared_imports import *
 from rudechat4.global_variables import *
-from rudechat4.rude_config_server import RudeConfigServer
+from rudechat4.GUI.rude_config_server import RudeConfigServer
 
 class FirstRun:
     def __init__(self, app):

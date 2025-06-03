@@ -2,39 +2,9 @@
 
 from rudechat4.shared_imports import *
 from rudechat4.global_variables import *
-from rudechat4.rude_logger import configure_logging
-from rudechat4.channel_expand import ChannelExp
-
-class RudeColorOption(QWidget):
-    def __init__(self, parent):
-        super().__init__(parent)
-
-        self.setLayout(QHBoxLayout())
-
-        self.layout().setContentsMargins(0, 0, 0, 0)
-
-        self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
-
-        self.inputField = QLineEdit(self)
-        self.inputField.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
-        self.editButton = QToolButton(self)
-        self.editButton.setText('Pick...')
-        self.editButton.clicked.connect(self.pickColor)
-
-        self.layout().addWidget(self.inputField)
-        self.layout().addWidget(self.editButton)
-
-    def setText(self, text):
-        self.inputField.setText(text)
-
-    def text(self):
-        return self.inputField.text()
-    
-    def pickColor(self):
-        newColor = QColorDialog.getColor(QColor(self.text()))
-
-        if newColor.isValid():
-            self.setText(newColor.name())
+from rudechat4.Util.rude_logger import configure_logging
+from rudechat4.GUI.channel_expand import ChannelExp
+from rudechat4.Components.rude_color_option import RudeColorOption
 
 class RudeConfigGui(QScrollArea):
     def __init__(self, parent, config_file, close_callback):
