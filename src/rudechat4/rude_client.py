@@ -3351,8 +3351,10 @@ class RudeChatClient:
             QMessageBox.warning(self.gui, "Upload Error", f"An unexpected error occured: {e}")
             return
 
-    # Helper method to compile WHO data.
     def update_user_data(self, nickname, new_data):
+        """
+        Helper method to compile WHO data.
+        """
         # Check if the user already exists in who_user_data
         if nickname in self.who_user_data:
             user_data = self.who_user_data[nickname]
@@ -3395,9 +3397,7 @@ class RudeChatClient:
 
     # Protocol Handlers
     def prtcl_ACCOUNT(self, tokens):
-        """
-        Handle the ACCOUNT message from the server and update accountname cache.
-        """
+        """Handle the ACCOUNT message from the server and update accountname cache."""
         if self.log_on:
             logging.debug(f"ACCOUNT Token: {tokens}")
         try:
@@ -3425,7 +3425,8 @@ class RudeChatClient:
         except Exception as e:
             logging.error(f"Error in handle_account_message: {e}")
 
-    async def prtcl_AUTHENTICATE(self, tokens):
+    async def prtcl_AUTHENTICATE(self, tokens): 
+        """Handle SASL authentication"""
         if not self.sasl_enabled:
             self.gui.insert_text_widget(f"SASL is not enabled.\n")
             return  # Skip SASL if it's not enabled
@@ -3435,6 +3436,7 @@ class RudeChatClient:
             await self.send_message(f"AUTHENTICATE {encoded_auth_string}")
 
     def prtcl_AWAY(self, tokens):
+        """Handle going away"""
         try:
             nickname = tokens.hostmask.nickname
             params = tokens.params
@@ -3465,7 +3467,7 @@ class RudeChatClient:
             logging.error(f"Error in handle_away: {e}")
 
     async def prtcl_CAP(self, tokens):
-        # Check if the server is listing capabilities
+        """Handle CAPability negotiations"""
         if "LS" in tokens.params:
             await self.send_message('CAP REQ :away-notify')
             await self.send_message('CAP REQ :account-notify')
@@ -3556,6 +3558,7 @@ class RudeChatClient:
                 logging.error(f"Error3 in handle_cap NEW block: {e}")
 
     def prtcl_ERROR(self, tokens):
+        """Handle fatal errors"""
         try:
             error_message = ' '.join(tokens.params) if tokens.params else 'Unknown error'
             self.gui.insert_text_widget(f"ERROR: {error_message}\n")
@@ -3563,6 +3566,7 @@ class RudeChatClient:
             logging.error(f"Exception in handle_error: {e}")
 
     async def prtcl_INVITE(self, tokens):
+        """Handle inviting a user to a channel"""
         try:
             inviter = tokens.source.split('!')[0]
             invitee = tokens.params[0]
@@ -3579,6 +3583,7 @@ class RudeChatClient:
             logging.error(f"Error in handle_invite: {e}")
 
     def prtcl_JOIN(self, tokens):
+        """Handle joining a channel"""
         try:
             user_info = tokens.hostmask.nickname
             user_mask = tokens.hostmask
@@ -3643,9 +3648,7 @@ class RudeChatClient:
             logging.error(f"Error In handle_join: {e}")
 
     async def prtcl_KICK(self, tokens):
-        """
-        Handle the KICK event from the server.
-        """
+        """Handle the server KICK event"""
         try:
             modes_to_strip = ''.join(self.mode_values)
             channel = tokens.params[0]
@@ -3696,6 +3699,7 @@ class RudeChatClient:
                 logging.error(f"Error2 in handle_kick_event upon attempting to remove kicked channel or auto_rejoin: {e}")
 
     def prtcl_KILL(self, tokens):
+        """Handle closing the connection between the user and a given server"""
         try:
             source = tokens.source
             user = tokens.params[0]
@@ -3707,6 +3711,7 @@ class RudeChatClient:
             logging.error(f"Error in handle_kill_command: {e}")
 
     def prtcl_MODE(self, tokens):
+        """Handle setting or removing modes"""
         try:
             giver = tokens.source.split("!")[0]
             channel = tokens.params[0]
@@ -3807,6 +3812,7 @@ class RudeChatClient:
             logging.error(f"Error in handle_mode: {e}")
 
     async def prtcl_NICK(self, tokens):
+        """Handle nickname changes"""
         try:
             modes_to_strip = ''.join(self.mode_values)
             old_nick = tokens.hostmask.nickname
@@ -3854,6 +3860,7 @@ class RudeChatClient:
             logging.error(f"Error in handle_nick: {e}")
 
     def prtcl_NOTICE(self, tokens):
+        """Handle notices between users and to channels"""
         try:
             sender = tokens.hostmask if tokens.hostmask else "Server"
             target = tokens.params[0]
@@ -3896,6 +3903,7 @@ class RudeChatClient:
             logging.error(f"Error in handle_notice_message: {e}")
 
     def prtcl_PART(self, tokens):
+        """Handle leaving channels"""
         try:
             modes_to_strip = ''.join(self.mode_values)
             user_info = tokens.hostmask.nickname
@@ -3948,9 +3956,12 @@ class RudeChatClient:
         except Exception as e:
             logging.error(f"Error in handle_part: {e}")
 
-    async def prtcl_PING(self, tokens): await self.send_message(f'PONG {tokens.params[0]}')
+    async def prtcl_PING(self, tokens): 
+        """Ping!"""
+        await self.send_message(f'PONG {tokens.params[0]}')
 
     def prtcl_PONG(self, tokens):
+        """Pong!"""
         try:
             pong_server = tokens.params[-1]  # Assumes the server name is the last parameter
             current_time = time.time()
@@ -3972,6 +3983,7 @@ class RudeChatClient:
             logging.error(f"Error in handle_pong: {e}")
 
     async def prtcl_PRIVMSG(self, tokens, znc_privmsg=False):
+        """Handle private messages between users, and messages to channels"""
         sender_hostmask = str(tokens.hostmask)
         if self.should_ignore_sender(sender_hostmask):
             return
@@ -4003,6 +4015,7 @@ class RudeChatClient:
         await self.notify_user_if_mentioned(gmessage, target, sender, timestamp)
 
     def prtcl_QUIT(self, tokens):
+        """Handle client connection termination"""
         try:
             modes_to_strip = ''.join(self.mode_values)
             user_info = tokens.hostmask.nickname
@@ -4058,6 +4071,7 @@ class RudeChatClient:
             logging.error(f"Error in handle_quit: {e}")
 
     def prtcl_TOPIC(self, tokens):
+        """Handle viewing/changing channel topics"""
         channel_name = tokens.params[1]
         command = tokens.command
 
@@ -4112,9 +4126,12 @@ class RudeChatClient:
             except Exception as e:
                 logging.error(f"Error in handle_topic command TOPIC: {e}")
 
-    def prtcl_WALLOPS(self, tokens): self.add_server_message(f"{tokens.source}: {tokens.params[0]}\n")
+    def prtcl_WALLOPS(self, tokens):
+        """Handle WALLOPS"""
+        self.add_server_message(f"{tokens.source}: {tokens.params[0]}\n")
 
     def prtcl_005(self, tokens):
+        """RPL_ISUPPORT"""
         try:
             # Set default values
             self.mode_to_symbol = {'o': '@', 'v': '+'}
@@ -4179,13 +4196,15 @@ class RudeChatClient:
         self.get_mode_lists()
 
     def prtcl_250(self, tokens):
+        """RPL_STATSCONN"""
         try:
             connection_info = tokens.params[-1]  # Assumes the connection info is the last parameter
             self.gui.insert_text_widget(f"Server Info: {connection_info}\n")
         except Exception as e:
             logging.error(f"Error in handle_connection_info: {e}")
 
-    def prtcl_263(self, tokens): # 263
+    def prtcl_263(self, tokens):
+        """RPL_TRYAGAIN"""
         try:
             source = tokens.source
             param_len = len(tokens.params)
@@ -4207,6 +4226,7 @@ class RudeChatClient:
             logging.info(f"Token: {tokens}")
 
     def prtcl_266(self, tokens):
+        """RPL_GLOBALUSERS"""
         try:
             global_users_info = tokens.params[-1]  # Assumes the global users info is the last parameter
             self.gui.insert_text_widget(f"Server Users Info: {global_users_info}\n")
@@ -4214,6 +4234,7 @@ class RudeChatClient:
             logging.error(f"Error in handle_global_users_info: {e}")
 
     async def prtcl_301(self, tokens):
+        """RPL_AWAY"""
         nickname = tokens.params[1] 
 
         try:
@@ -4227,6 +4248,7 @@ class RudeChatClient:
             logging.error(f"Error in handle_whois_replies command 301: {e}")
 
     def prtcl_307(self, tokens):
+        """RPL_WHOISREGNICK"""
         try:
             source = tokens.source
             user = tokens.params[0]
@@ -4239,6 +4261,7 @@ class RudeChatClient:
             logging.error(f"Error in command_307: {e}")
 
     async def prtcl_311(self, tokens):
+        """RPL_WHOISUSER"""
         nickname = tokens.params[1]
 
         try:
@@ -4250,6 +4273,7 @@ class RudeChatClient:
             logging.error(f"Error in handle_whois_replies command 311: {e}")
 
     async def prtcl_312(self, tokens):
+        """RPL_WHOISSERVER"""
         nickname = tokens.params[1]
 
         try:
@@ -4260,6 +4284,7 @@ class RudeChatClient:
             logging.error(f"Error in handle_whois_replies command 312: {e}")
 
     async def prtcl_313(self, tokens):
+        """RPL_WHOISOPERATOR"""
         nickname = tokens.params[1] 
 
         try:
@@ -4270,6 +4295,7 @@ class RudeChatClient:
             logging.error(f"Error in handle_whois_replies command 313: {e}")
 
     async def prtcl_315(self, tokens):
+        """RPL_ENDOFWHO"""
         if self.log_on:
             logging.debug(f"WHO Tokens: {tokens}")
         if not hasattr(self, 'who_details'):
@@ -4293,6 +4319,7 @@ class RudeChatClient:
             logging.error(f"Error in handle_who_reply command 315: {e}")
 
     async def prtcl_317(self, tokens):
+        """RPL_WHOISIDLE"""
         nickname = tokens.params[1] 
 
         try:
@@ -4304,6 +4331,7 @@ class RudeChatClient:
             logging.error(f"Error in handle_whois_replies command 317: {e}")
 
     async def prtcl_318(self, tokens):
+        """RPL_ENDOFWHOIS"""
         nickname = tokens.params[1] 
 
         try:
@@ -4324,6 +4352,7 @@ class RudeChatClient:
             logging.error(f"Error in handle_whois_replies command 318: {e}")
 
     async def prtcl_319(self, tokens):
+        """RPL_WHOISCHANNELS"""
         nickname = tokens.params[1] 
 
         try:
@@ -4333,6 +4362,7 @@ class RudeChatClient:
             logging.error(f"Error in handle_whois_replies command 319: {e}")
 
     async def prtcl_322(self, tokens):
+        """RPL_LIST"""
         try:
             channel_name = tokens.params[1]
             user_count = tokens.params[2]
@@ -4346,6 +4376,7 @@ class RudeChatClient:
             logging.error(f"Error in handle_list_response: {e}")
 
     async def prtcl_323(self):
+        """RPL_LISTEND"""
         try:
             channel_list_path = os.path.join(G_CONFIG_DIR, "channel_list.txt")
 
@@ -4356,6 +4387,7 @@ class RudeChatClient:
             logging.error(f"Error in save_channel_list_to_file: {e}")
 
     def prtcl_324(self, tokens):
+        """RPL_CHANNELMODEIS"""
         try:
             channel = tokens.params[1]
             modes = tokens.params[2]
@@ -4365,7 +4397,8 @@ class RudeChatClient:
         except Exception as e:
             logging.error(f"Error in handle_mode_info: {e}")
 
-    def prtcl_328(self, tokens): # 328
+    def prtcl_328(self, tokens):
+        """RPL_CHANNEL_URL"""
         try:
             channel = tokens.params[1]
             url = tokens.params[2]
@@ -4376,6 +4409,7 @@ class RudeChatClient:
             logging.error(f"Error in handle_328: {e}")
 
     def prtcl_329(self, tokens):
+        """RPL_CREATIONTIME"""
         try:
             channel = tokens.params[1]
             timestamp = int(tokens.params[2])  # Convert timestamp to an integer if it's a string
@@ -4388,6 +4422,7 @@ class RudeChatClient:
             logging.error(f"Exception in handle_creation_time: {e}")
 
     async def prtcl_330(self, tokens):
+        """RPL_WHOISACCOUNT"""
         nickname = tokens.params[1] 
 
         try:
@@ -4399,6 +4434,7 @@ class RudeChatClient:
             logging.error(f"Error in handle_whois_replies command 330: {e}")
 
     async def prtcl_338(self, tokens):
+        """RPL_WHOISACTUALLY"""
         nickname = tokens.params[1] 
 
         try:
@@ -4407,9 +4443,12 @@ class RudeChatClient:
         except Exception as e:
             logging.error(f"Error in handle_whois_replies command 338: {e}")
 
-    def prtcl_341(self, tokens): self.add_server_message(f"{tokens.source} {' '.join(tokens.params)}\n")
+    def prtcl_341(self, tokens):
+        """RPL_INVITING"""
+        self.add_server_message(f"{tokens.source} {' '.join(tokens.params)}\n")
 
     async def prtcl_352(self, tokens):
+        """RPL_WHOREPLY"""
         if self.log_on:
             logging.debug(f"WHO Tokens: {tokens}")
         if not hasattr(self, 'who_details'):
@@ -4448,6 +4487,7 @@ class RudeChatClient:
             logging.error(f"Error in handle_who_reply command 352: {e}")
 
     def prtcl_353(self, tokens):
+        """RPL_NAMREPLY"""
         try:
             current_channel = tokens.params[2]
             users = tokens.params[3].split(" ")
@@ -4464,6 +4504,7 @@ class RudeChatClient:
             logging.error(f"Error in handle_names_list command 353: {e}")
 
     async def prtcl_354(self, tokens):
+        """RPL_WHOSPCRPL"""
         if self.log_on:
             logging.debug(f"WHO Tokens: {tokens}")
         if not hasattr(self, 'who_details'):
@@ -4505,6 +4546,7 @@ class RudeChatClient:
             logging.error(f"Error in handle_who_reply command 354: {e}")
 
     def prtcl_366(self, tokens):
+        """RPL_ENDOFNAMES"""
         try:
             current_channel = tokens.params[1]
             if current_channel:
@@ -4552,6 +4594,7 @@ class RudeChatClient:
             logging.error(f"Error in handle_endofbanlist: {e}") 
 
     def prtcl_372(self, tokens):
+        """RPL_MOTD"""
         try:
             motd_line = tokens.params[-1]  # Assumes the MOTD line is the last parameter
             self.motd_lines.append(motd_line)
@@ -4559,6 +4602,7 @@ class RudeChatClient:
             logging.error(f"Error in handle_motd_line: {e}")
 
     def prtcl_375(self, tokens):
+        """RPL_MOTDSTART"""
         try:
             self.motd_lines.clear()
             motd_start_line = tokens.params[-1]  # Assumes the introductory line is the last parameter
@@ -4567,6 +4611,7 @@ class RudeChatClient:
             logging.error(f"Error in handle_motd_start: {e}")
 
     def prtcl_376(self, tokens):
+        """RPL_ENDOFMOTD"""
         try:
             full_motd = "\n".join(self.motd_lines)
             
@@ -4580,7 +4625,8 @@ class RudeChatClient:
         except Exception as e:
             logging.error(f"Error in handle_motd_end: {e}")
 
-    def prtcl_378(self, tokens): # 378
+    def prtcl_378(self, tokens):
+        """RPL_WHOISHOST"""
         try:
             source = tokens.source
             user = tokens.params[0]
@@ -4592,7 +4638,8 @@ class RudeChatClient:
         except Exception as e:
             logging.error(f"Error in command_378: {e}")
 
-    def prtcl_379(self, tokens): # 379
+    def prtcl_379(self, tokens):
+        """RPL_WHOISMODES"""
         try:
             source = tokens.source
             user = tokens.params[0]
@@ -4617,7 +4664,8 @@ class RudeChatClient:
         except Exception as e:
             logging.error(f"Error in handle_time_request: {e}")
 
-    def prtcl_396(self, tokens): # 396
+    def prtcl_396(self, tokens):
+        """RPL_HOSTHIDDEN"""
         try:
             hidden_host = tokens.params[1]
             reason = tokens.params[2]
@@ -4645,7 +4693,8 @@ class RudeChatClient:
         except Exception as e:
             logging.error(f"Error in handle_nickname_doesnt_exist: {e}")
 
-    def prtcl_403(self, tokens): # 403
+    def prtcl_403(self, tokens):
+        """ERR_NOSUCHCHANNEL"""
         try:
             target = tokens.params[1]
             message = tokens.params[2]
@@ -4654,7 +4703,8 @@ class RudeChatClient:
         except Exception as e:
             logging.error(f"Error in command_403: {e}")
 
-    def prtcl_404(self, tokens): # 404
+    def prtcl_404(self, tokens):
+        """ERR_CANNOTSENDTOCHAN"""
         try:
             channel = tokens.params[1]
             message = tokens.params[2]
@@ -4663,9 +4713,12 @@ class RudeChatClient:
         except Exception as e:
             logging.error(f"Error in command_404: {e}")
 
-    def prtcl_431(self, tokens): self.gui.insert_text_widget(f"{tokens.source} {" ".join(tokens.params)}\n")
+    def prtcl_431(self, tokens):
+        """ERR_NONICKNAMEGIVEN"""
+        self.gui.insert_text_widget(f"{tokens.source} {" ".join(tokens.params)}\n")
 
-    def prtcl_432(self, tokens): # 432
+    def prtcl_432(self, tokens):
+        """ERR_ERRONEUSNICKNAME"""
         try:
             source = tokens.source
             user = tokens.params[0]
@@ -4676,7 +4729,8 @@ class RudeChatClient:
         except Exception as e:
             logging.error(f"Error in command_432: {e}")
 
-    async def prtcl_433(self, tokens): # 433
+    async def prtcl_433(self, tokens):
+        """ERR_NICKNAMEINUSE"""
         try:
             source = tokens.source
             current_nick = tokens.params[0]
@@ -4690,6 +4744,7 @@ class RudeChatClient:
             logging.error(f"Error in command_433: {e}")
 
     def prtcl_442(self, tokens):
+        """ERR_NOTONCHANNEL"""
         try:
             channel = tokens.params[1]
             message = tokens.params[2]
@@ -4700,6 +4755,7 @@ class RudeChatClient:
             logging.error(f"Error in handle_not_on_channel: {e}")
 
     def prtcl_443(self, tokens):
+        """ERR_USERONCHANNEL"""
         try:
             channel = tokens.params[2]
             message = tokens.params[3]
@@ -4709,11 +4765,16 @@ class RudeChatClient:
         except Exception as e:
             logging.error(f"Error in handle_already_on_channel: {e}")
 
-    def prtcl_461(self, tokens): self.gui.insert_text_widget(f"{tokens.source} {" ".join(tokens.params)}\n")
+    def prtcl_461(self, tokens):
+        """ERR_NEEDMOREPARAMS"""
+        self.gui.insert_text_widget(f"{tokens.source} {" ".join(tokens.params)}\n")
 
-    def prtcl_464(self, tokens): self.add_server_message(f"{tokens.source} {tokens.params[0]} {tokens.params[1]}\n")
+    def prtcl_464(self, tokens):
+        """ERR_PASSWDMISMATCH"""
+        self.add_server_message(f"{tokens.source} {tokens.params[0]} {tokens.params[1]}\n")
 
     def prtcl_472(self, tokens):
+        """ERR_UNKNOWNMODE"""
         try:
             channel = tokens.params[1]
             message = tokens.params[2]
@@ -4724,6 +4785,7 @@ class RudeChatClient:
             logging.error(f"Error in handle_unknown_mode: {e}")
 
     def prtcl_477(self, tokens):
+        """ERR_NOCHANMODES or ERR_NEEDREGGEDNICK"""
         try:
             channel_name = tokens.params[1]
             error_message = tokens.params[2]
@@ -4734,6 +4796,7 @@ class RudeChatClient:
             logging.error(f"Error in handle_cannot_join_channel: {e}")
 
     def prtcl_482(self, tokens):
+        """ERR_CHANOPRIVSNEEDED"""
         try:
             channel = tokens.params[1]
             message = tokens.params[2]
@@ -4744,6 +4807,7 @@ class RudeChatClient:
             logging.error(f"Error in handle_not_channel_operator: {e}")
 
     def prtcl_487(self, tokens):
+        """ERR_CHANTOORECENT or ERR_MSGSERVICES"""
         try:
             source = tokens.source
             user = tokens.params[0]
@@ -4755,6 +4819,7 @@ class RudeChatClient:
             logging.error(f"Exception in command_487: {e}")
 
     async def prtcl_671(self, tokens):
+        """RPL_WHOISSECURE"""
         nickname = tokens.params[1] 
 
         try:
@@ -4763,9 +4828,12 @@ class RudeChatClient:
         except Exception as e:
             logging.error(f"Error in handle_whois_replies command 671: {e}")
 
-    def prtcl_716(self, tokens): self.add_server_message(f"{tokens.source}: {tokens.params[1]} {tokens.params[2]}\n")
+    def prtcl_716(self, tokens):
+        """RPL_TARGUMODEG"""
+        self.add_server_message(f"{tokens.source}: {tokens.params[1]} {tokens.params[2]}\n")
 
     def prtcl_900(self, tokens):
+        """RPL_LOGGEDIN"""
         try:
             logged_in_as = tokens.params[3]
             data = f"Successfully authenticated as: {logged_in_as}\n"
@@ -4774,6 +4842,7 @@ class RudeChatClient:
             logging.error(f"Error in command_900: {e}")
 
     async def prtcl_903(self):
+        """RPL_SASLSUCCESS"""
         if not self.sasl_enabled:
             self.gui.insert_text_widget(f"SASL is not enabled.\n")
             return  # Skip SASL if it's not enabled
@@ -4781,6 +4850,7 @@ class RudeChatClient:
         await self.send_message("CAP END")
 
     def prtcl_904(self):
+        """ERR_SASLFAIL"""
         if not self.sasl_enabled:
             self.gui.insert_text_widget(f"SASL is not enabled.\n")
             return
