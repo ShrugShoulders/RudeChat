@@ -2077,17 +2077,17 @@ class RudeChatClient:
                         case "251" | "252" | "253" | "254" | "255" | "265": self.server_message_handler(tokens)
                         case "263": self.prtcl_263(tokens)
                         case "266": self.prtcl_266(tokens)
-                        case "301": await self.prtcl_301(tokens)
+                        case "301": await self.bprtcl_whois_replies(tokens)
                         case "305": self.gui.insert_text_widget(f"{self.server_name}: You are no longer marked as being away\n")
                         case "306": self.gui.insert_text_widget(f"{self.server_name}: You have been marked as being away\n")
                         case "307": self.prtcl_307(tokens)
-                        case "311": await self.prtcl_311(tokens)
-                        case "312": await self.prtcl_312(tokens)
-                        case "313": await self.prtcl_313(tokens)
-                        case "315": await self.prtcl_315(tokens)
-                        case "317": await self.prtcl_317(tokens)
-                        case "318": await self.prtcl_318(tokens)
-                        case "319": await self.prtcl_319(tokens)
+                        case "311": await self.bprtcl_whois_replies(tokens)
+                        case "312": await self.bprtcl_whois_replies(tokens)
+                        case "313": await self.bprtcl_whois_replies(tokens)
+                        case "315": await self.bprtcl_who_replies(tokens)
+                        case "317": await self.bprtcl_whois_replies(tokens)
+                        case "318": await self.bprtcl_whois_replies(tokens)
+                        case "319": await self.bprtcl_whois_replies(tokens)
                         case "321": pass
                         case "322":  
                             await self.prtcl_322(tokens)
@@ -2099,13 +2099,13 @@ class RudeChatClient:
                         case "324": self.prtcl_324(tokens)
                         case "328": self.prtcl_328(tokens)
                         case "329": self.prtcl_329(tokens)
-                        case "330": await self.prtcl_330(tokens)
+                        case "330": await self.bprtcl_whois_replies(tokens)
                         case "332" | "333" | "TOPIC": self.prtcl_TOPIC(tokens)
-                        case "338": await self.prtcl_338(tokens)
+                        case "338": await self.bprtcl_whois_replies(tokens)
                         case "341": self.prtcl_341(tokens)
-                        case "352": await self.prtcl_352(tokens)
+                        case "352": await self.bprtcl_who_replies(tokens)
                         case "353": self.prtcl_353(tokens)
-                        case "354": await self.prtcl_354(tokens)
+                        case "354": await self.bprtcl_who_replies(tokens)
                         case "366": self.prtcl_366(tokens)
                         case "367": self.prtcl_367(tokens)     
                         case "368": self.prtcl_368(tokens)
@@ -2133,7 +2133,7 @@ class RudeChatClient:
                         case "477": self.prtcl_477(tokens)
                         case "482": self.prtcl_482(tokens)
                         case "487": self.prtcl_487(tokens)
-                        case "671": await self.prtcl_671(tokens)
+                        case "671": await self.bprtcl_whois_replies(tokens)
                         case "716": self.prtcl_716(tokens)
                         case "900": self.prtcl_900(tokens)
                         case _:
@@ -3395,6 +3395,166 @@ class RudeChatClient:
             new_data["mode"] = f"{new_data['channel']}({new_data['mode']})" if "mode" in new_data else ""
             self.who_user_data[nickname] = new_data
 
+    # Combined Handlers
+    async def bprtcl_who_replies(self, tokens):
+        if self.log_on:
+            logging.debug(f"WHO Tokens: {tokens}")
+        if not hasattr(self, 'who_details'):
+            self.who_details = []
+
+        # Helper method to compile WHO data.
+        def update_user_data(nickname, new_data):
+            # Check if the user already exists in who_user_data
+            if nickname in self.who_user_data:
+                user_data = self.who_user_data[nickname]
+                
+                # Update the "shared-channels"
+                if "channel" in new_data:
+                    # Ensure "shared-channels" is a string
+                    if "shared-channels" not in user_data:
+                        user_data["shared-channels"] = user_data.get("channel", new_data["channel"])
+                    elif new_data["channel"] not in user_data["shared-channels"].split(", "):
+                        # Append the new channel to the string if it's not already included
+                        user_data["shared-channels"] += f", {new_data['channel']}"
+
+                # Update other fields in user_data
+                for key, value in new_data.items():
+                    if key not in {"shared-channels", "mode"} and (key not in user_data or user_data[key] != value):
+                        user_data[key] = value
+                
+                # Update the "mode" field
+                if "mode" in new_data and "channel" in new_data:
+                    # Only proceed if the mode is not empty
+                    if new_data["mode"]:
+                        channel_mode = f"{new_data['channel']}({new_data['mode']})"
+                        
+                        # Initialize "mode" as an empty string if not already present or inconsistently formatted
+                        if "mode" not in user_data or user_data["mode"] == "":
+                            data = f"No Modes"
+                            user_data["mode"] = data
+                        else:
+                            existing_modes = user_data["mode"].split(", ")
+                            # Append only if this channel_mode isn't already present
+                            if channel_mode not in existing_modes:
+                                user_data["mode"] += f", {channel_mode}"
+
+            else:
+                # Initialize new user data with "shared-channels" and "mode" as strings
+                new_data["shared-channels"] = new_data.get("channel", "")
+                new_data["mode"] = f"{new_data['channel']}({new_data['mode']})" if "mode" in new_data else ""
+                self.who_user_data[nickname] = new_data
+
+        try:
+            if (tokens.command == "315"):
+                messages = []
+                for details in self.who_details:
+                    message = f"User {details['nickname']} ({details['username']}@{details['host']}) on {details['server']} in {details['channel']} - Status: {details['status']} ({details['mode']}) {details['who_message']}"
+                    messages.append(message)
+                final_message = "\n".join(messages)
+                if self.who_user_request:
+                    self.gui.insert_text_widget(f"{final_message}\n")
+                    self.who_user_request = False
+
+                # Reset the who_details for future use
+                self.who_details = []
+            else:
+                channel = tokens.params[1]
+                username = tokens.params[2]
+                host = tokens.params[3]
+                server = tokens.params[4]
+                nickname = tokens.params[5]
+                status = tokens.params[6]
+                mode_state = status[1:] if len(status) > 1 else ""
+                account = ""
+                who_message = ""
+
+                # Determine if the user is away
+                away_status = "Away" if status.startswith('G') else "Active"
+                self._who_reply_data_handler(away_status, nickname)
+
+                user_details = {}
+
+                match tokens.command:
+                    case "352":
+                        who_message = tokens.params[7]
+
+                        user_details = {
+                            "nickname": nickname,
+                            "username": username,
+                            "host": host,
+                            "server": server,
+                            "channel": channel,
+                            "status": away_status,
+                            "mode": mode_state,
+                            "who_message": who_message
+                        }
+                    case "354":
+                        account = tokens.params[8]
+                        who_message = tokens.params[9]
+
+                        user_details = {
+                            "nickname": nickname,
+                            "username": username,
+                            "host": host,
+                            "server": server,
+                            "channel": channel,
+                            "status": away_status,
+                            "mode": mode_state,
+                            "account": account,
+                            "who_message": who_message
+                        }
+
+                update_user_data(nickname, user_details)
+                self.who_details.append(user_details)
+
+                if (tokens.command == "354"): self.cache_accountname(nickname, account)
+        except Exception as e:
+            logging.error(f"Error in bprtcl_who_replies ({tokens.command}): {e}")
+
+    async def bprtcl_whois_replies(self, tokens):
+        nickname = tokens.params[1]
+        info = tokens.params[2]
+        nick = nickname in self.whois_data
+
+        try:
+            match tokens.command:
+                case "301":
+                    if not nick: self.whois_data[nickname] = {}
+                    self.whois_data[nickname]["Away"] = info
+                    if nickname in self.away_users_dict: self.away_users_dict[nickname] = info
+                case "311": 
+                    self.whois_data[nickname] = {"Username": info, "Hostname": tokens.params[3], "Realname": tokens.params[5]}
+                case "312": 
+                    if nick: self.whois_data[nickname]["Server"] = info
+                case "313":
+                    if nick: self.whois_data[nickname]["Operator"] = info
+                case "317":
+                    if nick: self.whois_data[nickname]["Idle Time"] = str(timedelta(seconds=int(info)))
+                case "318":
+                    if self.whois_user_request:
+                        if nick: whois_response = f"WHOIS for {nickname}:\n"
+                        for key, value in self.whois_data[nickname].items():
+                            whois_response += f"{key}: {value}\n"
+
+                        # Generate and append the /ignore suggestion
+                        ignore_suggestion = f"*!{self.whois_data[nickname]['Username']}@{self.whois_data[nickname]['Hostname']}"
+                        whois_response += f"\nSuggested /ignore mask: {ignore_suggestion}\n"
+
+                        self.whois_display(whois_response)
+                        await self.save_whois_to_file(nickname)
+                case "319":
+                    self.whois_data[nickname]["Channels"] = info
+                case "330":
+                    if not nick: self.whois_data[nickname] = {}
+                    self.whois_data[nickname]["Logged In As"] = info
+                case "338":
+                    self.whois_data[nickname]["Actual IP"] = info
+                case "671": 
+                    self.whois_data[nickname]["Secure Connection"] = info
+
+        except Exception as e:
+            logging.error(f"Error in bprtcl_whois_replies ({tokens.command}): {e}")
+
     # Protocol Handlers
     def prtcl_ACCOUNT(self, tokens):
         """Handle the ACCOUNT message from the server and update accountname cache."""
@@ -4233,20 +4393,6 @@ class RudeChatClient:
         except Exception as e:
             logging.error(f"Error in handle_global_users_info: {e}")
 
-    async def prtcl_301(self, tokens):
-        """RPL_AWAY"""
-        nickname = tokens.params[1] 
-
-        try:
-            away_message = tokens.params[2]
-            if nickname not in self.whois_data:
-                self.whois_data[nickname] = {}  
-            self.whois_data[nickname]["Away"] = away_message
-            if nickname in self.away_users_dict:
-                self.away_users_dict[nickname] = away_message
-        except Exception as e:
-            logging.error(f"Error in handle_whois_replies command 301: {e}")
-
     def prtcl_307(self, tokens):
         """RPL_WHOISREGNICK"""
         try:
@@ -4259,107 +4405,6 @@ class RudeChatClient:
             self.add_server_message(data)
         except Exception as e:
             logging.error(f"Error in command_307: {e}")
-
-    async def prtcl_311(self, tokens):
-        """RPL_WHOISUSER"""
-        nickname = tokens.params[1]
-
-        try:
-            username = tokens.params[2]
-            hostname = tokens.params[3]
-            realname = tokens.params[5]
-            self.whois_data[nickname] = {"Username": username, "Hostname": hostname, "Realname": realname}
-        except Exception as e:
-            logging.error(f"Error in handle_whois_replies command 311: {e}")
-
-    async def prtcl_312(self, tokens):
-        """RPL_WHOISSERVER"""
-        nickname = tokens.params[1]
-
-        try:
-            server_info = tokens.params[2]
-            if self.whois_data.get(nickname):
-                self.whois_data[nickname]["Server"] = server_info
-        except Exception as e:
-            logging.error(f"Error in handle_whois_replies command 312: {e}")
-
-    async def prtcl_313(self, tokens):
-        """RPL_WHOISOPERATOR"""
-        nickname = tokens.params[1] 
-
-        try:
-            operator_info = tokens.params[2]
-            if self.whois_data.get(nickname):
-                self.whois_data[nickname]["Operator"] = operator_info
-        except Exception as e:
-            logging.error(f"Error in handle_whois_replies command 313: {e}")
-
-    async def prtcl_315(self, tokens):
-        """RPL_ENDOFWHO"""
-        if self.log_on:
-            logging.debug(f"WHO Tokens: {tokens}")
-        if not hasattr(self, 'who_details'):
-            self.who_details = []
-
-        try:
-            messages = []
-            for details in self.who_details:
-                message = f"User {details['nickname']} ({details['username']}@{details['host']}) on {details['server']} in {details['channel']} - Status: {details['status']} ({details['mode']}) {details['who_message']}"
-                messages.append(message)
-            
-            final_message = "\n".join(messages)
-            if self.who_user_request:
-                self.gui.insert_text_widget(f"{final_message}\n")
-                self.who_user_request = False
-
-            # Reset the who_details for future use
-            self.who_details = []
-
-        except Exception as e:
-            logging.error(f"Error in handle_who_reply command 315: {e}")
-
-    async def prtcl_317(self, tokens):
-        """RPL_WHOISIDLE"""
-        nickname = tokens.params[1] 
-
-        try:
-            idle_time_seconds = int(tokens.params[2])
-            idle_time = str(timedelta(seconds=idle_time_seconds))
-            if self.whois_data.get(nickname):
-                self.whois_data[nickname]["Idle Time"] = idle_time
-        except Exception as e:
-            logging.error(f"Error in handle_whois_replies command 317: {e}")
-
-    async def prtcl_318(self, tokens):
-        """RPL_ENDOFWHOIS"""
-        nickname = tokens.params[1] 
-
-        try:
-            if self.whois_user_request:
-                if self.whois_data.get(nickname):
-                    whois_response = f"WHOIS for {nickname}:\n"
-                    for key, value in self.whois_data[nickname].items():
-                        whois_response += f"{key}: {value}\n"
-
-                    # Generate and append the /ignore suggestion
-                    ignore_suggestion = f"*!{self.whois_data[nickname]['Username']}@{self.whois_data[nickname]['Hostname']}"
-                    whois_response += f"\nSuggested /ignore mask: {ignore_suggestion}\n"
-
-                    self.whois_display(whois_response)
-                    await self.save_whois_to_file(nickname)
-
-        except Exception as e:
-            logging.error(f"Error in handle_whois_replies command 318: {e}")
-
-    async def prtcl_319(self, tokens):
-        """RPL_WHOISCHANNELS"""
-        nickname = tokens.params[1] 
-
-        try:
-            channels = tokens.params[2]
-            self.whois_data[nickname]["Channels"] = channels
-        except Exception as e:
-            logging.error(f"Error in handle_whois_replies command 319: {e}")
 
     async def prtcl_322(self, tokens):
         """RPL_LIST"""
@@ -4421,70 +4466,9 @@ class RudeChatClient:
         except Exception as e:
             logging.error(f"Exception in handle_creation_time: {e}")
 
-    async def prtcl_330(self, tokens):
-        """RPL_WHOISACCOUNT"""
-        nickname = tokens.params[1] 
-
-        try:
-            logged_in_as = tokens.params[2]
-            if nickname not in self.whois_data:
-                self.whois_data[nickname] = {}
-            self.whois_data[nickname]["Logged In As"] = logged_in_as
-        except Exception as e:
-            logging.error(f"Error in handle_whois_replies command 330: {e}")
-
-    async def prtcl_338(self, tokens):
-        """RPL_WHOISACTUALLY"""
-        nickname = tokens.params[1] 
-
-        try:
-            ip_address = tokens.params[2]
-            self.whois_data[nickname]["Actual IP"] = ip_address
-        except Exception as e:
-            logging.error(f"Error in handle_whois_replies command 338: {e}")
-
     def prtcl_341(self, tokens):
         """RPL_INVITING"""
         self.add_server_message(f"{tokens.source} {' '.join(tokens.params)}\n")
-
-    async def prtcl_352(self, tokens):
-        """RPL_WHOREPLY"""
-        if self.log_on:
-            logging.debug(f"WHO Tokens: {tokens}")
-        if not hasattr(self, 'who_details'):
-            self.who_details = []
-
-        try:
-            # Parse the WHO reply
-            channel = tokens.params[1]
-            username = tokens.params[2]
-            host = tokens.params[3]
-            server = tokens.params[4]
-            nickname = tokens.params[5]
-            status = tokens.params[6]
-            mode_state = status[1:] if len(status) > 1 else ""
-            who_message = tokens.params[7]
-
-            # Determine if the user is away
-            away_status = "Away" if status.startswith('G') else "Active"
-            self._who_reply_data_handler(away_status, nickname)
-
-            user_details = {
-                "nickname": nickname,
-                "username": username,
-                "host": host,
-                "server": server,
-                "channel": channel,
-                "status": away_status,
-                "mode": mode_state,
-                "who_message": who_message
-            }
-            
-            self.update_user_data(nickname, user_details)
-            self.who_details.append(user_details)
-
-        except Exception as e:
-            logging.error(f"Error in handle_who_reply command 352: {e}")
 
     def prtcl_353(self, tokens):
         """RPL_NAMREPLY"""
@@ -4502,48 +4486,6 @@ class RudeChatClient:
 
         except Exception as e:
             logging.error(f"Error in handle_names_list command 353: {e}")
-
-    async def prtcl_354(self, tokens):
-        """RPL_WHOSPCRPL"""
-        if self.log_on:
-            logging.debug(f"WHO Tokens: {tokens}")
-        if not hasattr(self, 'who_details'):
-            self.who_details = []
-
-        try:
-            # Parse the WHOX reply
-            channel = tokens.params[1]
-            username = tokens.params[2]
-            host = tokens.params[3]
-            server = tokens.params[4]
-            nickname = tokens.params[5]
-            status = tokens.params[6]
-            mode_state = status[1:] if len(status) > 1 else ""
-            account = tokens.params[8]
-            who_message = tokens.params[9]
-
-            # Determine if the user is away
-            away_status = "Away" if status.startswith('G') else "Active"
-            self._who_reply_data_handler(away_status, nickname)
-
-            user_details = {
-                "nickname": nickname,
-                "username": username,
-                "host": host,
-                "server": server,
-                "channel": channel,
-                "status": away_status,
-                "mode": mode_state,
-                "account": account,
-                "who_message": who_message
-            }
-            
-            self.update_user_data(nickname, user_details)
-            self.who_details.append(user_details)
-            self.cache_accountname(nickname, account)
-
-        except Exception as e:
-            logging.error(f"Error in handle_who_reply command 354: {e}")
 
     def prtcl_366(self, tokens):
         """RPL_ENDOFNAMES"""
@@ -4817,16 +4759,6 @@ class RudeChatClient:
             self.add_server_message(data)
         except Exception as e:
             logging.error(f"Exception in command_487: {e}")
-
-    async def prtcl_671(self, tokens):
-        """RPL_WHOISSECURE"""
-        nickname = tokens.params[1] 
-
-        try:
-            secure_message = tokens.params[2]
-            self.whois_data[nickname]["Secure Connection"] = secure_message
-        except Exception as e:
-            logging.error(f"Error in handle_whois_replies command 671: {e}")
 
     def prtcl_716(self, tokens):
         """RPL_TARGUMODEG"""

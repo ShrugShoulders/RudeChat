@@ -68,7 +68,7 @@ class RudeUserListWidget(QListWidget):
             modes_to_strip = ''.join(self.gui.irc_client.mode_values)
             user = selected_item.text().lstrip(modes_to_strip)
             self.gui.irc_client.whois_user_request = True
-            self.gui.irc_client.loop.create_task(self.gui.irc_client.whois(user))
+            self.gui.irc_client.loop.create_task(self.gui.irc_client.cmd_whois(user))
 
     def ignore_user(self):
         selected_item = self.currentItem()
