@@ -3821,13 +3821,6 @@ class RudeChatClient:
             except Exception as e:
                 logging.error(f"Error3 in handle_cap NEW block: {e}")
 
-    def bprtcl_to_client(self, tokens):
-        """Handle fatal errors"""
-        try:
-            self.gui.insert_text_widget()
-        except Exception as e:
-            logging.error(f"Exception in handle_error: {e}")
-
     async def prtcl_INVITE(self, tokens):
         """Handle inviting a user to a channel"""
         try:
@@ -4385,13 +4378,6 @@ class RudeChatClient:
             logging.error(f"Error in handle_isupport: {e}")
 
         self.get_mode_lists()
-
-    def bprtcl_to_client(self, tokens):
-        """RPL_STATSCONN"""
-        try:
-            self.gui.insert_text_widget()
-        except Exception as e:
-            logging.error(f"Error in handle_connection_info: {e}")
 
     def prtcl_266(self, tokens):
         """RPL_GLOBALUSERS"""
