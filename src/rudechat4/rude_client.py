@@ -1,14 +1,3 @@
-"""
-COLLAPSIBLE FUNCTIONS MAYBE (in terms of function)
-[WALLOPS, 341, 464, 716]
-[431, 461]
-[250, 266]
-[312, 313, 317, 319, 330, 338, 671]
-[324, 328]
-[378, 379, 477]
-[391, 396, 403, 404, 433?, 442, 443, 472, 482, 487] 
-"""
-
 #!/usr/bin/env python3
 from rudechat4.shared_imports import *
 from rudechat4.global_variables import *
@@ -3406,54 +3395,7 @@ class RudeChatClient:
             new_data["mode"] = f"{new_data['channel']}({new_data['mode']})" if "mode" in new_data else ""
             self.who_user_data[nickname] = new_data
 
-    # Generalised Handlers
-    def bprtcl_to_server(self, tokens):
-        match tokens.command:
-            case "WALLOPS": data = f"{tokens.source}: {tokens.params[0]}\n"
-            case "324": data = f"Modes for {tokens.params[1]}: {tokens.params[2]}\n"
-            case "328": data = f"URL for {tokens.params[1]} {tokens.params[2]}\n"
-            case "341": data = f"{tokens.source} {' '.join(tokens.params)}\n"
-            case "378": data = f"{tokens.source} {tokens.params[0]} {tokens.params[1]}: {tokens.params[2]}\n"
-            case "379": data = f"{tokens.source} {tokens.params[0]}: {tokens.params[1]} {tokens.params[2]}\n"
-            case "396": data = f"Your host is now hidden as: {tokens.params[1]}. Reason: {tokens.params[2]}\n"
-            case "403": data = f"{tokens.params[1]}: {tokens.params[2]}\n"
-            case "404": data = f"{tokens.params[1]}: {tokens.params[2]}"
-            case "432": data = f"{tokens.source} {tokens.params[0]}: {f"""{tokens.params[2]}"""}\n"
-            case "442": data = f"{tokens.params[1]}: {tokens.params[2]}\n"
-            case "443": data = f"{tokens.params[2]}: {tokens.params[3]}\n"
-            case "464": data = f"{tokens.source} {tokens.params[0]} {tokens.params[1]}\n"
-            case "472": data = f"Unknown mode for {tokens.params[1]}: {tokens.params[2]}\n"
-            case "482": data = f"{tokens.params[1]}: {tokens.params[2]}\n"
-            case "487": data = f"{tokens.source} {tokens.params[0]}: {f"""{tokens.params[1]}"""}\n"
-            case "716": data = f"{tokens.source}: {tokens.params[1]} {tokens.params[2]}\n"
-        
-        self.add_server_message(data)
-
-    def bprtcl_to_client(self, tokens):
-        match tokens.command:
-            case "250": data = f"Server Info: {tokens.params[-1]}\n"
-            case "266": data = f"Server Users Info: {tokens.params[-1]}\n"
-            case "391": data = f"Server Time from {tokens.params[0]}: {tokens.params[1]}"
-            case "431" | "461": data = f"{tokens.source} {" ".join(tokens.params)}\n"
-            case "477": data = f"Cannot join channel {tokens.params[1]}: {tokens.params[2]}\n"
-
-        self.gui.insert_text_widget(data)
-
-    async def bprtcl_whois_data(self, tokens):
-        nickname = tokens.params[1]
-
-        info = tokens.params[2]
-        if self.whois_data.get(nickname):
-            match tokens.command:
-                case "312": self.whois_data[nickname]["Server"] = info
-                case "313": self.whois_data[nickname]["Operator"] = info
-                case "317": self.whois_data[nickname]["Idle Time"] = str(timedelta(seconds=int(info)))
-                case "319": self.whois_data[nickname]["Channels"] = info
-                case "330": self.whois_data[nickname]["Logged In As"] = info
-                case "338": self.whois_data[nickname]["Actual IP"] = info
-                case "671": self.whois_data[nickname]["Secure Connection"] = info
-
-    # Individual Protocol Handlers
+    # Protocol Handlers
     def prtcl_ACCOUNT(self, tokens):
         """Handle the ACCOUNT message from the server and update accountname cache."""
         if self.log_on:
@@ -4256,7 +4198,8 @@ class RudeChatClient:
     def prtcl_250(self, tokens):
         """RPL_STATSCONN"""
         try:
-            self.gui.insert_text_widget(f"Server Info: {tokens.params[-1]}\n")
+            connection_info = tokens.params[-1]  # Assumes the connection info is the last parameter
+            self.gui.insert_text_widget(f"Server Info: {connection_info}\n")
         except Exception as e:
             logging.error(f"Error in handle_connection_info: {e}")
 
@@ -4285,7 +4228,8 @@ class RudeChatClient:
     def prtcl_266(self, tokens):
         """RPL_GLOBALUSERS"""
         try:
-            self.gui.insert_text_widget(f"Server Users Info: {tokens.params[-1]}\n")
+            global_users_info = tokens.params[-1]  # Assumes the global users info is the last parameter
+            self.gui.insert_text_widget(f"Server Users Info: {global_users_info}\n")
         except Exception as e:
             logging.error(f"Error in handle_global_users_info: {e}")
 
@@ -4652,7 +4596,8 @@ class RudeChatClient:
     def prtcl_372(self, tokens):
         """RPL_MOTD"""
         try:
-            self.motd_lines.append(tokens.params[-1])
+            motd_line = tokens.params[-1]  # Assumes the MOTD line is the last parameter
+            self.motd_lines.append(motd_line)
         except Exception as e:
             logging.error(f"Error in handle_motd_line: {e}")
 
