@@ -1,5 +1,13 @@
-from setuptools import setup, find_packages
+from setuptools import setup, find_namespace_packages
 import platform
+
+PKGS = [
+    'rudechat4',
+    'rudechat4.Client',
+    'rudechat4.Components',
+    'rudechat4.GUI',
+    'rudechat4.Util'
+]
 
 VERSION = '4.1.1'
 APP = ['src/rudechat4/__main__.py']
@@ -21,7 +29,7 @@ def isMac():
     return platform.system() == 'Darwin'
 
 setup(
-    packages = find_packages(where='src'),
+    packages = find_namespace_packages(where='src'),
     package_dir={"": "src"},
     include_package_data=True,
     scripts=["src/rudechat4/__main__.py"],
