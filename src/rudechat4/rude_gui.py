@@ -1022,14 +1022,14 @@ class RudeGui(QWidget):
                 self.user_selector_label.setStyleSheet("color: red;")
             else:
                 user_num = len(self.irc_client.channel_users.get(self.irc_client.current_channel, []))
-                
+
                 if user_num == 0:
                     user_num = self.user_selector_list.count()
 
                 back_text = f"Users ({user_num})"
                 self.user_selector_label.setText(back_text)
                 self.user_selector_label.setStyleSheet(f"color: {self.window_fg};")
-                
+
                 if self.irc_client.server_name in self.irc_client.away_servers:
                     self.irc_client.away_servers.remove(self.irc_client.server_name)
 
@@ -1091,7 +1091,7 @@ class RudeGui(QWidget):
         if usrchannel in self.pop_out_windows:
             # Get the list of windows for the user channel
             windows_list = self.pop_out_windows[usrchannel]
-            
+
             if windows_list:
                 # Use the first window in the list
                 window = windows_list[0]
@@ -1305,7 +1305,7 @@ class RudeGui(QWidget):
     def escape_color_codes(self, line):
         # Escape color codes in the string
         escaped_line = re.sub(r'\\x([0-9a-fA-F]{2})', lambda match: bytes.fromhex(match.group(1)).decode('utf-8'), line)
-        
+
         return escaped_line
 
     # Event Handling
@@ -1362,7 +1362,7 @@ class RudeGui(QWidget):
 
                 # Store the foreground and background colors for the selected server
                 self.server_colors[selected_server_index] = {'fg': self.list_server_fg, 'bg': self.list_channel_current_bg}
-                
+
                 if self.previous_server_index is not None:
                     if self.previous_server_index != selected_server_index:
                         # Check if the previous server color is not a mention or activity highlight before updating
@@ -1610,7 +1610,7 @@ class RudeGui(QWidget):
             fmt = QTextCharFormat()
             fmt.setFontFamily(self.chat_font_family)
             fmt.setFontPointSize(int(self.chat_font_size))
-            
+
             if attr["bold"]:
                 #fmt.setFontFamily("Courier") # For bold testing
                 fmt.setFontWeight(QFont.Weight.Bold)
@@ -1620,17 +1620,17 @@ class RudeGui(QWidget):
                 fmt.setFontUnderline(True)
             if attr["strikethrough"]:
                 fmt.setFontStrikeOut(True)
-            
+
             if attr["colour"] != 0:
                 irc_color_code = f"{attr['colour']:02d}"
                 hex_color = self.irc_colors.get(irc_color_code, 'white')
                 fmt.setForeground(QColor(hex_color))
-            
+
             if attr["background"] != 1:
                 irc_background_code = f"{attr['background']:02d}"
                 hex_background = self.irc_colors.get(irc_background_code, 'black')
                 fmt.setBackground(QColor(hex_background))
-            
+
             return fmt
 
         except Exception as e:
@@ -1647,7 +1647,7 @@ class RudeGui(QWidget):
                 char_format.setAnchorHref(url)
             except Exception as e:
                 logging.error(f"Error1 in tag_urls: {e}")
-                
+
             try:
                 char_format.setForeground(QColor("blue"))
                 char_format.setFontUnderline(True)
@@ -1760,7 +1760,7 @@ class RudeGui(QWidget):
 
             # Apply formatting
             cursor = self.chat_box.textCursor()
-            
+
             cursor.setPosition(start_position)
 
             cursor.setPosition(end_position, QTextCursor.MoveMode.KeepAnchor)
@@ -1798,7 +1798,7 @@ class RudeGui(QWidget):
             r = random.randint(50, 255)
             g = random.randint(50, 255)
             b = random.randint(50, 255)
-            
+
             if max(r, g, b) - min(r, g, b) > 50:
                 return "#{:02x}{:02x}{:02x}".format(r, g, b)
 
@@ -1823,10 +1823,10 @@ class RudeGui(QWidget):
                 else:
                     # Reset the foreground color 
                     user_item.setForeground(QColor(self.list_user_fg))
-            
+
             # Update the UI to reflect changes
             self.user_selector_list.update()
-            
+
         except Exception as e:
             logging.error(f"Exception in highlight_away_users: {e}")
 
@@ -1891,7 +1891,7 @@ class RudeGui(QWidget):
         except Exception as e:
             logging.error(f"An unexpected error occurred while loading nickname colors: {e}. Returning an empty dictionary.")
             return {}
-        
+
     def save_nickname_colors(self):
         clean_nicks = clean_nicknames(self.nickname_colors)
         nickname_colors_path = os.path.join(G_CONFIG_DIR, 'nickname_colours.json')
@@ -1930,7 +1930,7 @@ class RudeGui(QWidget):
             clicked_channel = clicked_item.text()
             if self.log_on:
                 logging.debug(f"Clicked Channel: {clicked_channel}")
-            
+
             self.switch_channel(clicked_channel)
             if self.log_on:
                 logging.debug(f"Switching channels...")

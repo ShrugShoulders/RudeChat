@@ -7,7 +7,7 @@ from rudechat4.GUI.nick_editor import NickEditor
 class RudeColours(QWidget):
     def __init__(self):
         super().__init__()
-        
+
         self.resize(350, 500)
 
         self.layout = QVBoxLayout(self)
@@ -60,7 +60,7 @@ class RudeColours(QWidget):
         self.edit_button.setEnabled(False)
         self.edit_button.clicked.connect(self.edit_option)
         self.buttons.addWidget(self.edit_button)
-        
+
         self.delete_button = QPushButton("Delete", self)
         self.delete_button.clicked.connect(self.delete_option)
         self.buttons.addWidget(self.delete_button)
@@ -126,10 +126,10 @@ class RudeColours(QWidget):
     def filter_list(self, event):
         # Get the search query
         query = self.search_bar.text().lower()
-        
+
         # Filter the color options by the search query
         filtered_options = {key: value for key, value in self.color_options.items() if query in key.lower()}
-        
+
         # Update the listbox with filtered results
         self.update_list(filtered_options)
 

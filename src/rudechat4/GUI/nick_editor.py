@@ -17,7 +17,7 @@ class NickEditor(QWidget):
         self.layout = QGridLayout(self)
 
         self.create_widgets()
-    
+
     def create_widgets(self):
         self.nick_label = QLabel("Nickname")
         self.nick_input = QLineEdit()
@@ -39,7 +39,7 @@ class NickEditor(QWidget):
 
         self.save_button = QPushButton("Save")
         self.save_button.clicked.connect(self.save)
-        
+
         self.layout.addWidget(self.save_button, 3, 0, 1, 3)
 
     def pick_colour(self):

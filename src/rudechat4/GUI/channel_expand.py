@@ -56,6 +56,6 @@ class ChannelExp(QWidget):
 
         for i in range (0, self.channel_list.count()):
             result.append(self.channel_list.item(i).text())
-        
+
         self.set(','.join(result))
         self.close()

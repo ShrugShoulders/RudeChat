@@ -110,25 +110,25 @@ class TabEventFilter(QObject):
 
     def find_closest_match(self, input_text, user_list):
         """Returns the closest match to input_text from user_list (case insensitive), after stripping mode prefixes."""
-        
+
         input_text = input_text.lower()
-        
+
         # Strip any mode characters
         modes_to_strip = ''.join(self.gui.irc_client.mode_values)
-        
+
         # Remove any leading modes from each username in the list
         def strip_modes(username):
             for mode in modes_to_strip:
                 if username.startswith(mode):
                     username = username[1:]
             return username
-        
+
         # Get matches after stripping modes
         matches = [
             user for user in user_list 
             if strip_modes(user).lower().startswith(input_text)
         ]
-        
+
         # Strip modes from the match
         matched_nick = matches[0] if matches else None
         if matched_nick is None:
@@ -553,7 +553,7 @@ class RudePopout(QObject):
             fmt = QTextCharFormat()
             fmt.setFontFamily(self.parentGui.chat_font_family)
             fmt.setFontPointSize(int(self.parentGui.chat_font_size))
-            
+
             if attr["bold"]:
                 fmt.setFontWeight(2)
             if attr["italic"]:
@@ -562,17 +562,17 @@ class RudePopout(QObject):
                 fmt.setFontUnderline(True)
             if attr["strikethrough"]:
                 fmt.setFontStrikeOut(True)
-            
+
             if attr["colour"] != 0:
                 irc_color_code = f"{attr['colour']:02d}"
                 hex_color = self.irc_colors.get(irc_color_code, 'white')
                 fmt.setForeground(QColor(hex_color))
-            
+
             if attr["background"] != 1:
                 irc_background_code = f"{attr['background']:02d}"
                 hex_background = self.irc_colors.get(irc_background_code, 'black')
                 fmt.setBackground(QColor(hex_background))
-            
+
             return fmt
 
         except Exception as e:
@@ -593,7 +593,7 @@ class RudePopout(QObject):
                 char_format.setAnchorHref(url)
             except Exception as e:
                 logging.error(f"Error1 in tag_urls: {e}")
-                
+
             try:
                 char_format.setForeground(QColor("blue"))
                 char_format.setFontUnderline(True)
@@ -770,10 +770,10 @@ class RudePopout(QObject):
                 else:
                     # Reset the foreground color 
                     user_item.setForeground(QColor(self.parentGui.list_user_fg))
-            
+
             # Update the UI to reflect changes
             self.user_list.update()
-            
+
         except Exception as e:
             logging.error(f"Exception in highlight_away_users: {e}")
 
@@ -892,6 +892,6 @@ class RudePopout(QObject):
             r = random.randint(50, 255)
             g = random.randint(50, 255)
             b = random.randint(50, 255)
-            
+
             if max(r, g, b) - min(r, g, b) > 50:
                 return "#{:02x}{:02x}{:02x}".format(r, g, b)

@@ -126,7 +126,7 @@ class RudeChatClient:
     def reload_config(self, config_file):
         config = configparser.ConfigParser()
         config.read(config_file)
-        
+
         # Reload specific variables
         self.auto_join_channels = config.get('IRC', 'auto_join_channels', fallback=None).split(',')
         self.mention_note_color = config.get('IRC', 'mention_note_color', fallback='red')
@@ -174,7 +174,7 @@ class RudeChatClient:
                 try:
                     for nickname in list(self.away_users_dict.keys()):
                         away_message = self.away_users_dict.get(nickname, "")
-                        
+
                         if not away_message:
                             if self.log_on:
                                 logging.info(f"Sending WHOIS for {nickname}")
@@ -200,7 +200,7 @@ class RudeChatClient:
 
     def save_away_users_to_file(self):
         file_path = os.path.join(G_CONFIG_DIR, f'{self.server_name}_away_users.json')
-        
+
         with open(file_path, 'w') as file:
             # Write the dictionary as a JSON object
             json.dump(self.away_users_dict, file, indent=4)
@@ -390,7 +390,7 @@ class RudeChatClient:
         # Add the channel entry if it doesn't exist
         if channel not in self.channel_messages[self.server]:
             self.channel_messages[self.server][channel] = []
-            
+
         # Check if the channel is already in the list of joined channels
         if channel not in self.joined_channels:
             self.joined_channels.append(channel)
@@ -683,18 +683,18 @@ class RudeChatClient:
             if self.writer is None:
                 logging.warning("send_message called, but self.writer is not set.")
                 raise AttributeError("Writer is not initialized.")
-            
+
             if self.log_on:
                 logging.debug("Writing to writer...")
             self.writer.write(f'{message}\r\n'.encode('UTF-8'))
-            
+
             if self.log_on:
                 logging.debug("Draining writer...")
             await asyncio.wait_for(self.writer.drain(), timeout=10)
-            
+
             if self.log_on:
                 logging.info(f"Message sent successfully: {message}")
-        
+
         except (ssl.SSLError, ConnectionResetError, ConnectionRefusedError, 
                 BrokenPipeError, TimeoutError, OSError) as e:
             logging.error(f"{type(e).__name__} in send_message: {e}")
@@ -746,7 +746,7 @@ class RudeChatClient:
         if channel in self.joined_channels:
             self.detached_channels.append(channel)
             self.joined_channels.remove(channel)
-            
+
             # Remove the channel entry from the highlighted_channels dictionary
             if self.server_name in self.highlighted_channels:
                 self.highlighted_channels[self.server_name].pop(channel, None)
@@ -826,7 +826,7 @@ class RudeChatClient:
 
     async def stop_async_loop(self):
         loop = self.loop  # Access the loop from the client object
-        
+
         if loop is None:
             logging.error(f"No existing loop found")
             return
@@ -1207,7 +1207,7 @@ class RudeChatClient:
             ):
                 self.gui.insert_text_widget(action_message)
                 self.gui.highlight_nicknames()
-            
+
             elif (
                 self.server_name in self.gui.popped_out_channels
                 and target in self.gui.popped_out_channels[self.server_name]
@@ -1220,7 +1220,7 @@ class RudeChatClient:
                         window.highlight_nicknames()
                 except Exception as e:
                     logging.error(f"Error Handling Popped Out Windows ACTION command: {e}")
-            
+
             else:
                 # If it's not the currently viewed channel, highlight the channel in green in the Listbox
                 if target != self.current_channel:
@@ -1245,7 +1245,7 @@ class RudeChatClient:
             for server, channels in self.channel_messages.items():
                 # Identify keys to be deleted
                 keys_to_delete = [channel for channel in channels.keys() if channel.startswith('!')]
-                
+
                 # Delete identified keys
                 for key in keys_to_delete:
                     del channels[key]
@@ -1458,7 +1458,7 @@ class RudeChatClient:
     async def notify_user_if_mentioned(self, message, target, sender, timestamp):
         # Compile a regex pattern to match the exact nickname
         pattern = re.compile(r'\b' + re.escape(self.nickname) + r'\b', re.IGNORECASE)
-        
+
         # Check if the exact nickname is mentioned in the message
         if pattern.search(message):
             await self.notify_user_of_mention(self.server, target, sender, message)
@@ -1487,13 +1487,13 @@ class RudeChatClient:
 
     def is_ctcp_command(self, message):
         message = message.strip()
-        
+
         # Check if the message starts and ends with \x01
         if message.startswith('\x01') and message.endswith('\x01'):
             inner_message = message[1:-1].rstrip()  # Strip spaces inside the CTCP markers
             cleaned_message = f'\x01{inner_message}\x01'
             return True
-        
+
         return False
 
     def is_direct_message(self, target):
@@ -1597,14 +1597,14 @@ class RudeChatClient:
         try:
             # Get the second window from the list for the target or sender channel
             windows_list = self.gui.pop_out_windows.get(target) or self.gui.pop_out_windows.get(sender)
-            
+
             if windows_list and len(windows_list) > 1:
                 # Access the second window in the list
                 window = windows_list[1]
-                
+
                 # Format the message
                 formatted_message = f"{timestamp}<{mode_symbol}{sender}> {message}" if self.use_time_stamp else f"<{mode_symbol}{sender}> {message}"
-                
+
                 # Insert the formatted message into the second window
                 window.insert_text(formatted_message)
             else:
@@ -1855,10 +1855,10 @@ class RudeChatClient:
     def update_user_selector_list(self, channel):
         current_users = self.channel_users.get(channel, [])
         sorted_users = self.sort_users(current_users, channel)
-        
+
         # Remove duplicates from the sorted_users list
         unique_users = list(dict.fromkeys(sorted_users))
-        
+
         # Only update the user listbox if the channel is the currently selected channel
         if channel == self.current_channel and self.gui.irc_client == self and self.server_name in self.gui.popped_out_channels and channel not in self.gui.popped_out_channels[self.server_name]:
             # Update the Tkinter Listbox to reflect the current users in the channel
@@ -1867,7 +1867,7 @@ class RudeChatClient:
                 self.gui.user_selector_list.addItem(user)
             self.gui.highlight_away_users()
             self.gui.update_users_label()
-        
+
         if self.server_name in self.gui.popped_out_channels and channel in self.gui.popped_out_channels[self.server_name]:
             try:
                 window_list = self.gui.pop_out_windows.get(channel)
@@ -1928,13 +1928,13 @@ class RudeChatClient:
         """Save WHOIS data for a given nickname to a file."""
         # Construct the full path for the WHOIS directory
         whois_directory = os.path.join(G_CONFIG_DIR, 'whois')
-        
+
         # Create the WHOIS directory if it doesn't exist
         os.makedirs(whois_directory, exist_ok=True)
 
         # Construct the full path for the whois file inside the WHOIS directory
         filename = os.path.join(whois_directory, f'whois_{nickname}.txt')
-        
+
         with open(filename, 'w', encoding='utf-8') as file:
             for key, value in self.whois_data[nickname].items():
                 file.write(f"{key}: {value}\n")
@@ -2075,7 +2075,7 @@ class RudeChatClient:
                         case "002" | "003" | "004" | "251" | "252" | "253" | "254" | "255" | "265": self.server_message_handler(tokens)
                         case "005": pass
                         case "321": pass
-                        case "322":  
+                        case "322":
                             await self.prtcl_322(tokens)
                             try:
                                 await self.gui.channel_window.update_channel_info(tokens.params[1], tokens.params[2], tokens.params[3])
@@ -2542,11 +2542,11 @@ class RudeChatClient:
 
                     # Send the styled line as a message
                     await self.send_message(f'PRIVMSG {channel} :{styled_line}')
-                    
+
                     # Get the mode symbol for the current user
                     user_mode = self.get_user_mode(self.nickname, channel)
                     mode_symbol = self.get_mode_symbol(user_mode) if user_mode else ''
-                    
+
                     # Insert the message into the text widget
                     if self.use_time_stamp:
                         if channel == self.current_channel:
@@ -2576,13 +2576,13 @@ class RudeChatClient:
                     # Run the WHOIS check since the entry is an empty string
                     await self.get_away_user_whois(channel)
                     await asyncio.sleep(0.3)
-                    
+
                     # Re-check the dictionary after the WHOIS call for an updated entry
                     away_message = self.away_users_dict.get(channel, "")
                     if away_message and channel not in self.away_notified:
                         self.gui.insert_text_widget(f"User Is AWAY: {away_message}\n")
                         self.away_notified.add(channel)
-                        
+
                 else:
                     # Directly use the existing away message
                     if channel not in self.away_notified:
@@ -2683,7 +2683,7 @@ class RudeChatClient:
             channel = self.current_channel
             # Split the input into lines
             lines = processed_input.splitlines()
-            
+
             # Check the length of the first line
             first_line = lines[0]
             if len(first_line) > 420:
@@ -2692,7 +2692,7 @@ class RudeChatClient:
             else:
                 # Otherwise, pass the input without chunking
                 message_chunks = [processed_input]
-            
+
             # Send message chunks (green text is applied within send_message_chunks)
             await self.send_message_chunks(message_chunks, channel, timestamp)
         else:
@@ -2741,7 +2741,7 @@ class RudeChatClient:
     def escape_color_codes(self, line):
         # Escape color codes in the string
         escaped_line = re.sub(r'\\x([0-9a-fA-F]{2})', lambda match: bytes.fromhex(match.group(1)).decode('utf-8'), line)
-        
+
         return escaped_line
 
     async def load_ascii_art_macros(self):
@@ -2848,7 +2848,7 @@ class RudeChatClient:
     async def save_ignore_list(self):
         # Construct the full path for the ignore_list.txt
         file_path = os.path.join(G_CONFIG_DIR, 'ignore_list.txt')
-        
+
         async with aiofiles.open(file_path, mode="w", encoding='utf-8') as f:
             for user in self.ignore_list:
                 await f.write(f"{user}\n")
@@ -2856,7 +2856,7 @@ class RudeChatClient:
     async def save_dm_list(self):
         # Construct the full path for the ignore_list.txt
         file_path = os.path.join(G_CONFIG_DIR, f'{self.server_name}_open_dms.txt')
-        
+
         async with aiofiles.open(file_path, mode="w", encoding='utf-8') as f:
             for user in self.dm_list:
                 await f.write(f"{user}\n")
@@ -2864,7 +2864,7 @@ class RudeChatClient:
     def load_ignore_list(self):
         # Construct the full path for the ignore_list.txt
         file_path = os.path.join(G_CONFIG_DIR, 'ignore_list.txt')
-        
+
         if os.path.exists(file_path):
             with open(file_path, "r", encoding='utf-8') as f:
                 self.ignore_list = [line.strip() for line in f.readlines()]
@@ -2876,7 +2876,7 @@ class RudeChatClient:
     def load_dm_list(self):
         # Construct the full path for the ignore_list.txt
         file_path = os.path.join(G_CONFIG_DIR, f'{self.server_name}_open_dms.txt')
-        
+
         if os.path.exists(file_path):
             with open(file_path, "r", encoding='utf-8') as f:
                 self.dm_list = [line.strip() for line in f.readlines()]
@@ -2895,7 +2895,7 @@ class RudeChatClient:
 
     async def append_to_channel_history(self, channel, message, mode_symbol, is_action=False):
         timestamp = datetime.now().strftime('[%H:%M:%S] ')
-        
+
         # Escape color codes in the message
         escaped_message = self.escape_color_codes(message)
         if self.use_time_stamp:
@@ -2956,7 +2956,7 @@ class RudeChatClient:
         max_line_length = max(len(line) for line in combined_message.split('\n'))
 
         top_border = ' ' + '_' * (max_line_length - 2)
-        
+
         # Set the bottom border to match the max line length
         bottom_border = ' ' + '-' * (max_line_length - 2)
 
@@ -2980,10 +2980,10 @@ class RudeChatClient:
 
     def get_fortune_file(self, file_name=None):
         fortune_directory = os.path.join(G_SOURCE_DIR, "Fortune Lists")
-        
+
         if file_name:
             return os.path.join(fortune_directory, file_name + ".txt")
-        
+
         fortune_files = [os.path.join(fortune_directory, f) for f in os.listdir(fortune_directory) if f.endswith('.txt')]
         return random.choice(fortune_files)
 
@@ -3017,7 +3017,7 @@ class RudeChatClient:
         selected_channel = self.current_channel
         wrapped_message = self.wrap_text(message)
         cowsay_output = self.cowsay(wrapped_message)
-        
+
         for line in cowsay_output.split('\n'):
             if self.use_time_stamp == True:
                 formatted_message = f"{timestamp}<{mode_symbol}{self.nickname}> {line}\n"
@@ -3315,7 +3315,7 @@ class RudeChatClient:
         # Check if the user already exists in who_user_data
         if nickname in self.who_user_data:
             user_data = self.who_user_data[nickname]
-            
+
             # Update the "shared-channels"
             if "channel" in new_data:
                 # Ensure "shared-channels" is a string
@@ -3329,13 +3329,13 @@ class RudeChatClient:
             for key, value in new_data.items():
                 if key not in {"shared-channels", "mode"} and (key not in user_data or user_data[key] != value):
                     user_data[key] = value
-            
+
             # Update the "mode" field
             if "mode" in new_data and "channel" in new_data:
                 # Only proceed if the mode is not empty
                 if new_data["mode"]:
                     channel_mode = f"{new_data['channel']}({new_data['mode']})"
-                    
+
                     # Initialize "mode" as an empty string if not already present or inconsistently formatted
                     if "mode" not in user_data or user_data["mode"] == "":
                         data = f"No Modes"
@@ -3482,7 +3482,7 @@ class RudeChatClient:
             # Check if the user already exists in who_user_data
             if nickname in self.who_user_data:
                 user_data = self.who_user_data[nickname]
-                
+
                 # Update the "shared-channels"
                 if "channel" in new_data:
                     # Ensure "shared-channels" is a string
@@ -3496,13 +3496,13 @@ class RudeChatClient:
                 for key, value in new_data.items():
                     if key not in {"shared-channels", "mode"} and (key not in user_data or user_data[key] != value):
                         user_data[key] = value
-                
+
                 # Update the "mode" field
                 if "mode" in new_data and "channel" in new_data:
                     # Only proceed if the mode is not empty
                     if new_data["mode"]:
                         channel_mode = f"{new_data['channel']}({new_data['mode']})"
-                        
+
                         # Initialize "mode" as an empty string if not already present or inconsistently formatted
                         if "mode" not in user_data or user_data["mode"] == "":
                             data = f"No Modes"
@@ -3641,7 +3641,7 @@ class RudeChatClient:
 
             # Parse prefix into nick!user@host
             nick, user_host = self.parse_prefix(prefix)
-            
+
             if accountname == '*':
                 # User logged out, remove from account cache
                 if nick in self.account_cache:
@@ -3828,7 +3828,7 @@ class RudeChatClient:
                         self.gui.trigger_desktop_notification(channel_name=user_info, message_content="is Online!")
                     except Exception as e:
                         logging.error(f"Exception Caught in handle_join.trigger_desktop_notification: {e}")
-                        
+
                     self.friends.online_friends.append(user_info)
 
             # If the user joining is the client's user, return
@@ -3932,7 +3932,7 @@ class RudeChatClient:
             channel = tokens.params[0]
             mode_changes = tokens.params[1]
             users = tokens.params[2:] if len(tokens.params) > 2 else []
-            
+
             user_index = 0
             adding = None
 
@@ -4041,10 +4041,10 @@ class RudeChatClient:
                     if user_with_symbol.lstrip(modes_to_strip) == old_nick:
                         # Extract the mode symbols from the old nickname
                         mode_symbols = ''.join([c for c in user_with_symbol if c in modes_to_strip])
-                        
+
                         # Replace old_nick with new_nick, retaining the mode symbols
                         users[idx] = mode_symbols + new_nick
-                        
+
                         # Update the user listbox for the channel if necessary
                         self.update_user_selector_list(channel)
 
@@ -4055,7 +4055,7 @@ class RudeChatClient:
                             self.channel_messages[self.server][channel] = []
                         if self.show_join_part_quit_nick:
                             self.channel_messages[self.server][channel].append(f"\x0307(⟳)\x0F {old_nick} has changed their nickname to {new_nick}\n")
-                        
+
                         # Insert message into the text widget only if this is the current channel
                         if channel == self.current_channel and self.gui.irc_client == self and self.server_name in self.gui.popped_out_channels and channel not in self.gui.popped_out_channels[self.server_name]:
                             if self.show_join_part_quit_nick:
@@ -4125,12 +4125,12 @@ class RudeChatClient:
             user_mask = tokens.hostmask
             channel = tokens.params[0]
             reason = tokens.params[1] if len(tokens.params) > 1 else None
-            
+
             if reason:
                 part_message = f"\x0304(←)\x0F {user_mask} has parted from channel {channel}: {reason}\n"
             else:
                 part_message = f"\x0304(←)\x0F {user_mask} has parted from channel {channel}\n"
-            
+
             if not self.show_full_hostmask:
                 part_message = part_message.replace(user_mask, user_info)
 
@@ -4249,7 +4249,7 @@ class RudeChatClient:
                     if user_with_symbol.lstrip(modes_to_strip) == user_info:
                         user_found = True
                         del self.channel_users[channel][idx]
-                        
+
                         # Update the message history for the channel
                         if self.server not in self.channel_messages:
                             self.channel_messages[self.server] = {}
@@ -4375,7 +4375,7 @@ class RudeChatClient:
         except Exception as e:
             logging.error(f"Error in save_channel_list_to_file: {e}")
 
-    def prtcl_353(self, tokens):
+    def prtcl_353(self, tokens): # Get list of users in a channel
         """RPL_NAMREPLY"""
         try:
             current_channel = tokens.params[2]
@@ -4430,7 +4430,7 @@ class RudeChatClient:
         """RPL_ENDOFMOTD"""
         try:
             full_motd = "\n".join(self.motd_lines)
-            
+
             if self.server_name in self.motd_dict:
                 self.motd_dict[self.server_name] += full_motd + "\n"
             else:
@@ -4451,7 +4451,7 @@ class RudeChatClient:
                 nickname = tokens.params[1]
                 if nickname in self.away_users_dict:
                     del self.away_users_dict[nickname]
-                
+
                 self.gui.insert_text_widget(f"The nickname '{nickname}' doesn't exist on the server.\n")
             else:
                 if self.log_on:
@@ -4697,24 +4697,24 @@ class RudeChatClient:
                 self.channel_messages[self.server][mentions_channel].append(mention_message)
 
         self.gui.highlight_nicknames()
-                
+
         # Update the GUI to show the new mentions in the mentions channel
         self.gui.insert_and_scroll()
 
     async def cmd_mock(self, args):
-        try:            
+        try:
             if self.use_time_stamp:
                 timestamp = datetime.now().strftime('[%H:%M:%S]')
             else:
                 timestamp = ""
-            
+
             user_mode = self.get_user_mode(self.nickname, self.current_channel)
-            
+
             mode_symbol = self.get_mode_symbol(user_mode) if user_mode else ''
 
             user_input = ' '.join(args[1:])
             genmock = RudeMock(user_input)
-            
+
             mock_em = genmock.generate_mock()
 
             await self.send_message(f"PRIVMSG {self.current_channel} :{mock_em}")
@@ -4723,7 +4723,7 @@ class RudeChatClient:
             self.gui.insert_text_widget(f"{timestamp} <{mode_symbol}{self.nickname}> {mock_em}\n")
 
             self.gui.highlight_nicknames()
-        
+
         except Exception as e:
             logging.error(f"Error in mocker: {e}")
 
@@ -4744,7 +4744,7 @@ class RudeChatClient:
 
         nickname = args[1]
         message = " ".join(args[2:])
-        
+
         # Remove @ and + symbols from the nickname
         nickname = nickname.lstrip(modes_to_strip)
 

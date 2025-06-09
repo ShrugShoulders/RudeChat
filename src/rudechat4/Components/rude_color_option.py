@@ -26,7 +26,7 @@ class RudeColorOption(QWidget):
 
     def text(self):
         return self.inputField.text()
-    
+
     def pickColor(self):
         newColor = QColorDialog.getColor(QColor(self.text()))
 

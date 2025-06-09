@@ -74,7 +74,7 @@ class RudeConfigGui(QScrollArea):
         for section in self.config.sections():
             row_count = 0  # Track row number for grid positioning
             section_frame = QGroupBox(section.title())
-            
+
             section_frame.layout = QGridLayout(section_frame)
             section_frame.layout.setColumnStretch(0, 1)
             section_frame.layout.setColumnStretch(1, 1)
@@ -82,7 +82,7 @@ class RudeConfigGui(QScrollArea):
             for option in self.config.options(section):
                 label = QLabel(section_frame, text=self.label_map.get(option, option)[0])
                 label.setSizePolicy(QSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Preferred))
-                
+
                 label.setAlignment(Qt.AlignmentFlag.AlignRight|Qt.AlignmentFlag.AlignTrailing|Qt.AlignmentFlag.AlignVCenter)
 
                 section_frame.layout.addWidget(label, row_count, 0, 1, 1)
@@ -93,7 +93,7 @@ class RudeConfigGui(QScrollArea):
                         entry.setChecked(self.config.getboolean(section, option))
 
                         section_frame.layout.addWidget(entry, row_count, 1, 1, 2)
-                        
+
                     case 'string':
                         entry = QLineEdit(section_frame)
                         entry.setText(self.config.get(section, option))

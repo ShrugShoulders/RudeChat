@@ -6,7 +6,7 @@ class RudeFriends:
     def __init__(self):
         self.friend_list = []
         self.online_friends = []
-        
+
 
         self.load_friend_list()
 
@@ -62,7 +62,7 @@ class RudeFriends:
         """
         if not self.friend_list:
             return "No users in the watch list."
-        
+
         return "Friends: " + ", ".join(self.friend_list)
 
     def friend_online(self, channel, username):

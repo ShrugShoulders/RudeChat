@@ -10,7 +10,7 @@ class RudeShutdown(QWidget):
         self.read_config()
 
         self.init_layout()
-    
+
     def read_config(self): 
         config_file = os.path.join(G_CONFIG_DIR, 'gui_config.ini')
 

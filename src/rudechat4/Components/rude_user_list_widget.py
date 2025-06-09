@@ -47,7 +47,7 @@ class RudeUserListWidget(QListWidget):
             username = selected_item.text()
             modes_to_strip = ''.join(self.gui.irc_client.mode_values)
             cleaned_nickname = username.lstrip(modes_to_strip)
-            
+
             # Retrieve WHO data if it exists
             if cleaned_nickname in self.gui.irc_client.who_user_data:
                 self.gui.open_user_info(cleaned_nickname)

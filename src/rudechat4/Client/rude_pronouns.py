@@ -233,7 +233,7 @@ def replace_pronouns(text, channel=None):
             r'\bI couldn\'t believe her\b': 'I couldn\'t believe them',
             r'\bI couldn\'t believe him\b': 'I couldn\'t believe them',
             r'\bI don\'t believe her\b': 'I don\'t believe them',
-            r'\bI don\'t believe him\b': 'I don\'t believe them',    
+            r'\bI don\'t believe him\b': 'I don\'t believe them',
             r'\bhe gave her\b': 'they gave them',
             r'\bhe gave him\b': 'they gave them',
             r'\bhe told her\b': 'they told them',
@@ -340,15 +340,15 @@ def replace_pronouns(text, channel=None):
             r'\bgrandpa\b': 'grandparent',
             r'\bguy\b': 'friend',
         }
-        
+
         # Replace specific phrases
         for pattern, replacement in phrases.items():
             text = re.sub(pattern, replacement, text, flags=re.IGNORECASE)
-        
+
         # Replace pronouns
         for pattern, replacement in pronouns.items():
             text = re.sub(pattern, replacement, text, flags=re.IGNORECASE)
-            
+
         return text
 
     else:

@@ -13,7 +13,7 @@ class RudeChannelListWidget(QListWidget):
         """Displays channel list context menu"""
         menu = QMenu(self)
         selected_item = self.currentItem()
-        
+
         if not selected_item:
             return
 
@@ -45,7 +45,7 @@ class RudeChannelListWidget(QListWidget):
             return
         channel_name = item
         reason = f"Bye!"
-        self.gui.irc_client.loop.create_task(self.gui.irc_client.leave_channel(channel_name, reason))    
+        self.gui.irc_client.loop.create_task(self.gui.irc_client.leave_channel(channel_name, reason))
 
     def exit_dm(self, item):
         """Closes a DM from a user"""
