@@ -1,90 +1,25 @@
 #!/usr/bin/env python3
-
 from rudechat4.shared_imports import *
 from rudechat4.global_variables import *
+
 from rudechat4.rude_client import RudeChatClient
-from rudechat4.rude_popout import RudePopout
-from rudechat4.rude_colours import RudeColours
-from rudechat4.rude_config_gui import RudeConfigGui
-from rudechat4.rude_config_server import RudeConfigServer
-from rudechat4.list_window import ChannelListWindow
-from rudechat4.nick_cleaner import clean_nicknames
-from rudechat4.rude_logger import configure_logging
-from rudechat4.rude_text_browser import RudeTextBrowser
-from rudechat4.user_data_display import RudeUserData
-from rudechat4.rude_shutdown import RudeShutdown
 
-class CustomLineEdit(QLineEdit):
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        self.add_shortcuts()
+from rudechat4.Components.rude_channel_list_widget import RudeChannelListWidget
+from rudechat4.Components.rude_message_entry import RudeMessageEntry
+from rudechat4.Components.rude_server_list_widget import RudeServerListWidget
+from rudechat4.Components.rude_text_browser import RudeTextBrowser
+from rudechat4.Components.rude_user_list_widget import *
 
-    def add_shortcuts(self):
-        platform = sys.platform
-        is_mac = platform == "darwin"
-        is_windows = platform.startswith("win")
+from rudechat4.GUI.list_window import ChannelListWindow
+from rudechat4.GUI.rude_colours import RudeColours
+from rudechat4.GUI.rude_config_gui import RudeConfigGui
+from rudechat4.GUI.rude_config_server import RudeConfigServer
+from rudechat4.GUI.rude_popout import RudePopout
+from rudechat4.GUI.rude_shutdown import RudeShutdown
+from rudechat4.GUI.user_data_display import RudeUserData
 
-        # Add shortcuts
-        QShortcut(QKeySequence("Ctrl+B"), self, activated=lambda: self.apply_irc_format("\x02"))  # Bold
-        QShortcut(QKeySequence("Ctrl+I"), self, activated=lambda: self.apply_irc_format("\x1D"))  # Italic
-
-        # Underline → Ctrl+U for Windows + Mac, Ctrl+- otherwise
-        underline_key = "Ctrl+U" if is_mac or is_windows else "Ctrl+N"
-        QShortcut(QKeySequence(underline_key), self, activated=lambda: self.apply_irc_format("\x1F"))
-
-        QShortcut(QKeySequence("Ctrl+S"), self, activated=lambda: self.apply_irc_format("\x1E"))  # Strike Through
-        QShortcut(QKeySequence("Ctrl+/"), self, activated=lambda: self.apply_irc_format("\x16"))  # Inverse
-
-    def contextMenuEvent(self, event):
-        menu = self.createStandardContextMenu()
-
-        color_menu = menu.addMenu("Colors")
-        format_menu = menu.addMenu("Formatting")
-
-        # Group them by 10s
-        grouped_colors = {}
-        for name, code in IRC_COLORS.items():
-            group_label = f"{(int(code) // 10) * 10:02d}–{(int(code) // 10) * 10 + 9:02d}"
-            grouped_colors.setdefault(group_label, []).append((name, code))
-
-        for group, items in grouped_colors.items():
-            group_menu = color_menu.addMenu(group)
-            for name, code in items:
-                action = QAction(name, self)
-                action.triggered.connect(lambda checked, c=code: self.apply_irc_color(c))
-                group_menu.addAction(action)
-
-        for label, code in IRC_FORMAT:
-            action = QAction(label, self)
-            action.triggered.connect(lambda checked, c=code: self.apply_irc_format(c))
-            format_menu.addAction(action)
-
-        menu.exec(event.globalPos())
-
-    def apply_irc_color(self, color_code):
-        cursor = self.cursorPosition()
-        selected_text = self.selectedText()
-
-        if selected_text:
-            color_tagged = f"\x03{color_code}{selected_text}\x03"
-            current_text = self.text()
-            start = self.selectionStart()
-            end = start + len(selected_text)
-            new_text = current_text[:start] + color_tagged + current_text[end:]
-            self.setText(new_text)
-            self.setCursorPosition(start + len(color_tagged))
-
-    def apply_irc_format(self, format_code):
-        selected_text = self.selectedText()
-
-        if selected_text:
-            formatted = f"{format_code}{selected_text}\x0F"
-            current_text = self.text()
-            start = self.selectionStart()
-            end = start + len(selected_text)
-            new_text = current_text[:start] + formatted + current_text[end:]
-            self.setText(new_text)
-            self.setCursorPosition(start + len(formatted))
+from rudechat4.Util.nick_cleaner import clean_nicknames
+from rudechat4.Util.rude_logger import configure_logging
 
 class TabEventFilter(QObject):
     def __init__(self, gui):
@@ -169,180 +104,6 @@ class ArrowKeyEventFilter(QObject):
                 self.parent.show_next_entry()
                 return True
         return super().eventFilter(obj, event)
-
-class RudeChannelListWidget(QListWidget):
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        self.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
-        self.customContextMenuRequested.connect(self.show_context_menu)
-        self.gui = parent
-
-    def show_context_menu(self, pos: QPoint):
-        """Displays channel list context menu"""
-        menu = QMenu(self)
-        selected_item = self.currentItem()
-        
-        if not selected_item:
-            return
-
-        if any(selected_item.text().startswith(prefix) for prefix in self.gui.irc_client.chantypes):
-            remove_action = QAction("Leave Channel", self)
-            remove_action.triggered.connect(lambda _, item=selected_item.text(): self.exit_channel(item))
-        elif selected_item.text().startswith("!"):
-            remove_action = QAction("Close Info", self)
-            remove_action.triggered.connect(lambda _, item=selected_item.text(): self.exit_dm(item))
-        else:
-            remove_action = QAction("Close DM", self)
-            remove_action.triggered.connect(lambda _, item=selected_item.text(): self.exit_dm(item))
-
-
-        # Pop Out Window
-        pop_out_action = QAction("Pop Out", self)
-        pop_out_action.triggered.connect(lambda _, item=selected_item.text(): self.gui.open_pop_out_window(item))
-
-        # Add actions to menu
-        menu.addAction(remove_action)
-        menu.addAction(pop_out_action)
-
-        # Show menu at cursor position
-        menu.exec(self.mapToGlobal(pos))
-
-    def exit_channel(self, item):
-        """Leaves a channel"""
-        if not item:
-            return
-        channel_name = item
-        reason = f"Bye!"
-        self.gui.irc_client.loop.create_task(self.gui.irc_client.leave_channel(channel_name, reason))    
-
-    def exit_dm(self, item):
-        """Closes a DM from a user"""
-        if not item:
-            return
-        self.gui.irc_client.close_dm(item)
-
-class RudeServerListWidget(QListWidget):
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        self.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
-        self.customContextMenuRequested.connect(self.show_context_menu)
-        self.gui = parent
-
-    def show_context_menu(self, pos: QPoint):
-        menu = QMenu(self)
-
-        connect_to_server = QAction("Connect", self)
-        disconnect_from_server = QAction("Disconnect", self)
-
-        connect_to_server.triggered.connect(self.server_connect)
-        disconnect_from_server.triggered.connect(self.server_disconnect)
-
-        menu.addAction(connect_to_server)
-        menu.addAction(disconnect_from_server)
-
-        menu.exec(self.mapToGlobal(pos))
-
-    def server_connect(self):
-        selected_item = self.currentItem()
-        if selected_item:
-            server_name = selected_item.text()
-            self.gui.irc_client.loop.create_task(self.gui.client_connect(server_name))
-
-    def server_disconnect(self):
-        selected_item = self.currentItem()
-        if selected_item:
-            server_name = selected_item.text()
-            self.gui.irc_client.loop.create_task(self.gui.irc_client.disconnect(server_name))
-
-class RudeUserListWidget(QListWidget):
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        self.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
-        self.customContextMenuRequested.connect(self.show_context_menu)
-        self.gui = parent
-
-    def show_context_menu(self, pos: QPoint):
-        """Displays user list context menu"""
-        menu = QMenu(self)
-
-        # Init the actions
-        open_user_dm = QAction("Open DM", self)
-        whois_user = QAction("whois", self)
-        ignore_action = QAction("Ignore User", self)
-        unignore_action = QAction("Unignore User", self)
-        kick_action = QAction("Kick User", self)
-        open_user_data_action = QAction("User Data", self)
-
-        # Connect actions to methods
-        open_user_dm.triggered.connect(self.open_dm_with_user)
-        whois_user.triggered.connect(self.whois_the_user)
-        ignore_action.triggered.connect(self.ignore_user)
-        unignore_action.triggered.connect(self.unignore_user)
-        kick_action.triggered.connect(self.kick_user_from_channel)
-        open_user_data_action.triggered.connect(self.open_user_data_window)
-
-        # Add meu actions
-        menu.addAction(open_user_dm)
-        menu.addAction(whois_user)
-        menu.addAction(ignore_action)
-        menu.addAction(unignore_action)
-        menu.addAction(kick_action)
-        menu.addAction(open_user_data_action)
-
-        # Show menu at cursor position
-        menu.exec(self.mapToGlobal(pos))
-
-    def open_user_data_window(self):
-        try:
-            # Get the user
-            selected_item = self.currentItem()
-            username = selected_item.text()
-            modes_to_strip = ''.join(self.gui.irc_client.mode_values)
-            cleaned_nickname = username.lstrip(modes_to_strip)
-            
-            # Retrieve WHO data if it exists
-            if cleaned_nickname in self.gui.irc_client.who_user_data:
-                self.gui.open_user_info(cleaned_nickname)
-
-        except Exception as e:
-            logging.error(f"Error Showing User Data: {e}")
-
-    def open_dm_with_user(self):
-        """Removes the selected channel from the list."""
-        selected_item = self.currentItem()
-        if selected_item:
-            self.gui.irc_client.loop.create_task(self.gui.irc_client.command_parser(f"/query {selected_item.text()}"))
-
-    def whois_the_user(self):
-        """Runs a whois command on the selected user."""
-        selected_item = self.currentItem()
-        if selected_item:
-            modes_to_strip = ''.join(self.gui.irc_client.mode_values)
-            user = selected_item.text().lstrip(modes_to_strip)
-            self.gui.irc_client.whois_user_request = True
-            self.gui.irc_client.loop.create_task(self.gui.irc_client.whois(user))
-
-    def ignore_user(self):
-        selected_item = self.currentItem()
-        if selected_item:
-            modes_to_strip = ''.join(self.gui.irc_client.mode_values)
-            cleaned_nickname = selected_item.text().lstrip(modes_to_strip)
-            self.gui.irc_client.loop.create_task(self.gui.irc_client.ignore_user_from_gui(cleaned_nickname))
-
-    def unignore_user(self):
-        selected_item = self.currentItem()
-        if selected_item:
-            modes_to_strip = ''.join(self.gui.irc_client.mode_values)
-            cleaned_nickname = selected_item.text().lstrip(modes_to_strip)
-            self.gui.irc_client.loop.create_task(self.gui.irc_client.unignore_user_from_gui(cleaned_nickname))
-
-    def kick_user_from_channel(self):
-        selected_item = self.currentItem()
-        if selected_item:
-            modes_to_strip = ''.join(self.gui.irc_client.mode_values)
-            channel = self.gui.irc_client.current_channel
-            selected_user = selected_item.text().lstrip(modes_to_strip)
-            self.gui.irc_client.loop.create_task(self.gui.irc_client.handle_kick_command(["/kick", selected_user, channel, "Bye <3"]))
 
 class RudeGui(QWidget):
     # Initialisation and Setup
@@ -566,7 +327,7 @@ class RudeGui(QWidget):
         self.id_label = QLabel(self, text="Nickname | #Channel ▶")
         self.message_bar.addWidget(self.id_label)
 
-        self.text_field = CustomLineEdit(self)
+        self.text_field = RudeMessageEntry(self)
         self.text_field.setFrame(False)
         self.arrow_key_filter = ArrowKeyEventFilter(self)
         self.text_field.installEventFilter(self.arrow_key_filter)
@@ -888,7 +649,7 @@ class RudeGui(QWidget):
     # Tray Icon Management
     def create_tray_icon(self):
         # Create the tray icon
-        icon_file = os.path.join(G_CONFIG_DIR, 'rude_icon_round_tray.png')
+        icon_file = os.path.join(G_SOURCE_DIR, 'Resources/Icons/rude_icon_round_tray.png')
         self.tray_icon = QSystemTrayIcon()
         self.tray_icon.setIcon(QIcon(icon_file))
 
@@ -1261,14 +1022,14 @@ class RudeGui(QWidget):
                 self.user_selector_label.setStyleSheet("color: red;")
             else:
                 user_num = len(self.irc_client.channel_users.get(self.irc_client.current_channel, []))
-                
+
                 if user_num == 0:
                     user_num = self.user_selector_list.count()
 
                 back_text = f"Users ({user_num})"
                 self.user_selector_label.setText(back_text)
                 self.user_selector_label.setStyleSheet(f"color: {self.window_fg};")
-                
+
                 if self.irc_client.server_name in self.irc_client.away_servers:
                     self.irc_client.away_servers.remove(self.irc_client.server_name)
 
@@ -1330,7 +1091,7 @@ class RudeGui(QWidget):
         if usrchannel in self.pop_out_windows:
             # Get the list of windows for the user channel
             windows_list = self.pop_out_windows[usrchannel]
-            
+
             if windows_list:
                 # Use the first window in the list
                 window = windows_list[0]
@@ -1518,7 +1279,7 @@ class RudeGui(QWidget):
         self.channel_window.show()
 
     def show_startup_art(self):
-        splash_directory = os.path.join(G_SOURCE_DIR, "Splash")
+        splash_directory = os.path.join(G_SOURCE_DIR, "Resources/Splashes")
 
         try:
             # List all .txt files in the Splash directory
@@ -1544,7 +1305,7 @@ class RudeGui(QWidget):
     def escape_color_codes(self, line):
         # Escape color codes in the string
         escaped_line = re.sub(r'\\x([0-9a-fA-F]{2})', lambda match: bytes.fromhex(match.group(1)).decode('utf-8'), line)
-        
+
         return escaped_line
 
     # Event Handling
@@ -1601,7 +1362,7 @@ class RudeGui(QWidget):
 
                 # Store the foreground and background colors for the selected server
                 self.server_colors[selected_server_index] = {'fg': self.list_server_fg, 'bg': self.list_channel_current_bg}
-                
+
                 if self.previous_server_index is not None:
                     if self.previous_server_index != selected_server_index:
                         # Check if the previous server color is not a mention or activity highlight before updating
@@ -1849,7 +1610,7 @@ class RudeGui(QWidget):
             fmt = QTextCharFormat()
             fmt.setFontFamily(self.chat_font_family)
             fmt.setFontPointSize(int(self.chat_font_size))
-            
+
             if attr["bold"]:
                 #fmt.setFontFamily("Courier") # For bold testing
                 fmt.setFontWeight(QFont.Weight.Bold)
@@ -1859,17 +1620,17 @@ class RudeGui(QWidget):
                 fmt.setFontUnderline(True)
             if attr["strikethrough"]:
                 fmt.setFontStrikeOut(True)
-            
+
             if attr["colour"] != 0:
                 irc_color_code = f"{attr['colour']:02d}"
                 hex_color = self.irc_colors.get(irc_color_code, 'white')
                 fmt.setForeground(QColor(hex_color))
-            
+
             if attr["background"] != 1:
                 irc_background_code = f"{attr['background']:02d}"
                 hex_background = self.irc_colors.get(irc_background_code, 'black')
                 fmt.setBackground(QColor(hex_background))
-            
+
             return fmt
 
         except Exception as e:
@@ -1886,7 +1647,7 @@ class RudeGui(QWidget):
                 char_format.setAnchorHref(url)
             except Exception as e:
                 logging.error(f"Error1 in tag_urls: {e}")
-                
+
             try:
                 char_format.setForeground(QColor("blue"))
                 char_format.setFontUnderline(True)
@@ -1999,7 +1760,7 @@ class RudeGui(QWidget):
 
             # Apply formatting
             cursor = self.chat_box.textCursor()
-            
+
             cursor.setPosition(start_position)
 
             cursor.setPosition(end_position, QTextCursor.MoveMode.KeepAnchor)
@@ -2037,7 +1798,7 @@ class RudeGui(QWidget):
             r = random.randint(50, 255)
             g = random.randint(50, 255)
             b = random.randint(50, 255)
-            
+
             if max(r, g, b) - min(r, g, b) > 50:
                 return "#{:02x}{:02x}{:02x}".format(r, g, b)
 
@@ -2062,10 +1823,10 @@ class RudeGui(QWidget):
                 else:
                     # Reset the foreground color 
                     user_item.setForeground(QColor(self.list_user_fg))
-            
+
             # Update the UI to reflect changes
             self.user_selector_list.update()
-            
+
         except Exception as e:
             logging.error(f"Exception in highlight_away_users: {e}")
 
@@ -2130,7 +1891,7 @@ class RudeGui(QWidget):
         except Exception as e:
             logging.error(f"An unexpected error occurred while loading nickname colors: {e}. Returning an empty dictionary.")
             return {}
-        
+
     def save_nickname_colors(self):
         clean_nicks = clean_nicknames(self.nickname_colors)
         nickname_colors_path = os.path.join(G_CONFIG_DIR, 'nickname_colours.json')
@@ -2169,7 +1930,7 @@ class RudeGui(QWidget):
             clicked_channel = clicked_item.text()
             if self.log_on:
                 logging.debug(f"Clicked Channel: {clicked_channel}")
-            
+
             self.switch_channel(clicked_channel)
             if self.log_on:
                 logging.debug(f"Switching channels...")
