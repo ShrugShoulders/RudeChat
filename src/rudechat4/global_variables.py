@@ -123,8 +123,8 @@ if not os.path.exists(G_CONFIG_DIR):
 
 match platform.system():
     case "Darwin" | "Linux":
-        ICON_FILE = os.path.join(G_CONFIG_DIR, 'rude_icon_roundedge.png')
+        ICON_FILE = os.path.join(G_SOURCE_DIR, 'Resources/Icons/rude_icon_roundedge.png')
     case "Windows":
-        ICON_FILE = os.path.join(G_SOURCE_DIR, 'rude.ico')
+        ICON_FILE = os.path.join(G_SOURCE_DIR, 'Resources/Icons/rude.ico')
     case _:
-        ICON_FILE = os.path.join(G_CONFIG_DIR, 'rude_icon_roundedge.png')
+        ICON_FILE = os.path.join(G_SOURCE_DIR, 'Resources/Icons/rude_icon_roundedge.png')
