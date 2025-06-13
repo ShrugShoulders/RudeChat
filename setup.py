@@ -1,61 +1,125 @@
-from setuptools import setup, find_namespace_packages
+from setuptools import setup, find_packages
 import platform
 
-PKGS = [
-    'rudechat4',
-    'rudechat4.Client',
-    'rudechat4.Components',
-    'rudechat4.GUI',
-    'rudechat4.Util'
-]
+if platform.system() == "Darwin":
+    VERSION = '4.1.1'
 
-VERSION = '4.1.1'
-APP = ['src/rudechat4/__main__.py']
-OPTIONS = {
-    'iconfile': 'src/rudechat4/Resources/Icons/rude.icns', 
-    'excludes': ['rubicon', 'setuptools'],
-    'plist': {
-        'CFBundleName': 'RudeChat',
-        'CFBundleDisplayName': 'RudeChat',
-        'CFBundleGetInfoString': 'RudeChat',
-        'CFBundleIdentifier': 'io.github.ShrugShoulders.rudechat',
-        'CFBundleVersion': VERSION,
-        'CFBundleShortVersionString': VERSION,
-        'CFBundleIconFile': 'rude.icns',
+    APP = ['src/rudechat4/__main__.py']
+    DATA_FILES = []
+    OPTIONS = {
+        'iconfile': 'src/rudechat4/rude.icns', 
+        'excludes': ['rubicon', 'setuptools'],
+        'plist': {
+            'CFBundleName': 'RudeChat',
+            'CFBundleDisplayName': 'RudeChat',
+            'CFBundleGetInfoString': 'RudeChat',
+            'CFBundleIdentifier': 'io.github.ShrugShoulders.rudechat',
+            'CFBundleVersion': VERSION,
+            'CFBundleShortVersionString': VERSION,
+            'CFBundleIconFile': 'rude.icns',
+        }
     }
-}
 
-def isMac():
-    return platform.system() == 'Darwin'
-
-setup(
-    packages = find_namespace_packages(where='src'),
-    package_dir={"": "src"},
-    include_package_data=True,
-    scripts=["src/rudechat4/__main__.py"],
-    install_requires=[
-        'pytz',
-        'asyncio',
-        'irctokens',
-        'aiofiles',
-        'tzlocal',
-        'pillow',
-        'emoji',
-        'PyQt6',
-        'requests',
-    ],
-    classifiers=[
-        "Programming Language :: Python :: 3",
-        "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
-        "Operating System :: OS Independent",
-    ],
-    entry_points={
-        'console_scripts': [
-            'rudechat=rudechat4.__main__:main',
+    setup(
+        packages=find_packages(where="src"),
+        package_dir={"": "src"},
+        scripts=["src/rudechat4/__main__.py"],
+        install_requires=[
+            'pytz',
+            'asyncio',
+            'irctokens',
+            'plyer',
+            'aiofiles',
+            'colorchooser',
+            'tzlocal',
+            'tkcolorpicker',
+            'pillow',
+            'pystray',
+            'emoji',
+            'PyQt6',
+            'requests',
         ],
-    },
-    app = ['src/rudechat4/__main__.py'] if isMac() else [],
-    data_files = [],
-    options = {'py2app': OPTIONS} if isMac() else {},
-    setup_requires = ['py2app'] if isMac() else []
-)
+        classifiers=[
+            "Programming Language :: Python :: 3",
+            "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+            "Operating System :: OS Independent",
+        ],
+        package_data={
+            "rudechat4": [
+                "Art/*",
+                "Sounds/*",
+                "Fortune Lists/*",
+                "Splash/*",
+                "*.rudeserver",
+                "*.ini",
+                "nickname_colours.json",
+                "rude.ico",
+                "rude.png",
+                "rude_tray_icon.png",
+                "ignore_list.txt",
+                "filtered_channels.txt",
+                "first_run.txt",
+            ],
+        },
+        entry_points={
+            'console_scripts': [
+                'rudechat=rudechat4.__main__:main',
+            ],
+        },
+        # MacOS specific (Build using `python3 setup.py py2app` in root directory)
+        app=APP,
+        data_files=DATA_FILES,
+        options={'py2app': OPTIONS},
+        setup_requires=['py2app']
+    )
+
+else:
+    setup(
+        packages=find_packages(where="src"),
+        package_dir={"": "src"},
+        scripts=["src/rudechat4/__main__.py"],
+        install_requires=[
+            'pytz',
+            'asyncio',
+            'irctokens',
+            'plyer',
+            'aiofiles',
+            'colorchooser',
+            'tzlocal',
+            'tkcolorpicker',
+            'pillow',
+            'pystray',
+            'emoji',
+            'PyQt6',
+            'requests',
+        ],
+        classifiers=[
+            "Programming Language :: Python :: 3",
+            "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+            "Operating System :: OS Independent",
+        ],
+     
+        package_data={
+            "rudechat4": [
+                "Art/*",
+                "Sounds/*",
+                "Fortune Lists/*",
+                "Splash/*",
+                "*.rudeserver",
+                "*.ini",
+                "nickname_colours.json",
+                "rude.ico",
+                "rude.icns",
+                "*.png",
+                "ignore_list.txt",
+                "filtered_channels.txt",
+                "first_run.txt",
+            ],
+        },
+     
+        entry_points={
+            'console_scripts': [
+                'rudechat=rudechat4.__main__:main',
+            ],
+        },
+    )

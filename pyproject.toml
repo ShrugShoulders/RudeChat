@@ -19,3 +19,27 @@ classifiers = [
 
 [project.urls]
 homepage = "https://github.com/ShrugShoulders/RudeChat"
+
+[tool.setuptools]
+packages = ["rudechat4"]
+package-dir = {"" = "src"}
+
+[tool.setuptools.package-data]
+"rudechat4" = [
+    "Art/*",
+    "Sounds/*",
+    "Fortune Lists/*",
+    "Splash/*",
+    "*.rudeserver",
+    "*.ini",
+    "nickname_colours.json",
+    "rude.ico",
+    "rude.icns",
+    "*.png",
+    "ignore_list.txt",
+    "filtered_channels.txt",
+    "first_run.txt"
+]
+
+[project.scripts]
+rudechat = "rudechat4.__main__:__main__"
