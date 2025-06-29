@@ -1,8 +1,0 @@
-<RCC>
-  <qresource prefix="icons">
-    <file>icons/rude_icon_round_tray.png</file>
-    <file>icons/rude_icon_round.png</file>
-    <file>icons/rude_icon_roundedge.png</file>
-    <file>icons/rude_icon_square.png</file>
-  </qresource>
-</RCC>

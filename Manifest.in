@@ -1,0 +1,2 @@
+include src/rudechat4/DefaultConfig/*
+include src/rudechat4/Resources/*/*
