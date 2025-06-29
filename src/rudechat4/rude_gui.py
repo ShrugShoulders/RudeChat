@@ -25,6 +25,12 @@ class TabEventFilter(QObject):
     def __init__(self, gui):
         super().__init__()
         self.gui = gui
+        self.command_list = [
+            'join', 'query', 'cq', 'quote', 'mentions', 'away', 'back', 'msg', 'ctcp', 'mode', 'who', 'whois', 'part', 'time',
+            'me', 'list', 'sw', 'topic', 'names', 'banlist', 'nick', 'ping', 'quit', 'help', 'fortune', 'cowsay', 'ignore',
+            'unignore', 'kick', 'invite', 'clear', 'mac', 'notice', 'connect', 'disconnect', 'detach', 'watch', 'broadcast',
+            'logs', 'fortunes', 'macros', 'swhois', 'mock'
+        ]
 
     def eventFilter(self, obj, event):
         if event.type() == QEvent.Type.KeyPress and event.key() == Qt.Key.Key_Tab:
@@ -44,10 +50,21 @@ class TabEventFilter(QObject):
             if not last_word:
                 return
 
+            if current_text.startswith('/'):
+                command_input = last_word.lstrip('/')
+                matched_command = self.find_closest_match(command_input, self.command_list)
+                if matched_command:
+                    prefix = before_cursor[:-len(last_word)]
+                    new_text = prefix + '/' + matched_command + " "
+                    new_text += current_text[cursor_pos:]  # Preserve text after cursor
+                    self.gui.text_field.setText(new_text)
+                    self.gui.text_field.setCursorPosition(len(new_text))
+                return
+
             # Get list of usernames from QListWidget
             user_list = [self.gui.user_selector_list.item(i).text() for i in range(self.gui.user_selector_list.count())]
 
-            # Find the closest match
+            # Find the closest match for a nickname
             matched_name = self.find_closest_match(last_word, user_list)
 
             # Replace the last word with the matched nickname

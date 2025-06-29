@@ -2376,7 +2376,7 @@ class RudeChatClient:
             case "cq": self.cmd_cq(args)
             case "quote": # sends raw IRC message to the server
                 if len(args) < 2:
-                    self.gui.insert_text_widget(f"Error: Please provide a raw IRC command after /quote.\n")
+                    self.gui.insert_text_widget(f"Error: Please provide a raw IRC command after /quote.\n") 
                     return
 
                 raw_command = " ".join(args[1:])
