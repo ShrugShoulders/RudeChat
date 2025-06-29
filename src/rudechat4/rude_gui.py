@@ -1715,7 +1715,7 @@ class RudeGui(QWidget):
             if not text:
                 return
             #
-            lines = text.split("\r\n")
+            lines = text.rsplit("\r\n", 1)
             if not lines:
                 return
 
