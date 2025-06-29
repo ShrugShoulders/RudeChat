@@ -1236,9 +1236,9 @@ class RudeChatClient:
 
     def trim_messages(self):
         for server, channels in self.channel_messages.items():
-            # Trim the message history for remaining channels to the last 1000 messages
+            # Trim the message history for remaining channels to the last 500 messages
             for channel, messages in channels.items():
-                channels[channel] = messages[-1000:]
+                channels[channel] = messages[-500:]
 
     def remove_bang_channels(self):
         try:
@@ -2038,78 +2038,85 @@ class RudeChatClient:
                 logging.exception(f"Exception occurred during data processing: {e}")
                 continue
 
+            lines = []
             while "\r\n" in buffer:
                 line, buffer = buffer.split("\r\n", 1)
+                if line.strip():
+                    lines.append(line)
 
-                try:
-                    if len(line.strip()) == 0:
-                        if self.log_on:
-                            logging.info(f"Debug: Received an empty or whitespace-only line: '{line}'\n")
-                        continue
+            if lines:
+                await asyncio.gather(*(self.process_line(line) for line in lines))
 
+    async def process_line(self, line):
+        try:
+            if len(line.strip()) == 0:
+                if self.log_on:
+                    logging.info(f"Debug: Received an empty or whitespace-only line: '{line}'\n")
+                return
+
+            if self.log_on:
+                logging.info(f"Debug: About to tokenize the line - '{line}'")
+
+            tokens = irctokens.tokenise(line)
+        except ValueError as e:
+            self.gui.insert_text_widget(f"ValueError in process_line: {e}\n")
+            logging.error(f"ValueError in process_line: {e} line: {line}")
+            return
+        except IndexError as ie:
+            self.gui.insert_text_widget(f"IndexError in process_line: {ie}. Line: '{line}'\n")
+            logging.error(f"IndexError in process_line: {ie}. Line: '{line}'")
+            return
+        try:
+            match tokens.command:
+                case "ERROR" | "250" | "266" | "305" | "306" | "367" | "368" | "391" | "431" | "461" | "477": self.bprtcl_to_client(tokens)
+                case "KILL" | "WALLOPS" | "263" | "307" | "324" | "328" | "329" | "341" | "378" | "379" | "396" | "403" | "404" | "432" | "442" | "443" | "464" | "472" | "482" | "487" | "716" | "900": await self.bprtcl_to_server(tokens)
+                case "301" | "311" | "312" | "313" | "317" | "318" | "319" | "330" | "338" | "671": await self.bprtcl_whois_replies(tokens)
+                case "315" | "352" | "354": await self.bprtcl_who_replies(tokens)
+                case "ACCOUNT": self.prtcl_ACCOUNT(tokens)
+                case "AWAY": self.prtcl_AWAY(tokens)
+                case "CAP": await self.prtcl_CAP(tokens)
+                case "INVITE": await self.prtcl_INVITE(tokens)
+                case "JOIN": self.prtcl_JOIN(tokens)
+                case "KICK": await self.prtcl_KICK(tokens)
+                case "MODE": self.prtcl_MODE(tokens)
+                case "NICK": await self.prtcl_NICK(tokens)
+                case "NOTICE": self.prtcl_NOTICE(tokens)
+                case "PART": self.prtcl_PART(tokens)
+                case "PING": await self.send_message(f'PONG {tokens.params[0]}')
+                case "PONG": self.prtcl_PONG(tokens)
+                case "PRIVMSG": await self.prtcl_PRIVMSG(tokens)
+                case "QUIT": self.prtcl_QUIT(tokens)
+                case "001": pass
+                case "002" | "003" | "004" | "251" | "252" | "253" | "254" | "255" | "265": self.server_message_handler(tokens)
+                case "005": pass
+                case "321": pass
+                case "322":
+                    await self.prtcl_322(tokens)
+                    try:
+                        await self.gui.channel_window.update_channel_info(tokens.params[1], tokens.params[2], tokens.params[3])
+                    except Exception as e:
+                        logging.error(f"Error updating channel_window.update_channel_info: {e}")
+                case "323":  await self.prtcl_323()
+                case "332" | "333" | "TOPIC": self.bprtcl_topic(tokens)
+                case "353": self.prtcl_353(tokens)
+                case "366": self.prtcl_366(tokens)
+                case "372": self.prtcl_372(tokens)
+                case "375": self.prtcl_375(tokens)
+                case "376": self.prtcl_376(tokens)
+                case "401": self.prtcl_401(tokens)
+                case "412": pass
+                case "433": await self.prtcl_433(tokens)
+                case "473" | "475" | "474" | "471": self.m_prtcl_ChannelJoinUnable(tokens)
+                case "476" | "479": await self.m_prtcl_BadChannelName(tokens)
+                case _:
                     if self.log_on:
-                        logging.info(f"Debug: About to tokenize the line - '{line}'")
-
-                    tokens = irctokens.tokenise(line)
-                except ValueError as e:
-                    self.gui.insert_text_widget(f"ValueError in handle_incoming_message: {e}\n")
-                    logging.error(f"ValueError in handle_incoming_message: {e} line: {line}")
-                    continue
-                except IndexError as ie:
-                    self.gui.insert_text_widget(f"IndexError in handle_incoming_message: {ie}. Line: '{line}'\n")
-                    logging.error(f"IndexError in handle_incoming_message: {ie}. Line: '{line}'")
-                    continue
-                try:
-                    match tokens.command:
-                        case "ERROR" | "250" | "266" | "305" | "306" | "367" | "368" | "391" | "431" | "461" | "477": self.bprtcl_to_client(tokens)
-                        case "KILL" | "WALLOPS" | "263" | "307" | "324" | "328" | "329" | "341" | "378" | "379" | "396" | "403" | "404" | "432" | "442" | "443" | "464" | "472" | "482" | "487" | "716" | "900": await self.bprtcl_to_server(tokens)
-                        case "301" | "311" | "312" | "313" | "317" | "318" | "319" | "330" | "338" | "671": await self.bprtcl_whois_replies(tokens)
-                        case "315" | "352" | "354": await self.bprtcl_who_replies(tokens)
-                        case "ACCOUNT": self.prtcl_ACCOUNT(tokens)
-                        case "AWAY": self.prtcl_AWAY(tokens)
-                        case "CAP": await self.prtcl_CAP(tokens)
-                        case "INVITE": await self.prtcl_INVITE(tokens)
-                        case "JOIN": self.prtcl_JOIN(tokens)
-                        case "KICK": await self.prtcl_KICK(tokens)
-                        case "MODE": self.prtcl_MODE(tokens)
-                        case "NICK": await self.prtcl_NICK(tokens)
-                        case "NOTICE": self.prtcl_NOTICE(tokens)
-                        case "PART": self.prtcl_PART(tokens)
-                        case "PING": await self.send_message(f'PONG {tokens.params[0]}')
-                        case "PONG": self.prtcl_PONG(tokens)
-                        case "PRIVMSG": await self.prtcl_PRIVMSG(tokens)
-                        case "QUIT": self.prtcl_QUIT(tokens)
-                        case "001": pass
-                        case "002" | "003" | "004" | "251" | "252" | "253" | "254" | "255" | "265": self.server_message_handler(tokens)
-                        case "005": pass
-                        case "321": pass
-                        case "322":
-                            await self.prtcl_322(tokens)
-                            try:
-                                await self.gui.channel_window.update_channel_info(tokens.params[1], tokens.params[2], tokens.params[3])
-                            except Exception as e:
-                                logging.error(f"Error updating channel_window.update_channel_info: {e}")
-                        case "323":  await self.prtcl_323()
-                        case "332" | "333" | "TOPIC": self.bprtcl_topic(tokens)
-                        case "353": self.prtcl_353(tokens)
-                        case "366": self.prtcl_366(tokens)
-                        case "372": self.prtcl_372(tokens)
-                        case "375": self.prtcl_375(tokens)
-                        case "376": self.prtcl_376(tokens)
-                        case "401": self.prtcl_401(tokens)
-                        case "412": pass
-                        case "433": await self.prtcl_433(tokens)
-                        case "473" | "475" | "474" | "471": self.m_prtcl_ChannelJoinUnable(tokens)
-                        case "476" | "479": await self.m_prtcl_BadChannelName(tokens)
-                        case _:
-                            if self.log_on:
-                                logging.error(f"Unhandled Token command in handle_incoming_message: {tokens.command}.")
-                                logging.error(f"Unhandled Token in handle_incoming_message: {tokens}")
-                                logging.error(f"Unhandled Line in handle_incoming_message: {line}")
-                            if line.startswith(f":{self.server}"):
-                                self.handle_server_message(line)
-                except Exception as e:
-                    logging.error(f"Unhandled General Error in message handling: {e}")
+                        logging.error(f"Unhandled Token command in handle_incoming_message: {tokens.command}.")
+                        logging.error(f"Unhandled Token in handle_incoming_message: {tokens}")
+                        logging.error(f"Unhandled Line in handle_incoming_message: {line}")
+                    if line.startswith(f":{self.server}"):
+                        self.handle_server_message(line)
+        except Exception as e:
+            logging.error(f"Unhandled General Error in process_line: {e}")
 
     def sanitize_channel_name(self, channel):
         #gotta remove any characters that are not alphanumeric or allowed special characters

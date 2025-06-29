@@ -1528,10 +1528,10 @@ class RudeGui(QWidget):
         self.insert_and_scroll()
 
     def trim_text_widget(self):
-        """Trim the text widget to only hold a maximum of 1000 lines."""
+        """Trim the text widget to only hold a maximum of 500 lines."""
         line_count = self.chat_box.document().blockCount()  # Get total line count
-        if line_count > 1000:
-            excess_lines = line_count - 1000
+        if line_count > 500:
+            excess_lines = line_count - 500
             cursor = self.chat_box.textCursor()
             cursor.movePosition(QTextCursor.MoveOperation.Start)
             for _ in range(excess_lines):

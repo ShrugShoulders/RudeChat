@@ -90,4 +90,4 @@ class RudeUserListWidget(QListWidget):
             modes_to_strip = ''.join(self.gui.irc_client.mode_values)
             channel = self.gui.irc_client.current_channel
             selected_user = selected_item.text().lstrip(modes_to_strip)
-            self.gui.irc_client.loop.create_task(self.gui.irc_client.handle_kick_command(["/kick", selected_user, channel, "Bye <3"]))
+            self.gui.irc_client.loop.create_task(self.gui.irc_client.cmd_kick(["/kick", selected_user, channel, "Bye <3"]))
