@@ -1708,6 +1708,48 @@ class RudeGui(QWidget):
     def insert_and_scroll(self):
         self.chat_box.moveCursor(QTextCursor.MoveOperation.End)
 
+    def highlight_last_line(self):
+        """Highlight nicknames in the last line entered, with correct absolute positioning."""
+        try:
+            text = self.chat_box.toPlainText()
+            if not text:
+                return
+            #
+            lines = text.split("\r\n")
+            if not lines:
+                return
+
+            last_line = lines[-1]
+
+            # Find absolute position of last line in the full text
+            last_line_start = text.rfind(last_line)
+
+            # Compute emoji offsets just for the last line
+            emoji_offset_start, emoji_offset_end = {}, {}
+            font = self.chat_box.font()
+            emoji_widths = self.get_unicode_offset(last_line, font)
+            emoji_offset_start, emoji_offset_end = self.build_emoji_offset_map(last_line, emoji_widths)
+
+            nicknames_to_highlight = set()
+            nicknames_to_highlight.add(self.irc_client.nickname)
+
+            if hasattr(self, 'nickname_pattern'):
+                for match in self.nickname_pattern.finditer(last_line):
+                    nick = match.group(0)
+                    nicknames_to_highlight.add(nick.strip('<>').lstrip(''.join(self.irc_client.mode_values)))
+
+            for nickname in nicknames_to_highlight:
+                pattern = self.users_nickname_pattern(nickname)
+                for match in pattern.finditer(last_line):
+                    matched_text = match.group(0)
+                    start, end = match.span()
+                    adjusted_start = last_line_start + start + emoji_offset_start.get(start, 0)
+                    adjusted_end = last_line_start + end + emoji_offset_end.get(end, 0)
+                    self.apply_nickname_format(matched_text, adjusted_start, adjusted_end, matched_text)
+
+        except Exception as e:
+            logging.error(f"Error in highlight_nicknames (last line only): {e}")
+
     def highlight_nicknames(self):
         """Efficiently highlight nicknames in the chat box with emoji-aware offset correction."""
         try:
