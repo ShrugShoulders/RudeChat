@@ -1722,7 +1722,7 @@ class RudeGui(QWidget):
             last_line = lines[-1]
 
             # Find absolute position of last line in the full text
-            last_line_start = text.rfind(last_line)
+            last_line_start = len(text) - len(last_line)
 
             # Compute emoji offsets just for the last line
             emoji_offset_start, emoji_offset_end = {}, {}
