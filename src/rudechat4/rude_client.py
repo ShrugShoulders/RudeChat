@@ -1252,6 +1252,14 @@ class RudeChatClient:
         except (AttributeError, Exception) as e:
             logging.error(f'AttributeError or Exception in remove_bang_channels: {e}')
 
+    def remove_help_info(self):
+        try:
+            for server, channels in self.channel_messages.items():
+                if "!HELP!" in channels:
+                    del channels["!HELP!"]
+        except (AttributeError, Exception) as e:
+            logging.error(f'AttributeError or Exception in remove_help_info: {e}')
+
     async def notify_user_of_mention(self, server, channel, sender, message):
         notification_msg = f"<{sender}> {message}"
 
@@ -2284,7 +2292,7 @@ class RudeChatClient:
             folder_path = os.path.join(G_SOURCE_DIR, folder)
         elif primary_command == "swhois":
             folder = "whois"
-            folder_path = os.path.join(G_SOURCE_DIR, folder)
+            folder_path = os.path.join(G_CONFIG_DIR, folder)
 
         # Check if the fortune list directory exists, if not error out.
         if not os.path.exists(folder_path):
@@ -2302,8 +2310,10 @@ class RudeChatClient:
             else:
                 self.gui.insert_text_widget(f"xdg-open is not available {folder} are located: {folder_path}")
                 logging.error("xdg-open is not available on this system.")
+                return
         else:
             logging.warning(f"Unsupported OS: {platform.system()}")
+            return
 
     async def spec_quit(self):
         self.gui.save_nickname_colors()
@@ -2338,9 +2348,9 @@ class RudeChatClient:
 
     async def tray_quit(self):
         self.gui.minimize_to_tray = False
+        self.remove_bang_channels()
         self.gui.save_nickname_colors()
         await self.save_channel_messages()
-        self.remove_bang_channels()
         quit_message = "Client Quit"
         self.gui.quit_clients_with_message(quit_message)
         self.loop_running = False
@@ -2479,9 +2489,9 @@ class RudeChatClient:
                     await self.ping_server()
             case "quit":
                 self.gui.minimize_to_tray = False
+                self.remove_bang_channels()
                 self.gui.save_nickname_colors()
                 await self.save_channel_messages()
-                self.remove_bang_channels()
                 quit_message = " ".join(args[1:]) if len(args) > 0 else None
                 self.gui.quit_clients_with_message(quit_message)
                 self.loop_running = False
@@ -3208,6 +3218,7 @@ class RudeChatClient:
 
         try:
             help_channel = f"!HELP!"
+            self.remove_help_info()
             if help_channel not in self.joined_channels:
                 self.joined_channels.append(help_channel)
                 self.gui.channel_lists[self.server] = self.joined_channels
@@ -3238,7 +3249,7 @@ class RudeChatClient:
         self.server_name = server_name
         self.gui.update_nick_channel_label()
 
-    def display_last_messages(self, channel=None, num=150, server_name=None):
+    def display_last_messages(self, channel=None, num=200, server_name=None):
         if server_name is not None and channel is not None:
             try:
                 messages = self.channel_messages[server_name][channel]  # Direct lookup
