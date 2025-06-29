@@ -53,9 +53,19 @@ class TabEventFilter(QObject):
             # Replace the last word with the matched nickname
             if matched_name:
                 prefix = before_cursor[:-len(last_word)]
-                new_text = prefix + matched_name + f"{self.gui.tab_complete_terminator} "
+                new_text = prefix + matched_name
+
+                # Determine whether to add terminator
+                # Append terminator only if the matched name is at the very start of the text field
+                if current_text.startswith(last_word):
+                    new_text += f"{self.gui.tab_complete_terminator} "
+                else:
+                    new_text += f" "
+
+                new_text += current_text[cursor_pos:]  # Preserve text after cursor
+
                 self.gui.text_field.setText(new_text)
-                self.gui.text_field.setCursorPosition(len(new_text)) # Move cursor to the end
+                self.gui.text_field.setCursorPosition(len(new_text))  # Move cursor to the end
         except Exception as e:
             logging.error(f"Error in TabEventFilter.handle_tab_complete: {e}")
             return
