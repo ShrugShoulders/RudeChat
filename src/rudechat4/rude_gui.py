@@ -1536,7 +1536,7 @@ class RudeGui(QWidget):
         self.chat_box.reset_cursor_position()
         urls = self.find_urls(message)
 
-        # Start threaded decoding: this replaces your old synchronous call to self.decoder()
+        # Start threaded
         worker = DecoderWorker(message, self.decoder)
         worker.signals.finished.connect(lambda formatted_text: self.handle_decoded_text(formatted_text, urls))
         QThreadPool.globalInstance().start(worker)
