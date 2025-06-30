@@ -21,6 +21,23 @@ from rudechat4.GUI.user_data_display import RudeUserData
 from rudechat4.Util.nick_cleaner import clean_nicknames
 from rudechat4.Util.rude_logger import configure_logging
 
+class DecoderWorkerSignals(QObject):
+    finished = pyqtSignal(list)  # emits [(text, QTextCharFormat), ...]
+
+class DecoderWorker(QRunnable):
+    def __init__(self, text, decoder_func):
+        super().__init__()
+        self.text = text
+        self.decoder_func = decoder_func
+        self.signals = DecoderWorkerSignals()
+
+    def run(self):
+        try:
+            result = self.decoder_func(self.text)
+            self.signals.finished.emit(result)
+        except Exception as e:
+            logging.error(f"DecoderWorker error: {e}")
+
 class TabEventFilter(QObject):
     def __init__(self, gui):
         super().__init__()
@@ -1518,14 +1535,11 @@ class RudeGui(QWidget):
     def insert_text_widget(self, message):
         self.chat_box.reset_cursor_position()
         urls = self.find_urls(message)
-        formatted_text = self.decoder(message)
 
-        # Then apply other formatting
-        self.tag_text(formatted_text)
-
-        # Start tagging URLs using the non-blocking approach
-        self.tag_urls(urls)
-        self.insert_and_scroll()
+        # Start threaded decoding: this replaces your old synchronous call to self.decoder()
+        worker = DecoderWorker(message, self.decoder)
+        worker.signals.finished.connect(lambda formatted_text: self.handle_decoded_text(formatted_text, urls))
+        QThreadPool.globalInstance().start(worker)
 
     def trim_text_widget(self):
         """Trim the text widget to only hold a maximum of 500 lines."""
@@ -1542,6 +1556,12 @@ class RudeGui(QWidget):
     def find_urls(self, text):
         # Use the precompiled regex pattern to find URLs
         return self.url_pattern.findall(text)
+
+    def handle_decoded_text(self, formatted_text, urls):
+        """Handles inserting decoded text and tagging URLs once decoding is finished."""
+        self.tag_text(formatted_text)
+        self.tag_urls(urls)
+        self.insert_and_scroll()
 
     def decoder(self, input_text: str) -> List[Tuple[str, QTextCharFormat]]:
         output = []
