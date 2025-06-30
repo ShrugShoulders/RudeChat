@@ -1535,11 +1535,14 @@ class RudeGui(QWidget):
     def insert_text_widget(self, message):
         self.chat_box.reset_cursor_position()
         urls = self.find_urls(message)
+        formatted_text = self.decoder(message)
 
-        # Start threaded
-        worker = DecoderWorker(message, self.decoder)
-        worker.signals.finished.connect(lambda formatted_text: self.handle_decoded_text(formatted_text, urls))
-        QThreadPool.globalInstance().start(worker)
+        # Then apply other formatting
+        self.tag_text(formatted_text)
+
+        # Start tagging URLs using the non-blocking approach
+        self.tag_urls(urls)
+        self.insert_and_scroll()
 
     def trim_text_widget(self):
         """Trim the text widget to only hold a maximum of 500 lines."""
@@ -1561,7 +1564,6 @@ class RudeGui(QWidget):
         """Handles inserting decoded text and tagging URLs once decoding is finished."""
         self.tag_text(formatted_text)
         self.tag_urls(urls)
-        self.insert_and_scroll()
 
     def decoder(self, input_text: str) -> List[Tuple[str, QTextCharFormat]]:
         output = []
