@@ -36,7 +36,8 @@ package-dir = {"" = "src"}
     "Resources/Sounds/*",
     "Util/*",
     "Components/*",
-    "Client/*"
+    "Client/*",
+    "Cython/*"
 ]
 
 [project.scripts]

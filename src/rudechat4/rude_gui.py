@@ -21,22 +21,7 @@ from rudechat4.GUI.user_data_display import RudeUserData
 from rudechat4.Util.nick_cleaner import clean_nicknames
 from rudechat4.Util.rude_logger import configure_logging
 
-class DecoderWorkerSignals(QObject):
-    finished = pyqtSignal(list)  # emits [(text, QTextCharFormat), ...]
-
-class DecoderWorker(QRunnable):
-    def __init__(self, text, decoder_func):
-        super().__init__()
-        self.text = text
-        self.decoder_func = decoder_func
-        self.signals = DecoderWorkerSignals()
-
-    def run(self):
-        try:
-            result = self.decoder_func(self.text)
-            self.signals.finished.emit(result)
-        except Exception as e:
-            logging.error(f"DecoderWorker error: {e}")
+from rudechat4.Cython import decoder_cython
 
 class TabEventFilter(QObject):
     def __init__(self, gui):
@@ -1444,7 +1429,7 @@ class RudeGui(QWidget):
 
             # Turn background blue
             self.channel_selector_list.item(clicked_index).setBackground(QColor(self.list_channel_current_bg))
-            self.highlight_nicknames()
+            
             self.highlight_away_users()
             self.update_users_label()
 
@@ -1453,6 +1438,9 @@ class RudeGui(QWidget):
                 server_highlighted_channels = self.irc_client.highlighted_channels[self.irc_client.server_name]
                 if clicked_channel.text() in server_highlighted_channels:
                     del server_highlighted_channels[clicked_channel.text()]
+
+            QTimer.singleShot(1, self.highlight_nicknames)
+
         except AttributeError as e:
             logging.error(f"AttributeError in on_channel_click: {e}")
             return
@@ -1529,7 +1517,7 @@ class RudeGui(QWidget):
             self.text_field.clear()
             await self.irc_client.command_parser(user_input)
         except Exception as e:
-            logging.error(f"Error in on_enter_key: {e}")
+            logging.error(f"Error in on_enter_key: {e}") #self.insert_and_scroll()
 
     # Text & Formatting
     def insert_text_widget(self, message):
@@ -1565,87 +1553,6 @@ class RudeGui(QWidget):
         self.tag_text(formatted_text)
         self.tag_urls(urls)
 
-    def decoder(self, input_text: str) -> List[Tuple[str, QTextCharFormat]]:
-        output = []
-        text_buffer = []
-
-        # Mutable state
-        current_attr = {
-            "bold": False,
-            "italic": False,
-            "underline": False,
-            "strikethrough": False,
-            "inverse": False,
-            "colour": 0,
-            "background": 1
-        }
-
-        def flush():
-            if text_buffer:
-                try:
-                    fmt = self.configure_tag_based_on_attributes(current_attr)
-                    output.append(("".join(text_buffer), fmt))
-                except Exception as e:
-                    logging.error(f"Error creating format during flush: {e}")
-                text_buffer.clear()
-
-        c_index = 0
-        while c_index < len(input_text):
-            c = input_text[c_index]
-            match c:
-                case '\x02':  # Bold
-                    flush()
-                    current_attr["bold"] = not current_attr["bold"]
-                case '\x1D':  # Italic
-                    flush()
-                    current_attr["italic"] = not current_attr["italic"]
-                case '\x1F':  # Underline
-                    flush()
-                    current_attr["underline"] = not current_attr["underline"]
-                case '\x1E':  # Strikethrough
-                    flush()
-                    current_attr["strikethrough"] = not current_attr["strikethrough"]
-                case '\x16':  # Inverse
-                    flush()
-                    fg, bg = current_attr["colour"], current_attr["background"]
-                    current_attr["colour"], current_attr["background"] = bg, fg
-                case '\x03':  # Color code
-                    flush()
-                    current_attr = {
-                        "bold": False,
-                        "italic": False,
-                        "underline": False,
-                        "strikethrough": False,
-                        "inverse": False,
-                        "colour": 0,
-                        "background": 1
-                    }
-                    color_match = re.match(r'\x03(\d{1,2})(?:,(\d{1,2}))?', input_text[c_index:])
-                    if color_match:
-                        fg = int(color_match.group(1))
-                        bg = int(color_match.group(2)) if color_match.group(2) else 1
-                        current_attr["colour"] = fg
-                        current_attr["background"] = bg
-                        c_index += color_match.end() - 1
-                case '\x0F':  # Reset
-                    flush()
-                    current_attr = {
-                        "bold": False,
-                        "italic": False,
-                        "underline": False,
-                        "strikethrough": False,
-                        "inverse": False,
-                        "colour": 0,
-                        "background": 1
-                    }
-                case _:
-                    text_buffer.append(c)
-
-            c_index += 1
-
-        flush()
-        return output
-
     def tag_text(self, formatted_text):
         cursor = self.chat_box.textCursor()
         for text, char_format in formatted_text:
@@ -1654,37 +1561,39 @@ class RudeGui(QWidget):
             except Exception as e:
                 logging.error(f"Error in tag_text: {e}")
 
-    def configure_tag_based_on_attributes(self, attr: dict) -> QTextCharFormat:
-        try:
-            fmt = QTextCharFormat()
-            fmt.setFontFamily(self.chat_font_family)
-            fmt.setFontPointSize(int(self.chat_font_size))
+    def decoder(self, input_text: str) -> List[Tuple[str, QTextCharFormat]]:
+        segments = decoder_cython.decode_text(input_text.encode('utf-8'))
+        output = []
+        for text, bold, italic, underline, strikethrough, inverse, fg, bg in segments:
+            fmt = self.configure_tag_from_flags(bold, italic, underline, strikethrough, inverse, fg, bg)
+            output.append((text, fmt))
+        return output
 
-            if attr["bold"]:
-                #fmt.setFontFamily("Courier") # For bold testing
-                fmt.setFontWeight(QFont.Weight.Bold)
-            if attr["italic"]:
-                fmt.setFontItalic(True)
-            if attr["underline"]:
-                fmt.setFontUnderline(True)
-            if attr["strikethrough"]:
-                fmt.setFontStrikeOut(True)
+    def configure_tag_from_flags(self, bold, italic, underline, strikethrough, inverse, fg, bg):
+        fmt = QTextCharFormat()
+        fmt.setFontFamily(self.chat_font_family)
+        fmt.setFontPointSize(int(self.chat_font_size))
 
-            if attr["colour"] != 0:
-                irc_color_code = f"{attr['colour']:02d}"
-                hex_color = self.irc_colors.get(irc_color_code, 'white')
-                fmt.setForeground(QColor(hex_color))
+        if bold:
+            fmt.setFontWeight(QFont.Weight.Bold)
+        if italic:
+            fmt.setFontItalic(True)
+        if underline:
+            fmt.setFontUnderline(True)
+        if strikethrough:
+            fmt.setFontStrikeOut(True)
 
-            if attr["background"] != 1:
-                irc_background_code = f"{attr['background']:02d}"
-                hex_background = self.irc_colors.get(irc_background_code, 'black')
-                fmt.setBackground(QColor(hex_background))
+        if fg != 0:
+            irc_color_code = f"{fg:02d}"
+            hex_color = self.irc_colors.get(irc_color_code, 'white')
+            fmt.setForeground(QColor(hex_color))
 
-            return fmt
+        if bg != 1:
+            irc_background_code = f"{bg:02d}"
+            hex_background = self.irc_colors.get(irc_background_code, 'black')
+            fmt.setBackground(QColor(hex_background))
 
-        except Exception as e:
-            logging.error(f"Error in configure_tag_based_on_attributes: {e}")
-            return QTextCharFormat()
+        return fmt
 
     def tag_urls(self, urls, index=0):
         if index < len(urls):

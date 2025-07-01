@@ -6,7 +6,8 @@ PKGS = [
     'rudechat4.Client',
     'rudechat4.Components',
     'rudechat4.GUI',
-    'rudechat4.Util'
+    'rudechat4.Util',
+    'rudechat4.Cython'
 ]
 
 VERSION = '4.1.1'
