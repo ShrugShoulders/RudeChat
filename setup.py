@@ -47,7 +47,6 @@ setup(
         'emoji',
         'PyQt6',
         'requests',
-        'charset_normalizer',  # Add to fix RequestsDependencyWarning
     ],
     classifiers=[
         "Programming Language :: Python :: 3",
