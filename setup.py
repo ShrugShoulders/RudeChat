@@ -10,7 +10,7 @@ PKGS = [
     'rudechat4.Cython'
 ]
 
-VERSION = '4.1.1'
+VERSION = '4.1.2'
 APP = ['src/rudechat4/__main__.py']
 OPTIONS = {
     'iconfile': 'src/rudechat4/Resources/Icons/rude.icns', 
