@@ -1,4 +1,5 @@
 from setuptools import setup, find_namespace_packages
+import glob
 import platform
 
 PKGS = [
@@ -9,6 +10,7 @@ PKGS = [
     'rudechat4.Util',
     'rudechat4.Cython'
 ]
+cython_so_files = glob.glob('src/rudechat4/Cython/*.so')
 
 VERSION = '4.1.2'
 APP = ['src/rudechat4/__main__.py']
@@ -56,7 +58,7 @@ setup(
         ],
     },
     app = ['src/rudechat4/__main__.py'] if isMac() else [],
-    data_files = [],
+    data_files = [('rudechat4/Cython', cython_so_files),],
     options = {'py2app': OPTIONS} if isMac() else {},
     setup_requires = ['py2app'] if isMac() else []
 )
