@@ -52,6 +52,7 @@ setup(
         "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
         "Operating System :: OS Independent",
     ],
+    package_data ={"rudechat4": ["Cython/*"]},
     entry_points={
         'console_scripts': [
             'rudechat=rudechat4.__main__:main',
