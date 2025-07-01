@@ -1,21 +1,15 @@
-from setuptools import setup, find_namespace_packages, Extension
-from Cython.Build import cythonize
-import glob
+from setuptools import setup, find_namespace_packages
 import platform
 
-VERSION = '4.1.2'
+PKGS = [
+    'rudechat4',
+    'rudechat4.Client',
+    'rudechat4.Components',
+    'rudechat4.GUI',
+    'rudechat4.Util'
+]
 
-def isMac():
-    return platform.system() == 'Darwin'
-
-# Build the Cython extension
-ext_modules = cythonize([
-    Extension(
-        "rudechat4.Cython.decoder_cython",
-        sources=["src/rudechat4/Cython/decoder_cython.pyx"],
-    )
-])
-
+VERSION = '4.1.1'
 APP = ['src/rudechat4/__main__.py']
 OPTIONS = {
     'iconfile': 'src/rudechat4/Resources/Icons/rude.icns', 
@@ -31,12 +25,14 @@ OPTIONS = {
     }
 }
 
+def isMac():
+    return platform.system() == 'Darwin'
+
 setup(
-    name='RudeChat',
-    version=VERSION,
-    packages=find_namespace_packages(where='src'),
+    packages = find_namespace_packages(where='src'),
     package_dir={"": "src"},
     include_package_data=True,
+    scripts=["src/rudechat4/__main__.py"],
     install_requires=[
         'pytz',
         'asyncio',
@@ -53,17 +49,13 @@ setup(
         "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
         "Operating System :: OS Independent",
     ],
-    package_data={
-        "rudechat4": ["Cython/*"],  # include .pyx and other static files
-    },
     entry_points={
         'console_scripts': [
             'rudechat=rudechat4.__main__:main',
         ],
     },
-    app=APP if isMac() else [],
-    data_files=[],
-    ext_modules=ext_modules,
-    options={'py2app': OPTIONS} if isMac() else {},
-    setup_requires=['py2app'] if isMac() else [],
+    app = ['src/rudechat4/__main__.py'] if isMac() else [],
+    data_files = [],
+    options = {'py2app': OPTIONS} if isMac() else {},
+    setup_requires = ['py2app'] if isMac() else []
 )
