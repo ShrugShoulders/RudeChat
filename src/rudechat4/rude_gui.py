@@ -630,6 +630,8 @@ class RudeGui(QWidget):
         self.highlight_who_channels()
 
     def set_misc_variables(self):
+        self._last_attr = None
+        self._last_fmt = None
         self.channel_lists = {}
         self.nickname_colors = self.load_nickname_colors()
         self.clients = {}
@@ -1569,7 +1571,7 @@ class RudeGui(QWidget):
         output = []
         text_buffer = []
 
-        # Mutable state
+        # Mutable state (local variables for faster access)
         current_attr = {
             "bold": False,
             "italic": False,
@@ -1579,6 +1581,9 @@ class RudeGui(QWidget):
             "colour": 0,
             "background": 1
         }
+
+        # Set of control characters for faster membership checking
+        control_codes = {'\x02', '\x1D', '\x1F', '\x1E', '\x16', '\x03', '\x0F'}
 
         def flush():
             if text_buffer:
@@ -1592,6 +1597,16 @@ class RudeGui(QWidget):
         c_index = 0
         while c_index < len(input_text):
             c = input_text[c_index]
+
+            if c not in control_codes:
+                # Bulk append plain text until next control code for performance
+                start = c_index
+                while c_index < len(input_text) and input_text[c_index] not in control_codes:
+                    c_index += 1
+                text_buffer.append(input_text[start:c_index])
+                continue  # skip c_index += 1 since we've already advanced
+
+            # Process control codes
             match c:
                 case '\x02':  # Bold
                     flush()
@@ -1614,23 +1629,33 @@ class RudeGui(QWidget):
                     c_index += 1
                     num_buf = []
                     fg = bg = None
-                    # Parse up to two digits
-                    while c_index < len(input_text) and input_text[c_index].isdigit() and len(num_buf) < 2:
+                    # Parse up to two ASCII digits for foreground color
+                    while c_index < len(input_text) and input_text[c_index] in '0123456789' and len(num_buf) < 2:
                         num_buf.append(input_text[c_index])
                         c_index += 1
                     if num_buf:
-                        fg = int("".join(num_buf))
+                        try:
+                            fg = int("".join(num_buf))
+                        except ValueError:
+                            logging.warning(f"Invalid foreground color code: {''.join(num_buf)}")
+                            fg = 0
+                    # Look for optional background color
                     if c_index < len(input_text) and input_text[c_index] == ',':
                         c_index += 1
                         num_buf = []
-                        while c_index < len(input_text) and input_text[c_index].isdigit() and len(num_buf) < 2:
+                        while c_index < len(input_text) and input_text[c_index] in '0123456789' and len(num_buf) < 2:
                             num_buf.append(input_text[c_index])
                             c_index += 1
                         if num_buf:
-                            bg = int("".join(num_buf))
+                            try:
+                                bg = int("".join(num_buf))
+                            except ValueError:
+                                logging.warning(f"Invalid background color code: {''.join(num_buf)}")
+                                bg = 1
                     current_attr["colour"] = fg if fg is not None else 0
                     current_attr["background"] = bg if bg is not None else 1
                     c_index -= 1  # Compensate for outer loop increment
+
                 case '\x0F':  # Reset
                     flush()
                     current_attr = {
@@ -1643,7 +1668,8 @@ class RudeGui(QWidget):
                         "background": 1
                     }
                 case _:
-                    text_buffer.append(c)
+                    # Shouldn't happen, but included for completeness
+                    pass
 
             c_index += 1
 
@@ -1660,12 +1686,15 @@ class RudeGui(QWidget):
 
     def configure_tag_based_on_attributes(self, attr: dict) -> QTextCharFormat:
         try:
+            # Cache optimization: skip re-creating format if attrs are the same
+            if attr == self._last_attr:
+                return self._last_fmt
+
             fmt = QTextCharFormat()
             fmt.setFontFamily(self.chat_font_family)
             fmt.setFontPointSize(int(self.chat_font_size))
 
             if attr["bold"]:
-                #fmt.setFontFamily("Courier") # For bold testing
                 fmt.setFontWeight(QFont.Weight.Bold)
             if attr["italic"]:
                 fmt.setFontItalic(True)
@@ -1684,11 +1713,13 @@ class RudeGui(QWidget):
                 hex_background = self.irc_colors.get(irc_background_code, 'black')
                 fmt.setBackground(QColor(hex_background))
 
+            self._last_attr = attr.copy()  # Save current attributes for next time
+            self._last_fmt = fmt
             return fmt
 
         except Exception as e:
             logging.error(f"Error in configure_tag_based_on_attributes: {e}")
-            return QTextCharFormat()
+            return QTextCharFormat()  # fallback to avoid crashes
 
     def tag_urls(self, urls, index=0):
         if index < len(urls):

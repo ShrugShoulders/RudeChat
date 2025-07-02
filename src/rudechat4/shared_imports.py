@@ -79,7 +79,8 @@ from PyQt6.QtCore import (
     QRect,
     QRunnable,
     pyqtSignal,
-    QThreadPool
+    QThreadPool,
+    pyqtSlot
 )
 
 from PyQt6.QtGui import (
