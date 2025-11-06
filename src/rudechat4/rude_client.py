@@ -1136,11 +1136,11 @@ class RudeChatClient:
                     match ctcp_command:
                         case "VERSION" | "version":
                             if tokens.command == "PRIVMSG":
-                                await self.send_message(f'NOTICE {sender} :\x01VERSION RudeChat4.1.2\x01')
+                                await self.send_message(f'NOTICE {sender} :\x01VERSION RudeChat4.1.1\x01')
                                 self.add_server_message(f"CTCP: {sender} {target}: {ctcp_command}\n")
                         case "MOO" | "moo":
                             if tokens.command == "PRIVMSG":
-                                await self.send_message(f'NOTICE {sender} :\x01MoooOOO! Hi Cow!! RudeChat4.1.2\x01')
+                                await self.send_message(f'NOTICE {sender} :\x01MoooOOO! Hi Cow!! RudeChat4.1.1\x01')
                                 self.add_server_message(f"CTCP: {sender} {target}: {ctcp_command}\n")
                         case "PING" | "ping":
                             if tokens.command == "PRIVMSG":
@@ -1149,7 +1149,7 @@ class RudeChatClient:
                                 self.add_server_message(f"CTCP: {sender} {target}: {ctcp_command}\n")
                         case "FINGER" | "finger":
                             if tokens.command == "PRIVMSG":
-                                await self.send_message(f'NOTICE {sender} :\x01FINGER: {self.nickname} {self.server_name} RudeChat4.1.2\x01')
+                                await self.send_message(f'NOTICE {sender} :\x01FINGER: {self.nickname} {self.server_name} RudeChat4.1.1\x01')
                                 self.add_server_message(f"CTCP: {sender} {target}: {ctcp_command}\n")
                         case "CLIENTINFO" | "clientinfo":
                             if tokens.command == "PRIVMSG":
@@ -1206,7 +1206,7 @@ class RudeChatClient:
                 )
             ):
                 self.gui.insert_text_widget(action_message)
-                QTimer.singleShot(1, self.gui.highlight_nicknames)
+                QTimer.singleShot(1, self.gui.highlight_last_line)
 
             elif (
                 self.server_name in self.gui.popped_out_channels
@@ -1715,14 +1715,14 @@ class RudeChatClient:
                     self.gui.insert_text_widget(f"{timestamp}<{mode_symbol}{sender}> {message}\n")
                 else:
                     self.gui.insert_text_widget(f"<{mode_symbol}{sender}> {message}\n")
-                QTimer.singleShot(1, self.gui.highlight_nicknames)
+                QTimer.singleShot(1, self.gui.highlight_last_line)
             elif sender == self.current_channel and self.gui.irc_client == self:
                 if is_direct:
                     if self.use_time_stamp:
                         self.gui.insert_text_widget(f"{timestamp}<{sender}> {message}\n")
                     else:
                         self.gui.insert_text_widget(f"<{sender}> {message}\n")
-                    QTimer.singleShot(1, self.gui.highlight_nicknames)
+                    QTimer.singleShot(1, self.gui.highlight_last_line)
             else:
                 user_mention = self.is_it_a_mention(message)
                 if not user_mention:
@@ -1851,7 +1851,7 @@ class RudeChatClient:
             if channel == self.current_channel and self.gui.irc_client == self:
                 if self.server_name in self.gui.popped_out_channels and channel not in self.gui.popped_out_channels[self.server_name]:
                     self.gui.insert_text_widget(f"{message}")
-                    QTimer.singleShot(1, self.gui.highlight_nicknames)
+                    QTimer.singleShot(1, self.gui.highlight_last_line)
             if self.server_name in self.gui.popped_out_channels and channel in self.gui.popped_out_channels[self.server_name]:
                 self.pipe_mode_to_pop_out(message, channel)
             if self.server not in self.channel_messages:
@@ -2100,7 +2100,7 @@ class RudeChatClient:
                         case "412": pass
                         case "433": await self.prtcl_433(tokens)
                         case "473" | "475" | "474" | "471": self.m_prtcl_ChannelJoinUnable(tokens)
-                        case "476" | "479": await self.m_prtcl_BadChannelName(tokens)
+                        case "476" | "479": await self.m_prtcl_BadChannelName(tokens) #Add case 904 here
                         case _:
                             if self.log_on:
                                 logging.error(f"Unhandled Token command in handle_incoming_message: {tokens.command}.")
@@ -2564,7 +2564,7 @@ class RudeChatClient:
                     else:
                         if channel == self.current_channel:
                             self.gui.insert_text_widget(f"<{mode_symbol}{self.nickname}> {styled_line}\n")
-                    QTimer.singleShot(1, self.gui.highlight_nicknames)
+                    QTimer.singleShot(1, self.gui.highlight_last_line)
 
                     # Check if it's a DM or channel
                     if any(channel.startswith(prefix) for prefix in self.chantypes):  # It's a channel
@@ -2757,7 +2757,7 @@ class RudeChatClient:
     async def load_ascii_art_macros(self):
         """Load ASCII art from files into a dictionary asynchronously."""
         self.gui.insert_text_widget("\nLoading ASCII art macros...\n")
-        ASCII_ART_DIRECTORY = os.path.join(G_SOURCE_DIR, 'Art')
+        ASCII_ART_DIRECTORY = os.path.join(G_SOURCE_DIR, 'Resources', 'Macros')
 
         for file in os.listdir(ASCII_ART_DIRECTORY):
             if file.endswith(".txt"):
@@ -2989,7 +2989,7 @@ class RudeChatClient:
         return textwrap.fill(text, width)
 
     def get_fortune_file(self, file_name=None):
-        fortune_directory = os.path.join(G_SOURCE_DIR, "Fortune Lists")
+        fortune_directory = os.path.join(G_SOURCE_DIR, "Resources", "Fortunes")
 
         if file_name:
             return os.path.join(fortune_directory, file_name + ".txt")
@@ -3019,7 +3019,7 @@ class RudeChatClient:
             await self.append_to_channel_history(selected_channel, line, mode_symbol)
             if selected_channel == self.current_channel:
                 self.gui.insert_text_widget(formatted_message)
-                QTimer.singleShot(1, self.gui.highlight_nicknames)
+                QTimer.singleShot(1, self.gui.highlight_last_line)
 
     async def cowsay_custom_message(self, message, mode_symbol):
         """Wrap a custom message using the cowsay format."""
@@ -3038,7 +3038,7 @@ class RudeChatClient:
             await self.append_to_channel_history(selected_channel, line, mode_symbol)
             if selected_channel == self.current_channel:
                 self.gui.insert_text_widget(formatted_message)
-                QTimer.singleShot(1, self.gui.highlight_nicknames)
+                QTimer.singleShot(1, self.gui.highlight_last_line)
 
     async def send_ctcp_request(self, target_nick, ctcp_command):
         """Sends a CTCP request to a target."""
@@ -3248,18 +3248,6 @@ class RudeChatClient:
     def set_server_name(self, server_name):
         self.server_name = server_name
         self.gui.update_nick_channel_label()
-
-    def display_last_messages(self, channel=None, num=200, server_name=None):
-        if server_name is not None and channel is not None:
-            try:
-                messages = self.channel_messages[server_name][channel]  # Direct lookup
-            except Exception as e:
-                logging.error(f"Exception on dictionary lookup display_last_messages: {e}")
-                messages = []
-            for message in messages[-num:]:
-                self.gui.insert_text_widget(message)
-        else:
-            logging.info(f"display_last_messages: given server_name \'{server_name}\' or given channel \'{channel}\' is None")
 
     def display_server_motd(self, server_name=None):
         if server_name:
@@ -3866,7 +3854,7 @@ class RudeChatClient:
             if channel == self.current_channel and self.gui.irc_client == self and self.server_name in self.gui.popped_out_channels and channel not in self.gui.popped_out_channels[self.server_name]:
                 if self.show_join_part_quit_nick:
                     self.gui.insert_text_widget(join_message)
-                    QTimer.singleShot(1, self.gui.highlight_nicknames)
+                    QTimer.singleShot(1, self.gui.highlight_last_line)
             if self.server_name in self.gui.popped_out_channels and channel in self.gui.popped_out_channels[self.server_name]:
                 if self.show_join_part_quit_nick:
                     self.pipe_mode_to_pop_out(join_message, channel)
@@ -3905,7 +3893,7 @@ class RudeChatClient:
 
             if channel == self.current_channel and self.gui.irc_client == self and self.server_name in self.gui.popped_out_channels and channel not in self.gui.popped_out_channels[self.server_name]:
                 self.gui.insert_text_widget(kick_message_content)
-                QTimer.singleShot(1, self.gui.highlight_nicknames)
+                QTimer.singleShot(1, self.gui.highlight_last_line)
             if self.server_name in self.gui.popped_out_channels and channel in self.gui.popped_out_channels[self.server_name]:
                 self.pipe_mode_to_pop_out(kick_message_content, channel)
 
@@ -4071,7 +4059,7 @@ class RudeChatClient:
                         if channel == self.current_channel and self.gui.irc_client == self and self.server_name in self.gui.popped_out_channels and channel not in self.gui.popped_out_channels[self.server_name]:
                             if self.show_join_part_quit_nick:
                                 self.gui.insert_text_widget(message)
-                                QTimer.singleShot(1, self.gui.highlight_nicknames)
+                                QTimer.singleShot(1, self.gui.highlight_last_line)
                         if self.server_name in self.gui.popped_out_channels and channel in self.gui.popped_out_channels[self.server_name]:
                             if self.show_join_part_quit_nick:
                                 self.pipe_mode_to_pop_out(message, channel)
@@ -4158,7 +4146,7 @@ class RudeChatClient:
             if channel == self.current_channel and self.gui.irc_client == self and self.server_name in self.gui.popped_out_channels and channel not in self.gui.popped_out_channels[self.server_name]:
                 if self.show_join_part_quit_nick:
                     self.gui.insert_text_widget(part_message)
-                    QTimer.singleShot(1, self.gui.highlight_nicknames)
+                    QTimer.singleShot(1, self.gui.highlight_last_line)
             if self.server_name in self.gui.popped_out_channels and channel in self.gui.popped_out_channels[self.server_name]:
                 if self.show_join_part_quit_nick:
                     self.pipe_mode_to_pop_out(part_message, channel)
@@ -4273,7 +4261,7 @@ class RudeChatClient:
                         if channel == self.current_channel and self.gui.irc_client == self and self.server_name in self.gui.popped_out_channels and channel not in self.gui.popped_out_channels[self.server_name]:
                             if self.show_join_part_quit_nick:
                                 self.gui.insert_text_widget(quit_message)
-                                QTimer.singleShot(1, self.gui.highlight_nicknames)
+                                QTimer.singleShot(1, self.gui.highlight_last_line)
                         if self.server_name in self.gui.popped_out_channels and channel in self.gui.popped_out_channels[self.server_name]:
                             if self.show_join_part_quit_nick:
                                 self.pipe_mode_to_pop_out(quit_message, channel)
@@ -4547,7 +4535,7 @@ class RudeChatClient:
                     self.gui.insert_text_widget(f"Message Sent To: {channel}\n")
                     if channel == self.current_channel:
                         self.gui.insert_text_widget(f"{timestamp} <{mode_symbol}{self.nickname}> {message}\n")
-                        QTimer.singleShot(1, self.gui.highlight_nicknames)
+                        QTimer.singleShot(1, self.gui.highlight_last_line)
                 else:
                     self.gui.insert_text_widget(f"Error: bad channel {channel}\n")
             return
@@ -4609,7 +4597,7 @@ class RudeChatClient:
             await self.append_to_channel_history(selected_channel, line, mode_symbol)
             if selected_channel == self.current_channel:
                 self.gui.insert_text_widget(formatted_message)
-                QTimer.singleShot(1, self.gui.highlight_nicknames)
+                QTimer.singleShot(1, self.gui.highlight_last_line)
 
     async def cmd_invite(self, args):
         if len(args) < 3:
@@ -4655,7 +4643,7 @@ class RudeChatClient:
                         self.gui.insert_text_widget(f"{current_time}<{mode_symbol}{self.nickname}> {formatted_message}")
                     else:
                         self.gui.insert_text_widget(f"<{mode_symbol}{self.nickname}> {formatted_message}")
-                    QTimer.singleShot(1, self.gui.highlight_nicknames)
+                    QTimer.singleShot(1, self.gui.highlight_last_line)
                 await self.append_to_channel_history(selected_channel, line, mode_symbol)
         else:
             self.gui.insert_text_widget(f"Unknown ASCII art macro: {macro_name}. Type '/mac' to see available macros.\n")
@@ -4675,7 +4663,7 @@ class RudeChatClient:
             self.gui.insert_text_widget(f"{timestamp}{formatted_message}\n")
         elif self.use_time_stamp == False:
             self.gui.insert_text_widget(f"{formatted_message}\n")
-        QTimer.singleShot(1, self.gui.highlight_nicknames)
+        QTimer.singleShot(1, self.gui.highlight_last_line)
 
         # Save the action message to the channel_messages dictionary
         if self.server not in self.channel_messages:
@@ -4707,7 +4695,7 @@ class RudeChatClient:
                 mention_message = f" - {message}\n"
                 self.channel_messages[self.server][mentions_channel].append(mention_message)
 
-        QTimer.singleShot(1, self.gui.highlight_nicknames)
+        QTimer.singleShot(1, self.gui.highlight_last_line)
 
         # Update the GUI to show the new mentions in the mentions channel
         self.gui.insert_and_scroll()
@@ -4733,7 +4721,7 @@ class RudeChatClient:
 
             self.gui.insert_text_widget(f"{timestamp} <{mode_symbol}{self.nickname}> {mock_em}\n")
 
-            QTimer.singleShot(1, self.gui.highlight_nicknames)
+            QTimer.singleShot(1, self.gui.highlight_last_line)
 
         except Exception as e:
             logging.error(f"Error in mocker: {e}")

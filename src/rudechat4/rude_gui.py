@@ -21,22 +21,44 @@ from rudechat4.GUI.user_data_display import RudeUserData
 from rudechat4.Util.nick_cleaner import clean_nicknames
 from rudechat4.Util.rude_logger import configure_logging
 
-class DecoderWorkerSignals(QObject):
-    finished = pyqtSignal(list)  # emits [(text, QTextCharFormat), ...]
+class BatchDecoderWorkerSignals(QObject):
+    # This signal carries BOTH formatted_text (list) AND urls (list)
+    message_decoded = pyqtSignal(list, list) 
+    
+    # Signal batch completion
+    finished = pyqtSignal()
 
-class DecoderWorker(QRunnable):
-    def __init__(self, text, decoder_func):
+class BatchDecoderWorker(QRunnable):
+    def __init__(self, messages_input, decoder_func, find_urls_func): 
         super().__init__()
-        self.text = text
+        
+        # Unify the input: wrap a single string in a list
+        if isinstance(messages_input, str):
+            self.messages_list = [messages_input]
+        elif isinstance(messages_input, list):
+            self.messages_list = messages_input
+        else:
+            self.messages_list = []
+            
         self.decoder_func = decoder_func
-        self.signals = DecoderWorkerSignals()
+        self.find_urls_func = find_urls_func
+        self.signals = BatchDecoderWorkerSignals()
 
     def run(self):
-        try:
-            result = self.decoder_func(self.text)
-            self.signals.finished.emit(result)
-        except Exception as e:
-            logging.error(f"DecoderWorker error: {e}")
+        """Processes all messages sequentially and emits results on message_decoded."""
+        for message in self.messages_list:
+            try:
+                formatted_text = self.decoder_func(message)
+                
+                urls = self.find_urls_func(message)
+                
+                # Emit formatted_text and urls
+                self.signals.message_decoded.emit(formatted_text, urls)
+                
+            except Exception as e:
+                logging.error(f"BatchDecoderWorker error: {e} for message: {message[:30]}...")
+        
+        self.signals.finished.emit()
 
 class TabEventFilter(QObject):
     def __init__(self, gui):
@@ -630,8 +652,6 @@ class RudeGui(QWidget):
         self.highlight_who_channels()
 
     def set_misc_variables(self):
-        self._last_attr = None
-        self._last_fmt = None
         self.channel_lists = {}
         self.nickname_colors = self.load_nickname_colors()
         self.clients = {}
@@ -1430,39 +1450,81 @@ class RudeGui(QWidget):
             return
 
     def on_channel_click(self):
-        # Set background of currently selected channel back to default
-        try:
-            current_selected_channel = self.irc_client.current_channel
-            if current_selected_channel:
-                for i in range(self.channel_selector_list.count()):
-                    if self.channel_selector_list.item(i).text() == current_selected_channel:
-                        self.channel_selector_list.item(i).setBackground(QColor(self.list_bg))
-                        break
+            try:
+                # Get index of clicked item
+                clicked_index = self.channel_selector_list.currentRow()
+                
+                # Ensure an item is actually selected/clicked
+                clicked_channel_item = self.channel_selector_list.item(clicked_index)
+                if clicked_channel_item is None:
+                    return
+                    
+                clicked_channel_name = clicked_channel_item.text()
+                current_selected_channel = self.irc_client.current_channel
 
-            # Get index of clicked item
-            clicked_index = self.channel_selector_list.currentRow()
-            clicked_channel = self.channel_selector_list.item(clicked_index)
-            self.switch_channel(clicked_channel.text())
+                # Check if the channel is already selected
+                if clicked_channel_name == current_selected_channel:
+                    # Log the skip and return early
+                    logging.debug(f"Channel {clicked_channel_name} is already active. Skipping switch.")
+                    return 
+                
+                # Set background of currently selected channel back to default
+                if current_selected_channel:
+                    for i in range(self.channel_selector_list.count()):
+                        if self.channel_selector_list.item(i).text() == current_selected_channel:
+                            self.channel_selector_list.item(i).setBackground(QColor(self.list_bg))
+                            break
 
-            # Turn background blue
-            self.channel_selector_list.item(clicked_index).setBackground(QColor(self.list_channel_current_bg))
-            
-            self.highlight_away_users()
-            self.update_users_label()
+                # Switch to the new channel
+                self.switch_channel(clicked_channel_name)
 
-            # Remove the clicked channel from highlighted_channels dictionary
-            if self.irc_client.server_name in self.irc_client.highlighted_channels:
-                server_highlighted_channels = self.irc_client.highlighted_channels[self.irc_client.server_name]
-                if clicked_channel.text() in server_highlighted_channels:
-                    del server_highlighted_channels[clicked_channel.text()]
+                # Turn background blue
+                self.channel_selector_list.item(clicked_index).setBackground(QColor(self.list_channel_current_bg))
+                
+                # Update other GUI elements
+                self.highlight_away_users()
+                self.update_users_label()
 
-            QTimer.singleShot(1, self.highlight_nicknames)
+                # Remove the clicked channel from highlighted_channels dictionary
+                if self.irc_client.server_name in self.irc_client.highlighted_channels:
+                    server_highlighted_channels = self.irc_client.highlighted_channels[self.irc_client.server_name]
+                    if clicked_channel_name in server_highlighted_channels:
+                        del server_highlighted_channels[clicked_channel_name]
 
-        except AttributeError as e:
-            logging.error(f"AttributeError in on_channel_click: {e}")
-            return
-        except Exception as e:
-            logging.error(f"Exception in on_channel_click: {e}")
+            except AttributeError as e:
+                logging.error(f"AttributeError in on_channel_click: {e}")
+                return
+            except Exception as e:
+                logging.error(f"Exception in on_channel_click: {e}")
+
+    def display_last_messages(self, channel=None, num=200, server_name=None):
+            if server_name is not None and channel is not None:
+                try:
+                    # Ensure the client is accessible.
+                    messages = self.irc_client.channel_messages[server_name][channel]
+                    # Slice the list to get the oldest to newest messages
+                    messages_to_process = messages[-num:] 
+                except Exception as e:
+                    logging.error(f"Exception on dictionary lookup display_last_messages: {e}")
+                    messages_to_process = []
+                
+                if messages_to_process:
+                    # Create a single worker for the entire batch
+                    worker = BatchDecoderWorker(
+                        messages_to_process, 
+                        self.decoder, 
+                        self.find_urls # Pass the method that finds URLs because why not
+                    )
+                    
+                    # Connect the signal to a new handler (or your existing one)
+                    # The handle_decoded_text method is now used for *each* message
+                    worker.signals.message_decoded.connect(self.handle_decoded_text)
+                    
+                    # Start the batch worker
+                    QThreadPool.globalInstance().start(worker)
+                
+            else:
+                logging.info(f"display_last_messages: given server_name \'{server_name}\' or given channel \'{channel}\' is None")
 
     def switch_channel(self, channel_name):
         try:
@@ -1490,11 +1552,11 @@ class RudeGui(QWidget):
                 self.topic_label.setText(f"Topic: {current_topic}")
 
                 # Display the last messages for the current channel
-                self.irc_client.display_last_messages(channel_name, server_name=server)
-                self.highlight_nicknames()
+                self.display_last_messages(channel_name, server_name=server)
 
                 self.irc_client.update_gui_user_list(channel_name)
                 self.insert_and_scroll()
+                QTimer.singleShot(1, self.highlight_nicknames)
 
             else:
                 self.insert_text_widget(f"Not a member of channel {channel_name}\n")
@@ -1509,7 +1571,7 @@ class RudeGui(QWidget):
             self.update_nick_channel_label()
 
             # Display the last messages for the current DM
-            self.irc_client.display_last_messages(channel_name, server_name=server)
+            self.display_last_messages(channel_name, server_name=server)
             self.insert_and_scroll()
             self.highlight_nicknames()
 
@@ -1538,13 +1600,22 @@ class RudeGui(QWidget):
 
     # Text & Formatting
     def insert_text_widget(self, message):
-        self.chat_box.reset_cursor_position()
-        urls = self.find_urls(message)
-
-        # Start threaded decoding: this replaces your old synchronous call to self.decoder()
-        worker = DecoderWorker(message, self.decoder)
-        worker.signals.finished.connect(lambda formatted_text: self.handle_decoded_text(formatted_text, urls))
-        QThreadPool.globalInstance().start(worker)
+            """
+            Handles messages using the unified BatchDecoderWorker.
+            """
+            self.chat_box.reset_cursor_position()
+            
+            # Use the unified worker, processing in batches or single messages
+            worker = BatchDecoderWorker(
+                message, 
+                self.decoder,
+                self.find_urls
+            )
+            
+            # Connect to the 'message_decoded' signal, which provides 2 arguments.
+            worker.signals.message_decoded.connect(self.handle_decoded_text)
+            
+            QThreadPool.globalInstance().start(worker)
 
     def trim_text_widget(self):
         """Trim the text widget to only hold a maximum of 500 lines."""
@@ -1571,7 +1642,7 @@ class RudeGui(QWidget):
         output = []
         text_buffer = []
 
-        # Mutable state (local variables for faster access)
+        # Mutable state
         current_attr = {
             "bold": False,
             "italic": False,
@@ -1581,9 +1652,6 @@ class RudeGui(QWidget):
             "colour": 0,
             "background": 1
         }
-
-        # Set of control characters for faster membership checking
-        control_codes = {'\x02', '\x1D', '\x1F', '\x1E', '\x16', '\x03', '\x0F'}
 
         def flush():
             if text_buffer:
@@ -1597,16 +1665,6 @@ class RudeGui(QWidget):
         c_index = 0
         while c_index < len(input_text):
             c = input_text[c_index]
-
-            if c not in control_codes:
-                # Bulk append plain text until next control code for performance
-                start = c_index
-                while c_index < len(input_text) and input_text[c_index] not in control_codes:
-                    c_index += 1
-                text_buffer.append(input_text[start:c_index])
-                continue  # skip c_index += 1 since we've already advanced
-
-            # Process control codes
             match c:
                 case '\x02':  # Bold
                     flush()
@@ -1629,33 +1687,23 @@ class RudeGui(QWidget):
                     c_index += 1
                     num_buf = []
                     fg = bg = None
-                    # Parse up to two ASCII digits for foreground color
-                    while c_index < len(input_text) and input_text[c_index] in '0123456789' and len(num_buf) < 2:
+                    # Parse up to two digits
+                    while c_index < len(input_text) and input_text[c_index].isdigit() and len(num_buf) < 2:
                         num_buf.append(input_text[c_index])
                         c_index += 1
                     if num_buf:
-                        try:
-                            fg = int("".join(num_buf))
-                        except ValueError:
-                            logging.warning(f"Invalid foreground color code: {''.join(num_buf)}")
-                            fg = 0
-                    # Look for optional background color
+                        fg = int("".join(num_buf))
                     if c_index < len(input_text) and input_text[c_index] == ',':
                         c_index += 1
                         num_buf = []
-                        while c_index < len(input_text) and input_text[c_index] in '0123456789' and len(num_buf) < 2:
+                        while c_index < len(input_text) and input_text[c_index].isdigit() and len(num_buf) < 2:
                             num_buf.append(input_text[c_index])
                             c_index += 1
                         if num_buf:
-                            try:
-                                bg = int("".join(num_buf))
-                            except ValueError:
-                                logging.warning(f"Invalid background color code: {''.join(num_buf)}")
-                                bg = 1
+                            bg = int("".join(num_buf))
                     current_attr["colour"] = fg if fg is not None else 0
                     current_attr["background"] = bg if bg is not None else 1
                     c_index -= 1  # Compensate for outer loop increment
-
                 case '\x0F':  # Reset
                     flush()
                     current_attr = {
@@ -1668,8 +1716,7 @@ class RudeGui(QWidget):
                         "background": 1
                     }
                 case _:
-                    # Shouldn't happen, but included for completeness
-                    pass
+                    text_buffer.append(c)
 
             c_index += 1
 
@@ -1686,15 +1733,12 @@ class RudeGui(QWidget):
 
     def configure_tag_based_on_attributes(self, attr: dict) -> QTextCharFormat:
         try:
-            # Cache optimization: skip re-creating format if attrs are the same
-            if attr == self._last_attr:
-                return self._last_fmt
-
             fmt = QTextCharFormat()
             fmt.setFontFamily(self.chat_font_family)
             fmt.setFontPointSize(int(self.chat_font_size))
 
             if attr["bold"]:
+                #fmt.setFontFamily("Courier") # For bold testing
                 fmt.setFontWeight(QFont.Weight.Bold)
             if attr["italic"]:
                 fmt.setFontItalic(True)
@@ -1713,13 +1757,11 @@ class RudeGui(QWidget):
                 hex_background = self.irc_colors.get(irc_background_code, 'black')
                 fmt.setBackground(QColor(hex_background))
 
-            self._last_attr = attr.copy()  # Save current attributes for next time
-            self._last_fmt = fmt
             return fmt
 
         except Exception as e:
             logging.error(f"Error in configure_tag_based_on_attributes: {e}")
-            return QTextCharFormat()  # fallback to avoid crashes
+            return QTextCharFormat()
 
     def tag_urls(self, urls, index=0):
         if index < len(urls):
