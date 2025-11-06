@@ -2,7 +2,7 @@
 - [x] Complete / Has base function
 - [ ] Needs to be done / all child goals need to be completed
 
-**RudeChat4.1: (7/13 - 53.85%)**
+**RudeChat4.1: (0/3 - 0.00%)**
 - [ ] Fix messages loading in the wrong order
 - [ ] Fix nickname highlighting (use ANSI escape codes?)
 - [ ] Implement updated GUI
