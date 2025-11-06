@@ -2,21 +2,15 @@
 - [x] Complete / Has base function
 - [ ] Needs to be done / all child goals need to be completed
 
-**Tasks Complete: (7/13 - 53.85%)**
+**RudeChat4.1: (7/13 - 53.85%)**
+- [ ] Fix messages loading in the wrong order
+- [ ] Fix nickname highlighting (use ANSI escape codes?)
+- [ ] Implement updated GUI
+
+**RudeChat4 (Carry-overs): (0/3 - 0.00%)**
 - [ ] Small Bugfixes
 	- [ ] Make clicking on the app reopen the window (MacOS)
-	- [x] Implement full notification support for mentions and DMs.
-- [x] Implement "Closing" screen - replaces the main window while the program shuts down
 - [ ] OS Builds
-	- [ ] `Linux`
-		- [x] Debian/Ubuntu
-		- [x] Fedora(Needs testing)
-		- [ ] Gentoo(ebuild)
-		- [x] Universal Stand-alone
-	- [x] `MacOS`
-		- [x] Application.app 
-	- [x] `Windows`
-		- [x] Installer
 
 # RudeChat IRC Client: For Fun & Reasons.
 ## How to Install
