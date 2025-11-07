@@ -4275,16 +4275,17 @@ class RudeChatClient:
         else:
             # If the active channel list isn't loaded or doesn't exist, skip coloring.
             return message
-            
+
         processed_message = message
-        
+
         for nickname in users_to_check:
             if nickname and nickname[0] in self.mode_values:
                 nickname = nickname[1:]
+
+            pattern_str = r'(?<![./])\b' + re.escape(nickname) + r'\b(?![./])'
             
-            pattern_str = r'\b' + re.escape(nickname) + r'\b'
             pattern = re.compile(pattern_str, re.IGNORECASE)
-            
+
             # The substitution function wraps the matched nickname in ANSI codes
             def color_match(match: re.Match) -> str:
                 # Use the exact casing of the nickname as it appeared in the message
@@ -4293,10 +4294,9 @@ class RudeChatClient:
                 # The helper function generates the colored string
                 return self.ansi_color_nickname(matched_nick)
 
-            # Apply the substitution to the message. 
-            # The re.sub call implicitly performs the matching and replacement.
+            # Apply the substitution to the message.
             new_processed_message = pattern.sub(color_match, processed_message)
-                 
+            
             processed_message = new_processed_message
 
         return processed_message
