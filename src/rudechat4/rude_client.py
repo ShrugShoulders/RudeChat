@@ -4451,6 +4451,10 @@ class RudeChatClient:
             for raw_user in raw_users:
                 # Remove mode symbols (@, +, %, etc.) to get the canonical nickname
                 # The user's name starts after the mode symbol, if one exists.
+                # Add user to the channel list if they are new
+                if raw_user not in self.channel_users[current_channel]:
+                    self.channel_users[current_channel].append(raw_user)
+
                 if raw_user and raw_user[0] in ('@', '+', '%', '&', '~'):
                     user = raw_user[1:]
                 else:
@@ -4458,10 +4462,6 @@ class RudeChatClient:
                     
                 if not user:
                     continue
-
-                # Add user to the channel list if they are new
-                if user not in self.channel_users[current_channel]:
-                    self.channel_users[current_channel].append(user)
 
                 # Generate and Save Color to self.gui.nickname_colors
                 # Check if the user already has a color assigned
