@@ -2608,7 +2608,6 @@ class RudeChatClient:
                     # Apply green text formatting here for each line
                     eline = self.replace_emojis(line)
                     styled_line = self.green_texter(eline)
-                    styled_line = self.color_message_mentions(styled_line)
 
                     # Send the styled line as a message
                     await self.send_message(f'PRIVMSG {channel} :{styled_line}')
@@ -2616,6 +2615,7 @@ class RudeChatClient:
                     # Get the mode symbol for the current user
                     user_mode = self.get_user_mode(self.nickname, channel)
                     mode_symbol = self.get_mode_symbol(user_mode) if user_mode else ''
+                    styled_line = self.color_message_mentions(styled_line)
 
                     # Insert the message into the text widget
                     if self.use_time_stamp:
