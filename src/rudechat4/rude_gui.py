@@ -1494,7 +1494,7 @@ class RudeGui(QWidget):
             except Exception as e:
                 logging.error(f"Exception in on_channel_click: {e}")
 
-    def display_last_messages(self, channel=None, num=200, server_name=None):
+    def display_last_messages(self, channel=None, num=800, server_name=None):
             if server_name is not None and channel is not None:
                 try:
                     # Ensure the client is accessible.
@@ -1612,18 +1612,6 @@ class RudeGui(QWidget):
             
             QThreadPool.globalInstance().start(worker)
 
-    def trim_text_widget(self):
-        """Trim the text widget to only hold a maximum of 500 lines."""
-        line_count = self.chat_box.document().blockCount()  # Get total line count
-        if line_count > 500:
-            excess_lines = line_count - 500
-            cursor = self.chat_box.textCursor()
-            cursor.movePosition(QTextCursor.MoveOperation.Start)
-            for _ in range(excess_lines):
-                cursor.select(QTextCursor.SelectionType.BlockUnderCursor)
-                cursor.removeSelectedText()
-                cursor.deleteChar()
-
     def find_urls(self, text):
         # Use the precompiled regex pattern to find URLs
         return self.url_pattern.findall(text)
@@ -1667,7 +1655,7 @@ class RudeGui(QWidget):
             codes = []
             num_buf = []
 
-            # 1. Collect all numerical SGR codes
+            # Collect all numerical SGR codes
             while i < len(input_text):
                 char = input_text[i]
                 if char == 'm': # Sequence Terminator
@@ -1711,7 +1699,7 @@ class RudeGui(QWidget):
                      # Reversing inverse is complex, better to skip or rely on a new 0 code
                     pass
 
-                # 3. Handle Color Codes (3/4-bit and extended)
+                # Handle Color Codes (3/4-bit and extended)
                 
                 # Default Colors
                 elif code == 39: current_attr["colour"] = (0, 0)  # Default FG

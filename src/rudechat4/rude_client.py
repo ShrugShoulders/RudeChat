@@ -1009,7 +1009,6 @@ class RudeChatClient:
             try:
                 await asyncio.sleep(125)
                 self.trim_messages()
-                self.gui.trim_text_widget()
                 if not self.loop_running:
                     break
 
@@ -1237,7 +1236,7 @@ class RudeChatClient:
         for server, channels in self.channel_messages.items():
             # Trim the message history for remaining channels to the last 500 messages
             for channel, messages in channels.items():
-                channels[channel] = messages[-500:]
+                channels[channel] = messages[-800:]
 
     def remove_bang_channels(self):
         try:
@@ -1672,13 +1671,20 @@ class RudeChatClient:
         """
         Retrieves the hex color for a nickname, converts it to 24-bit ANSI SGR 
         codes, and wraps the nickname in the coloring sequence.
-        """
-        # 1. Look up the hex color for the nickname
-        # Assumes self.gui.nickname_colors is available and contains hex strings (e.g., "#FF00AA")
-        # Use .get() with a default hex color (e.g., bright white) for safety
-        hex_color = self.gui.nickname_colors.get(nickname, "#FFFFFF")
         
-        # 2. Clean the hex color and convert to R, G, B decimal integers (0-255)
+        This version performs a case-insensitive lookup against the nickname_colors dictionary.
+        """
+        lower_nickname = nickname.lower()
+
+        color_key = None
+        for key in self.gui.nickname_colors:
+            if key.lower() == lower_nickname:
+                color_key = key # This is the case-sensitive key that works in the dict
+                break
+
+        hex_color = self.gui.nickname_colors.get(color_key, "#FFFFFF")
+
+        # Clean the hex color and convert to R, G, B decimal integers (0-255)
         hex_color = hex_color.lstrip('#')
         
         # Basic validation for a 6-character hex string
@@ -1694,18 +1700,19 @@ class RudeChatClient:
             # Should be caught by the regex, but safe to include
             return nickname
             
-        # 3. Define ANSI Control Codes
+        # Define ANSI Control Codes
         ESC = "\x1b["
         # 24-bit Foreground Code: \x1b[38;2;R;G;Bm
         ANSI_START = f"{ESC}38;2;{r};{g};{b}m"
         # Reset Code: \x1b[0m
         ANSI_END = f"{ESC}0m"
         
-        # 4. Wrap the nickname
+        # Wrap the nickname (using the exact casing from the message: 'nickname')
         return f"{ANSI_START}{nickname}{ANSI_END}"
 
     def save_message(self, server, target, sender, message, mode_symbol, is_sent):
         timestamp = datetime.now().strftime('[%H:%M:%S] ')
+        gmessage = self.color_message_mentions(target, message)
         
         # Determine the target for the message list (channel or sender/target for DM)
         if self.is_direct_message(target):
@@ -1724,9 +1731,9 @@ class RudeChatClient:
         
         # Construct the final message using the colored name
         if self.use_time_stamp == True:
-            message_list.append(f"{timestamp}<{mode_symbol}{colored_name}> {message}\n")
+            message_list.append(f"{timestamp}<{mode_symbol}{colored_name}> {gmessage}\n")
         elif self.use_time_stamp == False:
-            message_list.append(f"<{mode_symbol}{colored_name}> {message}\n")
+            message_list.append(f"<{mode_symbol}{colored_name}> {gmessage}\n")
 
     def is_it_a_mention(self, message):
         if self.nickname.lower() in message.lower():
@@ -1755,14 +1762,13 @@ class RudeChatClient:
                 # 1. Get the ANSI-colored version of the sender's nickname
                 colored_sender = self.ansi_color_nickname(sender)
 
-                # --- Target is the Currently Selected Channel/Tab ---
                 if target == self.current_channel and self.gui.irc_client == self:
-                    
+                    gmessage = self.color_message_mentions(target, message)
                     # Use the colored sender in the final message string
                     if self.use_time_stamp:
-                        final_message = f"{timestamp}<{mode_symbol}{colored_sender}> {message}\n"
+                        final_message = f"{timestamp}<{mode_symbol}{colored_sender}> {gmessage}\n"
                     else:
-                        final_message = f"<{mode_symbol}{colored_sender}> {message}\n"
+                        final_message = f"<{mode_symbol}{colored_sender}> {gmessage}\n"
                         
                     # Pass the complete, ANSI-encoded string to the GUI widget
                     self.gui.insert_text_widget(final_message)
@@ -1771,9 +1777,9 @@ class RudeChatClient:
                     if is_direct:
                         # For DM, mode_symbol is often not used, but we'll use the colored_sender
                         if self.use_time_stamp:
-                            final_message = f"{timestamp}<{colored_sender}> {message}\n"
+                            final_message = f"{timestamp}<{colored_sender}> {gmessage}\n"
                         else:
-                            final_message = f"<{colored_sender}> {message}\n"
+                            final_message = f"<{colored_sender}> {gmessage}\n"
                             
                         self.gui.insert_text_widget(final_message)
 
@@ -2615,7 +2621,7 @@ class RudeChatClient:
                     # Get the mode symbol for the current user
                     user_mode = self.get_user_mode(self.nickname, channel)
                     mode_symbol = self.get_mode_symbol(user_mode) if user_mode else ''
-                    styled_line = self.color_message_mentions(styled_line)
+                    styled_line = self.color_message_mentions(channel, styled_line)
 
                     # Insert the message into the text widget
                     if self.use_time_stamp:
@@ -4257,15 +4263,15 @@ class RudeChatClient:
         except Exception as e:
             logging.error(f"Error in handle_pong: {e}")
 
-    def color_message_mentions(self, message: str) -> str:
+    def color_message_mentions(self, channel, message: str) -> str:
         """
         Searches the message body for any nicknames present in the currently active
         channel's user list and wraps them in their assigned 24-bit ANSI color codes.
         """
 
-        if self.current_channel in self.channel_users:
+        if channel in self.channel_users:
             # Get the user list from the actively focused channel/tab.
-            users_to_check = self.channel_users.get(self.current_channel, [])
+            users_to_check = self.channel_users.get(channel, [])
         else:
             # If the active channel list isn't loaded or doesn't exist, skip coloring.
             return message
@@ -4275,19 +4281,24 @@ class RudeChatClient:
         for nickname in users_to_check:
             if nickname and nickname[0] in self.mode_values:
                 nickname = nickname[1:]
-
-            pattern = re.compile(r'\b' + re.escape(nickname) + r'\b', re.IGNORECASE)
+            
+            pattern_str = r'\b' + re.escape(nickname) + r'\b'
+            pattern = re.compile(pattern_str, re.IGNORECASE)
             
             # The substitution function wraps the matched nickname in ANSI codes
             def color_match(match: re.Match) -> str:
                 # Use the exact casing of the nickname as it appeared in the message
                 matched_nick = match.group(0)
+                
                 # The helper function generates the colored string
                 return self.ansi_color_nickname(matched_nick)
 
             # Apply the substitution to the message. 
-            processed_message = pattern.sub(color_match, processed_message)
-        
+            # The re.sub call implicitly performs the matching and replacement.
+            new_processed_message = pattern.sub(color_match, processed_message)
+                 
+            processed_message = new_processed_message
+
         return processed_message
 
     async def prtcl_PRIVMSG(self, tokens, znc_privmsg=False):
@@ -4310,8 +4321,6 @@ class RudeChatClient:
 
             # Process green text
             gmessage = self.green_texter(message_with_emojis) 
-
-            gmessage = self.color_message_mentions(gmessage)
 
             if self.is_ctcp_command(message):
                 await self.handle_ctcp(tokens)
