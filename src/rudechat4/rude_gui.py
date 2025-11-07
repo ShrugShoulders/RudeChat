@@ -680,7 +680,6 @@ class RudeGui(QWidget):
         self.show_startup_art()
 
     def apply_settings(self):
-        self.highlight_nicknames()
         self.highlight_away_users()
         self.emoji_select()
         self.set_gui_theme()
@@ -1138,7 +1137,6 @@ class RudeGui(QWidget):
 
     def reset_nick_colors(self):
         self.nickname_colors = self.load_nickname_colors()
-        self.highlight_nicknames()
 
     def append_to_pop_out_dict(self, user_or_chan):
         if self.irc_client.server_name not in self.popped_out_channels:
@@ -1418,7 +1416,6 @@ class RudeGui(QWidget):
                 self.show_startup_art()
                 self.irc_client.display_server_motd(actual_server)
                 self.update_users_label()
-                self.highlight_nicknames()
                 self.highlight_who_channels()
                 self.update_channel_label()
 
@@ -1556,7 +1553,6 @@ class RudeGui(QWidget):
 
                 self.irc_client.update_gui_user_list(channel_name)
                 self.insert_and_scroll()
-                QTimer.singleShot(1, self.highlight_nicknames)
 
             else:
                 self.insert_text_widget(f"Not a member of channel {channel_name}\n")
@@ -1573,7 +1569,6 @@ class RudeGui(QWidget):
             # Display the last messages for the current DM
             self.display_last_messages(channel_name, server_name=server)
             self.insert_and_scroll()
-            self.highlight_nicknames()
 
             # No topic for DMs
             self.topic_label.setText(f"{channel_name}")
@@ -1642,15 +1637,19 @@ class RudeGui(QWidget):
         output = []
         text_buffer = []
 
-        # Mutable state
+        # Mutable state. Colour and background are now tuples: (Type, Value)
+        # Type 0: Reset/Default
+        # Type 1: IRC Color Index (0-15)
+        # Type 2: ANSI 256-Color Index (0-255)
+        # Type 3: ANSI True Color RGB Tuple (R, G, B)
         current_attr = {
             "bold": False,
             "italic": False,
             "underline": False,
             "strikethrough": False,
             "inverse": False,
-            "colour": 0,
-            "background": 1
+            "colour": (0, 0),    # (Type, Value) - Default FG (Type 0, Value 0)
+            "background": (0, 0) # (Type, Value) - Default BG (Type 0, Value 1)
         }
 
         def flush():
@@ -1662,9 +1661,102 @@ class RudeGui(QWidget):
                     logging.error(f"Error creating format during flush: {e}")
                 text_buffer.clear()
 
+        def parse_ansi_sgr(start_index: int) -> int:
+            # start_index is the index of the '[' character
+            i = start_index + 1
+            codes = []
+            num_buf = []
+
+            # 1. Collect all numerical SGR codes
+            while i < len(input_text):
+                char = input_text[i]
+                if char == 'm': # Sequence Terminator
+                    break
+                elif char.isdigit():
+                    num_buf.append(char)
+                elif char == ';' or char == ':':
+                    if num_buf:
+                        codes.append(int("".join(num_buf)))
+                        num_buf.clear()
+                i += 1
+            
+            # Add the last code if it wasn't followed by a semicolon
+            if num_buf:
+                codes.append(int("".join(num_buf)))
+
+            # Process SGR codes
+            j = 0
+            while j < len(codes):
+                code = codes[j]
+                
+                if code == 0: # Reset
+                    current_attr.update({
+                        "bold": False, "italic": False, "underline": False, "strikethrough": False,
+                        "inverse": False, "colour": (0, 0), "background": (0, 0)
+                    })
+                elif code == 1: current_attr["bold"] = True
+                elif code == 3: current_attr["italic"] = True
+                elif code == 4: current_attr["underline"] = True
+                elif code == 9: current_attr["strikethrough"] = True
+                elif code == 7: # Inverse (Reverse)
+                    fg, bg = current_attr["colour"], current_attr["background"]
+                    current_attr["colour"], current_attr["background"] = bg, fg
+                
+                # Reset codes (2x means reset X or dim)
+                elif code == 22: current_attr["bold"] = False # Reset bold/dim
+                elif code == 23: current_attr["italic"] = False # Reset italic
+                elif code == 24: current_attr["underline"] = False # Reset underline
+                elif code == 29: current_attr["strikethrough"] = False # Reset strikethrough
+                elif code == 27: # Reset inverse (un-reverse)
+                     # Reversing inverse is complex, better to skip or rely on a new 0 code
+                    pass
+
+                # 3. Handle Color Codes (3/4-bit and extended)
+                
+                # Default Colors
+                elif code == 39: current_attr["colour"] = (0, 0)  # Default FG
+                elif code == 49: current_attr["background"] = (0, 1) # Default BG
+                
+                # Basic 3/4-bit Colors
+                elif 30 <= code <= 37 or 90 <= code <= 97:
+                    current_attr["colour"] = (1, ANSI_TO_IRC_MAP.get(code, 0)) # Type 1 = IRC/Basic
+                elif 40 <= code <= 47 or 100 <= code <= 107:
+                    current_attr["background"] = (1, ANSI_TO_IRC_MAP.get(code, 1)) # Type 1 = IRC/Basic
+
+                # Extended Colors (256-color or True Color)
+                elif code == 38 or code == 48:
+                    is_bg = (code == 48)
+                    
+                    if j + 1 < len(codes):
+                        # 256-color (8-bit) format: ...;5;N...
+                        if codes[j+1] == 5 and j + 2 < len(codes):
+                            color_val = codes[j+2]
+                            attr_key = "background" if is_bg else "colour"
+                            current_attr[attr_key] = (2, color_val) # Type 2 = 256-color
+                            j += 2 # Consume the 5 and the color index
+                        
+                        # True Color (24-bit RGB) format: ...;2;R;G;B...
+                        elif codes[j+1] == 2 and j + 4 <= len(codes): 
+                            r, g, b = codes[j+2], codes[j+3], codes[j+4]
+                            attr_key = "background" if is_bg else "colour"
+                            current_attr[attr_key] = (3, (r, g, b)) # Type 3 = RGB tuple
+                            j += 4 # Consume the 2, R, G, and B
+                
+                j += 1 # Move to the next code
+
+            # Return the index immediately after 'm'
+            return i + 1 if i < len(input_text) and input_text[i] == 'm' else i
+
         c_index = 0
         while c_index < len(input_text):
             c = input_text[c_index]
+            
+            if c == '\x1b' and c_index + 1 < len(input_text) and input_text[c_index+1] == '[':
+                flush()
+                # Pass the index of '\x1b' to the parser, it will handle the rest
+                c_index = parse_ansi_sgr(c_index + 1)
+                continue # Skip the normal c_index += 1 at the end
+            
             match c:
                 case '\x02':  # Bold
                     flush()
@@ -1682,38 +1774,39 @@ class RudeGui(QWidget):
                     flush()
                     fg, bg = current_attr["colour"], current_attr["background"]
                     current_attr["colour"], current_attr["background"] = bg, fg
-                case '\x03':  # Color code
+                case '\x03':  # Color code (IRC format)
                     flush()
                     c_index += 1
                     num_buf = []
                     fg = bg = None
-                    # Parse up to two digits
+
                     while c_index < len(input_text) and input_text[c_index].isdigit() and len(num_buf) < 2:
-                        num_buf.append(input_text[c_index])
-                        c_index += 1
+                         num_buf.append(input_text[c_index])
+                         c_index += 1
                     if num_buf:
-                        fg = int("".join(num_buf))
+                         fg = int("".join(num_buf))
                     if c_index < len(input_text) and input_text[c_index] == ',':
-                        c_index += 1
-                        num_buf = []
-                        while c_index < len(input_text) and input_text[c_index].isdigit() and len(num_buf) < 2:
-                            num_buf.append(input_text[c_index])
-                            c_index += 1
-                        if num_buf:
-                            bg = int("".join(num_buf))
-                    current_attr["colour"] = fg if fg is not None else 0
-                    current_attr["background"] = bg if bg is not None else 1
-                    c_index -= 1  # Compensate for outer loop increment
+                         c_index += 1
+                         num_buf = []
+                         while c_index < len(input_text) and input_text[c_index].isdigit() and len(num_buf) < 2:
+                              num_buf.append(input_text[c_index])
+                              c_index += 1
+                         if num_buf:
+                              bg = int("".join(num_buf))
+
+                    current_attr["colour"] = (1, fg if fg is not None else 0)
+                    
+                    if bg is not None:
+                        current_attr["background"] = (1, bg) # Type 1 if explicitly set
+                    else:
+                        current_attr["background"] = (0, 0) # Type 0 if no BG is specified
+                        
+                    c_index -= 1 
                 case '\x0F':  # Reset
                     flush()
                     current_attr = {
-                        "bold": False,
-                        "italic": False,
-                        "underline": False,
-                        "strikethrough": False,
-                        "inverse": False,
-                        "colour": 0,
-                        "background": 1
+                        "bold": False, "italic": False, "underline": False, "strikethrough": False,
+                        "inverse": False, "colour": (0, 0), "background": (0, 0) # Reset to Type 0 (Default)
                     }
                 case _:
                     text_buffer.append(c)
@@ -1732,36 +1825,74 @@ class RudeGui(QWidget):
                 logging.error(f"Error in tag_text: {e}")
 
     def configure_tag_based_on_attributes(self, attr: dict) -> QTextCharFormat:
-        try:
-            fmt = QTextCharFormat()
-            fmt.setFontFamily(self.chat_font_family)
-            fmt.setFontPointSize(int(self.chat_font_size))
+            """
+            Configures a QTextCharFormat based on the IRC/ANSI attributes, supporting
+            24-bit True Color (Type 3) and ensuring no background is set for defaults.
+            """
+            try:
+                fmt = QTextCharFormat()
+                fmt.setFontFamily(self.chat_font_family)
+                try:
+                    fmt.setFontPointSize(int(self.chat_font_size))
+                except ValueError:
+                    pass
 
-            if attr["bold"]:
-                #fmt.setFontFamily("Courier") # For bold testing
-                fmt.setFontWeight(QFont.Weight.Bold)
-            if attr["italic"]:
-                fmt.setFontItalic(True)
-            if attr["underline"]:
-                fmt.setFontUnderline(True)
-            if attr["strikethrough"]:
-                fmt.setFontStrikeOut(True)
+                if attr["bold"]:
+                    fmt.setFontWeight(QFont.Weight.Bold) 
+                if attr["italic"]:
+                    fmt.setFontItalic(True)
+                if attr["underline"]:
+                    fmt.setFontUnderline(True)
+                if attr["strikethrough"]:
+                    fmt.setFontStrikeOut(True)
 
-            if attr["colour"] != 0:
-                irc_color_code = f"{attr['colour']:02d}"
-                hex_color = self.irc_colors.get(irc_color_code, 'white')
-                fmt.setForeground(QColor(hex_color))
+                def get_qcolor_from_attr(color_attr: tuple, is_background: bool) -> QColor:
+                    color_type, color_value = color_attr
+                    
+                    # Type 0: Default Color (Used for FG when explicitly reset to default)
+                    if color_type == 0:
+                        # For FG, return the actual default text color (usually black/theme color)
+                        return QColor(self.window_fg) 
+                    
+                    # Type 1: IRC Color Index (or Mapped 3/4-bit ANSI)
+                    if color_type == 1:
+                        irc_code_str = f"{color_value:02d}"
+                        hex_color = self.irc_colors.get(irc_code_str, self.window_bg if is_background else 'white')
+                        return QColor(hex_color)
 
-            if attr["background"] != 1:
-                irc_background_code = f"{attr['background']:02d}"
-                hex_background = self.irc_colors.get(irc_background_code, 'black')
-                fmt.setBackground(QColor(hex_background))
+                    # Type 2: ANSI 256-Color Index (8-bit)
+                    if color_type == 2:
+                        hex_color = ANSI_256_COLOR_MAP.get(color_value)
+                        if hex_color:
+                            return QColor(hex_color)
+                        return QColor('gray') 
 
-            return fmt
+                    # Type 3: ANSI True Color (24-bit RGB)
+                    if color_type == 3:
+                        # The value is a tuple: (R, G, B)
+                        r, g, b = color_value
+                        # QColor can be instantiated directly with RGB values (0-255)
+                        return QColor(r, g, b)
+                    
+                    # Fallback in case of an unknown Type (should not happen)
+                    return QColor(self.window_bg)
 
-        except Exception as e:
-            logging.error(f"Error in configure_tag_based_on_attributes: {e}")
-            return QTextCharFormat()
+                fg_color_type = attr["colour"][0]
+                if fg_color_type != 0:
+                    fg_color = get_qcolor_from_attr(attr["colour"], is_background=False)
+                    fmt.setForeground(fg_color)
+                
+                bg_color_type = attr["background"][0]
+                
+                if bg_color_type != 0:
+                    bg_color = get_qcolor_from_attr(attr["background"], is_background=True)
+                    fmt.setBackground(bg_color)
+
+                return fmt
+
+            except Exception as e:
+                logging.error(f"Error in configure_tag_based_on_attributes: {e}")
+                return QTextCharFormat()
 
     def tag_urls(self, urls, index=0):
         if index < len(urls):
@@ -1806,159 +1937,6 @@ class RudeGui(QWidget):
 
     def insert_and_scroll(self):
         self.chat_box.moveCursor(QTextCursor.MoveOperation.End)
-
-    def highlight_last_line(self):
-        """Highlight nicknames in the last line entered, with correct absolute positioning."""
-        try:
-            text = self.chat_box.toPlainText()
-            if not text:
-                return
-            #
-            lines = text.rsplit("\r\n", 1)
-            if not lines:
-                return
-
-            last_line = lines[-1]
-
-            # Find absolute position of last line in the full text
-            last_line_start = len(text) - len(last_line)
-
-            # Compute emoji offsets just for the last line
-            emoji_offset_start, emoji_offset_end = {}, {}
-            font = self.chat_box.font()
-            emoji_widths = self.get_unicode_offset(last_line, font)
-            emoji_offset_start, emoji_offset_end = self.build_emoji_offset_map(last_line, emoji_widths)
-
-            nicknames_to_highlight = set()
-            nicknames_to_highlight.add(self.irc_client.nickname)
-
-            if hasattr(self, 'nickname_pattern'):
-                for match in self.nickname_pattern.finditer(last_line):
-                    nick = match.group(0)
-                    nicknames_to_highlight.add(nick.strip('<>').lstrip(''.join(self.irc_client.mode_values)))
-
-            for nickname in nicknames_to_highlight:
-                pattern = self.users_nickname_pattern(nickname)
-                for match in pattern.finditer(last_line):
-                    matched_text = match.group(0)
-                    start, end = match.span()
-                    adjusted_start = last_line_start + start + emoji_offset_start.get(start, 0)
-                    adjusted_end = last_line_start + end + emoji_offset_end.get(end, 0)
-                    self.apply_nickname_format(matched_text, adjusted_start, adjusted_end, matched_text)
-
-        except Exception as e:
-            logging.error(f"Error in highlight_nicknames (last line only): {e}")
-
-    def highlight_nicknames(self):
-        """Efficiently highlight nicknames in the chat box with emoji-aware offset correction."""
-        try:
-            text = self.chat_box.toPlainText()
-            if not text:
-                return
-
-            # Precompute emoji offsets once for the entire text
-            emoji_offset_start, emoji_offset_end = {}, {}
-            font = self.chat_box.font()
-            emoji_widths = self.get_unicode_offset(text, font)
-
-            # Precompute cumulative emoji offsets for faster lookup
-            emoji_offset_start, emoji_offset_end = self.build_emoji_offset_map(text, emoji_widths)
-            nicknames_to_highlight = set()
-            nicknames_to_highlight.add(self.irc_client.nickname)
-
-            # Include matches from general nickname pattern
-            if hasattr(self, 'nickname_pattern'):
-                for match in self.nickname_pattern.finditer(text):
-                    nick = match.group(0)
-                    nicknames_to_highlight.add(nick.strip('<>').lstrip(''.join(self.irc_client.mode_values)))
-
-            # Highlight nicknames
-            for nickname in nicknames_to_highlight:
-                pattern = self.users_nickname_pattern(nickname)
-                for match in pattern.finditer(text):
-                    matched_text = match.group(0)
-                    start, end = match.span()
-                    adjusted_start = start + emoji_offset_start.get(start, 0)
-                    adjusted_end = end + emoji_offset_end.get(end, 0)
-                    self.apply_nickname_format(matched_text, adjusted_start, adjusted_end, matched_text)
-
-        except Exception as e:
-            logging.error(f"Error in optimized highlight_nicknames: {e}")
-
-    def build_emoji_offset_map(self, text, emoji_widths):
-        """Precompute emoji offset adjustments at each index."""
-        offset_start_map = {}
-        offset_end_map = {}
-        cum_offset = 0
-
-        for i, char in enumerate(text):
-            offset = emoji_widths.get(char, 0)
-            if offset:
-                cum_offset += offset
-            offset_start_map[i + 1] = cum_offset
-            offset_end_map[i + 1] = cum_offset
-
-        return offset_start_map, offset_end_map
-
-    def apply_nickname_format(self, text, start_position, end_position, nickname):
-        """Apply color formatting to the nickname with emoji offset correction."""
-        try:
-            if not nickname:
-                return
-
-            # Determine the nickname color
-            if nickname in self.nickname_colors:
-                nickname_color = self.nickname_colors[nickname]
-            else:
-                if self.generate_nickname_colors:
-                    if nickname == self.irc_client.nickname:
-                        nickname_color = self.main_nickname_color
-                    else:
-                        nickname_color = self.generate_random_color()
-                else:
-                    nickname_color = self.main_fg_color
-
-                self.nickname_colors[nickname] = nickname_color
-
-            # Setup text format
-            format_nick = QTextCharFormat()
-            format_nick.setFontFamily(self.chat_font_family)
-            format_nick.setFontPointSize(int(self.chat_font_size))
-            format_nick.setForeground(QColor(nickname_color))
-
-            # Apply formatting
-            cursor = self.chat_box.textCursor()
-
-            cursor.setPosition(start_position)
-
-            cursor.setPosition(end_position, QTextCursor.MoveMode.KeepAnchor)
-            cursor.setCharFormat(format_nick)
-
-        except Exception as e:
-            logging.error(f"Error in apply_nickname_format: {e}")
-
-    def get_text_width(self, text, font):
-        """Measure the width of text using QFontMetrics, with caching."""
-        if text in self.emoji_width_cache:
-            return self.emoji_width_cache[text]
-
-        metrics = QFontMetrics(font)
-        width = metrics.horizontalAdvance(text)  # Get the width of the text
-        self.emoji_width_cache[text] = width  # Cache result
-        return width
-
-    def get_unicode_offset(self, text, font):
-        """Estimate unicode offset based on their visual width, using caching."""
-        uni_offsets = {}
-
-        for char in set(text):  # Process only unique characters
-            if (len(str(ord(char))) == 6):  # Only measure unicode characters
-
-                offset = 1
-
-                uni_offsets[char] = offset
-
-        return uni_offsets
 
     def generate_random_color(self):
         while True:

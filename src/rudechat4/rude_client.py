@@ -293,7 +293,6 @@ class RudeChatClient:
     async def connect_to_server(self, config_file):
         TIMEOUT = 256  # seconds
         self.gui.insert_text_widget(f'Connecting to server: {self.server}:{self.port}\n')
-        self.gui.highlight_nicknames()
 
         try:
             if self.ssl_enabled:
@@ -1182,11 +1181,12 @@ class RudeChatClient:
             self.highlight_server(server_activity=True)
 
     async def handle_action_ctcp(self, timestamp, sender, target, ctcp_content):
+        colored_sender = self.ansi_color_nickname(sender)
         try:
             if self.use_time_stamp:
-                action_message = f"{timestamp}* {sender} {ctcp_content}\n"
+                action_message = f"{timestamp}* {colored_sender} {ctcp_content}\n"
             else:
-                action_message = f"* {sender} {ctcp_content}\n"
+                action_message = f"* {colored_sender} {ctcp_content}\n"
 
             # Update the message history
             if self.server not in self.channel_messages:
@@ -1206,7 +1206,6 @@ class RudeChatClient:
                 )
             ):
                 self.gui.insert_text_widget(action_message)
-                QTimer.singleShot(1, self.gui.highlight_last_line)
 
             elif (
                 self.server_name in self.gui.popped_out_channels
@@ -1669,22 +1668,65 @@ class RudeChatClient:
             except Exception as e:
                 logging.error(f"Error3 in handle_channel_message: {e}")
 
+    def ansi_color_nickname(self, nickname: str) -> str:
+        """
+        Retrieves the hex color for a nickname, converts it to 24-bit ANSI SGR 
+        codes, and wraps the nickname in the coloring sequence.
+        """
+        # 1. Look up the hex color for the nickname
+        # Assumes self.gui.nickname_colors is available and contains hex strings (e.g., "#FF00AA")
+        # Use .get() with a default hex color (e.g., bright white) for safety
+        hex_color = self.gui.nickname_colors.get(nickname, "#FFFFFF")
+        
+        # 2. Clean the hex color and convert to R, G, B decimal integers (0-255)
+        hex_color = hex_color.lstrip('#')
+        
+        # Basic validation for a 6-character hex string
+        if len(hex_color) != 6 or not re.match(r'^[0-9a-fA-F]{6}$', hex_color):
+            # Fallback to plain nickname if the color is invalid
+            return nickname
+            
+        try:
+            r = int(hex_color[0:2], 16)
+            g = int(hex_color[2:4], 16)
+            b = int(hex_color[4:6], 16)
+        except ValueError:
+            # Should be caught by the regex, but safe to include
+            return nickname
+            
+        # 3. Define ANSI Control Codes
+        ESC = "\x1b["
+        # 24-bit Foreground Code: \x1b[38;2;R;G;Bm
+        ANSI_START = f"{ESC}38;2;{r};{g};{b}m"
+        # Reset Code: \x1b[0m
+        ANSI_END = f"{ESC}0m"
+        
+        # 4. Wrap the nickname
+        return f"{ANSI_START}{nickname}{ANSI_END}"
+
     def save_message(self, server, target, sender, message, mode_symbol, is_sent):
         timestamp = datetime.now().strftime('[%H:%M:%S] ')
+        
+        # Determine the target for the message list (channel or sender/target for DM)
         if self.is_direct_message(target):
-            # If it's a DM, handle it differently
-            if sender not in self.channel_messages[server]:
-                self.channel_messages[server][sender] = []  # Create a list for the sender if it doesn't exist
-            message_list = self.channel_messages[server][sender]
+            key = sender
+            # The sender is the one who will be colored
+            colored_name = self.ansi_color_nickname(sender)
         else:
-            if target not in self.channel_messages[server]:
-                self.channel_messages[server][target] = []  # Create a list for the target if it doesn't exist
-            message_list = self.channel_messages[server][target]
-        # Append the message to the appropriate list
+            key = target
+            # The sender is the one who will be colored
+            colored_name = self.ansi_color_nickname(sender)
+
+        # Ensure the message list exists
+        if key not in self.channel_messages[server]:
+            self.channel_messages[server][key] = []
+        message_list = self.channel_messages[server][key]
+        
+        # Construct the final message using the colored name
         if self.use_time_stamp == True:
-            message_list.append(f"{timestamp}<{mode_symbol}{sender}> {message}\n")
+            message_list.append(f"{timestamp}<{mode_symbol}{colored_name}> {message}\n")
         elif self.use_time_stamp == False:
-            message_list.append(f"<{mode_symbol}{sender}> {message}\n")
+            message_list.append(f"<{mode_symbol}{colored_name}> {message}\n")
 
     def is_it_a_mention(self, message):
         if self.nickname.lower() in message.lower():
@@ -1709,28 +1751,44 @@ class RudeChatClient:
             return None
 
     def display_message(self, timestamp, sender, message, target, mode_symbol, is_direct=False):
-        try:
-            if target == self.current_channel and self.gui.irc_client == self:
-                if self.use_time_stamp:
-                    self.gui.insert_text_widget(f"{timestamp}<{mode_symbol}{sender}> {message}\n")
-                else:
-                    self.gui.insert_text_widget(f"<{mode_symbol}{sender}> {message}\n")
-                QTimer.singleShot(1, self.gui.highlight_last_line)
-            elif sender == self.current_channel and self.gui.irc_client == self:
-                if is_direct:
+            try:
+                # 1. Get the ANSI-colored version of the sender's nickname
+                colored_sender = self.ansi_color_nickname(sender)
+
+                # --- Target is the Currently Selected Channel/Tab ---
+                if target == self.current_channel and self.gui.irc_client == self:
+                    
+                    # Use the colored sender in the final message string
                     if self.use_time_stamp:
-                        self.gui.insert_text_widget(f"{timestamp}<{sender}> {message}\n")
+                        final_message = f"{timestamp}<{mode_symbol}{colored_sender}> {message}\n"
                     else:
-                        self.gui.insert_text_widget(f"<{sender}> {message}\n")
-                    QTimer.singleShot(1, self.gui.highlight_last_line)
-            else:
-                user_mention = self.is_it_a_mention(message)
-                if not user_mention:
-                    self.highlight_channel_if_not_current(target, sender, user_mention)
+                        final_message = f"<{mode_symbol}{colored_sender}> {message}\n"
+                        
+                    # Pass the complete, ANSI-encoded string to the GUI widget
+                    self.gui.insert_text_widget(final_message)
+
+                elif sender == self.current_channel and self.gui.irc_client == self:
+                    if is_direct:
+                        # For DM, mode_symbol is often not used, but we'll use the colored_sender
+                        if self.use_time_stamp:
+                            final_message = f"{timestamp}<{colored_sender}> {message}\n"
+                        else:
+                            final_message = f"<{colored_sender}> {message}\n"
+                            
+                        self.gui.insert_text_widget(final_message)
+
                 else:
-                    self.highlight_channel_if_not_current(target, sender, user_mention)
-        except Exception as e:
-            logging.error(f"Error in display_message: {e}")
+                    user_mention = self.is_it_a_mention(message)
+                    
+                    # The highlighting logic typically doesn't display the message directly, 
+                    # but saves it and potentially triggers a notification.
+                    if not user_mention:
+                        self.highlight_channel_if_not_current(target, sender, user_mention)
+                    else:
+                        self.highlight_channel_if_not_current(target, sender, user_mention)
+                        
+            except Exception as e:
+                logging.error(f"Error in display_message: {e}")
 
     def highlight_channel_if_not_current(self, target, sender, user_mention):
         highlighted_channel = target
@@ -1851,7 +1909,7 @@ class RudeChatClient:
             if channel == self.current_channel and self.gui.irc_client == self:
                 if self.server_name in self.gui.popped_out_channels and channel not in self.gui.popped_out_channels[self.server_name]:
                     self.gui.insert_text_widget(f"{message}")
-                    QTimer.singleShot(1, self.gui.highlight_last_line)
+
             if self.server_name in self.gui.popped_out_channels and channel in self.gui.popped_out_channels[self.server_name]:
                 self.pipe_mode_to_pop_out(message, channel)
             if self.server not in self.channel_messages:
@@ -2542,6 +2600,7 @@ class RudeChatClient:
         for chunk in message_chunks:
             # Split the chunk into lines
             lines = chunk.split('\n')
+            colored_sender = self.ansi_color_nickname(self.nickname)
 
             # Send each line separately
             for line in lines:
@@ -2560,11 +2619,10 @@ class RudeChatClient:
                     # Insert the message into the text widget
                     if self.use_time_stamp:
                         if channel == self.current_channel:
-                            self.gui.insert_text_widget(f"{timestamp}<{mode_symbol}{self.nickname}> {styled_line}\n")
+                            self.gui.insert_text_widget(f"{timestamp}<{mode_symbol}{colored_sender}> {styled_line}\n")
                     else:
                         if channel == self.current_channel:
-                            self.gui.insert_text_widget(f"<{mode_symbol}{self.nickname}> {styled_line}\n")
-                    QTimer.singleShot(1, self.gui.highlight_last_line)
+                            self.gui.insert_text_widget(f"<{mode_symbol}{colored_sender}> {styled_line}\n")
 
                     # Check if it's a DM or channel
                     if any(channel.startswith(prefix) for prefix in self.chantypes):  # It's a channel
@@ -2632,43 +2690,46 @@ class RudeChatClient:
             return
 
     def user_input_channel_message(self, chunk, timestamp, mode_symbol, channel):
+        colored_sender = self.ansi_color_nickname(self.nickname)
         if self.server not in self.channel_messages:
             self.channel_messages[self.server] = {}
         if channel not in self.channel_messages[self.server]:
             self.channel_messages[self.server][channel] = []
 
         if self.use_time_stamp == True:
-            self.channel_messages[self.server][channel].append(f"{timestamp}<{mode_symbol}{self.nickname}> {chunk}\n")
+            self.channel_messages[self.server][channel].append(f"{timestamp}<{mode_symbol}{colored_sender}> {chunk}\n")
         elif self.use_time_stamp == False:
-            self.channel_messages[self.server][channel].append(f"<{mode_symbol}{self.nickname}> {chunk}\n")
+            self.channel_messages[self.server][channel].append(f"<{mode_symbol}{colored_sender}> {chunk}\n")
 
         # Log the sent message using the new logging method
         self.log_message(self.server_name, channel, self.nickname, chunk, is_sent=True)
 
     def user_input_dm_message(self, chunk, timestamp, channel):
+        colored_sender = self.ansi_color_nickname(self.nickname)
         server_name = self.server
         if server_name not in self.channel_messages:
             self.channel_messages[server_name] = {}
         if self.current_channel not in self.channel_messages[server_name]:
             self.channel_messages[server_name][channel] = []
         if self.use_time_stamp == True:
-            self.channel_messages[server_name][channel].append(f"{timestamp}<{self.nickname}> {chunk}\n")
+            self.channel_messages[server_name][channel].append(f"{timestamp}<{colored_sender}> {chunk}\n")
         elif self.use_time_stamp == False:
-            self.channel_messages[server_name][channel].append(f"<{self.nickname}> {chunk}\n")
+            self.channel_messages[server_name][channel].append(f"<{colored_sender}> {chunk}\n")
 
         # Log the sent message using the new logging method
         self.log_message(self.server_name, channel, self.nickname, chunk, is_sent=True)
 
     def query_msg_handler(self, user, chunk, timestamp):
+        colored_sender = self.ansi_color_nickname(self.nickname)
         server_name = self.server
         if server_name not in self.channel_messages:
             self.channel_messages[server_name] = {}
         if user not in self.channel_messages[server_name]:
             self.channel_messages[server_name][user] = []
         if self.use_time_stamp == True:
-            self.channel_messages[server_name][user].append(f"{timestamp}<{self.nickname}> {chunk}\n")
+            self.channel_messages[server_name][user].append(f"{timestamp}<{colored_sender}> {chunk}\n")
         elif self.use_time_stamp == False:
-            self.channel_messages[server_name][user].append(f"<{self.nickname}> {chunk}\n")
+            self.channel_messages[server_name][user].append(f"<{colored_sender}> {chunk}\n")
 
         # Log the sent message using the new logging method
         self.log_message(self.server_name, user, self.nickname, chunk, is_sent=True)
@@ -2998,6 +3059,7 @@ class RudeChatClient:
         return random.choice(fortune_files)
 
     async def fortune_cowsay(self, mode_symbol, file_name=None):
+        colored_sender = self.ansi_color_nickname(self.nickname)
         timestamp = datetime.now().strftime('[%H:%M:%S] ')
         file_name = self.get_fortune_file(file_name)
         selected_channel = self.current_channel
@@ -3013,16 +3075,16 @@ class RudeChatClient:
             if self.use_time_stamp == True:
                 formatted_message = f"{timestamp}<{mode_symbol}{self.nickname}> {line}\n"
             elif self.use_time_stamp == False:
-                formatted_message = f"<{mode_symbol}{self.nickname}> {line}\n"
+                formatted_message = f"<{mode_symbol}{colored_sender}> {line}\n"
             await self.send_message(f'PRIVMSG {selected_channel} :{line}')
             await asyncio.sleep(0.4)
             await self.append_to_channel_history(selected_channel, line, mode_symbol)
             if selected_channel == self.current_channel:
                 self.gui.insert_text_widget(formatted_message)
-                QTimer.singleShot(1, self.gui.highlight_last_line)
 
     async def cowsay_custom_message(self, message, mode_symbol):
         """Wrap a custom message using the cowsay format."""
+        colored_sender = self.ansi_color_nickname(self.nickname)
         timestamp = datetime.now().strftime('[%H:%M:%S] ')
         selected_channel = self.current_channel
         wrapped_message = self.wrap_text(message)
@@ -3030,15 +3092,14 @@ class RudeChatClient:
 
         for line in cowsay_output.split('\n'):
             if self.use_time_stamp == True:
-                formatted_message = f"{timestamp}<{mode_symbol}{self.nickname}> {line}\n"
+                formatted_message = f"{timestamp}<{mode_symbol}{colored_sender}> {line}\n"
             elif self.use_time_stamp == False:
-                formatted_message = f"<{mode_symbol}{self.nickname}> {line}\n"
+                formatted_message = f"<{mode_symbol}{colored_sender}> {line}\n"
             await self.send_message(f'PRIVMSG {selected_channel} :{line}')
             await asyncio.sleep(0.4)
             await self.append_to_channel_history(selected_channel, line, mode_symbol)
             if selected_channel == self.current_channel:
                 self.gui.insert_text_widget(formatted_message)
-                QTimer.singleShot(1, self.gui.highlight_last_line)
 
     async def send_ctcp_request(self, target_nick, ctcp_command):
         """Sends a CTCP request to a target."""
@@ -3815,6 +3876,7 @@ class RudeChatClient:
             user_mask = tokens.hostmask
             channel = tokens.params[0]
             param_len = len(tokens.params)
+            colored_sender = self.ansi_color_nickname(user_info)
             if self.extended_join and param_len != 1:
                 account = tokens.params[1]
                 self.cache_accountname(user_info, account)
@@ -3839,7 +3901,7 @@ class RudeChatClient:
             if self.show_full_hostmask == True:
                 join_message = f"\x0312(→)\x0F {user_mask} has joined channel {channel}\n"
             elif self.show_full_hostmask == False:
-                join_message = f"\x0312(→)\x0F {user_info} has joined channel {channel}\n"
+                join_message = f"\x0312(→)\x0F {colored_sender} has joined channel {channel}\n"
 
             # Update the message history for the channel
             if self.server not in self.channel_messages:
@@ -3854,7 +3916,6 @@ class RudeChatClient:
             if channel == self.current_channel and self.gui.irc_client == self and self.server_name in self.gui.popped_out_channels and channel not in self.gui.popped_out_channels[self.server_name]:
                 if self.show_join_part_quit_nick:
                     self.gui.insert_text_widget(join_message)
-                    QTimer.singleShot(1, self.gui.highlight_last_line)
             if self.server_name in self.gui.popped_out_channels and channel in self.gui.popped_out_channels[self.server_name]:
                 if self.show_join_part_quit_nick:
                     self.pipe_mode_to_pop_out(join_message, channel)
@@ -3880,6 +3941,7 @@ class RudeChatClient:
             channel = tokens.params[0]
             kicked_nickname = tokens.params[1]
             reason = tokens.params[2] if len(tokens.params) > 2 else 'No reason provided'
+            colored_sender = self.ansi_color_nickname(kicked_nickname)
 
             # Update the message history for the channel
             if self.server not in self.channel_messages:
@@ -3888,12 +3950,11 @@ class RudeChatClient:
                 self.channel_messages[self.server][channel] = []
 
             # Display the kick message in the chat window only if the channel is the current channel
-            kick_message_content = f"\x0304(←)\x0F {kicked_nickname} has been kicked from {channel} by {tokens.hostmask.nickname} ({reason})\n"
+            kick_message_content = f"\x0304(←)\x0F {colored_sender} has been kicked from {channel} by {tokens.hostmask.nickname} ({reason})\n"
             self.channel_messages[self.server][channel].append(kick_message_content)
 
             if channel == self.current_channel and self.gui.irc_client == self and self.server_name in self.gui.popped_out_channels and channel not in self.gui.popped_out_channels[self.server_name]:
                 self.gui.insert_text_widget(kick_message_content)
-                QTimer.singleShot(1, self.gui.highlight_last_line)
             if self.server_name in self.gui.popped_out_channels and channel in self.gui.popped_out_channels[self.server_name]:
                 self.pipe_mode_to_pop_out(kick_message_content, channel)
 
@@ -4059,7 +4120,6 @@ class RudeChatClient:
                         if channel == self.current_channel and self.gui.irc_client == self and self.server_name in self.gui.popped_out_channels and channel not in self.gui.popped_out_channels[self.server_name]:
                             if self.show_join_part_quit_nick:
                                 self.gui.insert_text_widget(message)
-                                QTimer.singleShot(1, self.gui.highlight_last_line)
                         if self.server_name in self.gui.popped_out_channels and channel in self.gui.popped_out_channels[self.server_name]:
                             if self.show_join_part_quit_nick:
                                 self.pipe_mode_to_pop_out(message, channel)
@@ -4124,6 +4184,7 @@ class RudeChatClient:
             user_mask = tokens.hostmask
             channel = tokens.params[0]
             reason = tokens.params[1] if len(tokens.params) > 1 else None
+            colored_sender = self.ansi_color_nickname(user_info)
 
             if reason:
                 part_message = f"\x0304(←)\x0F {user_mask} has parted from channel {channel}: {reason}\n"
@@ -4131,7 +4192,7 @@ class RudeChatClient:
                 part_message = f"\x0304(←)\x0F {user_mask} has parted from channel {channel}\n"
 
             if not self.show_full_hostmask:
-                part_message = part_message.replace(user_mask, user_info)
+                part_message = part_message.replace(user_mask, colored_sender)
 
             # Update the message history for the channel
             if self.server not in self.channel_messages:
@@ -4146,7 +4207,6 @@ class RudeChatClient:
             if channel == self.current_channel and self.gui.irc_client == self and self.server_name in self.gui.popped_out_channels and channel not in self.gui.popped_out_channels[self.server_name]:
                 if self.show_join_part_quit_nick:
                     self.gui.insert_text_widget(part_message)
-                    QTimer.singleShot(1, self.gui.highlight_last_line)
             if self.server_name in self.gui.popped_out_channels and channel in self.gui.popped_out_channels[self.server_name]:
                 if self.show_join_part_quit_nick:
                     self.pipe_mode_to_pop_out(part_message, channel)
@@ -4235,10 +4295,11 @@ class RudeChatClient:
             user_info = tokens.hostmask.nickname
             user_mask = tokens.hostmask
             reason = tokens.params[0] if tokens.params else "No reason"
+            colored_sender = self.ansi_color_nickname(user_info)
             if self.show_full_hostmask == True:
                 quit_message = f"\x0304(←)\x0F {user_mask} has quit: {reason}\n"
             elif self.show_full_hostmask == False:
-                quit_message = f"\x0304(←)\x0F {user_info} has quit: {reason}\n"
+                quit_message = f"\x0304(←)\x0F {colored_sender} has quit: {reason}\n"
 
             # Remove the user from all channel_users lists
             for channel, users in self.channel_users.items():
@@ -4261,7 +4322,7 @@ class RudeChatClient:
                         if channel == self.current_channel and self.gui.irc_client == self and self.server_name in self.gui.popped_out_channels and channel not in self.gui.popped_out_channels[self.server_name]:
                             if self.show_join_part_quit_nick:
                                 self.gui.insert_text_widget(quit_message)
-                                QTimer.singleShot(1, self.gui.highlight_last_line)
+                                
                         if self.server_name in self.gui.popped_out_channels and channel in self.gui.popped_out_channels[self.server_name]:
                             if self.show_join_part_quit_nick:
                                 self.pipe_mode_to_pop_out(quit_message, channel)
@@ -4374,22 +4435,49 @@ class RudeChatClient:
         except Exception as e:
             logging.error(f"Error in save_channel_list_to_file: {e}")
 
-    def prtcl_353(self, tokens): # Get list of users in a channel
-        """RPL_NAMREPLY"""
+    def prtcl_353(self, tokens): 
+        """RPL_NAMREPLY: Processes the list of users in a channel and assigns a random color."""
         try:
-            current_channel = tokens.params[2]
-            users = tokens.params[3].split(" ")
-            # If this channel isn't in channel_users, initialize it with an empty list
+            # tokens.params[2] is the channel name
+            current_channel = tokens.params[2] 
+            # tokens.params[3] is the list of users, space-separated
+            raw_users = tokens.params[3].split(" ")
+                
+            # If this channel isn't in channel_users, initialize it
             if current_channel not in self.channel_users:
                 self.channel_users[current_channel] = []
 
-            # Append the users to the channel's list only if they are not already in it
-            for user in users:
+            # Process each user token
+            for raw_user in raw_users:
+                # Remove mode symbols (@, +, %, etc.) to get the canonical nickname
+                # The user's name starts after the mode symbol, if one exists.
+                if raw_user and raw_user[0] in ('@', '+', '%', '&', '~'):
+                    user = raw_user[1:]
+                else:
+                    user = raw_user
+                    
+                if not user:
+                    continue
+
+                # Add user to the channel list if they are new
                 if user not in self.channel_users[current_channel]:
                     self.channel_users[current_channel].append(user)
 
+                # Generate and Save Color to self.gui.nickname_colors
+                # Check if the user already has a color assigned
+                if user not in self.gui.nickname_colors:
+                    # Generate a random hex color string
+                    if user == self.nickname:
+                        self.gui.nickname_colors[user] = self.gui.main_nickname_color
+                    else:
+                        new_color = self.gui.generate_random_color()
+                            
+                        # Store the new color in the nickname_colors dictionary
+                        self.gui.nickname_colors[user] = new_color
+            self.gui.save_nickname_colors()
+
         except Exception as e:
-            logging.error(f"Error in handle_names_list command 353: {e}")
+            logging.error(f"Error in prtcl_353 (RPL_NAMREPLY): {e}")
 
     def prtcl_366(self, tokens):
         """RPL_ENDOFNAMES"""
@@ -4518,6 +4606,7 @@ class RudeChatClient:
 
     # Command Handlers
     async def cmd_broadcast(self, args):
+        colored_sender = self.ansi_color_nickname(self.nickname)
         if len(args) > 2:
             channels = args[1].split(',')
             message = " ".join(args[2:])
@@ -4534,8 +4623,8 @@ class RudeChatClient:
                     await self.send_message(f"PRIVMSG {channel} :{message}")
                     self.gui.insert_text_widget(f"Message Sent To: {channel}\n")
                     if channel == self.current_channel:
-                        self.gui.insert_text_widget(f"{timestamp} <{mode_symbol}{self.nickname}> {message}\n")
-                        QTimer.singleShot(1, self.gui.highlight_last_line)
+                        self.gui.insert_text_widget(f"{timestamp} <{mode_symbol}{colored_sender}> {message}\n")
+
                 else:
                     self.gui.insert_text_widget(f"Error: bad channel {channel}\n")
             return
@@ -4577,6 +4666,7 @@ class RudeChatClient:
 
     async def cmd_fortune(self, file_name=None):
         """Choose a random fortune from one of the lists"""
+        colored_sender = self.ansi_color_nickname(self.nickname)
         selected_channel = self.current_channel
         user_mode = self.get_user_mode(self.nickname, selected_channel)
         mode_symbol = self.get_mode_symbol(user_mode) if user_mode else ''
@@ -4589,15 +4679,14 @@ class RudeChatClient:
 
         for line in chosen_fortune.split('\n'):
             if self.use_time_stamp == True:
-                formatted_message = f"{timestamp}<{mode_symbol}{self.nickname}> {line}\n"
+                formatted_message = f"{timestamp}<{mode_symbol}{colored_sender}> {line}\n"
             elif self.use_time_stamp == False:
-                formatted_message = f"<{mode_symbol}{self.nickname}> {line}\n"
+                formatted_message = f"<{mode_symbol}{colored_sender}> {line}\n"
             await self.send_message(f'PRIVMSG {selected_channel} :{line}')
             await asyncio.sleep(0.4)
             await self.append_to_channel_history(selected_channel, line, mode_symbol)
             if selected_channel == self.current_channel:
                 self.gui.insert_text_widget(formatted_message)
-                QTimer.singleShot(1, self.gui.highlight_last_line)
 
     async def cmd_invite(self, args):
         if len(args) < 3:
@@ -4621,6 +4710,7 @@ class RudeChatClient:
         self.gui.insert_text_widget(f"Kicked {user} from {channel} for {reason}\n")
 
     async def cmd_mac(self, args):
+        colored_sender = self.ansi_color_nickname(self.nickname)
         if len(args) < 2:
             available_macros = ", ".join(self.ASCII_ART_MACROS.keys())
             self.gui.insert_text_widget(f"Available ASCII art macros: {available_macros}\n")
@@ -4640,18 +4730,19 @@ class RudeChatClient:
                 await asyncio.sleep(0.4)
                 if selected_channel == self.current_channel:
                     if self.use_time_stamp:
-                        self.gui.insert_text_widget(f"{current_time}<{mode_symbol}{self.nickname}> {formatted_message}")
+                        self.gui.insert_text_widget(f"{current_time}<{mode_symbol}{colored_sender}> {formatted_message}")
                     else:
-                        self.gui.insert_text_widget(f"<{mode_symbol}{self.nickname}> {formatted_message}")
-                    QTimer.singleShot(1, self.gui.highlight_last_line)
+                        self.gui.insert_text_widget(f"<{mode_symbol}{colored_sender}> {formatted_message}")
+
                 await self.append_to_channel_history(selected_channel, line, mode_symbol)
         else:
             self.gui.insert_text_widget(f"Unknown ASCII art macro: {macro_name}. Type '/mac' to see available macros.\n")
 
     async def cmd_me(self, args):
+        colored_sender = self.ansi_color_nickname(self.nickname)
         action_message = ' '.join(args[1:])
         escaped_input = self.escape_color_codes(action_message)
-        formatted_message = f"* {self.nickname} {escaped_input}"
+        formatted_message = f"* {colored_sender} {escaped_input}"
         await self.send_message(f'PRIVMSG {self.current_channel} :\x01ACTION {escaped_input}\x01')
 
         if self.use_auto_away:
@@ -4663,7 +4754,6 @@ class RudeChatClient:
             self.gui.insert_text_widget(f"{timestamp}{formatted_message}\n")
         elif self.use_time_stamp == False:
             self.gui.insert_text_widget(f"{formatted_message}\n")
-        QTimer.singleShot(1, self.gui.highlight_last_line)
 
         # Save the action message to the channel_messages dictionary
         if self.server not in self.channel_messages:
@@ -4695,12 +4785,11 @@ class RudeChatClient:
                 mention_message = f" - {message}\n"
                 self.channel_messages[self.server][mentions_channel].append(mention_message)
 
-        QTimer.singleShot(1, self.gui.highlight_last_line)
-
         # Update the GUI to show the new mentions in the mentions channel
         self.gui.insert_and_scroll()
 
     async def cmd_mock(self, args):
+        colored_sender = self.ansi_color_nickname(self.nickname)
         try:
             if self.use_time_stamp:
                 timestamp = datetime.now().strftime('[%H:%M:%S]')
@@ -4719,9 +4808,7 @@ class RudeChatClient:
             await self.send_message(f"PRIVMSG {self.current_channel} :{mock_em}")
             await self.append_to_channel_history(self.current_channel, mock_em, mode_symbol, is_action=False)
 
-            self.gui.insert_text_widget(f"{timestamp} <{mode_symbol}{self.nickname}> {mock_em}\n")
-
-            QTimer.singleShot(1, self.gui.highlight_last_line)
+            self.gui.insert_text_widget(f"{timestamp} <{mode_symbol}{colored_sender}> {mock_em}\n")
 
         except Exception as e:
             logging.error(f"Error in mocker: {e}")
