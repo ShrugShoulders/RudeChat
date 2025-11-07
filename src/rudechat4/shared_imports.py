@@ -26,7 +26,7 @@ import sys
 import threading
 import textwrap
 import time
-from typing import List, Tuple, Dict, Any
+from typing import List, Tuple, Dict, Any, Optional
 from tzlocal import get_localzone
 import webbrowser
 

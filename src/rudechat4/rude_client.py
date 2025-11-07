@@ -2608,6 +2608,7 @@ class RudeChatClient:
                     # Apply green text formatting here for each line
                     eline = self.replace_emojis(line)
                     styled_line = self.green_texter(eline)
+                    styled_line = self.color_message_mentions(styled_line)
 
                     # Send the styled line as a message
                     await self.send_message(f'PRIVMSG {channel} :{styled_line}')
@@ -4256,37 +4257,73 @@ class RudeChatClient:
         except Exception as e:
             logging.error(f"Error in handle_pong: {e}")
 
-    async def prtcl_PRIVMSG(self, tokens, znc_privmsg=False):
-        """Handle private messages between users, and messages to channels"""
-        sender_hostmask = str(tokens.hostmask)
-        if self.should_ignore_sender(sender_hostmask):
-            return
+    def color_message_mentions(self, message: str) -> str:
+        """
+        Searches the message body for any nicknames present in the currently active
+        channel's user list and wraps them in their assigned 24-bit ANSI color codes.
+        """
 
-        timestamp = datetime.now().strftime('[%H:%M:%S] ')
-        sender = tokens.hostmask.nickname
-        target = tokens.params[0]
-        message = tokens.params[1]
-
-        user_mode = self.get_user_mode(sender, target)
-        mode_symbol = self.get_mode_symbol(user_mode) if user_mode else ''
-
-        # Replace emojis in the message
-        message_with_emojis = self.replace_emojis(message)
-
-        # Process green text
-        gmessage = self.green_texter(message_with_emojis)
-
-        if self.is_ctcp_command(message):
-            await self.handle_ctcp(tokens)
-            return
-
-        if self.is_direct_message(target):
-            target = await self.get_direct_message_target(sender, target)
-            await self.prepare_direct_message(sender, target, gmessage, timestamp, mode_symbol, znc_privmsg)
+        if self.current_channel in self.channel_users:
+            # Get the user list from the actively focused channel/tab.
+            users_to_check = self.channel_users.get(self.current_channel, [])
         else:
-            await self.handle_channel_message(sender, target, gmessage, timestamp, mode_symbol, znc_privmsg)
+            # If the active channel list isn't loaded or doesn't exist, skip coloring.
+            return message
+            
+        processed_message = message
+        
+        for nickname in users_to_check:
+            if nickname and nickname[0] in self.mode_values:
+                nickname = nickname[1:]
 
-        await self.notify_user_if_mentioned(gmessage, target, sender, timestamp)
+            pattern = re.compile(r'\b' + re.escape(nickname) + r'\b', re.IGNORECASE)
+            
+            # The substitution function wraps the matched nickname in ANSI codes
+            def color_match(match: re.Match) -> str:
+                # Use the exact casing of the nickname as it appeared in the message
+                matched_nick = match.group(0)
+                # The helper function generates the colored string
+                return self.ansi_color_nickname(matched_nick)
+
+            # Apply the substitution to the message. 
+            processed_message = pattern.sub(color_match, processed_message)
+        
+        return processed_message
+
+    async def prtcl_PRIVMSG(self, tokens, znc_privmsg=False):
+            """Handle private messages between users, and messages to channels"""
+            
+            sender_hostmask = str(tokens.hostmask)
+            if self.should_ignore_sender(sender_hostmask):
+                return
+
+            timestamp = datetime.now().strftime('[%H:%M:%S] ')
+            sender = tokens.hostmask.nickname
+            target = tokens.params[0]
+            message = tokens.params[1]
+
+            user_mode = self.get_user_mode(sender, target)
+            mode_symbol = self.get_mode_symbol(user_mode) if user_mode else ''
+
+            # Replace emojis in the message
+            message_with_emojis = self.replace_emojis(message)
+
+            # Process green text
+            gmessage = self.green_texter(message_with_emojis) 
+
+            gmessage = self.color_message_mentions(gmessage)
+
+            if self.is_ctcp_command(message):
+                await self.handle_ctcp(tokens)
+                return
+
+            if self.is_direct_message(target):
+                target = await self.get_direct_message_target(sender, target)
+                await self.prepare_direct_message(sender, target, gmessage, timestamp, mode_symbol, znc_privmsg)
+            else:
+                await self.handle_channel_message(sender, target, gmessage, timestamp, mode_symbol, znc_privmsg)
+
+            await self.notify_user_if_mentioned(gmessage, target, sender, timestamp)
 
     def prtcl_QUIT(self, tokens):
         """Handle client connection termination"""
@@ -4455,7 +4492,7 @@ class RudeChatClient:
                 if raw_user not in self.channel_users[current_channel]:
                     self.channel_users[current_channel].append(raw_user)
 
-                if raw_user and raw_user[0] in ('@', '+', '%', '&', '~'):
+                if raw_user and raw_user[0] in self.mode_values:
                     user = raw_user[1:]
                 else:
                     user = raw_user
