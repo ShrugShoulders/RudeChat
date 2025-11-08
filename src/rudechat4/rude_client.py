@@ -2388,6 +2388,9 @@ class RudeChatClient:
         elif primary_command == "swhois":
             folder = "whois"
             folder_path = os.path.join(G_CONFIG_DIR, folder)
+        elif primary_command == "sounds":
+            folder = "Resources/Sounds"
+            folder_path = os.path.join(G_SOURCE_DIR, folder)
 
         # Check if the fortune list directory exists, if not error out.
         if not os.path.exists(folder_path):
@@ -2628,7 +2631,7 @@ class RudeChatClient:
                     self.gui.insert_text_widget("You're either not connected to a ZNC or haven't provided a channel.")
             case "watch": self.cmd_watch(args)
             case "broadcast": await self.cmd_broadcast(args)
-            case "logs" | "fortunes" | "macros" | "swhois": self.show_file_folder(primary_command)
+            case "logs" | "fortunes" | "macros" | "swhois" | "sounds": self.show_file_folder(primary_command)
             case "mock": await self.cmd_mock(args)
             case None: await self.handle_user_input(user_input, timestamp)
         return True
@@ -3259,7 +3262,6 @@ class RudeChatClient:
                 "/whois <nickname> - Shows information about a user",
                 "/me <action text> - Sends an action to the current channel",
                 "/clear - clears the chat window and removes all messages for the current channel",
-                "/swhois - shows the whois log folder, not to be confused with /whois.",
                 "_________",
             ],
             "Server Interaction": [
@@ -3306,6 +3308,7 @@ class RudeChatClient:
                 "/mac <macro> - sends a chosen macro to a channel /mac - shows available macros",
                 "/macros - Shows the macros folder",
                 "/fortunes - Shows the fortunes folder",
+                "/sounds - Shows custom ping sound folder"
                 "/mock <string> - uses mocking such as: tHiS Is a StRiNg.",
                 "Macros: To add a macro, save a .txt file with your chosen macro and add it to the Art folder within your installation directory.",
                 "Fortune Lists: dadjoke(jokes your dad makes), yomama(YO MAMA SO FAT), therules(Ferengi Rules of Acquisition)",
