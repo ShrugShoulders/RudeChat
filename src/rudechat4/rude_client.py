@@ -1609,13 +1609,15 @@ class RudeChatClient:
         try:
             # Get the second window from the list for the target or sender channel
             windows_list = self.gui.pop_out_windows.get(target) or self.gui.pop_out_windows.get(sender)
+            colored_nickname = self.ansi_color_nickname(sender)
+            gmessage = self.color_message_mentions(target, message)
 
             if windows_list and len(windows_list) > 1:
                 # Access the second window in the list
                 window = windows_list[1]
 
                 # Format the message
-                formatted_message = f"{timestamp}<{mode_symbol}{sender}> {message}" if self.use_time_stamp else f"<{mode_symbol}{sender}> {message}"
+                formatted_message = f"{timestamp}<{mode_symbol}{colored_nickname}> {gmessage}" if self.use_time_stamp else f"<{mode_symbol}{colored_nickname}> {gmessage}"
 
                 # Insert the formatted message into the second window
                 window.insert_text(formatted_message)
