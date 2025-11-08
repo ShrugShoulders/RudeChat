@@ -1668,6 +1668,31 @@ class RudeChatClient:
             except Exception as e:
                 logging.error(f"Error3 in handle_channel_message: {e}")
 
+    def update_nickname_colors(self, nickname, NICK=False, JOIN=False):
+        if JOIN == True:
+            if nickname not in self.gui.nickname_colors:
+                # Generate a random hex color string
+                if nickname == self.nickname:
+                    self.gui.nickname_colors[nickname] = self.gui.main_nickname_color
+                else:
+                    new_color = self.gui.generate_random_color()
+                    # Store the new color in the nickname_colors dictionary
+                    self.gui.nickname_colors[nickname] = new_color
+                self.gui.save_nickname_colors()
+                
+        elif NICK == True:
+            try:
+                old_nick, new_nick = nickname
+            except ValueError:
+                return
+
+            # Check if the old nickname has a color assigned
+            if old_nick in self.gui.nickname_colors:
+                old_color = self.gui.nickname_colors.get(old_nick)
+                self.gui.nickname_colors[new_nick] = old_color
+                del self.gui.nickname_colors[old_nick]
+                self.gui.save_nickname_colors()
+
     def ansi_color_nickname(self, nickname: str) -> str:
         """
         Retrieves the hex color for a nickname, converts it to 24-bit ANSI SGR 
@@ -3884,6 +3909,7 @@ class RudeChatClient:
             user_mask = tokens.hostmask
             channel = tokens.params[0]
             param_len = len(tokens.params)
+            self.update_nickname_colors(user_info, JOIN=True)
             colored_sender = self.ansi_color_nickname(user_info)
             if self.extended_join and param_len != 1:
                 account = tokens.params[1]
@@ -3894,7 +3920,7 @@ class RudeChatClient:
                 self.gui.insert_text_widget(f"{friends_here}\n")
                 if user_info not in self.friends.online_friends:
                     try:
-                        self.gui.trigger_desktop_notification(channel_name=user_info, message_content="is Online!")
+                        self.gui.trigger_desktop_notification(sender=None, channel_name=user_info, message_content="is Online!")
                     except Exception as e:
                         logging.error(f"Exception Caught in handle_join.trigger_desktop_notification: {e}")
 
@@ -4100,6 +4126,8 @@ class RudeChatClient:
             modes_to_strip = ''.join(self.mode_values)
             old_nick = tokens.hostmask.nickname
             new_nick = tokens.params[0]
+            nick_data = (old_nick, new_nick)
+            self.update_nickname_colors(nick_data, NICK=True)
             message = f"\x0307(⟳)\x0F {old_nick} has changed their nickname to {new_nick}\n"
 
             # Update the user's nick in all channel_users lists they are part of
@@ -4790,6 +4818,7 @@ class RudeChatClient:
         action_message = ' '.join(args[1:])
         escaped_input = self.escape_color_codes(action_message)
         formatted_message = f"* {colored_sender} {escaped_input}"
+
         await self.send_message(f'PRIVMSG {self.current_channel} :\x01ACTION {escaped_input}\x01')
 
         if self.use_auto_away:
@@ -4797,10 +4826,11 @@ class RudeChatClient:
         await self.remove_away_status()
 
         timestamp = datetime.now().strftime('[%H:%M:%S] ')
+        colored_content = self.color_message_mentions(self.current_channel, formatted_message)
         if self.use_time_stamp == True:
-            self.gui.insert_text_widget(f"{timestamp}{formatted_message}\n")
+            self.gui.insert_text_widget(f"{timestamp}{colored_content}\n")
         elif self.use_time_stamp == False:
-            self.gui.insert_text_widget(f"{formatted_message}\n")
+            self.gui.insert_text_widget(f"{colored_content}\n")
 
         # Save the action message to the channel_messages dictionary
         if self.server not in self.channel_messages:
@@ -4808,9 +4838,9 @@ class RudeChatClient:
         if self.current_channel not in self.channel_messages[self.server]:
             self.channel_messages[self.server][self.current_channel] = []
         if self.use_time_stamp == True:
-            self.channel_messages[self.server][self.current_channel].append(f"{timestamp}{formatted_message}\n")
+            self.channel_messages[self.server][self.current_channel].append(f"{timestamp}{colored_content}\n")
         elif self.use_time_stamp == False:
-            self.channel_messages[self.server][self.current_channel].append(f"{formatted_message}\n")
+            self.channel_messages[self.server][self.current_channel].append(f"{colored_content}\n")
 
     def cmd_mentions(self):
         mentions_channel = f"!MENTIONS!"
