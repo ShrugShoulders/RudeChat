@@ -1342,12 +1342,17 @@ class RudeChatClient:
             return
 
     def mac_trigger_sound(self):
-        os.system("afplay /System/Library/Sounds/Ping.aiff")
+        if self.custom_sounds:
+            if shutil.which("afplay"):
+                sound_path = os.path.join(G_SOURCE_DIR, "Resources", "Sounds", "Notification4.wav")
+                os.system(f"afplay {sound_path}")
+        else:
+            os.system("afplay /System/Library/Sounds/Ping.aiff")
 
     def linux_trigger_sound(self):
         if self.custom_sounds:
             if shutil.which("paplay"):
-                sound_path = os.path.join(G_CONFIG_DIR, "Sounds", "Notification4.wav")
+                sound_path = os.path.join(G_SOURCE_DIR, "Resources", "Sounds", "Notification4.wav")
                 os.system(f"paplay {sound_path}")
         else:
             os.system("echo -e '\a'")
