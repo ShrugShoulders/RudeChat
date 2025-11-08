@@ -2999,13 +2999,14 @@ class RudeChatClient:
 
     async def append_to_channel_history(self, channel, message, mode_symbol, is_action=False):
         timestamp = datetime.now().strftime('[%H:%M:%S] ')
+        colored_sender = self.ansi_color_nickname(self.nickname)
 
         # Escape color codes in the message
         escaped_message = self.escape_color_codes(message)
         if self.use_time_stamp:
-            formatted_message = f"{timestamp}<{mode_symbol}{self.nickname}> {escaped_message}\n"
+            formatted_message = f"{timestamp}<{mode_symbol}{colored_sender}> {escaped_message}\n"
         else:
-            formatted_message = f"<{mode_symbol}{self.nickname}> {escaped_message}\n"
+            formatted_message = f"<{mode_symbol}{colored_sender}> {escaped_message}\n"
 
         # Initialize the server name
         server_name = self.server
@@ -3087,6 +3088,7 @@ class RudeChatClient:
 
         if file_name:
             return os.path.join(fortune_directory, file_name + ".txt")
+            print(file_name)
 
         fortune_files = [os.path.join(fortune_directory, f) for f in os.listdir(fortune_directory) if f.endswith('.txt')]
         return random.choice(fortune_files)
@@ -3106,7 +3108,7 @@ class RudeChatClient:
 
         for line in cowsay_fortune.split('\n'):
             if self.use_time_stamp == True:
-                formatted_message = f"{timestamp}<{mode_symbol}{self.nickname}> {line}\n"
+                formatted_message = f"{timestamp}<{mode_symbol}{colored_sender}> {line}\n"
             elif self.use_time_stamp == False:
                 formatted_message = f"<{mode_symbol}{colored_sender}> {line}\n"
             await self.send_message(f'PRIVMSG {selected_channel} :{line}')
@@ -4715,7 +4717,7 @@ class RudeChatClient:
             if len(args) > 1:
                 file_name_arg = args[1]
                 # Construct the potential file path using the absolute path
-                potential_path = os.path.join(G_SOURCE_DIR, "Fortune Lists", f"{file_name_arg}.txt")
+                potential_path = os.path.join(G_SOURCE_DIR, "Resources", "Fortunes", f"{file_name_arg}.txt")
 
                 # Check if the provided argument corresponds to a valid fortune file
                 if os.path.exists(potential_path):
