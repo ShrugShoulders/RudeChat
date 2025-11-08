@@ -78,53 +78,61 @@ class TabEventFilter(QObject):
         return super().eventFilter(obj, event)
 
     def handle_tab_complete(self):
-        try:
-            current_text = self.gui.text_field.text()
-            cursor_pos = self.gui.text_field.cursorPosition()
+            try:
+                current_text = self.gui.text_field.text()
+                cursor_pos = self.gui.text_field.cursorPosition()
 
-            # Find the last word before the cursor
-            before_cursor = current_text[:cursor_pos]
-            last_word = before_cursor.split()[-1] if before_cursor else ""
+                # Find the last word before the cursor
+                before_cursor = current_text[:cursor_pos]
+                last_word = before_cursor.split()[-1] if before_cursor else ""
+                is_first_word = before_cursor == last_word
+                
+                if not last_word:
+                    return
 
-            if not last_word:
-                return
+                # Only complete a command if it starts with '/' AND the last word is the command itself
+                if current_text.startswith('/') and is_first_word:
+                    command_input = last_word.lstrip('/')
+                    matched_command = self.find_closest_match(command_input, self.command_list)
+                    
+                    if matched_command:
+                        prefix = before_cursor[:-len(last_word)]
+                        # Ensure the command is correctly prefixed with /
+                        new_text = prefix + '/' + matched_command + " "
+                        new_text += current_text[cursor_pos:]  # Preserve text after cursor
+                        
+                        self.gui.text_field.setText(new_text)
+                        # Set cursor position to the end of the newly inserted space
+                        self.gui.text_field.setCursorPosition(len(prefix) + 1 + len(matched_command) + 1) 
+                    return
+                
+                # Get list of usernames from QListWidget
+                user_list = [self.gui.user_selector_list.item(i).text() for i in range(self.gui.user_selector_list.count())]
 
-            if current_text.startswith('/'):
-                command_input = last_word.lstrip('/')
-                matched_command = self.find_closest_match(command_input, self.command_list)
-                if matched_command:
+                # Find the closest match for a nickname
+                matched_name = self.find_closest_match(last_word, user_list)
+
+                # Replace the last word with the matched nickname
+                if matched_name:
                     prefix = before_cursor[:-len(last_word)]
-                    new_text = prefix + '/' + matched_command + " "
+                    new_text = prefix + matched_name
+
+                    if current_text.lstrip().startswith(last_word):
+                        new_text += f"{self.gui.tab_complete_terminator} "
+                        new_cursor_pos = len(prefix) + len(matched_name) + len(self.gui.tab_complete_terminator) + 1
+                    else:
+                        new_text += f" "
+                        # Move cursor to end of space
+                        new_cursor_pos = len(prefix) + len(matched_name) + 1
+
                     new_text += current_text[cursor_pos:]  # Preserve text after cursor
+
                     self.gui.text_field.setText(new_text)
-                    self.gui.text_field.setCursorPosition(len(new_text))
+                    self.gui.text_field.setCursorPosition(new_cursor_pos)
                 return
-
-            # Get list of usernames from QListWidget
-            user_list = [self.gui.user_selector_list.item(i).text() for i in range(self.gui.user_selector_list.count())]
-
-            # Find the closest match for a nickname
-            matched_name = self.find_closest_match(last_word, user_list)
-
-            # Replace the last word with the matched nickname
-            if matched_name:
-                prefix = before_cursor[:-len(last_word)]
-                new_text = prefix + matched_name
-
-                # Determine whether to add terminator
-                # Append terminator only if the matched name is at the very start of the text field
-                if current_text.startswith(last_word):
-                    new_text += f"{self.gui.tab_complete_terminator} "
-                else:
-                    new_text += f" "
-
-                new_text += current_text[cursor_pos:]  # Preserve text after cursor
-
-                self.gui.text_field.setText(new_text)
-                self.gui.text_field.setCursorPosition(len(new_text))  # Move cursor to the end
-        except Exception as e:
-            logging.error(f"Error in TabEventFilter.handle_tab_complete: {e}")
-            return
+            except Exception as e:
+                logging.error(f"Error in TabEventFilter.handle_tab_complete: {e}")
+                return
 
     def find_closest_match(self, input_text, user_list):
         """Returns the closest match to input_text from user_list (case insensitive), after stripping mode prefixes."""
