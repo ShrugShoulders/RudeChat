@@ -1181,11 +1181,12 @@ class RudeChatClient:
 
     async def handle_action_ctcp(self, timestamp, sender, target, ctcp_content):
         colored_sender = self.ansi_color_nickname(sender)
+        colored_content = self.color_message_mentions(target, ctcp_content)
         try:
             if self.use_time_stamp:
-                action_message = f"{timestamp}* {colored_sender} {ctcp_content}\n"
+                action_message = f"{timestamp}* {colored_sender} {colored_content}\n"
             else:
-                action_message = f"* {colored_sender} {ctcp_content}\n"
+                action_message = f"* {colored_sender} {colored_content}\n"
 
             # Update the message history
             if self.server not in self.channel_messages:
@@ -4199,7 +4200,7 @@ class RudeChatClient:
                 part_message = f"\x0304(←)\x0F {user_mask} has parted from channel {channel}\n"
 
             if not self.show_full_hostmask:
-                part_message = part_message.replace(user_mask, colored_sender)
+                part_message = part_message.replace(str(user_mask), colored_sender)
 
             # Update the message history for the channel
             if self.server not in self.channel_messages:
