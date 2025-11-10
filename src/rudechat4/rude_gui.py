@@ -423,13 +423,13 @@ class RudeGui(QWidget):
 
     def set_shortcuts(self):
         # Channels
-        QShortcut(QKeySequence("Ctrl+Tab"), self, activated=self.cycle_channel_selection_down)
-        QShortcut(QKeySequence("Ctrl+Shift+Tab"), self, activated=self.cycle_channel_selection_up)
+        QShortcut(QKeySequence("Ctrl+]"), self, activated=self.cycle_channel_selection_down)
+        QShortcut(QKeySequence("Ctrl+["), self, activated=self.cycle_channel_selection_up)
         QShortcut(QKeySequence("PgUp"), self, activated=self.cycle_channel_selection_up)
         QShortcut(QKeySequence("PgDown"), self, activated=self.cycle_channel_selection_down)
 
         # Servers
-        QShortcut(QKeySequence("Ctrl+`"), self, activated=self.cycle_server_selection)
+        QShortcut(QKeySequence("Ctrl+Shift+\\"), self, activated=self.cycle_server_selection)
 
         # Windows
         QShortcut(QKeySequence("Ctrl+W"), self, activated=self.open_gui_config_window)
