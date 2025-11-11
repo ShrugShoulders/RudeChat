@@ -8,18 +8,18 @@ a = Analysis(
     pathex=['src'],
     binaries=[],
     datas=[
-        ('src/rudechat4/*.py', 'rudechat4'),
-        ('src/rudechat4/*.ini', 'rudechat4'),
-        ('src/rudechat4/*.ico', 'rudechat4'),
-        ('src/rudechat4/*.png', 'rudechat4'),
-        ('src/rudechat4/libera.rudeserver', 'rudechat4'),
-        ('src/rudechat4/Art/*', 'rudechat4/Art'),
-        ('src/rudechat4/Sounds/*', 'rudechat4/Sounds'),
-        ('src/rudechat4/Splash/*', 'rudechat4/Splash'),
-        ('src/rudechat4/Fortune Lists/*', 'rudechat4/Fortune Lists'),
-        ('/home/irish/.local/lib/python3.13/site-packages/emoji/unicode_codes/emoji.json', 'emoji/unicode_codes')
+        ('src/rudechat4/Client/*', 'rudechat4/Client'),
+        ('src/rudechat4/GUI/*', 'rudechat4/GUI'),
+        ('src/rudechat4/Util/*', 'rudechat4/Util'),
+        ('src/rudechat4/DefaultConfig/*', 'rudechat4/DefaultConfig'),
+        ('src/rudechat4/Components/*', 'rudechat4/Components'),
+        ('src/rudechat4/Resources/Splashes/*', 'rudechat4/Resources/Splashes'),
+        ('src/rudechat4/Resources/Sounds/*', 'rudechat4/Resources/Sounds'),
+        ('src/rudechat4/Resources/Macros/*', 'rudechat4/Resources/Macros'),
+        ('src/rudechat4/Resources/Icons/*', 'rudechat4/Resources/Icons'),
+        ('src/rudechat4/Resources/Fortunes/*', 'rudechat4/Resources/Fortunes'),
     ],
-    hiddenimports=['emoji'],
+    hiddenimports=[],
     hookspath=[],
     runtime_hooks=[],
     excludes=[],
@@ -44,7 +44,7 @@ exe = EXE(
     upx_exclude=[],
     runtime_tmpdir=None,
     console=False,
-    icon='src/rudechat4/rude.ico'
+    icon='src/rudechat4/Resources/Icons/rude.ico'
 )
 
 coll = COLLECT(
