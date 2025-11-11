@@ -15,38 +15,22 @@ IRC_FORMAT = [
 ]
 
 ANSI_TO_IRC_MAP = {
-    30: 0, 40: 1,  # Black FG (0) / Black BG (1)
-    # RED (4)
-    31: 4, 41: 5,  # Red FG (4) / Red BG (5)
-    # GREEN (3)
-    32: 3, 42: 7,  # Green FG (3) / Green BG (7)
-    # YELLOW / BROWN (8)
-    33: 7, 43: 8,  # Yellow/Brown FG (7) / Yellow/Brown BG (8)
-    # BLUE (2)
-    34: 2, 44: 10, # Blue FG (2) / Blue BG (10)
-    # MAGENTA / PURPLE (6)
-    35: 6, 45: 12, # Magenta FG (6) / Magenta BG (12)
-    # CYAN / TEAL (10)
-    36: 10, 46: 14, # Cyan FG (10) / Cyan BG (14)
-    # WHITE / LIGHT GRAY (15)
-    37: 15, 47: 15, # White/Light Gray FG (15) / White/Light Gray BG (15) 
-    39: 0,
-    49: 1, 
-    90: 14, 100: 1, # Dark Gray FG (14) / Black BG (1)
-    # BRIGHT RED (5)
-    91: 5, 101: 4,  # Bright Red FG (5) / Red BG (4)
-    # BRIGHT GREEN (9)
-    92: 9, 102: 3,  # Bright Green FG (9) / Green BG (3)
-    # BRIGHT YELLOW (11)
-    93: 8, 103: 7,  # Bright Yellow FG (8) / Yellow BG (7)
-    # BRIGHT BLUE (12)
-    94: 12, 104: 2, # Bright Blue FG (12) / Blue BG (2)
-    # BRIGHT MAGENTA (13)
-    95: 13, 105: 6, # Bright Magenta FG (13) / Magenta BG (6)
-    # BRIGHT CYAN (11)
-    96: 11, 106: 10, # Bright Cyan FG (11) / Cyan BG (10)
-    # BRIGHT WHITE (15)
-    97: 15, 107: 15, # Bright White FG (15) / White BG (15) 
+    # Foreground Colors (30-37, ANSI Dark)
+    # ANSI Color:     Black, Red, Green, Yellow, Blue, Magenta, Cyan, White/Gray
+    # IRC Index:      01,    04,  03,    08,     02,   06,      10,   14 
+    30: 1, 31: 4, 32: 3, 33: 7, 34: 2, 35: 6, 36: 10, 37: 14,
+    
+    # Background Colors (40-47, ANSI Dark)
+    # IRC Index:      01,    04,  03,    08,     02,   06,      10,   14 
+    40: 1, 41: 4, 42: 3, 43: 7, 44: 2, 45: 6, 46: 10, 47: 14,
+    
+    # Bright Foreground Colors (90-97, ANSI Bright)
+    # IRC Index:      08,    05,  09,    11,     12,   13,      11,   00 (or 15)
+    90: 8, 91: 5, 92: 9, 93: 11, 94: 12, 95: 13, 96: 11, 97: 0, # Use 0 (White) for Bright White
+    
+    # Bright Background Colors (100-107, ANSI Bright)
+    # IRC Index:      08,    05,  09,    11,     12,   13,      11,   00 (or 15)
+    100: 8, 101: 5, 102: 9, 103: 11, 104: 12, 105: 13, 106: 11, 107: 0,
 }
 
 ANSI_256_COLOR_MAP = {

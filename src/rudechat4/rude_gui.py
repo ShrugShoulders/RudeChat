@@ -1624,6 +1624,12 @@ class RudeGui(QWidget):
                         num_buf.clear()
                 i += 1
             
+            # Check if the sequence terminated correctly with 'm'
+            if i == len(input_text) or input_text[i] != 'm':
+                # If not terminated, return the index right after the '[' (start_index + 1)
+                # This ensures the partial sequence is treated as literal text.
+                return start_index + 1
+
             # Add the last code if it wasn't followed by a semicolon
             if num_buf:
                 codes.append(int("".join(num_buf)))
@@ -1792,16 +1798,22 @@ class RudeGui(QWidget):
 
                 def get_qcolor_from_attr(color_attr: tuple, is_background: bool) -> QColor:
                     color_type, color_value = color_attr
-                    
-                    # Type 0: Default Color (Used for FG when explicitly reset to default)
+
+                    # Type 0: Default Color (from ANSI 39 or 49 reset)
                     if color_type == 0:
-                        # For FG, return the actual default text color (usually black/theme color)
-                        return QColor(self.window_fg) 
-                    
+                        if is_background:
+                            # Code 49: Return the actual default background color
+                            return QColor(self.window_bg)
+                        else:
+                            # Code 39: Return the actual default foreground color
+                            return QColor(self.window_fg)
+
                     # Type 1: IRC Color Index (or Mapped 3/4-bit ANSI)
                     if color_type == 1:
+                        # IRC index (0-15)
                         irc_code_str = f"{color_value:02d}"
-                        hex_color = self.irc_colors.get(irc_code_str, self.window_bg if is_background else 'white')
+                        default_color = self.window_bg if is_background else self.window_fg 
+                        hex_color = self.irc_colors.get(irc_code_str, default_color)
                         return QColor(hex_color)
 
                     # Type 2: ANSI 256-Color Index (8-bit)
