@@ -19,7 +19,7 @@ a = Analysis(
         ('src/rudechat4/Resources/Icons/*', 'rudechat4/Resources/Icons'),
         ('src/rudechat4/Resources/Fortunes/*', 'rudechat4/Resources/Fortunes'),
     ],
-    hiddenimports=[],
+    hiddenimports=['emoji'],
     hookspath=[],
     runtime_hooks=[],
     excludes=[],

@@ -6,6 +6,7 @@ import base64
 import configparser
 import dataclasses
 from datetime import datetime, timedelta
+import emoji
 import fnmatch
 import glob
 import irctokens

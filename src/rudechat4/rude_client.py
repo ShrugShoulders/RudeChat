@@ -1452,13 +1452,19 @@ class RudeChatClient:
                 message = re.sub(symbol_pattern, emoji_char, message)
 
             # Replace emoji aliases using the emoji library
-            message = emoji.emojize(message, language="alias")
+            try:
+                message = emoji.emojize(message, language="alias")
+            except Exception as e:
+                logging.error(f"Error1 in replace_emojis: {e}")
 
             return message
 
         else:
-            message = emoji.emojize(message, language="alias")
-            return message
+            try:
+                message = emoji.emojize(message, language="alias")
+                return message
+            except Exception as e:
+                logging.error(f"Error2 in replace_emojis: {e}")
 
     def should_ignore_sender(self, sender_hostmask):
         for ignored in self.ignore_list:
