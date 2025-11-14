@@ -1855,41 +1855,32 @@ class RudeGui(QWidget):
     def tag_urls(self, urls, index=0):
         if index < len(urls):
             url = urls[index]
+            tag_name = f"url_{url}"
+            
             try:
-                tag_name = f"url_{url}"
+                # Prepare the character format for the hyperlink
                 char_format = QTextCharFormat()
                 char_format.setAnchor(True)
                 char_format.setAnchorHref(url)
-            except Exception as e:
-                logging.error(f"Error1 in tag_urls: {e}")
-
-            try:
-                char_format.setForeground(QColor("blue"))
+                char_format.setForeground(QColor("#3d85c6"))
                 char_format.setFontUnderline(True)
                 self.tag_cache[tag_name] = char_format
-
-                cursor = self.chat_box.textCursor()
+                
+                # Loop through the document to find and merge the format
+                # Start search from the beginning of the document (position 0)
                 cursor = self.chat_box.document().find(url, 0)
-            except Exception as e:
-                logging.error(f"Error2 in tag_urls: {e}")
-
-            try:
+                
                 while not cursor.isNull():
+                    # Apply the hyperlink format to the found text (which is selected by the cursor)
                     cursor.mergeCharFormat(char_format)
+                    
+                    # Search for the next occurrence of the URL starting from the current cursor position
                     cursor = self.chat_box.document().find(url, cursor)
 
-                cursor = self.chat_box.textCursor()
-                cursor.movePosition(QTextCursor.MoveOperation.Start) 
-                while self.chat_box.find(url):
-                    cursor.mergeCharFormat(self.tag_cache[tag_name])
-                    cursor.setCharFormat(self.tag_cache[tag_name])
-                    cursor.insertText(url, self.tag_cache[tag_name])
-                    cursor.setPosition(cursor.position() + len(url))
             except Exception as e:
-                logging.error(f"Error3 in tag_urls: {e}")
-
-            # Schedule the next URL tagging
-            QTimer.singleShot(1, lambda: self.tag_urls(urls, index + 1))
+                logging.error(f"Error in tag_urls: {e}")
+        else:
+            self.scroll_on_channel_click()
 
     def scroll_on_channel_click(self):
         self.chat_box.moveCursor(QTextCursor.MoveOperation.End)
