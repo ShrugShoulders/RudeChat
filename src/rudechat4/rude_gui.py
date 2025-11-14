@@ -1545,9 +1545,10 @@ class RudeGui(QWidget):
                 self.history_index = len(self.entry_history)
 
             self.text_field.clear()
+            self.scroll_on_channel_click()
             await self.irc_client.command_parser(user_input)
         except Exception as e:
-            logging.error(f"Error in on_enter_key: {e}") #self.insert_and_scroll()
+            logging.error(f"Error in on_enter_key: {e}")
 
     # Text & Formatting
     def insert_text_widget(self, message):
@@ -2040,7 +2041,6 @@ class RudeGui(QWidget):
             clicked_item.setBackground(QColor(self.list_channel_select_bg))
             self.highlight_away_users()
             self.update_users_label()
-            self.scroll_on_channel_click()
             if self.log_on:
                 logging.debug(f"Finished with GUI update.")
 
@@ -2049,3 +2049,4 @@ class RudeGui(QWidget):
                 server_highlighted_channels = self.irc_client.highlighted_channels[self.irc_client.server_name]
                 if clicked_channel in server_highlighted_channels:
                     del server_highlighted_channels[clicked_channel]
+            self.scroll_on_channel_click()
