@@ -1437,6 +1437,7 @@ class RudeGui(QWidget):
                 # Update other GUI elements
                 self.highlight_away_users()
                 self.update_users_label()
+                self.scroll_on_channel_click()
 
                 # Remove the clicked channel from highlighted_channels dictionary
                 if self.irc_client.server_name in self.irc_client.highlighted_channels:
@@ -1508,7 +1509,6 @@ class RudeGui(QWidget):
                 self.display_last_messages(channel_name, server_name=server)
 
                 self.irc_client.update_gui_user_list(channel_name)
-                self.insert_and_scroll()
 
             else:
                 self.insert_text_widget(f"Not a member of channel {channel_name}\n")
@@ -1524,7 +1524,6 @@ class RudeGui(QWidget):
 
             # Display the last messages for the current DM
             self.display_last_messages(channel_name, server_name=server)
-            self.insert_and_scroll()
 
             # No topic for DMs
             self.topic_label.setText(f"{channel_name}")
@@ -1554,8 +1553,6 @@ class RudeGui(QWidget):
             """
             Handles messages using the unified BatchDecoderWorker.
             """
-            self.chat_box.reset_cursor_position()
-            
             # Use the unified worker, processing in batches or single messages
             worker = BatchDecoderWorker(
                 message, 
@@ -1767,12 +1764,17 @@ class RudeGui(QWidget):
         return output
 
     def tag_text(self, formatted_text):
-        cursor = self.chat_box.textCursor()
+        temp_cursor = self.chat_box.textCursor()
+        temp_cursor.movePosition(QTextCursor.MoveOperation.End)
+
         for text, char_format in formatted_text:
             try:
-                cursor.insertText(text, char_format)
+                # Insertion happens at the end of the document, 
+                # leaving the user's view/selection undisturbed
+                temp_cursor.insertText(text, char_format)
             except Exception as e:
                 logging.error(f"Error in tag_text: {e}")
+        self.insert_and_scroll()
 
     def configure_tag_based_on_attributes(self, attr: dict) -> QTextCharFormat:
             """
@@ -1888,11 +1890,21 @@ class RudeGui(QWidget):
 
             # Schedule the next URL tagging
             QTimer.singleShot(1, lambda: self.tag_urls(urls, index + 1))
-        else:
-            self.insert_and_scroll()
+
+    def scroll_on_channel_click(self):
+        self.chat_box.moveCursor(QTextCursor.MoveOperation.End)
 
     def insert_and_scroll(self):
-        self.chat_box.moveCursor(QTextCursor.MoveOperation.End)
+        cursor = self.chat_box.textCursor()
+        v_scrollbar = self.chat_box.verticalScrollBar()
+        
+        if cursor.hasSelection():
+            return
+
+        is_at_bottom = v_scrollbar.value() >= v_scrollbar.maximum() - 40
+        
+        if is_at_bottom:
+            v_scrollbar.setValue(v_scrollbar.maximum())
 
     def generate_random_color(self):
         while True:
