@@ -1437,13 +1437,14 @@ class RudeGui(QWidget):
                 # Update other GUI elements
                 self.highlight_away_users()
                 self.update_users_label()
-                self.scroll_on_channel_click()
 
                 # Remove the clicked channel from highlighted_channels dictionary
                 if self.irc_client.server_name in self.irc_client.highlighted_channels:
                     server_highlighted_channels = self.irc_client.highlighted_channels[self.irc_client.server_name]
                     if clicked_channel_name in server_highlighted_channels:
                         del server_highlighted_channels[clicked_channel_name]
+
+                QTimer.singleShot(110, self.scroll_on_channel_click)
 
             except AttributeError as e:
                 logging.error(f"AttributeError in on_channel_click: {e}")
@@ -1879,11 +1880,10 @@ class RudeGui(QWidget):
 
             except Exception as e:
                 logging.error(f"Error in tag_urls: {e}")
-        else:
-            self.scroll_on_channel_click()
 
     def scroll_on_channel_click(self):
         self.chat_box.moveCursor(QTextCursor.MoveOperation.End)
+        self.chat_box.ensureCursorVisible()
 
     def insert_and_scroll(self):
         cursor = self.chat_box.textCursor()
@@ -1892,7 +1892,7 @@ class RudeGui(QWidget):
         if cursor.hasSelection():
             return
 
-        is_at_bottom = v_scrollbar.value() >= v_scrollbar.maximum() - 40
+        is_at_bottom = v_scrollbar.value() >= v_scrollbar.maximum() - 60
         
         if is_at_bottom:
             v_scrollbar.setValue(v_scrollbar.maximum())
@@ -2007,12 +2007,6 @@ class RudeGui(QWidget):
         except Exception as e:
             logging.error(f"An unexpected error occurred while saving nickname colors: {e}. Unable to save nickname colors.")
 
-    # Unused (but maybe used in the future)
-    def find_nicks_in_brackets(self, text):
-        # Match a space followed by '<', then the nickname inside <>, and then a space after '>'
-        nick_matches = list(re.finditer(r"<([^<>]+)>", text))
-        return nick_matches
-
     def the_force_click(self, index):
         # Set background of currently selected channel back to default
         current_selected_channel = self.irc_client.current_channel
@@ -2046,6 +2040,7 @@ class RudeGui(QWidget):
             clicked_item.setBackground(QColor(self.list_channel_select_bg))
             self.highlight_away_users()
             self.update_users_label()
+            self.scroll_on_channel_click()
             if self.log_on:
                 logging.debug(f"Finished with GUI update.")
 
