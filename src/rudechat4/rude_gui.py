@@ -288,9 +288,9 @@ class RudeGui(QWidget):
             self.generate_nickname_colors = config.getboolean('Utility', 'generate_nickname_colors', fallback=True)
             self.minimize_to_tray = config.getboolean('Utility', 'minimize_to_tray', fallback=True)
             self.log_on = config.getboolean('Utility', 'turn_logging_on', fallback=False)
-            self.show_server_window = config.getboolean('Utility', 'show_server_window', fallback=True)
             self.tab_complete_terminator = config.get('Utility', 'tab_complete_terminator', fallback=':')
             self.scrollbar_bg = config.get('Utility', 'scrollbar_bg', fallback='#2a2e32')
+            self.url_color = config.get('Utility', 'url_color', fallback='#3d85c6')
 
         else:
             self.window_bg = '#1b1e20'
@@ -320,7 +320,6 @@ class RudeGui(QWidget):
             self.generate_nickname_colors = True
             self.minimize_to_tray = True
             self.log_on = False
-            self.show_server_window = True
             self.tab_complete_terminator = ':'
 
     def init_layout(self):
@@ -1865,7 +1864,7 @@ class RudeGui(QWidget):
                     char_format = QTextCharFormat()
                     char_format.setAnchor(True)
                     char_format.setAnchorHref(url)
-                    char_format.setForeground(QColor("#3d85c6"))
+                    char_format.setForeground(QColor(self.url_color))
                     char_format.setFontUnderline(True)
                     self.tag_cache[tag_name] = char_format
                     

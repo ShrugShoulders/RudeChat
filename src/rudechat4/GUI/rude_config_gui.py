@@ -60,10 +60,10 @@ class RudeConfigGui(QScrollArea):
             'generate_nickname_colors' : ['Generate Nickname Colors', 'bool'],
             'minimize_to_tray' : ['Minimize to Tray', 'bool'],
             'highlight_all_nicknames' : ['Highlight All Nicks', 'bool'],
-            'show_server_window' : ['Show Server Window', 'bool'],
             'tab_complete_terminator' : ['Tab Autocomplete Terminator', 'string'],
             'turn_logging_on' : ['Turn On Logging', 'bool'],
-            'scrollbar_bg' : ['Scrollbar Background', 'color']
+            'scrollbar_bg' : ['Scrollbar Background', 'color'],
+            'url_color' : ['URL Highlight Color', 'color']
         }
 
         configure_logging()
