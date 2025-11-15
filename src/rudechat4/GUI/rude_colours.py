@@ -5,7 +5,7 @@ from rudechat4.global_variables import *
 from rudechat4.GUI.nick_editor import NickEditor
 
 class RudeColours(QWidget):
-    def __init__(self):
+    def __init__(self, reset_colors):
         super().__init__()
 
         self.resize(350, 500)
@@ -17,6 +17,7 @@ class RudeColours(QWidget):
 
         self.color_options = {}
         self.colors_json_path = os.path.join(G_CONFIG_DIR, "nickname_colours.json")
+        self.reset = reset_colors
 
         self.load_color_options()
 
@@ -72,14 +73,17 @@ class RudeColours(QWidget):
         self.update_list()
 
     def update_index(self):
-        if self.nicks_list.selectedItems():
-            self.edit_button.setEnabled(True)
-            self.selectedIndex = self.nicks_list.currentRow()
-            keys = list(self.color_options.keys())
-            if 0 <= self.selectedIndex < len(keys):
-                self.selectedKey = keys[self.selectedIndex]
+        selected_items = self.nicks_list.selectedItems()
+        if selected_items:
+            key_item = self.nicks_list.item(self.nicks_list.currentRow(), 0)
+            
+            if key_item:
+                self.selectedKey = key_item.text()
+                self.selectedIndex = self.nicks_list.currentRow()
+                self.edit_button.setEnabled(True)
             else:
                 self.selectedKey = None
+                self.selectedIndex = -1
                 self.edit_button.setEnabled(False)
         else:
             self.edit_button.setEnabled(False)
@@ -89,10 +93,13 @@ class RudeColours(QWidget):
     def update_list(self, filtered_options=None):
         # Clear the listbox and insert new items
         self.nicks_list.clearContents()
-        self.nicks_list.setRowCount(len(self.color_options))
+        
+        self.nicks_list.setRowCount(len(self.color_options)) 
 
         # If filtered options are provided, use them; otherwise, use all options
         color_options_to_display = filtered_options if filtered_options else self.color_options
+
+        self.nicks_list.setRowCount(len(color_options_to_display))
 
         index = 0
         for key, value in color_options_to_display.items():
@@ -110,14 +117,7 @@ class RudeColours(QWidget):
             self.selectedIndex = -1
             self.selectedKey = None
             self.edit_button.setEnabled(False)
-        elif self.selectedIndex != -1 and list(self.color_options.keys())[self.selectedIndex] != self.selectedKey:
-            # This can happen if the order of items changed due to filtering
-            try:
-                self.selectedKey = list(self.color_options.keys())[self.selectedIndex]
-            except IndexError:
-                self.selectedKey = None
-                self.selectedIndex = -1
-                self.edit_button.setEnabled(False)
+
         elif self.nicks_list.rowCount() == 0:
             self.selectedIndex = -1
             self.selectedKey = None
@@ -181,3 +181,4 @@ class RudeColours(QWidget):
                 self.nicks_list.setCurrentCell(index, 0)
             except ValueError:
                 pass
+            self.reset()

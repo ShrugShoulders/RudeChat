@@ -1086,7 +1086,7 @@ class RudeGui(QWidget):
         loop.create_task(self.irc_client.update_available_macros())
 
     def open_color_selector(self):
-        self.color_selector = RudeColours()
+        self.color_selector = RudeColours(self.reset_nick_colors)
 
         self.color_selector.show()
 
