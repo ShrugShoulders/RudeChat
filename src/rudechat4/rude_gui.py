@@ -56,7 +56,7 @@ class BatchDecoderWorker(QRunnable):
                 self.signals.message_decoded.emit(formatted_text, urls)
                 
             except Exception as e:
-                logging.error(f"BatchDecoderWorker error: {e} for message: {message[:30]}...")
+                logging.error(f"BatchDecoderWorker error: {e} for message: {message}...")
         
         self.signals.finished.emit()
 
@@ -1579,6 +1579,7 @@ class RudeGui(QWidget):
     def decoder(self, input_text: str) -> List[Tuple[str, QTextCharFormat]]:
         output = []
         text_buffer = []
+        VALID_DIGITS = set('0123456789')
 
         # Mutable state. Colour and background are now tuples: (Type, Value)
         # Type 0: Reset/Default
@@ -1729,19 +1730,24 @@ class RudeGui(QWidget):
                     num_buf = []
                     fg = bg = None
 
-                    while c_index < len(input_text) and input_text[c_index].isdigit() and len(num_buf) < 2:
-                         num_buf.append(input_text[c_index])
-                         c_index += 1
+                    # Only allow standard ASCII digits
+                    while c_index < len(input_text) and input_text[c_index] in VALID_DIGITS and len(num_buf) < 2:
+                        num_buf.append(input_text[c_index])
+                        c_index += 1
+
                     if num_buf:
-                         fg = int("".join(num_buf))
+                        fg = int("".join(num_buf))
                     if c_index < len(input_text) and input_text[c_index] == ',':
-                         c_index += 1
-                         num_buf = []
-                         while c_index < len(input_text) and input_text[c_index].isdigit() and len(num_buf) < 2:
-                              num_buf.append(input_text[c_index])
-                              c_index += 1
-                         if num_buf:
-                              bg = int("".join(num_buf))
+                        c_index += 1
+                        num_buf = []
+                            
+                        # Only allow standard ASCII digits
+                        while c_index < len(input_text) and input_text[c_index] in VALID_DIGITS and len(num_buf) < 2:
+                            num_buf.append(input_text[c_index])
+                            c_index += 1
+
+                        if num_buf:
+                            bg = int("".join(num_buf))
 
                     current_attr["colour"] = (1, fg if fg is not None else 0)
                     
