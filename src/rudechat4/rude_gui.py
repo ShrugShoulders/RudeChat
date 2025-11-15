@@ -1569,7 +1569,8 @@ class RudeGui(QWidget):
 
     def find_urls(self, text):
         # Use the precompiled regex pattern to find URLs
-        return self.url_pattern.findall(text)
+        urls = self.url_pattern.findall(text)
+        return urls
 
     def handle_decoded_text(self, formatted_text, urls):
         """Handles inserting decoded text and tagging URLs once decoding is finished."""
@@ -1855,32 +1856,34 @@ class RudeGui(QWidget):
                 return QTextCharFormat()
 
     def tag_urls(self, urls, index=0):
-        if index < len(urls):
-            url = urls[index]
-            tag_name = f"url_{url}"
-            
-            try:
-                # Prepare the character format for the hyperlink
-                char_format = QTextCharFormat()
-                char_format.setAnchor(True)
-                char_format.setAnchorHref(url)
-                char_format.setForeground(QColor("#3d85c6"))
-                char_format.setFontUnderline(True)
-                self.tag_cache[tag_name] = char_format
+            if index < len(urls):
+                url = urls[index]
+                tag_name = f"url_{url}"
                 
-                # Loop through the document to find and merge the format
-                # Start search from the beginning of the document (position 0)
-                cursor = self.chat_box.document().find(url, 0)
-                
-                while not cursor.isNull():
-                    # Apply the hyperlink format to the found text (which is selected by the cursor)
-                    cursor.mergeCharFormat(char_format)
+                try:
+                    # Prepare the character format for the hyperlink
+                    char_format = QTextCharFormat()
+                    char_format.setAnchor(True)
+                    char_format.setAnchorHref(url)
+                    char_format.setForeground(QColor("#3d85c6"))
+                    char_format.setFontUnderline(True)
+                    self.tag_cache[tag_name] = char_format
                     
-                    # Search for the next occurrence of the URL starting from the current cursor position
-                    cursor = self.chat_box.document().find(url, cursor)
+                    # Loop through the document to find and merge the format
+                    cursor = self.chat_box.document().find(url, 0)
+                    
+                    while not cursor.isNull():
+                        # Apply the hyperlink format to the found text
+                        cursor.mergeCharFormat(char_format)
+                        
+                        # Search for the next occurrence
+                        cursor = self.chat_box.document().find(url, cursor)
 
-            except Exception as e:
-                logging.error(f"Error in tag_urls: {e}")
+                    # Call the function again for the next URL in the list
+                    self.tag_urls(urls, index + 1)
+
+                except Exception as e:
+                    logging.error(f"Error in tag_urls: {e}")
 
     def scroll_on_channel_click(self):
         self.chat_box.moveCursor(QTextCursor.MoveOperation.End)
