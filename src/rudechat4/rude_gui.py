@@ -321,6 +321,8 @@ class RudeGui(QWidget):
             self.minimize_to_tray = True
             self.log_on = False
             self.tab_complete_terminator = ':'
+            self.scrollbar_bg = '#2a2e32'
+            self.url_color = '#3d85c6'
 
     def init_layout(self):
         self.setLayout(QHBoxLayout(self))
@@ -625,8 +627,6 @@ class RudeGui(QWidget):
         self.iconed = False
         self.target_user_info = None
         self.url_pattern = re.compile(r'(\w+://[^\s()<>]*\([^\s()<>]*\)[^\s()<>]*(?<![.,;!?])|www\.[^\s()<>]*\([^\s()<>]*\)[^\s()<>]*(?<![.,;!?])|\w+://[^\s()<>]+(?<![.,;!?])|www\.[^\s()<>]+(?<![.,;!?]))')
-        self.nickname_pattern = re.compile(r'<([\S]+)>')
-        self.users_nickname_pattern = lambda nickname: re.compile(r"\b" + re.escape(nickname) + r"\b")
         self.rude_shutdown = RudeShutdown(self)
 
     def init_client(self):
@@ -636,15 +636,7 @@ class RudeGui(QWidget):
 
     def apply_settings(self):
         self.highlight_away_users()
-        self.emoji_select()
         self.set_gui_theme()
-
-    def emoji_select(self):
-        match platform.system():
-            case "Darwin": self.emoji_type = "Apple Color Emoji" #macOS
-            case "Linux": self.emoji_type = "Noto Color Emoji"
-            case "Windows": self.emoji_type = "Segoe UI Emoji"
-            case _: self.emoji_type = "Arial" # A generic font as a last resort
 
     def bind_return_key(self):
         loop = asyncio.get_event_loop()

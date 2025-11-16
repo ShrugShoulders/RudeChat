@@ -3936,9 +3936,9 @@ class RudeChatClient:
                 self.gui.insert_text_widget(f"{friends_here}\n")
                 if user_info not in self.friends.online_friends:
                     try:
-                        self.gui.trigger_desktop_notification(sender=None, channel_name=user_info, message_content="is Online!")
+                        self.gui.trigger_desktop_notification(sender=None, usrchan=user_info, message_content="is Online!")
                     except Exception as e:
-                        logging.error(f"Exception Caught in handle_join.trigger_desktop_notification: {e}")
+                        logging.error(f"Exception Caught in prtcl_JOIN.trigger_desktop_notification: {e}")
 
                     self.friends.online_friends.append(user_info)
 
