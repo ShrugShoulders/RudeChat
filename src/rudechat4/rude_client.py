@@ -1812,12 +1812,13 @@ class RudeChatClient:
                     self.gui.insert_text_widget(final_message)
 
                 elif sender == self.current_channel and self.gui.irc_client == self:
+                    #gmessage = self.color_message_mentions(target, message)
                     if is_direct:
                         # For DM, mode_symbol is often not used, but we'll use the colored_sender
                         if self.use_time_stamp:
-                            final_message = f"{timestamp}<{colored_sender}> {gmessage}\n"
+                            final_message = f"{timestamp}<{colored_sender}> {message}\n"
                         else:
-                            final_message = f"<{colored_sender}> {gmessage}\n"
+                            final_message = f"<{colored_sender}> {message}\n"
                             
                         self.gui.insert_text_widget(final_message)
 
