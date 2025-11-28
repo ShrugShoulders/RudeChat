@@ -1532,7 +1532,7 @@ class RudeChatClient:
         else:
             return target
 
-    async def handle_znc_status_message(self, target, sender, message, mode_symbol):
+    async def handle_znc_status_message(self, target, sender, message, mode_symbol, timestamp):
         if self.log_on:
             logging.info(f"handle_znc_status_message variables: Target: {target} / Sender: {sender} / Message: {message} / Mode symbol: {mode_symbol}")
         try:
@@ -1580,7 +1580,7 @@ class RudeChatClient:
 
                 if sender.startswith("*status"):
                     self.save_message(self.server, target, sender, message, mode_symbol, is_sent=False)
-                    await self.handle_znc_status_message(target, sender, message, mode_symbol)
+                    await self.handle_znc_status_message(target, sender, message, mode_symbol, timestamp)
                     return
 
                 if znc_privmsg:
@@ -1796,44 +1796,44 @@ class RudeChatClient:
             return None
 
     def display_message(self, timestamp, sender, message, target, mode_symbol, is_direct=False):
-            try:
-                # 1. Get the ANSI-colored version of the sender's nickname
-                colored_sender = self.ansi_color_nickname(sender)
+        try:
+            # Get the ANSI-colored version of the sender's nickname
+            colored_sender = self.ansi_color_nickname(sender)
 
-                if target == self.current_channel and self.gui.irc_client == self:
-                    gmessage = self.color_message_mentions(target, message)
-                    # Use the colored sender in the final message string
-                    if self.use_time_stamp:
-                        final_message = f"{timestamp}<{mode_symbol}{colored_sender}> {gmessage}\n"
-                    else:
-                        final_message = f"<{mode_symbol}{colored_sender}> {gmessage}\n"
+            if target == self.current_channel and self.gui.irc_client == self:
+                gmessage = self.color_message_mentions(target, message)
+                # Use the colored sender in the final message string
+                if self.use_time_stamp:
+                    final_message = f"{timestamp}<{mode_symbol}{colored_sender}> {gmessage}\n"
+                else:
+                    final_message = f"<{mode_symbol}{colored_sender}> {gmessage}\n"
                         
-                    # Pass the complete, ANSI-encoded string to the GUI widget
+                # Pass the complete, ANSI-encoded string to the GUI widget
+                self.gui.insert_text_widget(final_message)
+
+            elif sender == self.current_channel and self.gui.irc_client == self:
+                #gmessage = self.color_message_mentions(target, message)
+                if is_direct:
+                    # For DM, mode_symbol is often not used, but we'll use the colored_sender
+                    if self.use_time_stamp:
+                        final_message = f"{timestamp}<{colored_sender}> {message}\n"
+                    else:
+                        final_message = f"<{colored_sender}> {message}\n"
+                        
                     self.gui.insert_text_widget(final_message)
 
-                elif sender == self.current_channel and self.gui.irc_client == self:
-                    #gmessage = self.color_message_mentions(target, message)
-                    if is_direct:
-                        # For DM, mode_symbol is often not used, but we'll use the colored_sender
-                        if self.use_time_stamp:
-                            final_message = f"{timestamp}<{colored_sender}> {message}\n"
-                        else:
-                            final_message = f"<{colored_sender}> {message}\n"
-                            
-                        self.gui.insert_text_widget(final_message)
-
-                else:
-                    user_mention = self.is_it_a_mention(message)
+            else:
+                user_mention = self.is_it_a_mention(message)
                     
-                    # The highlighting logic typically doesn't display the message directly, 
-                    # but saves it and potentially triggers a notification.
-                    if not user_mention:
-                        self.highlight_channel_if_not_current(target, sender, user_mention)
-                    else:
-                        self.highlight_channel_if_not_current(target, sender, user_mention)
-                        
-            except Exception as e:
-                logging.error(f"Error in display_message: {e}")
+                # The highlighting logic typically doesn't display the message directly, 
+                # but saves it and potentially triggers a notification.
+                if not user_mention:
+                    self.highlight_channel_if_not_current(target, sender, user_mention)
+                else:
+                    self.highlight_channel_if_not_current(target, sender, user_mention)
+                    
+        except Exception as e:
+            logging.error(f"Error in display_message: {e}")
 
     def highlight_channel_if_not_current(self, target, sender, user_mention):
         highlighted_channel = target
