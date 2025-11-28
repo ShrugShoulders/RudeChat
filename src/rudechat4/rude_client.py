@@ -627,6 +627,10 @@ class RudeChatClient:
                             await self.send_message(f'PRIVMSG NickServ :IDENTIFY {self.nickname} {self.nickserv_password}\r\n')
                             self.gui.insert_text_widget(f"Sent NickServ authentication.\n")
                             nickserv_sent = True
+                    case "042":
+                        await self.send_message(f'PRIVMSG NickServ :IDENTIFY {self.nickserv_password}\r\n')
+                        await self.automatic_join()
+                        return
                     case "PING": await self.prtcl_PING(tokens)
                     case "PONG": self.prtcl_PONG(tokens)
                     case "900":
