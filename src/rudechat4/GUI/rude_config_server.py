@@ -12,8 +12,6 @@ class RudeConfigServer(RudeConfigGui):
 
         self.start()
 
-        print(self.widget.layout.count())
-
     def start(self):
         self.channels = self.config.get('IRC', 'auto_join_channels')
 

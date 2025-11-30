@@ -1229,7 +1229,6 @@ class RudeGui(QWidget):
         def on_config_change(event):
             selected_config_file = selected_config_file_var.currentText()
             config_window.config_file = os.path.join(G_CONFIG_DIR, selected_config_file)
-            print(config_window.config_file)
             config_window.config.read(config_window.config_file)
             config_window.reload_channels()
 

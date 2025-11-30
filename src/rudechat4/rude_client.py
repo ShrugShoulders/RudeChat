@@ -628,8 +628,10 @@ class RudeChatClient:
                             self.gui.insert_text_widget(f"Sent NickServ authentication.\n")
                             nickserv_sent = True
                     case "042":
-                        await self.send_message(f'PRIVMSG NickServ :IDENTIFY {self.nickserv_password}\r\n')
-                        await self.automatic_join()
+                        if self.use_nickserv_auth and not self.sasl_enabled:
+                            await self.send_message(f'PRIVMSG NickServ :IDENTIFY {self.nickserv_password}\r\n')
+                        if self.use_auto_join:
+                            await self.automatic_join()
                         return
                     case "PING": await self.prtcl_PING(tokens)
                     case "PONG": self.prtcl_PONG(tokens)
