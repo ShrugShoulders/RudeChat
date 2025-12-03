@@ -1293,18 +1293,19 @@ class RudeChatClient:
             logging.error(f"Exception in highlight_channel: {e}")
 
     def highlight_server(self, server_activity=False, is_mention=False):
-        for idx in range(self.gui.server_selector_list.count()):
-            listbox_server_item = self.gui.server_selector_list.item(idx)
-            if listbox_server_item.text().startswith(self.server_name):
+        # for idx in range(self.gui.server_selector_list.count()):
+        #     listbox_server_item = self.gui.server_selector_list.item(idx)
+        #     if listbox_server_item.text().startswith(self.server_name):
 
-                if server_activity:
-                    self.gui.server_selector_list.item(idx).setBackground(QColor(self.activity_note_color))
-                    self.gui.server_colors[idx] = {'fg': self.gui.list_server_fg, 'bg': self.activity_note_color}
+        #         if server_activity:
+        #             self.gui.server_selector_list.item(idx).setBackground(QColor(self.activity_note_color))
+        #             self.gui.server_colors[idx] = {'fg': self.gui.list_server_fg, 'bg': self.activity_note_color}
 
-                if is_mention and self.gui.irc_client != self and idx != self.gui.server_selector_list.currentRow():
-                    self.gui.server_selector_list.item(idx).setBackground(QColor(self.mention_note_color))
-                    self.gui.server_colors[idx] = {'fg': self.gui.list_server_fg, 'bg': self.mention_note_color}
-                break
+        #         if is_mention and self.gui.irc_client != self and idx != self.gui.server_selector_list.currentRow():
+        #             self.gui.server_selector_list.item(idx).setBackground(QColor(self.mention_note_color))
+        #             self.gui.server_colors[idx] = {'fg': self.gui.list_server_fg, 'bg': self.mention_note_color}
+        #         break
+        pass
 
     async def trigger_beep_notification(self, sender=None, channel_name=None, message_content=None):
         """

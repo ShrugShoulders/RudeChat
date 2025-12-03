@@ -187,6 +187,8 @@ class RudeGui(QWidget):
         self.app_size = [800, 600]
         self.set_screen_size()
         self.master.resize(self.app_size[0], self.app_size[1])
+        self.gridLayout = QGridLayout(self)
+        self.gridLayout.setSpacing(5)
 
         self.read_config()
 
@@ -325,30 +327,22 @@ class RudeGui(QWidget):
             self.url_color = '#3d85c6'
 
     def init_layout(self):
-        self.setLayout(QHBoxLayout(self))
-
-        self.main_section = QVBoxLayout()
-        self.main_section.setSpacing(5)
-
-        self.topic_and_chat = QVBoxLayout()
-        self.topic_and_chat.setSpacing(5)
 
         self.topic_label = QLabel(self, text="Topic: ")
+        self.topic_label.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
         self.topic_label.setWordWrap(True)
-        self.topic_and_chat.addWidget(self.topic_label)
+
+        self.gridLayout.addWidget(self.topic_label, 0, 0, 1, 2)
 
         self.chat_box = RudeTextBrowser(self)
         self.chat_box.setReadOnly(True)
         self.chat_box.setAcceptRichText(True)
-        self.topic_and_chat.addWidget(self.chat_box)
 
-        self.main_section.addLayout(self.topic_and_chat)
-
-        self.message_bar = QHBoxLayout()
-        self.message_bar.setSpacing(5)
+        self.gridLayout.addWidget(self.chat_box, 1, 0, 3, 2)
 
         self.id_label = QLabel(self, text="Nickname | #Channel ▶")
-        self.message_bar.addWidget(self.id_label)
+
+        self.gridLayout.addWidget(self.id_label, 4, 0, 1, 1)
 
         self.text_field = RudeMessageEntry(self)
         self.text_field.setFrame(False)
@@ -357,68 +351,59 @@ class RudeGui(QWidget):
         self.tab_filter = TabEventFilter(self)
         self.text_field.installEventFilter(self.tab_filter)
         self.text_field.setPlaceholderText("Connecting... please wait...")
+        self.text_field.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
+        # self.text_field.sizePolicy().setHorizontalStretch(0)
+        # self.text_field.sizePolicy().setVerticalStretch(0)
+        # self.text_field.sizePolicy().setHeightForWidth(self.text_field.sizePolicy().hasHeightForWidth())
         QTimer.singleShot(0, self.bind_return_key)
-        self.message_bar.addWidget(self.text_field)
 
-        self.main_section.addLayout(self.message_bar)
-
-        self.layout().addLayout(self.main_section)
-
-        self.sidebar = QVBoxLayout()
-        self.sidebar.setSpacing(5)
-
-        self.user_selector = QVBoxLayout()
+        self.gridLayout.addWidget(self.text_field, 4, 1, 1, 1)
 
         self.user_selector_label = QLabel(self, text="Users (0)")
         self.user_selector_label.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Preferred)
-        self.user_selector.addWidget(self.user_selector_label)
+
+        self.gridLayout.addWidget(self.user_selector_label, 0, 2, 1, 1)
 
         self.user_selector_list = RudeUserListWidget(self)
         self.user_selector_list.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Expanding)
         self.user_selector_list.setSizeAdjustPolicy(QAbstractScrollArea.SizeAdjustPolicy.AdjustToContents)
         self.user_selector_list.setItemAlignment(Qt.AlignmentFlag.AlignLeading)
         self.user_selector_list.setAutoFillBackground(True)
-        self.user_selector.addWidget(self.user_selector_list)
 
-        self.sidebar.addLayout(self.user_selector)
+        self.gridLayout.addWidget(self.user_selector_list, 1, 2, 1, 1)
 
-        self.server_selector = QVBoxLayout()
+        # self.server_selector_label = QLabel(self, text="Servers")
+        # self.server_selector_label.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Preferred)
 
-        self.server_selector_label = QLabel(self, text="Servers")
-        self.server_selector_label.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Preferred)
-        self.server_selector.addWidget(self.server_selector_label)
+        # self.server_selector_list = RudeServerListWidget(self)
+        # self.server_selector_list.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Expanding)
+        # self.server_selector_list.setSizeAdjustPolicy(QAbstractScrollArea.SizeAdjustPolicy.AdjustToContents)
+        # self.server_selector_list.itemClicked.connect(self.on_server_change)
+        # self.server_selector_list.setItemAlignment(Qt.AlignmentFlag.AlignLeading)
+        # self.server_selector_list.setAutoFillBackground(True)
 
-        self.server_selector_list = RudeServerListWidget(self)
-        self.server_selector_list.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Expanding)
-        self.server_selector_list.setSizeAdjustPolicy(QAbstractScrollArea.SizeAdjustPolicy.AdjustToContents)
-        self.server_selector_list.itemClicked.connect(self.on_server_change)
-        self.server_selector_list.setItemAlignment(Qt.AlignmentFlag.AlignLeading)
-        self.server_selector_list.setAutoFillBackground(True)
-        self.server_selector.addWidget(self.server_selector_list)
+        # self.gridLayout.addWidget(self.server_selector_list, 4, 2, 1, 1)
 
-        self.sidebar.addLayout(self.server_selector)
+        self.server_selector_box = QComboBox(self)
+        self.server_selector_box.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed)
+        self.server_selector_box.currentIndexChanged.connect(self.on_server_change)
 
-        self.channel_selector = QVBoxLayout()
+        self.gridLayout.addWidget(self.server_selector_box, 4, 2, 1, 1)
 
         self.channel_selector_label = QLabel(self, text="Channels (0)")
         self.channel_selector_label.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Preferred)
-        self.channel_selector.addWidget(self.channel_selector_label)
+
+        self.gridLayout.addWidget(self.channel_selector_label, 2, 2, 1, 1)
 
         self.channel_selector_list = RudeChannelListWidget(self)
-        self.channel_selector_list.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Expanding)
+        self.channel_selector_list.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed)
         self.channel_selector_list.setSizeAdjustPolicy(QAbstractScrollArea.SizeAdjustPolicy.AdjustToContents)
         self.channel_selector_list.itemClicked.connect(self.on_channel_click)
         self.channel_selector_list.setItemAlignment(Qt.AlignmentFlag.AlignLeading)
         self.channel_selector_list.setAutoFillBackground(True)
-        self.channel_selector.addWidget(self.channel_selector_list)
 
-        self.sidebar.addLayout(self.channel_selector)
+        self.gridLayout.addWidget(self.channel_selector_list, 3, 2, 1, 1)
 
-        self.sidebar.setStretch(0, 2)
-        self.sidebar.setStretch(1, 1)
-        self.sidebar.setStretch(2, 2)
-
-        self.layout().addLayout(self.sidebar)
         self.create_tray_icon()
         self.set_shortcuts()
 
@@ -483,30 +468,30 @@ class RudeGui(QWidget):
         self.the_force_click(next_index)
 
     def cycle_server_selection(self):
-        count = self.server_selector_list.count()
+        count = self.server_selector_box.count()
         if count == 0:
             return
 
-        current_index = self.server_selector_list.currentRow()
+        current_index = self.server_selector_box.currentIndex()
 
         # Move to next index
         next_index = (current_index + 1) % count
 
         # Select and scroll to next item
-        self.server_selector_list.clearSelection()
-        self.server_selector_list.setCurrentRow(next_index)
-        self.server_selector_list.scrollToItem(self.server_selector_list.item(next_index))
+        # self.server_selector_.clearSelection()
+        self.server_selector_box.setCurrentIndex(next_index)
+        # self.server_selector_list.scrollToItem(self.server_selector_list.item(next_index))
 
         self.on_server_change(None)
 
     def select_first_server(self):
-        server_count = self.server_selector_list.count()
+        server_count = self.server_selector_box.count()
         index_server = 0
 
         if server_count > 0:
-            self.server_selector_list.clearSelection()
-            self.server_selector_list.setCurrentRow(index_server)
-            self.server_selector_list.scrollToItem(self.server_selector_list.item(index_server))
+            # self.server_selector_list.clearSelection()
+            self.server_selector_list.setCurrentIndex(index_server)
+            # self.server_selector_list.scrollToItem(self.server_selector_list.item(index_server))
 
             self.on_server_change(None)
             return
@@ -555,12 +540,12 @@ class RudeGui(QWidget):
         """)
 
         # Apply Server List Theme
-        self.server_selector_list.setStyleSheet(f"""
-            color: {self.list_server_fg};
-            background-color: {self.list_bg};
-            font-family: {self.list_font_family};
-            font-size: {self.list_font_size}px;
-        """)
+        # self.server_selector_list.setStyleSheet(f"""
+        #     color: {self.list_server_fg};
+        #     background-color: {self.list_bg};
+        #     font-family: {self.list_font_family};
+        #     font-size: {self.list_font_size}px;
+        # """)
 
         # Apply Channel List Theme
         self.channel_selector_list.setStyleSheet(f"""
@@ -594,7 +579,7 @@ class RudeGui(QWidget):
 
         # Apply Labels (User, Server, and Channel Sections)
         self.user_selector_label.setStyleSheet(f"color: {self.window_fg}; background-color: {self.window_bg};")
-        self.server_selector_label.setStyleSheet(f"color: {self.window_fg}; background-color: {self.window_bg};")
+        # self.server_selector_label.setStyleSheet(f"color: {self.window_fg}; background-color: {self.window_bg};")
         self.channel_selector_label.setStyleSheet(f"color: {self.window_fg}; background-color: {self.window_bg};")
 
         # Apply Message ID Label Theme
@@ -604,7 +589,7 @@ class RudeGui(QWidget):
         self.topic_label.setStyleSheet(f"color: {self.window_fg}; background-color: {self.window_bg};")
 
         # Apply Selection Colors
-        self.server_selector_list.setStyleSheet(self.server_selector_list.styleSheet() + f"selection-background-color: {self.list_channel_current_bg};")
+        # self.server_selector_list.setStyleSheet(self.server_selector_list.styleSheet() + f"selection-background-color: {self.list_channel_current_bg};")
         self.channel_selector_list.setStyleSheet(self.channel_selector_list.styleSheet() + f"selection-background-color: {self.list_channel_current_bg};")
         self.highlight_who_channels()
 
@@ -721,8 +706,8 @@ class RudeGui(QWidget):
     # Client Management
     def server_checker(self, server):
         cleaned_items = [
-            self.server_selector_list.item(i).text().lower().split(" ")[0]
-            for i in range(self.server_selector_list.count())
+            self.server_selector_box.itemText(i).text().lower().split(" ")[0]
+            for i in range(self.server_selector_box.count())
         ]
         return server in cleaned_items
 
@@ -730,18 +715,18 @@ class RudeGui(QWidget):
         self.clients[server_name] = irc_client # Store clients here.
 
         # Get the current list of servers from the Listbox
-        current_servers = [self.server_selector_list.item(i) for i in range (self.server_selector_list.count())]
+        current_servers = [self.server_selector_box.itemText(i) for i in range (self.server_selector_box.count())]
 
         # Add the new server_name to the list if it's not already there
         if not any(server.text().startswith(server_name) for server in current_servers):
-            current_servers.append(QListWidgetItem(str(server_name)))
+            current_servers.append(str(server_name))
 
         # Update the Listbox with the new list of servers
         for server in current_servers:
-            self.server_selector_list.addItem(server)
+            self.server_selector_box.addItem(server)
 
         self.server_var = server_name  # Set the current server
-        self.server_selector_list.setCurrentRow(0)
+        self.server_selector_box.setCurrentIndex(0)
         self.channel_lists[server_name] = irc_client.joined_channels
 
     async def init_client_with_config(self, config_file, fallback_server_name):
@@ -889,21 +874,21 @@ class RudeGui(QWidget):
         Args:
             server_name (str): The name of the server to find and select.
         """
-        items = self.server_selector_list.findItems(server_name, Qt.MatchFlag.MatchExactly)
+        items = self.server_selector_box.findData(server_name, Qt.MatchFlag.MatchExactly)
         if items:
             item_to_select = items[0]  # Select the first matching item
-            row_index = self.server_selector_list.row(item_to_select)
-            self.server_selector_list.clearSelection()
-            self.server_selector_list.setCurrentRow(row_index)
-            self.server_selector_list.scrollToItem(item_to_select)
+            row_index = self.server_selector_box.findText(item_to_select)
+            # self.server_selector_list.clearSelection()
+            self.server_selector_box.setCurrentIndex(row_index)
+            # self.server_selector_list.scrollToItem(item_to_select)
             self.on_server_change(None)
         else:
             logging.error(f"Server '{server_name}' not found in the list.")
 
     def update_server_ping(self, server_name, ping_time=None):
         """Update the entry for a server in the QListWidget with the new ping time."""
-        for index in range(self.server_selector_list.count()):
-            item = self.server_selector_list.item(index)
+        for index in range(self.server_selector_box.count()):
+            item = self.server_selector_box.childAt(index, 0)
             if item.text().startswith(server_name):  # Find the matching server entry
                 if ping_time is not None:
                     item.setText(f"{server_name} - {ping_time}")
@@ -1320,77 +1305,67 @@ class RudeGui(QWidget):
 
     # Event Handling
     def on_server_change(self, event):
-        # Get the index of the currently selected server
-        selected_server_index_tuple = [self.server_selector_list.currentIndex().row()]
+    
+        # Get the selected server from the listbox
+        selected_server_index = self.server_selector_box.currentIndex()
+        selected_server = self.server_selector_box.currentText()
+        clean_name = selected_server.split(" ")
+        actual_server = clean_name[0]
 
-        # If there's a selected server
-        if selected_server_index_tuple:
-            selected_server_index = selected_server_index_tuple[0]  # Extract the integer index
+        # Update the current server in the IRC client
+        self.irc_client.current_server = actual_server
+        self.irc_client = self.clients.get(actual_server, None)
 
-            # If there's a previous server, reset its background color to black
+        # If the IRC client exists
+        if self.irc_client:
+            # Set the server name in the RudeChatClient instance
+            self.irc_client.set_server_name(actual_server)
+
+            # Set the currently selected channel to None
+            self.irc_client.current_channel = None
+
+            # Set the GUI reference and update the GUI components
+            self.irc_client.set_gui(self)
+            self.irc_client.update_gui_channel_list()
+
+            # Clear Widgets
+            self.clear_topic_label()
+            self.clear_user_list()
+            self.clear_text_widget()
+
+            # Display the MOTD if available
+            self.show_startup_art()
+            self.irc_client.display_server_motd(actual_server)
+            self.update_users_label()
+            self.highlight_who_channels()
+            self.update_channel_label()
+
+            # Set the background color of the selected server to blue
+            # selected_server.setBackground(QColor(self.list_channel_current_bg))
+            # selected_server.setForeground(QColor(self.list_server_fg))
+
+            # Store the foreground and background colors for the selected server
+            self.server_colors[selected_server_index] = {'fg': self.list_server_fg, 'bg': self.list_channel_current_bg}
+
             if self.previous_server_index is not None:
-                self.server_selector_list.item(self.previous_server_index).setBackground(QColor(self.list_bg))
-                self.server_selector_list.item(self.previous_server_index).setForeground(QColor(self.list_server_fg))
+                if self.previous_server_index != selected_server_index:
+                    # Check if the previous server color is not a mention or activity highlight before updating
+                    prev_bg = self.server_colors[self.previous_server_index].get('bg', '')
+                    if prev_bg not in [self.irc_client.activity_note_color, self.irc_client.mention_note_color]:
+                        self.server_colors[self.previous_server_index] = {'bg': self.list_bg, 'fg': self.list_server_fg}
 
-            # Get the selected server from the listbox
-            selected_server = self.server_selector_list.item(selected_server_index)
-            clean_name = selected_server.text().split(" ")
-            actual_server = clean_name[0]
+        for server_index, colors in self.server_colors.items():
+            # Get the stored foreground and background colors
+            fg_color = colors.get('fg', self.list_server_fg)
+            bg_color = colors.get('bg', self.list_bg)
 
-            # Update the current server in the IRC client
-            self.irc_client.current_server = actual_server
-            self.irc_client = self.clients.get(actual_server, None)
+            # Apply the stored colors to each server in the listbox
+            # self.server_selector_list.item(server_index).setForeground(QColor(fg_color))
+            # self.server_selector_list.item(server_index).setBackground(QColor(bg_color))
 
-            # If the IRC client exists
-            if self.irc_client:
-                # Set the server name in the RudeChatClient instance
-                self.irc_client.set_server_name(actual_server)
-
-                # Set the currently selected channel to None
-                self.irc_client.current_channel = None
-
-                # Set the GUI reference and update the GUI components
-                self.irc_client.set_gui(self)
-                self.irc_client.update_gui_channel_list()
-
-                # Clear Widgets
-                self.clear_topic_label()
-                self.clear_user_list()
-                self.clear_text_widget()
-
-                # Display the MOTD if available
-                self.show_startup_art()
-                self.irc_client.display_server_motd(actual_server)
-                self.update_users_label()
-                self.highlight_who_channels()
-                self.update_channel_label()
-
-                # Set the background color of the selected server to blue
-                selected_server.setBackground(QColor(self.list_channel_current_bg))
-                selected_server.setForeground(QColor(self.list_server_fg))
-
-                # Store the foreground and background colors for the selected server
-                self.server_colors[selected_server_index] = {'fg': self.list_server_fg, 'bg': self.list_channel_current_bg}
-
-                if self.previous_server_index is not None:
-                    if self.previous_server_index != selected_server_index:
-                        # Check if the previous server color is not a mention or activity highlight before updating
-                        prev_bg = self.server_colors[self.previous_server_index].get('bg', '')
-                        if prev_bg not in [self.irc_client.activity_note_color, self.irc_client.mention_note_color]:
-                            self.server_colors[self.previous_server_index] = {'bg': self.list_bg, 'fg': self.list_server_fg}
-
-            for server_index, colors in self.server_colors.items():
-                # Get the stored foreground and background colors
-                fg_color = colors.get('fg', self.list_server_fg)
-                bg_color = colors.get('bg', self.list_bg)
-
-                # Apply the stored colors to each server in the listbox
-                self.server_selector_list.item(server_index).setForeground(QColor(fg_color))
-                self.server_selector_list.item(server_index).setBackground(QColor(bg_color))
-
-            # Update the previous_server_index to the currently selected server index
-            self.previous_server_index = selected_server_index
-            return
+        # Update the previous_server_index to the currently selected server index
+        self.previous_server_index = selected_server_index
+        return
 
     def on_channel_click(self):
             try:
