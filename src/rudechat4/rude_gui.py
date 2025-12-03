@@ -706,7 +706,7 @@ class RudeGui(QWidget):
     # Client Management
     def server_checker(self, server):
         cleaned_items = [
-            self.server_selector_box.itemText(i).text().lower().split(" ")[0]
+            self.server_selector_box.itemText(i).lower().split(" ")[0]
             for i in range(self.server_selector_box.count())
         ]
         return server in cleaned_items
@@ -718,7 +718,7 @@ class RudeGui(QWidget):
         current_servers = [self.server_selector_box.itemText(i) for i in range (self.server_selector_box.count())]
 
         # Add the new server_name to the list if it's not already there
-        if not any(server.text().startswith(server_name) for server in current_servers):
+        if not any(server.startswith(server_name) for server in current_servers):
             current_servers.append(str(server_name))
 
         # Update the Listbox with the new list of servers
@@ -888,7 +888,7 @@ class RudeGui(QWidget):
     def update_server_ping(self, server_name, ping_time=None):
         """Update the entry for a server in the QListWidget with the new ping time."""
         for index in range(self.server_selector_box.count()):
-            item = self.server_selector_box.childAt(index, 0)
+            item = self.server_selector_box.childAt(index)
             if item.text().startswith(server_name):  # Find the matching server entry
                 if ping_time is not None:
                     item.setText(f"{server_name} - {ping_time}")
