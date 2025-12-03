@@ -1293,19 +1293,45 @@ class RudeChatClient:
             logging.error(f"Exception in highlight_channel: {e}")
 
     def highlight_server(self, server_activity=False, is_mention=False):
-        # for idx in range(self.gui.server_selector_list.count()):
-        #     listbox_server_item = self.gui.server_selector_list.item(idx)
-        #     if listbox_server_item.text().startswith(self.server_name):
+        idx = self.gui.server_selector_box.findText(self.server_name)
 
-        #         if server_activity:
-        #             self.gui.server_selector_list.item(idx).setBackground(QColor(self.activity_note_color))
-        #             self.gui.server_colors[idx] = {'fg': self.gui.list_server_fg, 'bg': self.activity_note_color}
+        # Proceed only if the server is found in the QComboBox
+        if idx != -1:
+            # Determine the colors based on the activity type
+            bg_color_str = None
+            
+            if server_activity:
+                bg_color_str = self.activity_note_color
 
-        #         if is_mention and self.gui.irc_client != self and idx != self.gui.server_selector_list.currentRow():
-        #             self.gui.server_selector_list.item(idx).setBackground(QColor(self.mention_note_color))
-        #             self.gui.server_colors[idx] = {'fg': self.gui.list_server_fg, 'bg': self.mention_note_color}
-        #         break
-        pass
+            if is_mention and self.gui.irc_client != self:
+                bg_color_str = self.mention_note_color
+
+            # Apply the Highlight if a color was determined
+            if bg_color_str:
+                fg_color_str = self.gui.list_server_fg # Use the standard foreground color
+                
+                # Convert color strings to QColor objects
+                bg_color = QColor(bg_color_str)
+                fg_color = QColor(fg_color_str)
+                
+                # Apply Background Color to the item
+                self.gui.server_selector_box.setItemData(
+                    idx,
+                    bg_color,
+                    Qt.ItemDataRole.BackgroundRole
+                )
+                
+                # Apply Foreground Color to the item
+                self.gui.server_selector_box.setItemData(
+                    idx,
+                    fg_color,
+                    Qt.ItemDataRole.ForegroundRole
+                )
+
+                # Store the colors in the gui's tracking dictionary
+                self.gui.server_colors[idx] = {'fg': fg_color_str, 'bg': bg_color_str}
+
+        return
 
     async def trigger_beep_notification(self, sender=None, channel_name=None, message_content=None):
         """

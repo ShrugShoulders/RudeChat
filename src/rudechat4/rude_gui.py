@@ -1365,13 +1365,29 @@ class RudeGui(QWidget):
                         self.server_colors[self.previous_server_index] = {'bg': self.list_bg, 'fg': self.list_server_fg}
 
         for server_index, colors in self.server_colors.items():
-            # Get the stored foreground and background colors
-            fg_color = colors.get('fg', self.list_server_fg)
-            bg_color = colors.get('bg', self.list_bg)
+            # Check if the server_index is valid (index is within the current count)
+            if server_index >= 0 and server_index < self.server_selector_box.count():
+                # Get the stored foreground and background colors
+                fg_color_str = colors.get('fg', self.list_server_fg)
+                bg_color_str = colors.get('bg', self.list_bg)
 
-            # Apply the stored colors to each server in the listbox
-            # self.server_selector_list.item(server_index).setForeground(QColor(fg_color))
-            # self.server_selector_list.item(server_index).setBackground(QColor(bg_color))
+                # Convert color strings to QColor objects
+                fg_color = QColor(fg_color_str)
+                bg_color = QColor(bg_color_str)
+                
+                # Set Foreground Color
+                self.server_selector_box.setItemData(
+                    server_index,
+                    fg_color,
+                    Qt.ItemDataRole.ForegroundRole  # The role for foreground color
+                )
+                
+                # Set Background Color
+                self.server_selector_box.setItemData(
+                    server_index,
+                    bg_color,
+                    Qt.ItemDataRole.BackgroundRole  # The role for background color
+                )
 
         # Update the previous_server_index to the currently selected server index
         self.previous_server_index = selected_server_index
