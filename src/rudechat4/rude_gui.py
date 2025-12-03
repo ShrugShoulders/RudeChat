@@ -891,7 +891,6 @@ class RudeGui(QWidget):
             item = self.server_selector_box.itemText(index)
             if item.startswith(server_name):  # Find the matching server entry
                 if ping_time is not None:
-                    item.setText(f"{server_name} - {ping_time}")
                     self.server_selector_box.setItemText(index, f"{server_name} - {ping_time}")
                 else:
                     self.server_selector_box.setItemText(index, f"{server_name}")
