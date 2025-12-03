@@ -1293,11 +1293,19 @@ class RudeChatClient:
             logging.error(f"Exception in highlight_channel: {e}")
 
     def highlight_server(self, server_activity=False, is_mention=False):
-        idx = self.gui.server_selector_box.findText(self.server_name)
+        idx = -1 # Initialize index to -1 (not found)
 
-        # Proceed only if the server is found in the QComboBox
+        # 1. Iterate through the QComboBox items to find the correct server index
+        for i in range(self.gui.server_selector_box.count()):
+            item_text = self.gui.server_selector_box.itemText(i)
+            clean_item_name = item_text.split('-', 1)[0].strip()
+            
+            # Check if the cleaned item name matches the current server's name
+            if clean_item_name == self.server_name:
+                idx = i
+                break
+            
         if idx != -1:
-            # Determine the colors based on the activity type
             bg_color_str = None
             
             if server_activity:
@@ -1308,7 +1316,7 @@ class RudeChatClient:
 
             # Apply the Highlight if a color was determined
             if bg_color_str:
-                fg_color_str = self.gui.list_server_fg # Use the standard foreground color
+                fg_color_str = self.gui.list_server_fg
                 
                 # Convert color strings to QColor objects
                 bg_color = QColor(bg_color_str)
