@@ -712,21 +712,28 @@ class RudeGui(QWidget):
         return server in cleaned_items
 
     def add_client(self, server_name, irc_client):
-        self.clients[server_name] = irc_client # Store clients here.
+        # Store the IRC client instance.
+        self.clients[server_name] = irc_client
 
-        # Get the current list of servers from the Listbox
-        current_servers = [self.server_selector_box.itemText(i) for i in range (self.server_selector_box.count())]
+        # Get the current list of unique server names from the clients dictionary keys.
+        unique_server_names = list(self.clients.keys())
+        
+        # Clear the existing items in the QComboBox.
+        self.server_selector_box.clear()
 
-        # Add the new server_name to the list if it's not already there
-        if not any(server.startswith(server_name) for server in current_servers):
-            current_servers.append(str(server_name))
-
-        # Update the Listbox with the new list of servers
-        for server in current_servers:
+        # Add the unique server names to the QComboBox.
+        for server in unique_server_names:
             self.server_selector_box.addItem(server)
 
-        self.server_var = server_name  # Set the current server
-        self.server_selector_box.setCurrentIndex(0)
+        # Set the current server and select it in the combo box.
+        self.server_var = server_name
+        
+        # Find the index of the newly added server name
+        index = self.server_selector_box.findText(server_name)
+        if index != -1:
+            self.server_selector_box.setCurrentIndex(index)
+        
+        # Store the joined channels list for this server.
         self.channel_lists[server_name] = irc_client.joined_channels
 
     async def init_client_with_config(self, config_file, fallback_server_name):
@@ -1305,19 +1312,26 @@ class RudeGui(QWidget):
 
     # Event Handling
     def on_server_change(self, event):
-    
-        # Get the selected server from the listbox
+        # Get the selected server name and its index
         selected_server_index = self.server_selector_box.currentIndex()
         selected_server = self.server_selector_box.currentText()
+        
+        # Handle the case where the index is -1 (e.g., during QComboBox.clear())
+        if selected_server_index == -1:
+            return
+
+        # Extract the clean server name
         clean_name = selected_server.split(" ")
         actual_server = clean_name[0]
 
-        # Update the current server in the IRC client
-        self.irc_client.current_server = actual_server
+        # Replace self.irc_client with the client instance associated with the selected server.
         self.irc_client = self.clients.get(actual_server, None)
 
-        # If the IRC client exists
+        # If the IRC client exists, which it will.
         if self.irc_client:
+            # Set the property on the correct (new) client object
+            self.irc_client.current_server = actual_server 
+            
             # Set the server name in the RudeChatClient instance
             self.irc_client.set_server_name(actual_server)
 
@@ -1339,11 +1353,7 @@ class RudeGui(QWidget):
             self.update_users_label()
             self.highlight_who_channels()
             self.update_channel_label()
-
-            # Set the background color of the selected server to blue
-            # selected_server.setBackground(QColor(self.list_channel_current_bg))
-            # selected_server.setForeground(QColor(self.list_server_fg))
-
+            
             # Store the foreground and background colors for the selected server
             self.server_colors[selected_server_index] = {'fg': self.list_server_fg, 'bg': self.list_channel_current_bg}
 
