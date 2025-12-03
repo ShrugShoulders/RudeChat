@@ -1385,72 +1385,75 @@ class RudeChatClient:
         """
         Replace emoji aliases (e.g., :smile:) and common symbols (e.g., :) ) with Unicode emojis.
         """
+        LEFT_BOUNDARY = r'(?<!\S)'
+        RIGHT_BOUNDARY = r'(?=\s|$|[.,?!])'
+        
         if self.use_emojis:
             # Map common symbols to their Unicode equivalents
             symbol_to_emoji = {
-                r"(?<!\w)>\:D": "😈",  # Mischievous
-                r"(?<!\w)>\:\)": "😈",
-                r"(?<!\w)>:\(": "😠",  # Angry
-                r"(?<!\w)>:-\(": "😠",
-                r"(?<!\w):\)": "🙂",  # Smiley face
-                r"(?<!\w):-\)": "🙂",
-                r"(?<!\w):D": "😃",  # Big grin
-                r"(?<!\w):-D": "😃",
-                r"(?<!\w):\(": "☹️",  # Sad face
-                r"(?<!\w):-\(": "☹️",
-                r"(?<!\w):'\(": "😢",  # Crying
-                r"(?<!\w);\)": "😉",  # Wink
-                r"(?<!\w);-\)": "😉",
-                r"(?<!\w):p": "😋",  # Yum face
-                r"(?<!\w);p": "😜",
-                r"(?<!\w):P": "😛",  # Tongue out
-                r"(?<!\w):-P": "😛",
-                r"(?<!\w);P": "😜",  # Cheeky tongue out
-                r"(?<!\w);-P": "😜",
-                r"(?<!\w):O": "😮",  # Surprised face
-                r"(?<!\w):-O": "😮",
-                r"(?<!\w):o": "😮",
-                r"(?<!\w):-o": "😮",
-                r"(?<!\w):\|": "😐",  # Neutral face
-                r"(?<!\w):-\|": "😐",
-                r"(?<!\w):/": "😕",  # Confused face
-                r"(?<!\w):-/": "😕",
-                r"(?<!\w):\*": "😘",  # Kiss
-                r"(?<!\w):-\*": "😘",
-                r"(?<!\w)<3": "❤️",  # Heart
-                r"(?<!\w)</3": "💔",  # Broken heart
-                r"(?<!\w):@": "😡",  # Angry face
-                r"(?<!\w):-@": "😡",
-                r"(?<!\w)D:": "😧",  # Horrified face
-                r"(?<!\w)DX": "😱",  # Screaming face
-                r"(?<!\w)xD": "😆",  # Laughing face
-                r"(?<!\w)XD": "😆",
-                r"(?<!\w):\$": "😳",  # Embarrassed
-                r"(?<!\w):-\$": "😳",
-                r"(?<!\w)O:\)": "😇",  # Angel
-                r"(?<!\w)O:-\)": "😇",
-                r"(?<!\w)8\)": "😎",  # Cool face
-                r"(?<!\w)8-\)": "😎",
-                r"(?<!\w)B\)": "😎",
-                r"(?<!\w)B-\)": "😎",
-                r"(?<!\w):S": "😖",  # Frustrated
-                r"(?<!\w):-S": "😖",
-                r"(?<!\w):X": "🤐",  # Zipped mouth
-                r"(?<!\w):-X": "🤐",
-                r"(?<!\w)>\:3": "😼",
-                r"(?<!\w):3": "😺",  # Cat smile
-                r"(?<!\w);3": "😸",
-                r"(?<!\w)=\^_\^=": "😸",
-                r"(?<!\w)X3": "😹",  # Laughing cat with tears
-                r"(?<!\w):\*3": "😻",  # Loving cat with heart eyes
-                r"(?<!\w)D:3": "🙀",  # Shocked/weary cat
-                r"(?<!\w)3:": "😿",  # Crying cat
-                r"(?<!\w)3:<": "😾",  # Angry/pouting cat
-                r"(?<!\w)\(=｀ェ´=\)": "😾",  # Another angry cat
-                r"(?<!\w)\(=；ω；=\)": "😿",  # Crying cat face
-                r"(?<!\w):\^\)": "😏",  # Smug face
-                r"(?<!\w):'D": "😂",  # Laughing with tears
-                r"(?<!\w)D':": "😓",  # Sad but surprised
+                LEFT_BOUNDARY + r'>\:D' + RIGHT_BOUNDARY: "😈",  # Mischievous
+                LEFT_BOUNDARY + r'>\:\)' + RIGHT_BOUNDARY: "😈",
+                LEFT_BOUNDARY + r'>:\(' + RIGHT_BOUNDARY: "😠",  # Angry
+                LEFT_BOUNDARY + r'>:-\(' + RIGHT_BOUNDARY: "😠",
+                LEFT_BOUNDARY + r':\)' + RIGHT_BOUNDARY: "🙂",  # Smiley face
+                LEFT_BOUNDARY + r':-\)' + RIGHT_BOUNDARY: "🙂",
+                LEFT_BOUNDARY + r':D' + RIGHT_BOUNDARY: "😃",  # Big grin
+                LEFT_BOUNDARY + r':-D' + RIGHT_BOUNDARY: "😃",
+                LEFT_BOUNDARY + r':\(' + RIGHT_BOUNDARY: "☹️",  # Sad face
+                LEFT_BOUNDARY + r':-\(' + RIGHT_BOUNDARY: "☹️",
+                LEFT_BOUNDARY + r":'\(" + RIGHT_BOUNDARY: "😢",  # Crying
+                LEFT_BOUNDARY + r';\)' + RIGHT_BOUNDARY: "😉",  # Wink
+                LEFT_BOUNDARY + r';-\)' + RIGHT_BOUNDARY: "😉",
+                LEFT_BOUNDARY + r':p' + RIGHT_BOUNDARY: "😋",  # Yum face
+                LEFT_BOUNDARY + r';p' + RIGHT_BOUNDARY: "😜",
+                LEFT_BOUNDARY + r':P' + RIGHT_BOUNDARY: "😛",  # Tongue out
+                LEFT_BOUNDARY + r':-P' + RIGHT_BOUNDARY: "😛",
+                LEFT_BOUNDARY + r';P' + RIGHT_BOUNDARY: "😜",  # Cheeky tongue out
+                LEFT_BOUNDARY + r';-P' + RIGHT_BOUNDARY: "😜",
+                LEFT_BOUNDARY + r':O' + RIGHT_BOUNDARY: "😮",  # Surprised face
+                LEFT_BOUNDARY + r':-O' + RIGHT_BOUNDARY: "😮",
+                LEFT_BOUNDARY + r':o' + RIGHT_BOUNDARY: "😮",
+                LEFT_BOUNDARY + r':-o' + RIGHT_BOUNDARY: "😮",
+                LEFT_BOUNDARY + r':\|' + RIGHT_BOUNDARY: "😐",  # Neutral face
+                LEFT_BOUNDARY + r':-\|' + RIGHT_BOUNDARY: "😐",
+                LEFT_BOUNDARY + r':/' + RIGHT_BOUNDARY: "😕",  # Confused face
+                LEFT_BOUNDARY + r':-/' + RIGHT_BOUNDARY: "😕",
+                LEFT_BOUNDARY + r':\*' + RIGHT_BOUNDARY: "😘",  # Kiss
+                LEFT_BOUNDARY + r':-\*' + RIGHT_BOUNDARY: "😘",
+                LEFT_BOUNDARY + r'<3' + RIGHT_BOUNDARY: "❤️",  # Heart
+                LEFT_BOUNDARY + r'</3' + RIGHT_BOUNDARY: "💔",  # Broken heart
+                LEFT_BOUNDARY + r':@' + RIGHT_BOUNDARY: "😡",  # Angry face
+                LEFT_BOUNDARY + r':-@' + RIGHT_BOUNDARY: "😡",
+                LEFT_BOUNDARY + r'D:' + RIGHT_BOUNDARY: "😧",  # Horrified face
+                LEFT_BOUNDARY + r'DX' + RIGHT_BOUNDARY: "😱",  # Screaming face
+                LEFT_BOUNDARY + r'xD' + RIGHT_BOUNDARY: "😆",  # Laughing face
+                LEFT_BOUNDARY + r'XD' + RIGHT_BOUNDARY: "😆",
+                LEFT_BOUNDARY + r':\$' + RIGHT_BOUNDARY: "😳",  # Embarrassed
+                LEFT_BOUNDARY + r':-\$' + RIGHT_BOUNDARY: "😳",
+                LEFT_BOUNDARY + r'O:\)' + RIGHT_BOUNDARY: "😇",  # Angel
+                LEFT_BOUNDARY + r'O:-\)' + RIGHT_BOUNDARY: "😇",
+                LEFT_BOUNDARY + r'8\)' + RIGHT_BOUNDARY: "😎",  # Cool face
+                LEFT_BOUNDARY + r'8-\)' + RIGHT_BOUNDARY: "😎",
+                LEFT_BOUNDARY + r'B\)' + RIGHT_BOUNDARY: "😎",
+                LEFT_BOUNDARY + r'B-\)' + RIGHT_BOUNDARY: "😎",
+                LEFT_BOUNDARY + r':S' + RIGHT_BOUNDARY: "😖",  # Frustrated
+                LEFT_BOUNDARY + r':-S' + RIGHT_BOUNDARY: "😖",
+                LEFT_BOUNDARY + r':X' + RIGHT_BOUNDARY: "🤐",  # Zipped mouth
+                LEFT_BOUNDARY + r':-X' + RIGHT_BOUNDARY: "🤐",
+                LEFT_BOUNDARY + r'>\:3' + RIGHT_BOUNDARY: "😼",
+                LEFT_BOUNDARY + r':3' + RIGHT_BOUNDARY: "😺",  # Cat smile
+                LEFT_BOUNDARY + r';3' + RIGHT_BOUNDARY: "😸",
+                LEFT_BOUNDARY + r'=\^_\^=' + RIGHT_BOUNDARY: "😸",
+                LEFT_BOUNDARY + r'X3' + RIGHT_BOUNDARY: "😹",  # Laughing cat with tears
+                LEFT_BOUNDARY + r':\*3' + RIGHT_BOUNDARY: "😻",  # Loving cat with heart eyes
+                LEFT_BOUNDARY + r'D:3' + RIGHT_BOUNDARY: "🙀",  # Shocked/weary cat
+                LEFT_BOUNDARY + r'3:' + RIGHT_BOUNDARY: "😿",  # Crying cat
+                LEFT_BOUNDARY + r'3:<' + RIGHT_BOUNDARY: "😾",  # Angry/pouting cat
+                LEFT_BOUNDARY + r'\(=｀ェ´=\)' + RIGHT_BOUNDARY: "😾",  # Another angry cat
+                LEFT_BOUNDARY + r'\(=；ω；=\)' + RIGHT_BOUNDARY: "😿",  # Crying cat face
+                LEFT_BOUNDARY + r':\^\)' + RIGHT_BOUNDARY: "😏",  # Smug face
+                LEFT_BOUNDARY + r":'D" + RIGHT_BOUNDARY: "😂",  # Laughing with tears
+                LEFT_BOUNDARY + r"D':" + RIGHT_BOUNDARY: "😓",  # Sad but surprised
             }
 
             # Replace common symbols using regex

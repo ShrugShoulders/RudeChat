@@ -9,7 +9,6 @@ class FirstRun:
         self.first_run_detect = self.load_first_run()
         self.app = app
 
-        self.window_size = "600x400"
         self.read_config()
 
     def load_first_run(self):
@@ -49,35 +48,6 @@ class FirstRun:
                 file.write('1')
         except Exception as e:
             print(f"An error occurred while updating the first run file: {str(e)}")
-
-    def set_screen_size(self, screen):
-        try:
-            width = screen.size().width()
-            height = screen.size().height()
-            screen_size = f"{width}x{height}"
-        except Exception as e:
-            logging.error(f"Unable to get screen size: {e} Using default variables.")
-            self.app_size = "1100x900"
-            self.config_window_size = "800x600"
-            self.colour_selector_size = "450x900"
-
-        # Determine window size based on screen resolution
-        if screen_size == "3840x2160":  # 4K UHD
-            self.window_size = "1650x1200"
-        elif screen_size == "1920x1080":  # Full HD
-            self.window_size = "1200x800" 
-        elif screen_size == "2560x1440":  # QHD
-            self.window_size = "1600x900" 
-        elif screen_size == "1366x768":  # Common budget laptop
-            self.window_size = "1024x600"
-        elif screen_size == "2560x1600":  # MacBook Retina
-            self.window_size = "1440x900" 
-        elif screen_size == "3440x1440":  # Ultra-wide
-            self.window_size = "2000x1000" 
-        else:
-            self.window_size = "800x600"  # Default fallback window size
-
-        return self.window_size
 
     def open_client_config_window(self):
         def after_config_window_close():

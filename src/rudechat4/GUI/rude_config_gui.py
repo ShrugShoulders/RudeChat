@@ -140,49 +140,50 @@ class RudeConfigGui(QScrollArea):
             logging.error("IRC section missing in config for channel save.")
 
     def save_config(self):
-            try:
-                # Create a new configuration object
-                new_config = configparser.ConfigParser()
+        try:
+            # Create a new configuration object
+            new_config = configparser.ConfigParser()
 
-                for (section, option), entry in self.entries.items():
-                    match self.label_map.get(option, option)[1]:
-                        case 'bool':
-                            value = str(entry.isChecked())
-                        case 'string':
-                            value = entry.text()
-                        case 'int':
-                            value = entry.text()
-                        case 'color':
-                            value = entry.text()
-                        case 'channels':
-                            value = self.channels
+            for (section, option), entry in self.entries.items():
+                match self.label_map.get(option, option)[1]:
+                    case 'bool':
+                        value = str(entry.isChecked())
+                    case 'string':
+                        value = entry.text()
+                    case 'int':
+                        value = entry.text()
+                    case 'color':
+                        value = entry.text()
+                    case 'channels':
+                        value = self.channels
                     
-                    # Add the entry to the new configuration
-                    if not new_config.has_section(section):
-                        new_config.add_section(section)
-                    new_config.set(section, option, value)
+                # Add the entry to the new configuration
+                if not new_config.has_section(section):
+                    new_config.add_section(section)
+                new_config.set(section, option, value)
                 
-                # Get the new server name from the collected data
-                new_server_name = new_config.get('IRC', 'server_name').lower()
+            # Get the new server name from the collected data
+            new_server_name = new_config.get('IRC', 'server_name').lower()
                 
-                # Get the directory of the current config file
-                config_dir = os.path.dirname(self.config_file)
+            # Get the directory of the current config file
+            config_dir = os.path.dirname(self.config_file)
                 
-                # Construct the expected new file path
-                new_config_filename = f"{new_server_name}.rudeserver"
-                potential_new_file = os.path.join(config_dir, new_config_filename)
+            # Construct the expected new file path
+            new_config_filename = f"{new_server_name}.rudeserver"
+            potential_new_file = os.path.join(config_dir, new_config_filename)
 
-                # Check if the potential new file path is different from the current one
-                if self.config_file != potential_new_file:
-                    # Update the configuration file path for future use/logging
-                    self.config_file = potential_new_file
+            # Check if the potential new file path is different from the current one
+            if self.config_file != potential_new_file:
+                # Update the configuration file path for future use/logging
+                self.config_file = potential_new_file
 
-                with open(self.config_file, 'w') as configfile:
-                    new_config.write(configfile)
+            with open(self.config_file, 'w') as configfile:
+                new_config.write(configfile)
 
-                self.close_callback()
+            self.close_callback()
                 
-            except configparser.NoOptionError as e:
-                logging.error(f"Error saving configuration: Option '{e.option}' not found in section '{e.section}'.")
-            except Exception as e:
-                logging.error(f"Error saving configuration: {e}")
+        except configparser.NoOptionError as e:
+            logging.error(f"Error saving configuration: Option '{e.option}' not found in section '{e.section}'.")
+        except Exception as e:
+            logging.error(f"Error saving configuration: {e}")
+            
