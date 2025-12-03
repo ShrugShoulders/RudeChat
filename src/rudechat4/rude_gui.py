@@ -888,12 +888,13 @@ class RudeGui(QWidget):
     def update_server_ping(self, server_name, ping_time=None):
         """Update the entry for a server in the QListWidget with the new ping time."""
         for index in range(self.server_selector_box.count()):
-            item = self.server_selector_box.childAt(index)
-            if item.text().startswith(server_name):  # Find the matching server entry
+            item = self.server_selector_box.itemText(index)
+            if item.startswith(server_name):  # Find the matching server entry
                 if ping_time is not None:
                     item.setText(f"{server_name} - {ping_time}")
+                    self.server_selector_box.setItemText(index, f"{server_name} - {ping_time}")
                 else:
-                    item.setText(f"{server_name}")
+                    self.server_selector_box.setItemText(index, f"{server_name}")
                 return
 
     def send_away_to_clients(self, away_message=None):
