@@ -903,7 +903,7 @@ class RudeChatClient:
                 self.replace_dms_in_gui()
                 self.loop_running = True
                 self.add_server_message(f"****Connected: {self.loop_running}\n")
-                self.gui.select_first_server()
+                #self.gui.select_first_server()
                 return
 
             except Exception as e:
@@ -3341,9 +3341,9 @@ class RudeChatClient:
             "Key Bindings": [
                 "PgUp - Cycle channels up",
                 "PgDown - Cycle channels down",
-                "Ctrl+Tab - Cycles to the next channel",
-                "Ctrl+Shift+Tab - Cycles to the previous channel",
-                "Ctrl+` - Cycles Server selection",
+                "Ctrl+] - Cycles to the next channel",
+                "Ctrl+[ - Cycles to the previous channel",
+                "Ctrl+Shift+\\ - Cycles Server selection",
                 "Ctrl+I - Insert Italic formatting to selected text",
                 "Ctrl+B - Insert Bold formatting to selected text",
                 "Ctrl+N(linux) or Ctrl+U(mac/win) - Insert Underline formatting to selected text",
@@ -4223,12 +4223,59 @@ class RudeChatClient:
 
                         break
 
+            self.prtcl_NICK_dm_helper(new_nick, old_nick)
+
             # If the old nickname is the same as the client's current nickname, update the client state
             if old_nick == self.nickname:
                 await self.change_nickname(new_nick, is_from_token=True)
 
         except Exception as e:
             logging.error(f"Error in handle_nick: {e}")
+
+    def prtcl_NICK_dm_helper(self, new_nick, old_nick):
+        """
+        Handles updating the internal DM list, the QListWidget, and the message history 
+        when a user in a Direct Message (DM) changes their nickname (NICK).
+        """
+        try:
+            # Check if the old nickname exists in the DM list
+            if old_nick in self.dm_list:
+                # Update tracking lists
+                self.dm_list.remove(old_nick)
+                self.joined_channels.remove(old_nick)
+                
+                self.dm_list.append(new_nick)
+                self.joined_channels.append(new_nick)
+                server_key = self.server
+                
+                # Check if the old nickname conversation history exists and update it
+                if old_nick in self.channel_messages.get(server_key, {}):
+                    history = self.channel_messages[server_key].pop(old_nick)
+                    self.channel_messages[server_key][new_nick] = history
+                
+                item_to_remove = None
+                
+                # Find and remove the old nickname item
+                for i in range(self.gui.channel_selector_list.count()):
+                    item = self.gui.channel_selector_list.item(i)
+                    
+                    if item and item.text() == old_nick:
+                        item_to_remove = item
+                        break
+                
+                if item_to_remove:
+                    # Remove the old item
+                    row = self.gui.channel_selector_list.row(item_to_remove)
+                    self.gui.channel_selector_list.takeItem(row) 
+                    
+                    # Add the new nickname item.
+                    self.gui.channel_selector_list.insertItem(0, new_nick)
+                else:
+                     logging.warning(f"Nickname {old_nick} found in self.dm_list but not in QListWidget.")
+            else:
+                return
+        except Exception as e:
+            logging.error(f"Error updating DM nickname in prtcl_NICK_dm_helper: {e}")
 
     def prtcl_NOTICE(self, tokens):
         """Handle notices between users and to channels"""

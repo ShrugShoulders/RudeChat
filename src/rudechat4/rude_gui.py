@@ -478,9 +478,7 @@ class RudeGui(QWidget):
         next_index = (current_index + 1) % count
 
         # Select and scroll to next item
-        # self.server_selector_.clearSelection()
         self.server_selector_box.setCurrentIndex(next_index)
-        # self.server_selector_list.scrollToItem(self.server_selector_list.item(next_index))
 
         self.on_server_change(None)
 
@@ -489,9 +487,7 @@ class RudeGui(QWidget):
         index_server = 0
 
         if server_count > 0:
-            # self.server_selector_list.clearSelection()
             self.server_selector_box.setCurrentIndex(index_server)
-            # self.server_selector_list.scrollToItem(self.server_selector_list.item(index_server))
 
             self.on_server_change(None)
             return
@@ -861,7 +857,7 @@ class RudeGui(QWidget):
                             await self.create_tasks(client, os.path.join(G_CONFIG_DIR, config_file_name))
                             client.disconnect_requested = False
                             client.loop_running = True
-                            self.find_and_select_server(actual_server_name)
+                            #self.find_and_select_server(actual_server_name)
                             return
                         else:
                             self.insert_text_widget(f"Client '{actual_server_name}' is already connected.")
@@ -885,9 +881,7 @@ class RudeGui(QWidget):
         if items:
             item_to_select = items[0]  # Select the first matching item
             row_index = self.server_selector_box.findText(item_to_select)
-            # self.server_selector_list.clearSelection()
             self.server_selector_box.setCurrentIndex(row_index)
-            # self.server_selector_list.scrollToItem(item_to_select)
             self.on_server_change(None)
         else:
             logging.error(f"Server '{server_name}' not found in the list.")
