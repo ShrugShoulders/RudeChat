@@ -731,6 +731,7 @@ class RudeGui(QWidget):
         
         # Store the joined channels list for this server.
         self.channel_lists[server_name] = irc_client.joined_channels
+        self.select_first_server()
 
     async def init_client_with_config(self, config_file, fallback_server_name):
         irc_client = None
@@ -857,7 +858,7 @@ class RudeGui(QWidget):
                             await self.create_tasks(client, os.path.join(G_CONFIG_DIR, config_file_name))
                             client.disconnect_requested = False
                             client.loop_running = True
-                            #self.find_and_select_server(actual_server_name)
+                            self.find_and_select_server(actual_server_name)
                             return
                         else:
                             self.insert_text_widget(f"Client '{actual_server_name}' is already connected.")

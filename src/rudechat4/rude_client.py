@@ -903,7 +903,7 @@ class RudeChatClient:
                 self.replace_dms_in_gui()
                 self.loop_running = True
                 self.add_server_message(f"****Connected: {self.loop_running}\n")
-                #self.gui.select_first_server()
+                self.gui.select_first_server()
                 return
 
             except Exception as e:
