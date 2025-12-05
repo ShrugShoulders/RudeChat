@@ -694,7 +694,7 @@ class RudePopout(QObject):
                 logging.error(f"Error1 in tag_urls: {e}")
 
             try:
-                char_format.setForeground(QColor("blue"))
+                char_format.setForeground(QColor(self.parentGui.url_color))
                 char_format.setFontUnderline(True)
                 self.tag_cache[tag_name] = char_format
 

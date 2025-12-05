@@ -1221,7 +1221,6 @@ class RudeChatClient:
                     window = window_list[1] if window_list else None
                     if window != None:
                         window.insert_text(action_message.strip("\n"))
-                        window.highlight_nicknames()
                 except Exception as e:
                     logging.error(f"Error Handling Popped Out Windows ACTION command: {e}")
 
@@ -1988,7 +1987,6 @@ class RudeChatClient:
                 formatted_message = f"{message.strip("\n")}"
                 if window != None:
                     window.insert_text(formatted_message)
-                    window.highlight_nicknames()
                 return
             except Exception as e:
                 logging.error(f"Exception in pipe_mode_to_pop_out: {e}")
@@ -2887,7 +2885,6 @@ class RudeChatClient:
                         window.insert_text(f"{timestamp} <{mode_symbol}{self.nickname}> {formatted_message.strip("\n")}")
                     else:
                         window.insert_text(f"<{mode_symbol}{self.nickname}> {formatted_message.strip("\n")}")
-                    window.highlight_nicknames()
                     await self.append_to_channel_history(channel, line, mode_symbol)
             else:
                 window.insert_text(f"Unknown ASCII art macro: {macro_name}. Type '/mac' to see available macros.")
