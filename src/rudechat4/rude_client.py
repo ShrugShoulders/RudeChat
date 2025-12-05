@@ -4086,100 +4086,109 @@ class RudeChatClient:
             giver = tokens.source.split("!")[0]
             channel = tokens.params[0]
             mode_changes = tokens.params[1]
-            users = tokens.params[2:] if len(tokens.params) > 2 else []
+            user_params = tokens.params[2:]
 
-            user_index = 0
-            adding = None
-
-            for mode_change in mode_changes:
-                if mode_change in '+-':
-                    adding = mode_change == '+'
-                    continue
-
-                mode = mode_change
-                user = users[user_index] if user_index < len(users) else None
-                stripped_mode = mode.lstrip('+-')
-
-                if adding is None:
-                    continue
-
-                current_modes = self.user_modes.get(channel, {})
-
-                if adding:
-                    if stripped_mode in self.chanmodes.get('no_parameter', []) or stripped_mode in self.chanmodes.get('parameter', []):
-                        message = f"\x0304(!)\x0F +{mode} mode for {channel} by {giver}\n"
-                        self._log_channel_message(channel, message)
-                        continue
-
-                    if stripped_mode in self.chanmodes.get('list', []):
-                        message = f"\x0304(!)\x0F +{mode} mode for {user if user else 'unknown'} by {giver}\n"
-                        self._log_channel_message(channel, message)
-                        continue
-
-                    if stripped_mode in self.chanmodes.get('setting', []):
-                        message = f"\x0304(!)\x0F +{mode} {user} set for {channel} by {giver}\n"
-                        self._log_channel_message(channel, message)
-                        continue
-
-                    current_modes.setdefault(user, set()).add(mode)
-                    message = f"\x0303(+)\x0F {user} has been given mode +{mode} by {giver}\n"
-                    self._log_channel_message(channel, message)
-                    user_index += 1
-
+            current_user_modes = self.user_modes.setdefault(channel, {})
+            param_index = 0
+            is_adding = None
+            
+            def log_mode_change(mode_char, message, mode_type="user", user=None):
+                """Logs the mode change to the channel buffer."""
+                if mode_char == '+':
+                    color_code = '\x0303(+)\x0F' if mode_type == 'user' else '\x0304(!)\x0F'
                 else:
-                    if stripped_mode in self.chanmodes.get('no_parameter', []) or stripped_mode in self.chanmodes.get('parameter', []):
-                        message = f"\x0312(Δ)\x0F -{mode} mode for {channel} by {giver}\n"
-                        self._log_channel_message(channel, message)
-                        continue
+                    color_code = '\x0304(-)\x0F' if mode_type == 'user' else '\x0312(Δ)\x0F'
+                
+                # Construct the log message
+                log_message = f"{color_code} {message.strip()}\n"
+                self._log_channel_message(channel, log_message)
 
-                    if stripped_mode in self.chanmodes.get('list', []):
-                        message = f"\x0312(Δ)\x0F -{mode} mode for {user if user else 'unknown'} by {giver}\n"
-                        self._log_channel_message(channel, message)
-                        continue
+            # Process Mode Changes
+            for mode_char in mode_changes:
+                if mode_char in '+-':
+                    is_adding = mode_char == '+'
+                    continue
+                
+                if is_adding is None:
+                    continue 
 
-                    if stripped_mode in self.chanmodes.get('setting', []):
-                        message = f"\x0312(Δ)\x0F -{mode} {user} set for {channel} by {giver}\n"
-                        self._log_channel_message(channel, message)
-                        continue
+                mode = mode_char
+                stripped_mode = mode
 
+                # Determine the parameter (if required)
+                user_or_param = None
+                if param_index < len(user_params):
+                    # User/parameter is consumed for modes that require one
+                    user_or_param = user_params[param_index]
+                
+                # Check the mode type based on self.chanmodes configuration
+                chanmodes = self.chanmodes
+                
+                if stripped_mode in chanmodes.get('no_parameter', []) or \
+                   stripped_mode in chanmodes.get('parameter', []) or \
+                   stripped_mode in chanmodes.get('list', []) or \
+                   stripped_mode in chanmodes.get('setting', []):
+
+                    param_str = f" {user_or_param}" if user_or_param and (stripped_mode in chanmodes.get('list', []) or stripped_mode in chanmodes.get('setting', []) or stripped_mode in chanmodes.get('parameter', [])) else ""
+                    
+                    if is_adding:
+                        msg = f"+{mode}{param_str} set for {channel} by {giver}"
+                        log_mode_change('+', msg, mode_type="channel")
+                    else:
+                        msg = f"-{mode}{param_str} removed for {channel} by {giver}"
+                        log_mode_change('-', msg, mode_type="channel")
+                    
+                    if stripped_mode in chanmodes.get('list', []) or stripped_mode in chanmodes.get('setting', []) or stripped_mode in chanmodes.get('parameter', []):
+                         param_index += 1
+                    
+                    continue
+                
+                # A user parameter is required for user modes
+                user_nick = user_or_param
+                if not user_nick:
+                    continue
+
+                if is_adding:
+                    # Add mode
+                    current_user_modes.setdefault(user_nick, set()).add(mode)
+                    msg = f"{user_nick} has been given mode +{mode} by {giver}"
+                    log_mode_change('+', msg, mode_type="user")
+                else:
+                    # Remove mode
+                    user_modes_set = current_user_modes.get(user_nick, set())
+                    user_modes_set.discard(mode)
+                    
                     if mode in self.mode_to_symbol:
+                        # Update channel_users list by removing the symbol
                         symbol_to_remove = self.mode_to_symbol[mode]
                         self.channel_users[channel] = [
-                            u.replace(symbol_to_remove, '') if u.endswith(user) else u
+                            u.replace(symbol_to_remove, '') if u.endswith(user_nick) else u
                             for u in self.channel_users.get(channel, [])
                         ]
 
-                    user_modes = current_modes.get(user, set())
-                    user_modes.discard(mode)
-
-                    message = f"\x0304(-)\x0F {user} has had mode +{mode} removed by {giver}\n"
-                    self._log_channel_message(channel, message)
-
-                    if not user_modes:
-                        if user in current_modes:
-                            del current_modes[user]
-                        else:
-                            user_modes = set()
-                            for mode, symbol in self.mode_to_symbol.items():
-                                if symbol in user:
-                                    user_modes.add(mode)
-                            # Update the current_modes dictionary
-                            current_modes[user] = user_modes
+                    if not user_modes_set:
+                        # Remove user from current_user_modes if they have no modes left
+                        if user_nick in current_user_modes:
+                            del current_user_modes[user_nick]
                     else:
-                        current_modes[user] = user_modes
+                        current_user_modes[user_nick] = user_modes_set
 
-                    self.user_modes[channel] = current_modes
-                    user_index += 1
+                    msg = f"{user_nick} has had mode +{mode} removed by {giver}"
+                    log_mode_change('-', msg, mode_type="user")
 
-                sorted_users = self.sort_users(self.channel_users.get(channel, []), channel)
-                self.channel_users[channel] = sorted_users
-                self.update_user_selector_list(channel)
-                if channel == self.current_channel:
-                    self.gui.update_nick_channel_label()
-            return 
+                param_index += 1 # Consume the user parameter
 
+            self.user_modes[channel] = current_user_modes
+            
+            # State management
+            sorted_users = self.sort_users(self.channel_users.get(channel, []), channel)
+            self.channel_users[channel] = sorted_users
+            self.update_user_selector_list(channel)
+            if channel == self.current_channel:
+                self.gui.update_nick_channel_label()
+            
         except Exception as e:
-            logging.error(f"Error in handle_mode: {e}")
+            self.logging.error(f"Error in prtcl_MODE_simplified: {e}")
 
     async def prtcl_NICK(self, tokens):
         """Handle nickname changes"""
