@@ -4188,7 +4188,7 @@ class RudeChatClient:
                 self.gui.update_nick_channel_label()
             
         except Exception as e:
-            self.logging.error(f"Error in prtcl_MODE_simplified: {e}")
+            logging.error(f"Error in prtcl_MODE: {e}")
 
     async def prtcl_NICK(self, tokens):
         """Handle nickname changes"""
