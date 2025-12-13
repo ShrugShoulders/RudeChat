@@ -429,6 +429,7 @@ class RudeChatClient:
             await asyncio.sleep(0.8)
             self.gui.clear_text_widget()
             self.gui.show_startup_art()
+            self.gui.scroll_on_channel_click()
 
         def reset_timer(symbol):
             nonlocal last_366_time
@@ -472,6 +473,7 @@ class RudeChatClient:
                     case "ACCOUNT": self.prtcl_ACCOUNT(tokens)
                     case "AWAY": self.prtcl_AWAY(tokens)
                     case "NOTICE":
+                        self.gui.scroll_on_channel_click()
                         if self.prtcl_NOTICE(tokens):
                             if self.use_auto_join:
                                 await self.automatic_join()
@@ -512,7 +514,7 @@ class RudeChatClient:
                             reset_timer("")
                         self.gui.insert_text_widget(f'Connected to the server: {self.server}:{self.port}\n')
                         received_001 = True
-                        self.gui.insert_and_scroll()
+                        self.gui.scroll_on_channel_click()
                         self.gui.master.chat_upload_file_action.setEnabled(True)
                         self.gui.text_field.setPlaceholderText("Type here...")
                     case "002" | "003" | "004":
@@ -524,7 +526,7 @@ class RudeChatClient:
                             reset_timer("")
                         self.prtcl_005(tokens)
                         self.isupport_flag = True
-                        self.gui.insert_and_scroll()
+                        self.gui.scroll_on_channel_click()
                     case "251" | "252" | "253" | "254" | "255" | "265":
                         self.server_message_handler(tokens)
                         reset_timer("")
@@ -603,6 +605,7 @@ class RudeChatClient:
                                 return
                             elif not self.use_auto_join:
                                 return
+                            self.gui.scroll_on_channel_click()
                         elif self.znc_connection and self.isupport_flag and not self.sasl_enabled and not self.use_nickserv_auth:
                             if self.use_auto_join:
                                 await self.automatic_join()
@@ -632,6 +635,7 @@ class RudeChatClient:
                             await self.send_message(f'PRIVMSG NickServ :IDENTIFY {self.nickserv_password}\r\n')
                         if self.use_auto_join:
                             await self.automatic_join()
+                        self.gui.scroll_on_channel_click()
                         return
                     case "PING": await self.prtcl_PING(tokens)
                     case "PONG": self.prtcl_PONG(tokens)
@@ -649,11 +653,12 @@ class RudeChatClient:
                                 self.gui.clear_text_widget()
                                 self.gui.show_startup_art()
                                 return
+                            self.gui.scroll_on_channel_click()
                     case "396": got_396 = True
                     case _:
                         if self.log_on:
                             logging.error(f"Unhandled Token command in _await_welcome_message: {tokens.command}. Token: {tokens}")
-                        self.gui.insert_and_scroll()
+                        self.gui.scroll_on_channel_click()
 
                 if check_timeout():
                     # Timeout occurred
@@ -3895,6 +3900,7 @@ class RudeChatClient:
 
                 if not self.sasl_enabled:
                     await self.send_message("CAP END")
+                self.gui.scroll_on_channel_click()
 
             except Exception as e:
                 logging.error(f"Error1 in handle_cap ACK block: {e}")
@@ -3922,6 +3928,7 @@ class RudeChatClient:
 
                 if not self.sasl_enabled:
                     await self.send_message("CAP END")
+                self.gui.scroll_on_channel_click()
 
             except Exception as e:
                 logging.error(f"Error2 in handle_cap NAK block: {e}")
@@ -3939,6 +3946,7 @@ class RudeChatClient:
                         await self.send_message('CAP REQ :extended-join')
                         await asyncio.sleep(1)
                     await self.send_message("CAP END")
+                    self.gui.scroll_on_channel_click()
 
             except Exception as e:
                 logging.error(f"Error3 in handle_cap NEW block: {e}")

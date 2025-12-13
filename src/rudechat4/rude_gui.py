@@ -396,13 +396,15 @@ class RudeGui(QWidget):
         self.gridLayout.addWidget(self.channel_selector_label, 2, 2, 1, 1)
 
         self.channel_selector_list = RudeChannelListWidget(self)
-        self.channel_selector_list.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed)
+        self.channel_selector_list.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Expanding)
         self.channel_selector_list.setSizeAdjustPolicy(QAbstractScrollArea.SizeAdjustPolicy.AdjustToContents)
         self.channel_selector_list.itemClicked.connect(self.on_channel_click)
         self.channel_selector_list.setItemAlignment(Qt.AlignmentFlag.AlignLeading)
         self.channel_selector_list.setAutoFillBackground(True)
 
         self.gridLayout.addWidget(self.channel_selector_list, 3, 2, 1, 1)
+        self.gridLayout.setRowStretch(1, 1)
+        self.gridLayout.setRowStretch(3, 1)
 
         self.create_tray_icon()
         self.set_shortcuts()
