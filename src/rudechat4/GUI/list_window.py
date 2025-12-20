@@ -35,6 +35,8 @@ class ChannelListWindow(QDialog):
 
         # Tree widget (Channel list)
         self.tree = QTreeWidget()
+        self.tree.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self.tree.customContextMenuRequested.connect(self.show_context_menu)
         self.tree.setColumnCount(3)
         self.tree.setHeaderLabels(["Channel", "Users", "Topic"])
         self.tree.header().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
@@ -71,6 +73,19 @@ class ChannelListWindow(QDialog):
             }}
 
         """)
+
+    def show_context_menu(self, position):
+            item = self.tree.itemAt(position)
+            if not item:
+                return
+
+            channel_name = item.text(0)
+            menu = QMenu(self)
+            join_action = menu.addAction(f"Join {channel_name}")
+            action = menu.exec(self.tree.viewport().mapToGlobal(position))
+
+            if action == join_action:
+                self.gui.irc_client.loop.create_task(self.gui.irc_client.command_parser(f'/join {channel_name}'))
 
     def sort_by_users(self):
         # Toggle sorting order
