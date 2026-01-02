@@ -4668,7 +4668,10 @@ class RudeChatClient:
                 if user not in self.gui.nickname_colors:
                     # Generate a random hex color string
                     if user == self.nickname:
-                        self.gui.nickname_colors[user] = self.gui.main_nickname_color
+                        if self.gui.generate_nickname_colors:
+                            self.gui.nickname_colors[user] = self.gui.main_nickname_color
+                        else:
+                            self.gui.nickname_colors[user] = self.gui.window_fg
                     else:
                         new_color = self.gui.generate_random_color()
                             
