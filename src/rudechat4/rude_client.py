@@ -1119,13 +1119,15 @@ class RudeChatClient:
         self.add_server_message(data)
 
     def add_notice_to_history(self, target, message):
-        # Update the message history for NOTICE messages.
-        if self.server not in self.channel_messages:
-            self.channel_messages[self.server] = {}
-        if target not in self.channel_messages[self.server]:
-            self.channel_messages[self.server][target] = []
+            # Ensure the server key exists
+            if self.server not in self.channel_messages:
+                self.channel_messages[self.server] = {target: [message]}
+                return
 
-        self.channel_messages[self.server][target].append(message)
+            # Iterate through all existing keys (channels/users) for this server
+            # and append the message to each one.
+            for existing_target in self.channel_messages[self.server]:
+                self.channel_messages[self.server][existing_target].append(message)
 
     async def handle_ctcp(self, tokens):
         try:
@@ -4311,6 +4313,7 @@ class RudeChatClient:
 
             if any(target.startswith(prefix) for prefix in self.chantypes):
                 self.add_notice_to_history(target, data)
+                self.gui.insert_text_widget(f"{sdata}")
 
             if (
                 self.server_name in self.gui.popped_out_channels

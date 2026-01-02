@@ -161,21 +161,24 @@ class RudeConfigGui(QScrollArea):
                 if not new_config.has_section(section):
                     new_config.add_section(section)
                 new_config.set(section, option, value)
-                
-            # Get the new server name from the collected data
-            new_server_name = new_config.get('IRC', 'server_name').lower()
-                
+
             # Get the directory of the current config file
             config_dir = os.path.dirname(self.config_file)
                 
-            # Construct the expected new file path
-            new_config_filename = f"{new_server_name}.rudeserver"
-            potential_new_file = os.path.join(config_dir, new_config_filename)
+            # Get the new server name from the collected data
+            try:
+                new_server_name = new_config.get('IRC', 'server_name').lower()
+                
+                # Construct the expected new file path
+                new_config_filename = f"{new_server_name}.rudeserver"
+                potential_new_file = os.path.join(config_dir, new_config_filename)
 
-            # Check if the potential new file path is different from the current one
-            if self.config_file != potential_new_file:
-                # Update the configuration file path for future use/logging
-                self.config_file = potential_new_file
+                # Check if the potential new file path is different from the current one
+                if self.config_file != potential_new_file:
+                    # Update the configuration file path for future use/logging
+                    self.config_file = potential_new_file
+            except Exception as e:
+                pass
 
             with open(self.config_file, 'w') as configfile:
                 new_config.write(configfile)
