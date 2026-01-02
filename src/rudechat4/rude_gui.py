@@ -1896,14 +1896,17 @@ class RudeGui(QWidget):
             v_scrollbar.setValue(v_scrollbar.maximum())
 
     def generate_random_color(self):
-        while True:
-            # Generate random values for each channel
-            r = random.randint(50, 255)
-            g = random.randint(50, 255)
-            b = random.randint(50, 255)
+        if self.generate_nickname_colors:
+            while True:
+                # Generate random values for each channel
+                r = random.randint(50, 255)
+                g = random.randint(50, 255)
+                b = random.randint(50, 255)
 
-            if max(r, g, b) - min(r, g, b) > 50:
-                return "#{:02x}{:02x}{:02x}".format(r, g, b)
+                if max(r, g, b) - min(r, g, b) > 50:
+                    return "#{:02x}{:02x}{:02x}".format(r, g, b)
+        else:
+            return self.window_fg
 
     def highlight_away_users(self):
         try:
@@ -1979,20 +1982,23 @@ class RudeGui(QWidget):
         return next(iter(user_modes), None)  # Get the first mode if available, else None
 
     def load_nickname_colors(self):
-        nickname_colors_path = os.path.join(G_CONFIG_DIR, 'nickname_colours.json')
+        if self.generate_nickname_colors:
+            nickname_colors_path = os.path.join(G_CONFIG_DIR, 'nickname_colours.json')
 
-        try:
-            with open(nickname_colors_path, 'r') as file:
-                nickname_colors = json.load(file)
-            return nickname_colors
-        except FileNotFoundError:
-            logging.error(f"Nickname colors file not found at {nickname_colors_path}. Returning an empty dictionary.")
-            return {}
-        except json.JSONDecodeError as e:
-            logging.error(f"Error decoding JSON in nickname colors file: {e}. Returning an empty dictionary.")
-            return {}
-        except Exception as e:
-            logging.error(f"An unexpected error occurred while loading nickname colors: {e}. Returning an empty dictionary.")
+            try:
+                with open(nickname_colors_path, 'r') as file:
+                    nickname_colors = json.load(file)
+                return nickname_colors
+            except FileNotFoundError:
+                logging.error(f"Nickname colors file not found at {nickname_colors_path}. Returning an empty dictionary.")
+                return {}
+            except json.JSONDecodeError as e:
+                logging.error(f"Error decoding JSON in nickname colors file: {e}. Returning an empty dictionary.")
+                return {}
+            except Exception as e:
+                logging.error(f"An unexpected error occurred while loading nickname colors: {e}. Returning an empty dictionary.")
+                return {}
+        else:
             return {}
 
     def save_nickname_colors(self):
