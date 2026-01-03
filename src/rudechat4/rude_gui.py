@@ -2024,15 +2024,52 @@ class RudeGui(QWidget):
                 logging.error(f"Unexpected error: {e}")
                 return {}
 
+    def update_bak_file(self):
+        nickname_colors_path_bak = os.path.join(G_CONFIG_DIR, 'nickname_colours_bak.json')
+        
+        try:
+            # Load existing backup data
+            if os.path.exists(nickname_colors_path_bak):
+                with open(nickname_colors_path_bak, 'r') as file:
+                    bak_data = json.load(file)
+            else:
+                return
+
+            # Find keys in current session that aren't in the backup
+            new_keys_found = False
+            for nickname in self.nickname_colors:
+                if nickname not in bak_data:
+                    if nickname == self.irc_client.nickname:
+                        bak_data[nickname] = self.main_nickname_color
+                    else:
+                        bak_data[nickname] = self.generate_random_color()
+                    new_keys_found = True
+
+            # Only write to disk if we actually added something new
+            if new_keys_found:
+                with open(nickname_colors_path_bak, 'w') as file:
+                    json.dump(bak_data, file, indent=2)
+                logging.info(f"Updated {nickname_colors_path_bak} with new nicknames.")
+
+        except Exception as e:
+            logging.error(f"Failed to update backup file: {e}")
+
+
+    def save_nickname_colors_bak(self):
+        clean_nicks = clean_nicknames(self.nickname_colors)
+        nickname_colors_path_bak = os.path.join(G_CONFIG_DIR, 'nickname_colours_bak.json')
+        try:
+            with open(nickname_colors_path_bak, 'w') as file:
+                json.dump(clean_nicks, file, indent=2)
+        except Exception as e:
+            logging.error(f"An unexpected error occurred while saving nickname colors bak: {e}. Unable to save nickname colors.")
+
     def save_nickname_colors(self):
         clean_nicks = clean_nicknames(self.nickname_colors)
         nickname_colors_path = os.path.join(G_CONFIG_DIR, 'nickname_colours.json')
-        nickname_colors_path_bak = os.path.join(G_CONFIG_DIR, 'nickname_colours_bak.json')
-
+        
         try:
             with open(nickname_colors_path, 'w') as file:
-                json.dump(clean_nicks, file, indent=2)
-            with open(nickname_colors_path_bak, 'w') as file:
                 json.dump(clean_nicks, file, indent=2)
         except Exception as e:
             logging.error(f"An unexpected error occurred while saving nickname colors: {e}. Unable to save nickname colors.")

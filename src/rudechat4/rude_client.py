@@ -1733,13 +1733,16 @@ class RudeChatClient:
     def update_nickname_colors(self, nickname, NICK=False, JOIN=False):
         if JOIN == True:
             if nickname not in self.gui.nickname_colors:
-                # Generate a random hex color string
-                if nickname == self.nickname:
-                    self.gui.nickname_colors[nickname] = self.gui.main_nickname_color
+                if not self.gui.generate_nickname_colors:
+                    self.gui.nickname_colors[nickname] = self.gui.window_fg
                 else:
-                    new_color = self.gui.generate_random_color()
-                    # Store the new color in the nickname_colors dictionary
-                    self.gui.nickname_colors[nickname] = new_color
+                    # Generate a random hex color string
+                    if nickname == self.nickname:
+                        self.gui.nickname_colors[nickname] = self.gui.main_nickname_color
+                    else:
+                        new_color = self.gui.generate_random_color()
+                        # Store the new color in the nickname_colors dictionary
+                        self.gui.nickname_colors[nickname] = new_color
                 self.gui.save_nickname_colors()
                 
         elif NICK == True:
@@ -1754,6 +1757,7 @@ class RudeChatClient:
                 self.gui.nickname_colors[new_nick] = old_color
                 del self.gui.nickname_colors[old_nick]
                 self.gui.save_nickname_colors()
+        self.gui.update_bak_file()
 
     def ansi_color_nickname(self, nickname: str) -> str:
         """
@@ -2470,7 +2474,6 @@ class RudeChatClient:
             return
 
     async def spec_quit(self):
-        self.gui.save_nickname_colors()
         self.remove_bang_channels()
         await self.send_message(f"QUIT :RudeChat4")
         self.loop_running = False
@@ -2503,7 +2506,6 @@ class RudeChatClient:
     async def tray_quit(self):
         self.gui.minimize_to_tray = False
         self.remove_bang_channels()
-        self.gui.save_nickname_colors()
         await self.save_channel_messages()
         quit_message = "Client Quit"
         self.gui.quit_clients_with_message(quit_message)
@@ -2644,7 +2646,6 @@ class RudeChatClient:
             case "quit":
                 self.gui.minimize_to_tray = False
                 self.remove_bang_channels()
-                self.gui.save_nickname_colors()
                 await self.save_channel_messages()
                 quit_message = " ".join(args[1:]) if len(args) > 0 else None
                 self.gui.quit_clients_with_message(quit_message)
@@ -4669,9 +4670,8 @@ class RudeChatClient:
                     # Generate a random hex color string
                     if user == self.nickname:
                         if self.gui.generate_nickname_colors:
-                            print(f"prtcl_353: generate is True")
                             self.gui.nickname_colors[user] = self.gui.main_nickname_color
-                            self.gui.save_nickname_colors()
+                            self.gui.save_nickname_colors_bak()
                         else:
                             self.gui.nickname_colors[user] = self.gui.window_fg
                     else:
@@ -4680,9 +4680,10 @@ class RudeChatClient:
                     
                             # Store the new color in the nickname_colors dictionary
                             self.gui.nickname_colors[user] = new_color
-                            self.gui.save_nickname_colors()
+                            self.gui.save_nickname_colors_bak()
                         else:
                             self.gui.nickname_colors[user] = self.gui.window_fg
+                    self.gui.save_nickname_colors()
 
         except Exception as e:
             logging.error(f"Error in prtcl_353 (RPL_NAMREPLY): {e}")
