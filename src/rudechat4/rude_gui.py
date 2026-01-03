@@ -620,6 +620,8 @@ class RudeGui(QWidget):
     def apply_settings(self):
         self.highlight_away_users()
         self.set_gui_theme()
+        self.load_nickname_colors()
+        self.reset_nick_colors()
 
     def bind_return_key(self):
         loop = asyncio.get_event_loop()
@@ -1896,17 +1898,14 @@ class RudeGui(QWidget):
             v_scrollbar.setValue(v_scrollbar.maximum())
 
     def generate_random_color(self):
-        if self.generate_nickname_colors:
-            while True:
-                # Generate random values for each channel
-                r = random.randint(50, 255)
-                g = random.randint(50, 255)
-                b = random.randint(50, 255)
+        while True:
+            # Generate random values for each channel
+            r = random.randint(50, 255)
+            g = random.randint(50, 255)
+            b = random.randint(50, 255)
 
-                if max(r, g, b) - min(r, g, b) > 50:
-                    return "#{:02x}{:02x}{:02x}".format(r, g, b)
-        else:
-            return self.window_fg
+            if max(r, g, b) - min(r, g, b) > 50:
+                return "#{:02x}{:02x}{:02x}".format(r, g, b)
 
     def highlight_away_users(self):
         try:
@@ -1982,31 +1981,58 @@ class RudeGui(QWidget):
         return next(iter(user_modes), None)  # Get the first mode if available, else None
 
     def load_nickname_colors(self):
-        if self.generate_nickname_colors:
-            nickname_colors_path = os.path.join(G_CONFIG_DIR, 'nickname_colours.json')
+        nickname_colors_path = os.path.join(G_CONFIG_DIR, 'nickname_colours.json')
+        nickname_colors_path_bak = os.path.join(G_CONFIG_DIR, 'nickname_colours_bak.json')
 
+        if not self.generate_nickname_colors:
+            try:
+                with open(nickname_colors_path, 'r') as file:
+                    old_data = json.load(file)
+                # Keep keys, but set all to window_fg
+                return {nickname: self.window_fg for nickname in old_data}
+            except (FileNotFoundError, json.JSONDecodeError):
+                return {}
+        else:
             try:
                 with open(nickname_colors_path, 'r') as file:
                     nickname_colors = json.load(file)
-                return nickname_colors
-            except FileNotFoundError:
-                logging.error(f"Nickname colors file not found at {nickname_colors_path}. Returning an empty dictionary.")
+                
+                if nickname_colors:
+                    first_key = next(iter(nickname_colors))
+                    
+                    if nickname_colors[first_key] == self.window_fg:
+                        try:
+                            # Attempt to load from the backup file
+                            with open(nickname_colors_path_bak, 'r') as bak_file:
+                                return json.load(bak_file)
+                        except (FileNotFoundError, json.JSONDecodeError):
+                            # If backup fails, fallback to generating random colors
+                            logging.warning("Backup colors missing or corrupt. Generating new random colors.")
+                            return {
+                                user: (self.main_nickname_color if user == self.nickname 
+                                       else self.generate_random_color())
+                                for user in nickname_colors
+                            }
+                    else:
+                        return nickname_colors
+
                 return {}
-            except json.JSONDecodeError as e:
-                logging.error(f"Error decoding JSON in nickname colors file: {e}. Returning an empty dictionary.")
+
+            except (FileNotFoundError, json.JSONDecodeError):
                 return {}
             except Exception as e:
-                logging.error(f"An unexpected error occurred while loading nickname colors: {e}. Returning an empty dictionary.")
+                logging.error(f"Unexpected error: {e}")
                 return {}
-        else:
-            return {}
 
     def save_nickname_colors(self):
         clean_nicks = clean_nicknames(self.nickname_colors)
         nickname_colors_path = os.path.join(G_CONFIG_DIR, 'nickname_colours.json')
+        nickname_colors_path_bak = os.path.join(G_CONFIG_DIR, 'nickname_colours_bak.json')
 
         try:
             with open(nickname_colors_path, 'w') as file:
+                json.dump(clean_nicks, file, indent=2)
+            with open(nickname_colors_path_bak, 'w') as file:
                 json.dump(clean_nicks, file, indent=2)
         except Exception as e:
             logging.error(f"An unexpected error occurred while saving nickname colors: {e}. Unable to save nickname colors.")

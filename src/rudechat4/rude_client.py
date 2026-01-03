@@ -1770,7 +1770,7 @@ class RudeChatClient:
                 color_key = key # This is the case-sensitive key that works in the dict
                 break
 
-        hex_color = self.gui.nickname_colors.get(color_key, "#FFFFFF")
+        hex_color = self.gui.nickname_colors.get(color_key, self.gui.window_fg)
 
         # Clean the hex color and convert to R, G, B decimal integers (0-255)
         hex_color = hex_color.lstrip('#')
@@ -4669,15 +4669,20 @@ class RudeChatClient:
                     # Generate a random hex color string
                     if user == self.nickname:
                         if self.gui.generate_nickname_colors:
+                            print(f"prtcl_353: generate is True")
                             self.gui.nickname_colors[user] = self.gui.main_nickname_color
+                            self.gui.save_nickname_colors()
                         else:
                             self.gui.nickname_colors[user] = self.gui.window_fg
                     else:
-                        new_color = self.gui.generate_random_color()
-                            
-                        # Store the new color in the nickname_colors dictionary
-                        self.gui.nickname_colors[user] = new_color
-            self.gui.save_nickname_colors()
+                        if self.gui.generate_nickname_colors:
+                            new_color = self.gui.generate_random_color()
+                    
+                            # Store the new color in the nickname_colors dictionary
+                            self.gui.nickname_colors[user] = new_color
+                            self.gui.save_nickname_colors()
+                        else:
+                            self.gui.nickname_colors[user] = self.gui.window_fg
 
         except Exception as e:
             logging.error(f"Error in prtcl_353 (RPL_NAMREPLY): {e}")
