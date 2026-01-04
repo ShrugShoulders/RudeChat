@@ -9,7 +9,7 @@ class RudeNewConfig(QWidget):
 
         # Base Layout Setup
         self.layout = QVBoxLayout(self)
-        self.layout.setContentsMargins(5, 5, 5, 5)
+        self.layout.setContentsMargins(10, 15, 10, 10)
         self.layout.setSpacing(5)
         self.resize(600, 400)
         self.setWindowTitle("Configure RudeChat")
@@ -18,25 +18,21 @@ class RudeNewConfig(QWidget):
         self.tabs  = QTabWidget(self)
 
         # Connections Tab
-        self.makeConnTab()
+        self.tabConnLogic()
 
         # Appearance Tab
-        self.makeLookTab()
+        self.tabLookLogic()
 
         # Behaviour Tab
-        self.behv = QWidget()
-
-        self.tabs.addTab(self.behv, "Behaviour")
+        self.tabBehvLogic()
 
         # About Tab
-        self.help = QWidget()
-        
-        self.tabs.addTab(self.help, "About")
+        self.tabInfoLogic()
 
         # Add the tabs to the base layout
         self.layout.addWidget(self.tabs)
         
-    def makeConnTab(self):
+    def tabConnLogic(self):
         # Basic layout
         self.conn = QWidget()
         self.conn.layout = QGridLayout(self.conn)
@@ -117,7 +113,7 @@ class RudeNewConfig(QWidget):
 
         self.conn.layout.addWidget(self.conn.settings, 0, 1, 4, 1)
 
-    def makeLookTab(self):
+    def tabLookLogic(self):
         # Basic Layout
         self.look = QWidget()
         self.look.layout = QVBoxLayout(self.look)
@@ -209,3 +205,102 @@ class RudeNewConfig(QWidget):
         self.look.btnSav = QPushButton("Save Changes", self.look.settings)
 
         self.look.layout.addWidget(self.look.btnSav)
+
+    def tabBehvLogic(self):
+        # Basic Layout
+        self.behv = QWidget()
+        self.behv.layout = QVBoxLayout(self.behv)
+        self.behv.layout.setContentsMargins(5, 5, 5, 5)
+        self.behv.layout.setSpacing(5)
+        
+        # Add this tab.
+        self.tabs.addTab(self.behv, "Behaviour")
+
+        # Big field where all the settings will go.
+        self.behv.settings = QScrollArea(self.behv)
+        self.behv.settings.setWidgetResizable(True)
+
+        self.behv.settings.content = QWidget(self.behv.settings)
+        self.behv.settings.content.layout = QVBoxLayout(self.behv.settings.content)
+        self.behv.settings.content.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
+
+        self.behv.settings.setWidget(self.behv.settings.content)
+
+        # Let's populate the settings, using test_rudeserver.ini as a base.
+        self.behv.entries = {}
+        self.behv.parser = configparser.ConfigParser()
+        # These are default values according to the test ini file. Logic should include populating these fields with the first loaded .rudeserver file.
+        self.behv.parser['Presence'] = {
+            'auto_rejoin': True,
+            'auto_away_minutes': 30,
+            'auto_join_invite': True,
+        }
+
+        self.behv.parser['Conversation'] = {
+            'replace_pronouns': False,
+            'use_emojis': True,
+            'tab_complete_terminator': ':',
+        }
+
+        self.behv.parser['Visibility'] = {
+            'show_hostmask': True,
+            'use_time_stamp': True,
+            'minimize_to_tray': True,
+        }
+
+        self.behv.parser['Sounds'] = {
+            'use_beep_noise': True,
+            'custom_sounds': False,
+        }
+
+        self.behv.parser['Misc/Unknown'] = {
+            'display_user_modes': True,
+            'send_ctcp_response': True,
+            'auto_whois': False,
+            'auto_connect_to_networks': True,
+        }
+
+        self.behv.parser['Debugging'] = {
+            'logging': False
+        }
+
+        # Create group boxes for each INI section. This just looks good, tbqh.
+        for section in self.behv.parser.sections():
+            row_count = 0
+            section_frame = QGroupBox(section)
+
+            section_frame.layout = QGridLayout(section_frame)
+            section_frame.layout.setColumnStretch(0, 1)
+            section_frame.layout.setColumnStretch(1, 1)
+
+            for option in self.behv.parser.options(section):
+                label = QLabel(section_frame, text=option)
+                section_frame.layout.addWidget(label, row_count, 0, 1, 1)
+
+                entry = QLineEdit(section_frame)
+                entry.setText(self.behv.parser.get(section, option))
+                section_frame.layout.addWidget(entry, row_count, 1, 1, 2)
+
+                row_count += 1
+            
+            self.behv.settings.content.layout.addWidget(section_frame)
+
+        self.behv.layout.addWidget(self.behv.settings)
+
+        self.behv.btnSav = QPushButton("Save Changes", self.behv.settings)
+
+        self.behv.layout.addWidget(self.behv.btnSav)
+
+    def tabInfoLogic(self):
+        # Basic layout
+        self.info = QWidget()
+        self.info.layout = QGridLayout(self.info)
+        self.info.layout.setContentsMargins(5, 5, 5, 5)
+        self.info.layout.setSpacing(5)
+        
+        # Add this tab.
+        self.tabs.addTab(self.info, "About")
+
+        self.info.heehoo = QLabel("irish is a neeeeeeerd", self.info)
+
+        self.info.layout.addWidget(self.info.heehoo)
