@@ -58,6 +58,7 @@ class Window(QMainWindow):
         self.config_menu = menu_bar.addMenu("Config")
         self.config_edit_servers_action = self.config_menu.addAction("Edit Servers...")
         self.config_edit_gui_action = self.config_menu.addAction("Edit GUI")
+        self.config_new_action = self.config_menu.addAction("(DEV) Settings...")
 
     def show_mac_about_panel(self):
         NSApp = lookUpClass("NSApplication").sharedApplication()

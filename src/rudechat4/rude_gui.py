@@ -13,6 +13,7 @@ from rudechat4.Components.rude_user_list_widget import *
 from rudechat4.GUI.list_window import ChannelListWindow
 from rudechat4.GUI.rude_colours import RudeColours
 from rudechat4.GUI.rude_config_gui import RudeConfigGui
+from rudechat4.GUI.rude_config_new import RudeNewConfig
 from rudechat4.GUI.rude_config_server import RudeConfigServer
 from rudechat4.GUI.rude_popout import RudePopout
 from rudechat4.GUI.rude_shutdown import RudeShutdown
@@ -240,6 +241,7 @@ class RudeGui(QWidget):
         self.master.colors_reset_colors_action.triggered.connect(self.reset_nick_colors)
         self.master.config_edit_servers_action.triggered.connect(self.open_client_config_window)
         self.master.config_edit_gui_action.triggered.connect(self.open_gui_config_window)
+        self.master.config_new_action.triggered.connect(self.open_new_config_window)
         configure_logging()
 
     def set_screen_size(self):
@@ -1272,6 +1274,20 @@ class RudeGui(QWidget):
         self.main_window.layout.addWidget(save_button)
 
         self.main_window.show()
+
+    def open_new_config_window(self):
+        def post_win_close():
+            self.read_config()
+            self.apply_settings()
+
+        def on_win_close():
+            QTimer.singleShot(100, post_win_close)
+            QTimer.singleShot(200, self.conf_window.close)
+            return
+        
+        self.conf_window = RudeNewConfig(on_win_close)
+        
+        self.conf_window.show()
 
     def show_channel_list_window(self):
         self.channel_window = ChannelListWindow(self, self.master)
