@@ -2,6 +2,37 @@
 from rudechat4.shared_imports import *
 from rudechat4.global_variables import *
 
+class OptionsView(QScrollArea):
+    def __init__(self, conf, parent):
+        super().__init__(parent)
+        self.conf = conf
+
+        self.setWidgetResizable(True)
+
+        self.content = QWidget(self)
+        self.content.layout = QVBoxLayout(self.content)
+        self.setWidget(self.content)
+
+        for section in self.conf.sections():
+            row_count = 0
+            section_frame = QGroupBox(section)
+
+            section_frame.layout = QGridLayout(section_frame)
+            section_frame.layout.setColumnStretch(0, 1)
+            section_frame.layout.setColumnStretch(1, 1)
+
+            for option in self.conf.options(section):
+                label = QLabel(section_frame, text=option)
+                section_frame.layout.addWidget(label, row_count, 0, 1, 1)
+
+                entry = QLineEdit(section_frame)
+                entry.setText(self.conf.get(section, option))
+                section_frame.layout.addWidget(entry, row_count, 1, 1, 2)
+
+                row_count += 1
+            
+            self.content.layout.addWidget(section_frame)
+
 class RudeNewConfig(QWidget):
     def __init__(self, close_callback):
         super().__init__()
@@ -31,7 +62,7 @@ class RudeNewConfig(QWidget):
 
         # Add the tabs to the base layout
         self.layout.addWidget(self.tabs)
-        
+
     def tabConnLogic(self):
         # Basic layout
         self.conn = QWidget()
@@ -59,16 +90,6 @@ class RudeNewConfig(QWidget):
         self.conn.btnSav = QPushButton("Save", self.conn)
         self.conn.layout.addWidget(self.conn.btnSav, 3, 0, 1, 1)
 
-        # Big field where all the settings will go.
-        self.conn.settings = QScrollArea(self.conn)
-        self.conn.settings.setWidgetResizable(True)
-
-        self.conn.settings.content = QWidget(self.conn.settings)
-        self.conn.settings.content.layout = QVBoxLayout(self.conn.settings.content)
-        self.conn.settings.content.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
-
-        self.conn.settings.setWidget(self.conn.settings.content)
-
         # Let's populate the settings, using test_rudeserver.ini as a base.
         self.conn.entries = {}
         self.conn.parser = configparser.ConfigParser()
@@ -90,27 +111,7 @@ class RudeNewConfig(QWidget):
         
         self.conn.parser['ZNC'] = { 'znc_username': 'username', 'znc_password': 'password'}
 
-        # Create group boxes for each INI section. This just looks good, tbqh.
-        for section in self.conn.parser.sections():
-            row_count = 0
-            section_frame = QGroupBox(section)
-
-            section_frame.layout = QGridLayout(section_frame)
-            section_frame.layout.setColumnStretch(0, 1)
-            section_frame.layout.setColumnStretch(1, 1)
-
-            for option in self.conn.parser.options(section):
-                label = QLabel(section_frame, text=option)
-                section_frame.layout.addWidget(label, row_count, 0, 1, 1)
-
-                entry = QLineEdit(section_frame)
-                entry.setText(self.conn.parser.get(section, option))
-                section_frame.layout.addWidget(entry, row_count, 1, 1, 2)
-
-                row_count += 1
-            
-            self.conn.settings.content.layout.addWidget(section_frame)
-
+        self.conn.settings = OptionsView(self.conn.parser, self.conn)
         self.conn.layout.addWidget(self.conn.settings, 0, 1, 4, 1)
 
     def tabLookLogic(self):
@@ -122,16 +123,6 @@ class RudeNewConfig(QWidget):
         
         # Add this tab.
         self.tabs.addTab(self.look, "Appearance")
-
-        # Big field where all the settings will go.
-        self.look.settings = QScrollArea(self.look)
-        self.look.settings.setWidgetResizable(True)
-
-        self.look.settings.content = QWidget(self.look.settings)
-        self.look.settings.content.layout = QVBoxLayout(self.look.settings.content)
-        self.look.settings.content.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
-
-        self.look.settings.setWidget(self.look.settings.content)
 
         # Let's populate the settings, using test_rudeserver.ini as a base.
         self.look.entries = {}
@@ -179,26 +170,7 @@ class RudeNewConfig(QWidget):
             'show_join_part_quit_nick': True,
         }
 
-        # Create group boxes for each INI section. This just looks good, tbqh.
-        for section in self.look.parser.sections():
-            row_count = 0
-            section_frame = QGroupBox(section)
-
-            section_frame.layout = QGridLayout(section_frame)
-            section_frame.layout.setColumnStretch(0, 1)
-            section_frame.layout.setColumnStretch(1, 1)
-
-            for option in self.look.parser.options(section):
-                label = QLabel(section_frame, text=option)
-                section_frame.layout.addWidget(label, row_count, 0, 1, 1)
-
-                entry = QLineEdit(section_frame)
-                entry.setText(self.look.parser.get(section, option))
-                section_frame.layout.addWidget(entry, row_count, 1, 1, 2)
-
-                row_count += 1
-            
-            self.look.settings.content.layout.addWidget(section_frame)
+        self.look.settings = OptionsView(self.look.parser, self.look)
 
         self.look.layout.addWidget(self.look.settings)
 
@@ -215,16 +187,6 @@ class RudeNewConfig(QWidget):
         
         # Add this tab.
         self.tabs.addTab(self.behv, "Behaviour")
-
-        # Big field where all the settings will go.
-        self.behv.settings = QScrollArea(self.behv)
-        self.behv.settings.setWidgetResizable(True)
-
-        self.behv.settings.content = QWidget(self.behv.settings)
-        self.behv.settings.content.layout = QVBoxLayout(self.behv.settings.content)
-        self.behv.settings.content.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
-
-        self.behv.settings.setWidget(self.behv.settings.content)
 
         # Let's populate the settings, using test_rudeserver.ini as a base.
         self.behv.entries = {}
@@ -264,26 +226,7 @@ class RudeNewConfig(QWidget):
             'logging': False
         }
 
-        # Create group boxes for each INI section. This just looks good, tbqh.
-        for section in self.behv.parser.sections():
-            row_count = 0
-            section_frame = QGroupBox(section)
-
-            section_frame.layout = QGridLayout(section_frame)
-            section_frame.layout.setColumnStretch(0, 1)
-            section_frame.layout.setColumnStretch(1, 1)
-
-            for option in self.behv.parser.options(section):
-                label = QLabel(section_frame, text=option)
-                section_frame.layout.addWidget(label, row_count, 0, 1, 1)
-
-                entry = QLineEdit(section_frame)
-                entry.setText(self.behv.parser.get(section, option))
-                section_frame.layout.addWidget(entry, row_count, 1, 1, 2)
-
-                row_count += 1
-            
-            self.behv.settings.content.layout.addWidget(section_frame)
+        self.behv.settings = OptionsView(self.behv.parser, self.behv)
 
         self.behv.layout.addWidget(self.behv.settings)
 
