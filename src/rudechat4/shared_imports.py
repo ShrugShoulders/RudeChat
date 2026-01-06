@@ -93,12 +93,13 @@ from PyQt6.QtGui import (
     QTextCharFormat,
     QTextCursor,
     QIcon,
+    QIntValidator,
     QKeyEvent,
     QMouseEvent,
     QPixmap,
     QPalette, 
     QShortcut, 
-    QKeySequence
+    QKeySequence,
 )
 
 if platform.system() == "Darwin":
