@@ -281,7 +281,7 @@ jobs:
     steps:
       - name: Install musl/Alpine build tools & native PyQt6
         run: |
-          apk add --no-cache python3 py3-pip py3-pyqt6 py3-requests py3-pytz py3-tzlocal py3-regex py3-aiofiles binutils gcc musl-dev python3-dev zlib-dev git bash
+          apk add --no-cache python3 py3-pip py3-qt6 py3-requests py3-tzlocal py3-regex py3-aiofiles binutils gcc musl-dev python3-dev zlib-dev git bash
 
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -290,7 +290,7 @@ jobs:
         run: |
           python3 -m venv --system-site-packages /opt/venv
           /opt/venv/bin/pip install --upgrade pip
-          /opt/venv/bin/pip install irctokens emoji pyinstaller
+          /opt/venv/bin/pip install irctokens emoji pyinstaller pytz
           /opt/venv/bin/pip install --no-deps .
           /opt/venv/bin/python -c "import pathlib; pathlib.Path('ci_entry.py').write_text('import runpy\nrunpy.run_module(chr(114)+chr(117)+chr(100)+chr(101)+chr(99)+chr(104)+chr(97)+chr(116)+chr(52), run_name=chr(95)*2+chr(109)+chr(97)+chr(105)+chr(110)+chr(95)*2)\n')"
           /opt/venv/bin/python -m PyInstaller --noconfirm --windowed --name "rudechat" --paths=src --collect-submodules=rudechat4 --icon=src/rudechat4/Resources/Icons/rude_icon_round.png "--add-data=src/rudechat4/Resources:rudechat4/Resources" "--add-data=src/rudechat4/DefaultConfig:rudechat4/DefaultConfig" ci_entry.py
