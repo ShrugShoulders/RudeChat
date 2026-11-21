@@ -153,6 +153,7 @@ jobs:
           cat <<EOF > ~/rpmbuild/SPECS/rudechat.spec
           %global _build_id_links none
           %global __strip /bin/true
+          %global debug_package %{nil}
           Name:           rudechat
           Version:        1.0.0
           Release:        1%{?dist}
