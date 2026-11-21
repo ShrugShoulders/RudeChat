@@ -1,0 +1,124 @@
+name: Build Cross-Platform Installers
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            platform: macos
+            icon_flag: '--icon=src/rudechat4/Resources/Icons/icon.icns'
+            data_flag: '--add-data=src/rudechat4/Resources:rudechat4/Resources --add-data=src/rudechat4/DefaultConfig:rudechat4/DefaultConfig'
+          - os: windows-latest
+            platform: windows
+            icon_flag: '--icon=src/rudechat4/Resources/Icons/icon.ico'
+            data_flag: '--add-data=src/rudechat4/Resources;rudechat4/Resources --add-data=src/rudechat4/DefaultConfig;rudechat4/DefaultConfig'
+          - os: ubuntu-latest
+            platform: linux
+            icon_flag: '--icon=src/rudechat4/Resources/Icons/icon.png'
+            data_flag: '--add-data=src/rudechat4/Resources:rudechat4/Resources --add-data=src/rudechat4/DefaultConfig:rudechat4/DefaultConfig'
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install Linux system dependencies (PyQt6 & Audio)
+        if: matrix.platform == 'linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libegl1 libxkbcommon-x11-0 libxcb-cursor0 libdbus-1-3 libasound2-dev
+
+      - name: Install Python dependencies & rudechat4 package
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install .
+
+      - name: Bundle app with PyInstaller
+        run: |
+          python -c "import runpy; open('ci_entry.py', 'w').write('import runpy\nrunpy.run_module(\"rudechat4\", run_name=\"__main__\")\n')"
+          pyinstaller --noconfirm --windowed --name "rudechat" --paths=src ${{ matrix.icon_flag }} ${{ matrix.data_flag }} ci_entry.py
+
+      # ---------------- MACOS (.dmg) ----------------
+      - name: Package macOS .dmg
+        if: matrix.platform == 'macos'
+        run: |
+          mkdir -p release
+          hdiutil create -volname "rudechat" -srcfolder "dist/rudechat.app" -ov -format UDZO "release/rudechat-macOS.dmg"
+
+      # ---------------- WINDOWS (.exe installer) ----------------
+      - name: Package Windows .exe Installer
+        if: matrix.platform == 'windows'
+        shell: pwsh
+        run: |
+          mkdir release
+          @"
+          [Setup]
+          AppName=rudechat
+          AppVersion=1.0.0
+          DefaultDirName={autopf}\rudechat
+          DefaultGroupName=rudechat
+          SetupIconFile=src\rudechat4\Resources\Icons\icon.ico
+          OutputDir=release
+          OutputBaseFilename=rudechat-Windows-Setup
+          Compression=lzma2
+          SolidCompression=yes
+
+          [Files]
+          Source: "dist\rudechat\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs
+
+          [Icons]
+          Name: "{group}\rudechat"; Filename: "{app}\rudechat.exe"; IconFilename: "{app}\_internal\rudechat4\Resources\Icons\icon.ico"
+          Name: "{autodesktop}\rudechat"; Filename: "{app}\rudechat.exe"; IconFilename: "{app}\_internal\rudechat4\Resources\Icons\icon.ico"
+          "@ | Out-File -FilePath installer.iss -Encoding utf8
+          iscc installer.iss
+
+      # ---------------- LINUX (.deb with Desktop Entry & Icon) ----------------
+      - name: Package Linux .deb
+        if: matrix.platform == 'linux'
+        run: |
+          mkdir -p release pkg/usr/local/bin pkg/opt/rudechat pkg/usr/share/applications pkg/usr/share/icons/hicolor/256x256/apps pkg/DEBIAN
+          cp -r dist/rudechat/* pkg/opt/rudechat/
+          cp src/rudechat4/Resources/Icons/icon.png pkg/usr/share/icons/hicolor/256x256/apps/rudechat.png
+          ln -s /opt/rudechat/rudechat pkg/usr/local/bin/rudechat
+
+          cat <<EOF > pkg/usr/share/applications/rudechat.desktop
+          [Desktop Entry]
+          Name=rudechat
+          Exec=/usr/local/bin/rudechat
+          Icon=rudechat
+          Type=Application
+          Categories=Utility;
+          EOF
+
+          cat <<EOF > pkg/DEBIAN/control
+          Package: rudechat
+          Version: 1.0.0
+          Section: utils
+          Priority: optional
+          Architecture: amd64
+          Maintainer: Your Name <you@example.com>
+          Description: rudechat PyQt6 Application
+          EOF
+          dpkg-deb --build pkg release/rudechat-Linux-amd64.deb
+
+      # ---------------- UPLOAD ARTIFACTS ----------------
+      - name: Upload Installers
+        uses: actions/upload-artifact@v4
+        with:
+          name: installer-${{ matrix.platform }}
+          path: release/*
