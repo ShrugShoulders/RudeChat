@@ -2049,11 +2049,10 @@ class RudeGui(QWidget):
             if new_keys_found:
                 with open(nickname_colors_path_bak, 'w') as file:
                     json.dump(bak_data, file, indent=2)
-                logging.info(f"Updated {nickname_colors_path_bak} with new nicknames.")
+                #logging.info(f"Updated {nickname_colors_path_bak} with new nicknames.")
 
         except Exception as e:
             logging.error(f"Failed to update backup file: {e}")
-
 
     def save_nickname_colors_bak(self):
         clean_nicks = clean_nicknames(self.nickname_colors)

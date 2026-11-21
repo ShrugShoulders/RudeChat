@@ -1763,44 +1763,51 @@ class RudeChatClient:
         """
         Retrieves the hex color for a nickname, converts it to 24-bit ANSI SGR 
         codes, and wraps the nickname in the coloring sequence.
-        
-        This version performs a case-insensitive lookup against the nickname_colors dictionary.
         """
-        lower_nickname = nickname.lower()
-
-        color_key = None
-        for key in self.gui.nickname_colors:
-            if key.lower() == lower_nickname:
-                color_key = key # This is the case-sensitive key that works in the dict
-                break
-
-        hex_color = self.gui.nickname_colors.get(color_key, self.gui.window_fg)
-
-        # Clean the hex color and convert to R, G, B decimal integers (0-255)
-        hex_color = hex_color.lstrip('#')
-        
-        # Basic validation for a 6-character hex string
-        if len(hex_color) != 6 or not re.match(r'^[0-9a-fA-F]{6}$', hex_color):
-            # Fallback to plain nickname if the color is invalid
-            return nickname
-            
         try:
-            r = int(hex_color[0:2], 16)
-            g = int(hex_color[2:4], 16)
-            b = int(hex_color[4:6], 16)
-        except ValueError:
-            # Should be caught by the regex, but safe to include
-            return nickname
+            # Safety check for the nickname input
+            if not nickname:
+                return ""
+
+            lower_nickname = nickname.lower()
+            color_key = None
+
+            # Safely access the dictionary to avoid AttributeError if gui is None
+            nickname_colors = getattr(self.gui, 'nickname_colors', {})
+            fallback_color = getattr(self.gui, 'window_fg', '#FFFFFF')
+
+            for key in nickname_colors:
+                if key.lower() == lower_nickname:
+                    color_key = key
+                    break
+
+            hex_color = nickname_colors.get(color_key, fallback_color)
+
+            # Clean and validate the hex color
+            hex_color = str(hex_color).lstrip('#')
             
-        # Define ANSI Control Codes
-        ESC = "\x1b["
-        # 24-bit Foreground Code: \x1b[38;2;R;G;Bm
-        ANSI_START = f"{ESC}38;2;{r};{g};{b}m"
-        # Reset Code: \x1b[0m
-        ANSI_END = f"{ESC}0m"
-        
-        # Wrap the nickname (using the exact casing from the message: 'nickname')
-        return f"{ANSI_START}{nickname}{ANSI_END}"
+            if len(hex_color) != 6 or not re.match(r'^[0-9a-fA-F]{6}$', hex_color):
+                return nickname
+                
+            # Convert hex to RGB
+            try:
+                r = int(hex_color[0:2], 16)
+                g = int(hex_color[2:4], 16)
+                b = int(hex_color[4:6], 16)
+            except (ValueError, IndexError):
+                # Handles cases where slicing fails or hex isn't valid base-16
+                return nickname
+                
+            # Define and apply ANSI codes
+            ESC = "\x1b["
+            ANSI_START = f"{ESC}38;2;{r};{g};{b}m"
+            ANSI_END = f"{ESC}0m"
+            
+            return f"{ANSI_START}{nickname}{ANSI_END}"
+
+        except Exception as e:
+            print(f"Error in ansi_color_nickname: {e}")
+            return nickname
 
     def save_message(self, server, target, sender, message, mode_symbol, is_sent):
         timestamp = datetime.now().strftime('[%H:%M:%S] ')
