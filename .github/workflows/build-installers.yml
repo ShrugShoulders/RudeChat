@@ -15,15 +15,12 @@ jobs:
           - os: macos-latest
             platform: macos
             icon_flag: '--icon=src/rudechat4/Resources/Icons/rude.icns'
-            data_flag: '--add-data=src/rudechat4/Resources:rudechat4/Resources --add-data=src/rudechat4/DefaultConfig:rudechat4/DefaultConfig'
           - os: windows-latest
             platform: windows
             icon_flag: '--icon=src/rudechat4/Resources/Icons/rude.ico'
-            data_flag: '--add-data=src/rudechat4/Resources;rudechat4/Resources --add-data=src/rudechat4/DefaultConfig;rudechat4/DefaultConfig'
           - os: ubuntu-latest
             platform: linux
             icon_flag: '--icon=src/rudechat4/Resources/Icons/rude_icon_round.png'
-            data_flag: '--add-data=src/rudechat4/Resources:rudechat4/Resources --add-data=src/rudechat4/DefaultConfig:rudechat4/DefaultConfig'
 
     runs-on: ${{ matrix.os }}
 
@@ -50,8 +47,8 @@ jobs:
 
       - name: Bundle app with PyInstaller
         run: |
-          python -c "open('ci_entry.py', 'w').write('import runpy\nrunpy.run_module(\"rudechat4\", run_name=\"__main__\")\n')"
-          python -m PyInstaller --noconfirm --windowed --name "rudechat" --paths=src --collect-submodules=rudechat4 ${{ matrix.icon_flag }} ${{ matrix.data_flag }} ci_entry.py
+          python -c "import pathlib; pathlib.Path('ci_entry.py').write_text('import runpy\nrunpy.run_module(chr(114)+chr(117)+chr(100)+chr(101)+chr(99)+chr(104)+chr(97)+chr(116)+chr(52), run_name=chr(95)*2+chr(109)+chr(97)+chr(105)+chr(110)+chr(95)*2)\n')"
+          python -m PyInstaller --noconfirm --windowed --name "rudechat" --paths=src --collect-submodules=rudechat4 ${{ matrix.icon_flag }} "--add-data=src/rudechat4/Resources:rudechat4/Resources" "--add-data=src/rudechat4/DefaultConfig:rudechat4/DefaultConfig" ci_entry.py
 
       # ---------------- MACOS (.dmg) ----------------
       - name: Package macOS .dmg
