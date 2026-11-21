@@ -109,15 +109,15 @@ def __main__():
     if first_run.first_run_detect == 0:
         first_run.open_client_config_window()
 
+    # Python 3.14 no longer creates a loop implicitly, so set one before
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+
     root = Window()
     gui = RudeGui(root)
     root.set_gui(gui)
     root.setCentralWidget(gui)
 
-    new_loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(new_loop)
-
-    loop = asyncio.get_event_loop()
     loop.create_task(initialize_clients(gui))
 
     def qt_update():
