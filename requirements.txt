@@ -6,3 +6,4 @@ emoji
 PyQt6
 requests
 regex
+pyinstaller
