@@ -15,6 +15,7 @@ class RudeChatClient:
         self.entry_widget = entry_widget
         self.server_text_widget = server_text_widget
         self.gui = gui
+        self._rx_leftover = ""  # Unprocessed text handed from the welcome loop to the main receive loop
         self.nicknamelen = 16
         self.chan_limit = 250
         self.channellen = 50
@@ -81,7 +82,7 @@ class RudeChatClient:
         self.nickname = config.get('IRC', 'nickname')
         self.use_nickserv_auth = config.getboolean('IRC', 'use_nickserv_auth', fallback=False)
         self.nickserv_password = config.get('IRC', 'nickserv_password') if self.use_nickserv_auth else None
-        self.auto_join_channels = config.get('IRC', 'auto_join_channels', fallback=None).split(',')
+        self.auto_join_channels = self._parse_channel_list(config.get('IRC', 'auto_join_channels', fallback=''))
         self.use_auto_join = config.getboolean('IRC', 'use_auto_join', fallback=True)
         self.auto_rejoin = config.getboolean('IRC', 'auto_rejoin', fallback=True)
         self.sasl_enabled = config.getboolean('IRC', 'sasl_enabled', fallback=False)
@@ -123,12 +124,17 @@ class RudeChatClient:
         if self.log_on:
             logging.info(f"Client config for {self.server_name} Completed")
 
+    @staticmethod
+    def _parse_channel_list(raw):
+        """Split a comma separated channel list, trimming spaces and dropping blanks."""
+        return [channel.strip() for channel in (raw or '').split(',') if channel.strip()]
+
     def reload_config(self, config_file):
         config = configparser.ConfigParser()
         config.read(config_file)
 
         # Reload specific variables
-        self.auto_join_channels = config.get('IRC', 'auto_join_channels', fallback=None).split(',')
+        self.auto_join_channels = self._parse_channel_list(config.get('IRC', 'auto_join_channels', fallback=''))
         self.mention_note_color = config.get('IRC', 'mention_note_color', fallback='red')
         self.activity_note_color = config.get('IRC', 'activity_note_color', fallback='green')
         self.use_time_stamp = config.getboolean('IRC', 'use_time_stamp', fallback=True)
@@ -411,21 +417,40 @@ class RudeChatClient:
             self.update_gui_channel_list()
 
     async def _await_welcome_message(self):
+        """Read server lines during registration until the client is ready.
+
+        Non-ZNC connections finish, join the auto-join channels and return
+        once the server has sent 001, 005 and the end of the MOTD (376 or
+        422), and authentication (SASL or NickServ) has finished or failed.
+        ZNC connections keep their own buffering and sync-timer logic.
+
+        Any text read but not processed when this returns is stored in
+        ``self._rx_leftover`` so the main receive loop sees it.
+        """
         self.gui.insert_text_widget(f'Waiting for welcome message from the server.\n')
         buffer = ""
         sync = True
-        received_001 = False
+        got_001 = False
+        got_005 = False
         motd_received = False
         sasl_authenticated = False
+        sasl_failed = False
         logged_in = False
-        nickserv_sent = False
-        got_396 = False
+        nickserv_done = False
+        nickserv_sent_at = None
         znc_connected = False
         count_366 = 0
         got_topic = 0
         last_366_time = None
         TIMEOUT_SECONDS = 0.30
         MAX_WAIT_TIME = 60
+        READ_TIMEOUT = 5  # seconds without data before the periodic checks run
+        NICKSERV_WAIT = 5  # seconds to wait for NickServ to answer before joining anyway
+        NICKSERV_DONE_WORDS = (
+            "identified", "recognized", "recognised", "password accepted",
+            "invalid password", "incorrect password", "isn't registered",
+            "is not registered", "not a registered",
+        )
         PRIVMSGTOKENS = []
         NAMESTOKENS = []
         TOPICTOKENS = []
@@ -463,244 +488,245 @@ class RudeChatClient:
                     return False
                 return time.time() - last_366_time > TIMEOUT_SECONDS
 
-        while True:
-            data = await self.reader.read(4096)
+        async def finish():
+            """Auto-join (if enabled), clear away status and reset the chat window."""
+            if self.use_auto_join:
+                await self.automatic_join()
+            await self.send_message("AWAY")
+            self.gui.clear_text_widget()
+            self.gui.show_startup_art()
+            self.gui.scroll_on_channel_click()
 
-            if not data:
-                raise ConnectionError("Connection lost while waiting for the welcome message.")
+        def auth_done():
+            """True once SASL or NickServ has finished, failed, or isn't in use."""
+            if self.sasl_enabled:
+                return sasl_authenticated or sasl_failed
+            if self.use_nickserv_auth:
+                if logged_in or nickserv_done:
+                    return True
+                return nickserv_sent_at is not None and time.time() - nickserv_sent_at > NICKSERV_WAIT
+            return True
 
-            decoded_data = data.decode('UTF-8', errors='ignore')
-            buffer += decoded_data
-            while "\r\n" in buffer:
-                line, buffer = buffer.split("\r\n", 1)
-                tokens = irctokens.tokenise(line)
-                if check_timeout():
-                    # Timeout occurred
-                    if self.znc_connection:
-                        for token in TOPICTOKENS:
-                            self.bprtcl_topic(token)
-                        for tokens in NAMESTOKENS:
-                            self.prtcl_366(tokens)
-                        await process_PRIVMSG_tokens(PRIVMSGTOKENS)
-                        return
+        async def try_finish():
+            """Finish a non-ZNC registration as soon as every step is done."""
+            if self.znc_connection:
+                return False
+            if got_001 and got_005 and motd_received and auth_done():
+                await finish()
+                return True
+            return False
 
-                match tokens.command:
-                    case "WALLOPS": await self.bprtcl_to_server(tokens)
-                    case "ACCOUNT": self.prtcl_ACCOUNT(tokens)
-                    case "AWAY": self.prtcl_AWAY(tokens)
-                    case "NOTICE":
-                        self.gui.scroll_on_channel_click()
-                        if self.prtcl_NOTICE(tokens):
-                            if self.use_auto_join:
-                                await self.automatic_join()
-                                await self.send_message("AWAY")
-                                self.gui.clear_text_widget()
-                                self.gui.show_startup_art()
-                                return
-                            elif not self.use_auto_join:
-                                await self.send_message("AWAY")
-                                self.gui.clear_text_widget()
-                                self.gui.show_startup_art()
-                                return
-                    case "CAP": await self.prtcl_CAP(tokens)
-                    case "AUTHENTICATE":
-                        self.gui.insert_text_widget("Handling AUTHENTICATE message\n")
-                        await self.prtcl_AUTHENTICATE(tokens)
-                    case "903":
-                        self.gui.insert_text_widget("Handling SASL successful message\n")
-                        await self.prtcl_903()
-                        sasl_authenticated = True
-                        if logged_in and sasl_authenticated and self.isupport_flag and motd_received:
-                            if self.use_auto_join:
-                                await self.automatic_join()
-                                await self.send_message("AWAY")
-                                self.gui.clear_text_widget()
-                                self.gui.show_startup_art()
-                                return
-                            elif not self.use_auto_join:
-                                await self.send_message("AWAY")
-                                self.gui.clear_text_widget()
-                                self.gui.show_startup_art()
-                                return
-                    case "904":
-                        self.gui.insert_text_widget("Handling SASL failed message\n")
-                        self.bprtcl_to_client(tokens)
-                    case "001":
-                        self.is_connected = True
-                        if self.znc_connection:
-                            reset_timer("")
-                        self.gui.insert_text_widget(f'Connected to the server: {self.server}:{self.port}\n')
-                        received_001 = True
-                        self.gui.scroll_on_channel_click()
-                        self.gui.master.chat_upload_file_action.setEnabled(True)
-                        self.gui.text_field.setPlaceholderText("Type here...")
-                    case "002" | "003" | "004":
-                        if self.znc_connection:
-                            reset_timer("")
-                        self.server_message_handler(tokens)
-                    case "005":
-                        if self.znc_connection:
-                            reset_timer("")
-                        self.prtcl_005(tokens)
-                        self.isupport_flag = True
-                        self.gui.scroll_on_channel_click()
-                    case "251" | "252" | "253" | "254" | "255" | "265":
-                        self.server_message_handler(tokens)
-                        reset_timer("")
-                    case "311" | "312" | "313" | "317" | "319" | "301" | "671" | "338" | "318" | "330":
-                        await self.bprtcl_whois_replies(tokens)
-                        reset_timer("")
-                    case "PART": self.prtcl_PART(tokens)
-                    case "QUIT": self.prtcl_QUIT(tokens)
-                    case "NICK":
-                        zncnick = 0
-                        if self.znc_connection and self.nickname != tokens.hostmask.nickname and zncnick == 0:
-                            new_nick = tokens.params[0]
-                            await self.change_nickname(new_nick, is_from_token=True)
-                            self.away_clean()
-                            zncnick += 1
-                        else:
-                            await self.prtcl_NICK(tokens)
-                    case "JOIN":
-                        if self.znc_connection:
-                            self.join_znc_channel(tokens)
-                            reset_timer("#")
-                    case "PRIVMSG":
-                        if self.znc_connection:
-                            PRIVMSGTOKENS.append(tokens)
-                            reset_timer("")
-                        else:
-                            await self.prtcl_PRIVMSG(tokens)
-                    case "MODE": self.prtcl_MODE(tokens)
-                    case "305" | "306": pass
-                    case "328": await self.bprtcl_to_server(tokens)
-                    case "332" | "333" | "TOPIC":
-                        got_topic += 1
-                        if not self.use_auto_join:
-                            TOPICTOKENS.append(tokens)
-                            reset_timer("")
-                        else:
-                            self.bprtcl_topic(tokens)
-                    case "353":  # NAMES list
-                        if not self.use_auto_join:
-                            NAMESTOKENS.append(tokens)
-                            reset_timer("")
-                        else:
-                            self.prtcl_353(tokens)
-                    case "366":  # End of NAMES list
-                        count_366 += 1
-                        if not self.use_auto_join:
-                            NAMESTOKENS.append(tokens)
-                            reset_timer("")
-                        elif self.use_auto_join:
-                            self.prtcl_366(tokens)
-                            if count_366 >= len(self.joined_channels) and got_topic >= len(self.joined_channels) and znc_connected:
-                                await self.send_message("AWAY")
-                                self.gui.clear_text_widget()
-                                self.gui.show_startup_art()
-                                return
-                    case "250": self.bprtcl_to_client(tokens)
-                    case "266": self.bprtcl_to_client(tokens)
-                    case "433": await self.handle_nickname_conflict(tokens)
-                    case "372":
-                        if self.znc_connection:
-                            reset_timer("")
-                        self.prtcl_372(tokens)
-                    case "375":
-                        if self.znc_connection:
-                            reset_timer("")
-                        self.prtcl_375(tokens)
-                    case "376":
-                        self.prtcl_376(tokens)
-                        motd_received = True
-                        if not self.use_nickserv_auth and not self.sasl_enabled and not self.znc_connection:
-                            if self.use_auto_join:
-                                await self.automatic_join()
-                                await self.send_message("AWAY")
-                                self.gui.clear_text_widget()
-                                self.gui.show_startup_art()
-                                return
-                            elif not self.use_auto_join:
-                                return
-                            self.gui.scroll_on_channel_click()
-                        elif self.znc_connection and self.isupport_flag and not self.sasl_enabled and not self.use_nickserv_auth:
-                            if self.use_auto_join:
-                                await self.automatic_join()
-                                znc_connected = True
-                                reset_timer("")
-                            elif not self.use_auto_join:
-                                znc_connected = True
-                                reset_timer("")
-                        elif sasl_authenticated and self.isupport_flag and not self.znc_connection:
-                            if self.use_auto_join:
-                                await self.automatic_join()
-                                await self.send_message("AWAY")
-                                self.gui.clear_text_widget()
-                                self.gui.show_startup_art()
-                                return
-                            elif not self.use_auto_join:
-                                await self.send_message("AWAY")
-                                self.gui.clear_text_widget()
-                                self.gui.show_startup_art()
-                                return
-                        elif self.use_nickserv_auth and not self.sasl_enabled and not self.znc_connection:
-                            await self.send_message(f'PRIVMSG NickServ :IDENTIFY {self.nickname} {self.nickserv_password}\r\n')
-                            self.gui.insert_text_widget(f"Sent NickServ authentication.\n")
-                            nickserv_sent = True
-                    case "042":
-                        if self.use_nickserv_auth and not self.sasl_enabled:
-                            await self.send_message(f'PRIVMSG NickServ :IDENTIFY {self.nickserv_password}\r\n')
-                        if self.use_auto_join:
-                            await self.automatic_join()
-                        self.gui.scroll_on_channel_click()
-                        return
-                    case "PING": await self.prtcl_PING(tokens)
-                    case "PONG": self.prtcl_PONG(tokens)
-                    case "900":
-                        logged_in = True
-                        if self.use_nickserv_auth and logged_in and nickserv_sent and not self.sasl_enabled:
-                            if self.use_auto_join:
-                                await self.automatic_join()
-                                await self.send_message("AWAY")
-                                self.gui.clear_text_widget()
-                                self.gui.show_startup_art()
-                                return
-                            elif not self.use_auto_join:
-                                await self.send_message("AWAY")
-                                self.gui.clear_text_widget()
-                                self.gui.show_startup_art()
-                                return
-                            self.gui.scroll_on_channel_click()
-                    case "396": got_396 = True
-                    case _:
-                        if self.log_on:
-                            logging.error(f"Unhandled Token command in _await_welcome_message: {tokens.command}. Token: {tokens}")
-                        self.gui.scroll_on_channel_click()
+        async def replay_znc_sync():
+            for token in TOPICTOKENS:
+                self.bprtcl_topic(token)
+            for tokens in NAMESTOKENS:
+                self.prtcl_353(tokens) if tokens.command == '353' else self.prtcl_366(tokens)
+            await process_PRIVMSG_tokens(PRIVMSGTOKENS)
 
-                if check_timeout():
-                    # Timeout occurred
-                    if self.znc_connection:
-                        for token in TOPICTOKENS:
-                            self.bprtcl_topic(token)
-                        for tokens in NAMESTOKENS:
-                            self.prtcl_353(tokens) if tokens.command == '353' else self.prtcl_366(tokens)
-                        await process_PRIVMSG_tokens(PRIVMSGTOKENS)
-                        return
+        try:
+            while True:
+                # While a ZNC sync is winding down, poll at the sync timeout instead of the long default.
+                read_timeout = TIMEOUT_SECONDS if (self.znc_connection and last_366_time is not None) else READ_TIMEOUT
+                try:
+                    data = await asyncio.wait_for(self.reader.read(4096), read_timeout)
+                except asyncio.TimeoutError:
+                    data = None  # Nothing arrived. Fall through to the periodic checks below.
 
-            # Check for overall timeout
-            elapsed_time = asyncio.get_event_loop().time() - start_time
-            if elapsed_time > MAX_WAIT_TIME:
-                if self.znc_connection:
-                    self.gui.insert_text_widget("\nMaximum sync time exceeded\n")
-                    for token in TOPICTOKENS:
-                        self.bprtcl_topic(token)
-                    for tokens in NAMESTOKENS:
-                        self.prtcl_353(tokens) if tokens.command == '353' else self.prtcl_366(tokens)
-                    await process_PRIVMSG_tokens(PRIVMSGTOKENS)
+                if data is not None:
+                    if not data:
+                        raise ConnectionError("Connection lost while waiting for the welcome message.")
+
+                    buffer += data.decode('UTF-8', errors='ignore')
+                    while "\r\n" in buffer:
+                        line, buffer = buffer.split("\r\n", 1)
+                        tokens = irctokens.tokenise(line)
+                        if check_timeout():
+                            # Timeout occurred
+                            if self.znc_connection:
+                                for token in TOPICTOKENS:
+                                    self.bprtcl_topic(token)
+                                for tokens in NAMESTOKENS:
+                                    self.prtcl_366(tokens)
+                                await process_PRIVMSG_tokens(PRIVMSGTOKENS)
+                                return
+
+                        try:
+                            match tokens.command:
+                                case "WALLOPS": await self.bprtcl_to_server(tokens)
+                                case "ACCOUNT": self.prtcl_ACCOUNT(tokens)
+                                case "AWAY": self.prtcl_AWAY(tokens)
+                                case "NOTICE":
+                                    self.gui.scroll_on_channel_click()
+                                    invalid_password = self.prtcl_NOTICE(tokens)
+                                    sender = tokens.hostmask.nickname.lower() if tokens.hostmask else ""
+                                    if sender == "nickserv" and nickserv_sent_at is not None:
+                                        text = tokens.params[1].lower() if len(tokens.params) > 1 else ""
+                                        if invalid_password or any(word in text for word in NICKSERV_DONE_WORDS):
+                                            nickserv_done = True
+                                    if invalid_password and self.znc_connection:
+                                        await finish()
+                                        return
+                                case "CAP": await self.prtcl_CAP(tokens)
+                                case "AUTHENTICATE":
+                                    self.gui.insert_text_widget("Handling AUTHENTICATE message\n")
+                                    await self.prtcl_AUTHENTICATE(tokens)
+                                case "903":
+                                    self.gui.insert_text_widget("Handling SASL successful message\n")
+                                    await self.prtcl_903()
+                                    sasl_authenticated = True
+                                    if self.znc_connection and logged_in and got_005 and motd_received:
+                                        await finish()
+                                        return
+                                case "904" | "905" | "906":
+                                    # SASL failed. Without CAP END the server never finishes registration.
+                                    sasl_failed = True
+                                    self.gui.insert_text_widget(f"SASL authentication failed ({tokens.command}).\n")
+                                    if self.sasl_enabled:
+                                        await self.send_message("CAP END")
+                                case "001":
+                                    self.is_connected = True
+                                    if self.znc_connection:
+                                        reset_timer("")
+                                    self.gui.insert_text_widget(f'Connected to the server: {self.server}:{self.port}\n')
+                                    got_001 = True
+                                    self.gui.scroll_on_channel_click()
+                                    self.gui.master.chat_upload_file_action.setEnabled(True)
+                                    self.gui.text_field.setPlaceholderText("Type here...")
+                                case "002" | "003" | "004":
+                                    if self.znc_connection:
+                                        reset_timer("")
+                                    self.server_message_handler(tokens)
+                                case "005":
+                                    if self.znc_connection:
+                                        reset_timer("")
+                                    self.prtcl_005(tokens)
+                                    self.isupport_flag = True
+                                    got_005 = True
+                                    self.gui.scroll_on_channel_click()
+                                case "251" | "252" | "253" | "254" | "255" | "265":
+                                    self.server_message_handler(tokens)
+                                    reset_timer("")
+                                case "311" | "312" | "313" | "317" | "319" | "301" | "671" | "338" | "318" | "330":
+                                    await self.bprtcl_whois_replies(tokens)
+                                    reset_timer("")
+                                case "PART": self.prtcl_PART(tokens)
+                                case "QUIT": self.prtcl_QUIT(tokens)
+                                case "NICK":
+                                    zncnick = 0
+                                    if self.znc_connection and self.nickname != tokens.hostmask.nickname and zncnick == 0:
+                                        new_nick = tokens.params[0]
+                                        await self.change_nickname(new_nick, is_from_token=True)
+                                        self.away_clean()
+                                        zncnick += 1
+                                    else:
+                                        await self.prtcl_NICK(tokens)
+                                case "JOIN":
+                                    if self.znc_connection:
+                                        self.join_znc_channel(tokens)
+                                        reset_timer("#")
+                                case "PRIVMSG":
+                                    if self.znc_connection:
+                                        PRIVMSGTOKENS.append(tokens)
+                                        reset_timer("")
+                                    else:
+                                        await self.prtcl_PRIVMSG(tokens)
+                                case "MODE": self.prtcl_MODE(tokens)
+                                case "305" | "306": pass
+                                case "328": await self.bprtcl_to_server(tokens)
+                                case "332" | "333" | "TOPIC":
+                                    got_topic += 1
+                                    if not self.use_auto_join:
+                                        TOPICTOKENS.append(tokens)
+                                        reset_timer("")
+                                    else:
+                                        self.bprtcl_topic(tokens)
+                                case "353":  # NAMES list
+                                    if not self.use_auto_join:
+                                        NAMESTOKENS.append(tokens)
+                                        reset_timer("")
+                                    else:
+                                        self.prtcl_353(tokens)
+                                case "366":  # End of NAMES list
+                                    count_366 += 1
+                                    if not self.use_auto_join:
+                                        NAMESTOKENS.append(tokens)
+                                        reset_timer("")
+                                    elif self.use_auto_join:
+                                        self.prtcl_366(tokens)
+                                        if count_366 >= len(self.joined_channels) and got_topic >= len(self.joined_channels) and znc_connected:
+                                            await self.send_message("AWAY")
+                                            self.gui.clear_text_widget()
+                                            self.gui.show_startup_art()
+                                            return
+                                case "250": self.bprtcl_to_client(tokens)
+                                case "266": self.bprtcl_to_client(tokens)
+                                case "433": await self.handle_nickname_conflict(tokens)
+                                case "372":
+                                    if self.znc_connection:
+                                        reset_timer("")
+                                    self.prtcl_372(tokens)
+                                case "375":
+                                    if self.znc_connection:
+                                        reset_timer("")
+                                    self.prtcl_375(tokens)
+                                case "376" | "422":  # End of MOTD, or no MOTD
+                                    if tokens.command == "376":
+                                        self.prtcl_376(tokens)
+                                    motd_received = True
+                                    if self.znc_connection:
+                                        if got_005 and not self.sasl_enabled and not self.use_nickserv_auth:
+                                            if self.use_auto_join:
+                                                await self.automatic_join()
+                                            znc_connected = True
+                                            reset_timer("")
+                                    elif self.use_nickserv_auth and not self.sasl_enabled and nickserv_sent_at is None:
+                                        await self.send_message(f'PRIVMSG NickServ :IDENTIFY {self.nickserv_password}')
+                                        self.gui.insert_text_widget(f"Sent NickServ authentication.\n")
+                                        nickserv_sent_at = time.time()
+                                case "PING": await self.prtcl_PING(tokens)
+                                case "PONG": self.prtcl_PONG(tokens)
+                                case "900":
+                                    logged_in = True
+                                case "396": pass
+                                case _:
+                                    if self.log_on:
+                                        logging.error(f"Unhandled Token command in _await_welcome_message: {tokens.command}. Token: {tokens}")
+                                    self.gui.scroll_on_channel_click()
+                        except OSError:
+                            raise  # Lost connection. Let wait_for_welcome and the caller deal with it.
+                        except Exception as e:
+                            # One bad line must not stop registration and the auto-join.
+                            logging.error(f"Error handling {tokens.command} in _await_welcome_message: {e}. Token: {tokens}")
+
+                        if await try_finish():
+                            return
+
+                        if check_timeout():
+                            # Timeout occurred
+                            if self.znc_connection:
+                                await replay_znc_sync()
+                                return
+
+                # Runs after each read, and after a quiet READ_TIMEOUT. NickServ may have gone silent.
+                if await try_finish():
                     return
-                else:
-                    self.gui.insert_text_widget("\nMaximum sync time exceeded\n")
+
+                if self.znc_connection and check_timeout():
+                    await replay_znc_sync()
                     return
+
+                # Check for overall timeout
+                elapsed_time = asyncio.get_event_loop().time() - start_time
+                if elapsed_time > MAX_WAIT_TIME:
+                    self.gui.insert_text_widget("\nMaximum sync time exceeded\n")
+                    if self.znc_connection:
+                        await replay_znc_sync()
+                    elif got_001:
+                        # The server accepted us but a step never finished. Join anyway.
+                        await finish()
+                    return
+        finally:
+            self._rx_leftover = buffer
 
     async def send_message(self, message):
         try:
@@ -741,16 +767,18 @@ class RudeChatClient:
             chantypes = tuple(self.chantypes)
             channel_count = sum(1 for c in self.joined_channels if c.startswith(chantypes))
             if not self.is_connected:
+                logging.warning(f"join_channel({channel}) skipped: client is not marked as connected.")
                 return
             if not self.is_valid_channel(channel):
                 self.gui.insert_text_widget(f"Invalid channel name {channel}.\n")
                 return
 
-            if len(channel) >= self.channellen:
-                self.gui.insert_text_widget(f"Maximum Channel Character Limit Reached, Max Allowed: {self.channellen}")
+            # A limit of 0 or less means the server didn't tell us one.
+            if self.channellen > 0 and len(channel) > self.channellen:
+                self.gui.insert_text_widget(f"Maximum Channel Character Limit Reached, Max Allowed: {self.channellen}\n")
                 return
 
-            if channel_count >= self.chan_limit:
+            if self.chan_limit > 0 and channel_count >= self.chan_limit:
                 self.gui.insert_text_widget(f"You have reached the maximum number of channels allowed.\n")
                 return
 
@@ -2182,7 +2210,12 @@ class RudeChatClient:
             try:
                 if self.log_on:
                     logging.debug("Waiting for data...")
-                data = await asyncio.wait_for(self.reader.read(4096), timeout_seconds)
+                # Bytes the welcome loop read but didn't process (it returns early) are handled first.
+                pending, self._rx_leftover = self._rx_leftover, ""
+                if pending:
+                    data = pending.encode('UTF-8')
+                else:
+                    data = await asyncio.wait_for(self.reader.read(4096), timeout_seconds)
                 if self.log_on:
                     logging.debug(f"Data received: {data}...")
 
@@ -4617,7 +4650,8 @@ class RudeChatClient:
 
                 elif param.startswith("CHANTYPES="):
                     _, channel_types = param.split("=")
-                    self.chantypes = list(channel_types)
+                    if channel_types:  # An empty value would make every channel invalid.
+                        self.chantypes = list(channel_types)
 
                 elif param.startswith("NICKLEN="):
                     _, nick_len = param.split("=")
@@ -4625,10 +4659,15 @@ class RudeChatClient:
 
                 elif param.startswith("CHANLIMIT="):
                     _, chan_limit = param.split("=")
-                    # Handle multiple limits: e.g., CHANLIMIT=#&:10
-                    parts = chan_limit.split(":")
-                    if len(parts) == 2 and parts[1].isdigit():
-                        self.chan_limit = int(parts[1])
+                    # Groups look like "#&:10" or "#:120,&:". An empty count means no limit.
+                    limits = []
+                    for group in chan_limit.split(","):
+                        prefixes, _, count = group.partition(":")
+                        if count.isdigit():
+                            limits.append((prefixes, int(count)))
+                    if limits:
+                        # Prefer the group that covers '#', otherwise the first group.
+                        self.chan_limit = next((n for p, n in limits if "#" in p), limits[0][1])
 
                 elif param.startswith("CHANNELLEN="):
                     _, channel_len = param.split("=")
