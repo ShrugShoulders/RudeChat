@@ -2093,7 +2093,7 @@ class RudeChatClient:
             self.whois_user_request = False
 
         except Exception as e:
-            logging.error(f"Exception in help: {e}")
+            logging.error(f"Exception in whois_display: {e}")
 
     async def save_whois_to_file(self, nickname):
         """Save WHOIS data for a given nickname to a file."""
@@ -3284,7 +3284,6 @@ class RudeChatClient:
                 "Use Your Right Click for Config and more.",
                 "/join <channel> - Joins a channel",
                 "/part <channel> - Leaves a channel",
-                "/ch - Shows channels joined",
                 "/sw <channel> - Switches to a channel",
                 "/topic - Requests the topic for the current channel",
                 "/names - Refreshes the user list for the current channel",

@@ -1,13 +1,25 @@
 #!/usr/bin/env python3
+"""The input box, with keyboard shortcuts and menus for IRC colour and formatting codes."""
 from rudechat4.shared_imports import *
 from rudechat4.global_variables import *
 
 class RudeMessageEntry(QLineEdit):
+"""Single-line input box for chat messages and slash commands.
+
+    Formatting only applies to selected text. The selection is wrapped in the
+    matching IRC control codes and the cursor moves to the end of it.
+"""
     def __init__(self, parent=None):
+    """Create the entry and register the formatting shortcuts."""
         super().__init__(parent)
         self.add_shortcuts()
 
     def add_shortcuts(self):
+    """Register Ctrl shortcuts for IRC formatting.
+
+        Bold is Ctrl+B, italic Ctrl+I, strike-through Ctrl+S and inverse
+        Ctrl+/. Underline is Ctrl+U on macOS and Windows and Ctrl+N elsewhere.
+    """
         platform = sys.platform
         is_mac = platform == "darwin"
         is_windows = platform.startswith("win")
@@ -24,6 +36,7 @@ class RudeMessageEntry(QLineEdit):
         QShortcut(QKeySequence("Ctrl+/"), self, activated=lambda: self.apply_irc_format("\x16"))  # Inverse
 
     def contextMenuEvent(self, event):
+    """Extend the standard menu with Colors (grouped by ten) and Formatting submenus."""
         menu = self.createStandardContextMenu()
 
         color_menu = menu.addMenu("Colors")
@@ -50,6 +63,11 @@ class RudeMessageEntry(QLineEdit):
         menu.exec(event.globalPos())
 
     def apply_irc_color(self, color_code):
+    """Wrap the selected text in an IRC colour code.
+
+        Args:
+            color_code: Two-digit IRC colour code, as in ``IRC_COLORS``.
+    """
         cursor = self.cursorPosition()
         selected_text = self.selectedText()
 
@@ -63,6 +81,12 @@ class RudeMessageEntry(QLineEdit):
             self.setCursorPosition(start + len(color_tagged))
 
     def apply_irc_format(self, format_code):
+    """Wrap the selected text in an IRC formatting code, ending with a reset.
+
+        Args:
+            format_code: One control character from ``IRC_FORMAT``, such as
+                the bold code (0x02).
+    """
         selected_text = self.selectedText()
 
         if selected_text:

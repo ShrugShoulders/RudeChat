@@ -1,16 +1,23 @@
 #!/usr/bin/env python3
+"""Channel list widget with a right-click menu for leaving, closing or popping out a channel."""
 from rudechat4.shared_imports import *
 from rudechat4.global_variables import *
 
 class RudeChannelListWidget(QListWidget):
+"""List of joined channels, DMs and info tabs for one server.
+
+    The parent must be the ``RudeGui`` window, which is stored as ``gui`` and
+    used to reach the active IRC client.
+"""
     def __init__(self, parent=None):
+    """Enable the custom context menu and keep a reference to the GUI."""
         super().__init__(parent)
         self.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.customContextMenuRequested.connect(self.show_context_menu)
         self.gui = parent
 
     def show_context_menu(self, pos: QPoint):
-        """Displays channel list context menu"""
+    """Displays channel list context menu"""
         menu = QMenu(self)
         selected_item = self.currentItem()
 
@@ -40,7 +47,7 @@ class RudeChannelListWidget(QListWidget):
         menu.exec(self.mapToGlobal(pos))
 
     def exit_channel(self, item):
-        """Leaves a channel"""
+    """Leaves a channel"""
         if not item:
             return
         channel_name = item
@@ -48,7 +55,7 @@ class RudeChannelListWidget(QListWidget):
         self.gui.irc_client.loop.create_task(self.gui.irc_client.leave_channel(channel_name, reason))
 
     def exit_dm(self, item):
-        """Closes a DM from a user"""
+    """Closes a DM from a user"""
         if not item:
             return
         self.gui.irc_client.close_dm(item)
