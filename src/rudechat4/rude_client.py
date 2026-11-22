@@ -89,7 +89,7 @@ class RudeChatClient:
         self.server_name = config.get('IRC', 'server_name', fallback=None)
         self.znc_connection = config.getboolean('IRC', 'znc_connection', fallback=False)
         self.znc_password = config.get('IRC', 'znc_password', fallback=None)
-        self.ignore_cert = config.get('IRC', 'ignore_cert', fallback=False)
+        self.ignore_cert = config.getboolean('IRC', 'ignore_cert', fallback=False)
         self.znc_user = config.get('IRC', 'znc_user', fallback=None)
         self.use_colors = config.getboolean('IRC', 'use_irc_colors', fallback=False)
         self.display_user_modes = config.getboolean('IRC', 'display_user_modes', fallback=True)
