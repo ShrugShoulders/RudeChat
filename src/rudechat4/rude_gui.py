@@ -780,8 +780,8 @@ class RudeGui(QWidget):
 
     async def create_tasks(self, irc_client, config_file):
         try:
-            await irc_client.connect(config_file)
             irc_client.is_connected = True
+            await irc_client.connect(config_file)
         except Exception as e:
             logging.error(f"Error connecting with configuration {config_file}: {e}")
 

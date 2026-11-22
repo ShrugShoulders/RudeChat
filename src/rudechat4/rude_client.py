@@ -15,13 +15,13 @@ class RudeChatClient:
         self.entry_widget = entry_widget
         self.server_text_widget = server_text_widget
         self.gui = gui
-        self.nicknamelen = 0
-        self.chan_limit = 0
-        self.channellen = 0
-        self.topiclen = 0
+        self.nicknamelen = 16
+        self.chan_limit = 250
+        self.channellen = 50
+        self.topiclen = 390
         self.current_channel = ''
         self.nickname = ''
-        self.chantypes = []
+        self.chantypes = ['#', '&']
         self.joined_channels = []
         self.motd_lines = []
         self.ignore_list = []
@@ -32,12 +32,13 @@ class RudeChatClient:
         self.cap_who_for_chan = []
         self.away_servers = []
         self.ping_threads = []
+        self.chanmodes = {'list': ['e', 'I', 'b', 'q'], 'parameter': ['k'], 'setting': ['f', 'l', 'j'], 'no_parameter': ['C', 'F', 'L', 'M', 'P', 'Q', 'R', 'S', 'T', 'c', 'g', 'i', 'm', 'n', 'p', 'r', 's', 't', 'u', 'z']}
         self.away_users_dict = {}
         self.motd_dict = {}
         self.channel_messages = {}
         self.channel_users = {}
         self.user_modes = {}
-        self.mode_to_symbol = {}
+        self.mode_to_symbol = {'o': '@', 'v': '+'}
         self.whois_data = {}
         self.who_user_data = {}
         self.highlighted_channels = {}
@@ -463,11 +464,8 @@ class RudeChatClient:
                 return time.time() - last_366_time > TIMEOUT_SECONDS
 
         while True:
-            try:
-                async with asyncio.timeout(90):
-                    data = await self.reader.read(4096)
-            except TimeoutError:
-                return
+            data = await self.reader.read(4096)
+
             if not data:
                 raise ConnectionError("Connection lost while waiting for the welcome message.")
 
@@ -528,6 +526,7 @@ class RudeChatClient:
                         self.gui.insert_text_widget("Handling SASL failed message\n")
                         self.bprtcl_to_client(tokens)
                     case "001":
+                        self.is_connected = True
                         if self.znc_connection:
                             reset_timer("")
                         self.gui.insert_text_widget(f'Connected to the server: {self.server}:{self.port}\n')
@@ -549,7 +548,7 @@ class RudeChatClient:
                         self.server_message_handler(tokens)
                         reset_timer("")
                     case "311" | "312" | "313" | "317" | "319" | "301" | "671" | "338" | "318" | "330":
-                        await self.bprtcl_whois_replies(tokens.command, tokens)
+                        await self.bprtcl_whois_replies(tokens)
                         reset_timer("")
                     case "PART": self.prtcl_PART(tokens)
                     case "QUIT": self.prtcl_QUIT(tokens)
@@ -738,38 +737,41 @@ class RudeChatClient:
         return any(channel.startswith(prefix) for prefix in self.chantypes)
 
     async def join_channel(self, channel):
-        chantypes = tuple(self.chantypes)
-        channel_count = sum(1 for c in self.joined_channels if c.startswith(chantypes))
-        if not self.is_connected:
-            return
-        if not self.is_valid_channel(channel):
-            self.gui.insert_text_widget(f"Invalid channel name {channel}.\n")
-            return
+        try:
+            chantypes = tuple(self.chantypes)
+            channel_count = sum(1 for c in self.joined_channels if c.startswith(chantypes))
+            if not self.is_connected:
+                return
+            if not self.is_valid_channel(channel):
+                self.gui.insert_text_widget(f"Invalid channel name {channel}.\n")
+                return
 
-        if len(channel) >= self.channellen:
-            self.gui.insert_text_widget(f"Maximum Channel Character Limit Reached, Max Allowed: {self.channellen}")
-            return
+            if len(channel) >= self.channellen:
+                self.gui.insert_text_widget(f"Maximum Channel Character Limit Reached, Max Allowed: {self.channellen}")
+                return
 
-        if channel_count >= self.chan_limit:
-            self.gui.insert_text_widget(f"You have reached the maximum number of channels allowed.\n")
-            return
+            if channel_count >= self.chan_limit:
+                self.gui.insert_text_widget(f"You have reached the maximum number of channels allowed.\n")
+                return
 
-        if channel in self.joined_channels:
-            self.gui.insert_text_widget(f"You are already in channel {channel}.\n")
-            return
+            if channel in self.joined_channels:
+                self.gui.insert_text_widget(f"You are already in channel {channel}.\n")
+                return
 
-        # Ensure the server entry exists in the dictionary
-        if self.server not in self.channel_messages:
-            self.channel_messages[self.server] = {}
+            # Ensure the server entry exists in the dictionary
+            if self.server not in self.channel_messages:
+                self.channel_messages[self.server] = {}
 
-        # Ensure the channel entry exists in the dictionary
-        if channel not in self.channel_messages[self.server]:
-            self.channel_messages[self.server][channel] = []
+            # Ensure the channel entry exists in the dictionary
+            if channel not in self.channel_messages[self.server]:
+                self.channel_messages[self.server][channel] = []
 
-        await self.send_message(f'JOIN {channel}')
-        self.joined_channels.append(channel)
-        self.gui.channel_lists[self.server] = self.joined_channels  # Update the GUI channel list
-        self.update_gui_channel_list()  # Update the channel list in GUI
+            await self.send_message(f'JOIN {channel}')
+            self.joined_channels.append(channel)
+            self.gui.channel_lists[self.server] = self.joined_channels  # Update the GUI channel list
+            self.update_gui_channel_list()  # Update the channel list in GUI
+        except Exception as e:
+            print(f"{e}")
 
     async def detach_channel(self, channel):
         if channel in self.joined_channels:
@@ -1197,6 +1199,15 @@ class RudeChatClient:
                                 logging.info(f"Unhandled CTCP command: {ctcp_command}")
                             pass
             else:
+                if smessage.startswith('\x01') and smessage.endswith('\x01'):
+                    ctcp_command = smessage[1:-1].split(' ', 1)[0]
+                    ctcp_content = smessage[1:-1].split(' ', 1)[1] if ' ' in smessage else None
+
+                    match ctcp_command:
+                        case "ACTION":
+                            await self.handle_action_ctcp(timestamp, sender, target, ctcp_content)
+                        case _:
+                            pass
                 return
         except Exception as e:
             logging.error(f"Error in handle_ctcp: {e}")
@@ -1557,11 +1568,14 @@ class RudeChatClient:
 
     async def auto_attach(self, channel):
         try:
-            self.joined_channels.append(channel)
-            self.gui.channel_lists[self.server] = self.joined_channels
-            self.update_gui_channel_list()
-            self.gui.update_channel_label()
-            self.highlight_channel(channel)
+            channel_lower = channel.lower()
+
+            # Remove from detached_channels immediately (case-insensitive, safe if absent)
+            self.detached_channels = [
+                c for c in self.detached_channels if c.lower() != channel_lower
+            ]
+
+            await self.join_channel(channel)
 
             channel_idx = self.joined_channels.index(channel)
             self.save_highlight(channel, channel_idx, is_mention=True)
@@ -4592,20 +4606,6 @@ class RudeChatClient:
     def prtcl_005(self, tokens):
         """RPL_ISUPPORT"""
         try:
-            # Set default values
-            self.mode_to_symbol = {'o': '@', 'v': '+'}
-            self.chantypes = ['#', '&']
-            self.nicknamelen = 16
-            self.chan_limit = 250
-            self.channellen = 50
-            self.topiclen = 390
-            self.chanmodes = {
-                'list': ['e', 'I', 'b', 'q'],
-                'parameter': ['k'],
-                'setting': ['f', 'l', 'j'],
-                'no_parameter': ['C', 'F', 'L', 'M', 'P', 'Q', 'R', 'S', 'T', 'c', 'g', 'i', 'm', 'n', 'p', 'r', 's', 't', 'u', 'z']
-            }
-
             params = tokens.params[:-1]  # Exclude trailing "are supported by this server"
 
             # Parse ISUPPORT parameters
