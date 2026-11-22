@@ -508,7 +508,7 @@ class RudeChatClient:
                                 return
                     case "904":
                         self.gui.insert_text_widget("Handling SASL failed message\n")
-                        self.bprtcl_to_client()
+                        self.bprtcl_to_client(tokens)
                     case "001":
                         if self.znc_connection:
                             reset_timer("")
@@ -531,7 +531,7 @@ class RudeChatClient:
                         self.server_message_handler(tokens)
                         reset_timer("")
                     case "311" | "312" | "313" | "317" | "319" | "301" | "671" | "338" | "318" | "330":
-                        await self.m_prtcl_WhoisReplies(tokens.command, tokens)
+                        await self.bprtcl_whois_replies(tokens.command, tokens)
                         reset_timer("")
                     case "PART": self.prtcl_PART(tokens)
                     case "QUIT": self.prtcl_QUIT(tokens)

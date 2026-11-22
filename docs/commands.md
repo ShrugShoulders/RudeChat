@@ -52,7 +52,7 @@ Anything that doesn't start with `/` is sent as a message to the current channel
 | Command | Purpose |
 | --- | --- |
 | `/connect <server_name>` | Connect to a configured server |
-| `/disconnect` | Disconnect from the currently connected servers |
+| `/disconnect <server_name>` | Disconnect from one server. Without a name it prints "Please Enter a Server Name", even though `/help` says it disconnects all servers |
 | `/quit` | Close the connection and the client |
 | `/quote <IRC command>` | Send a raw IRC line, for example `/quote MODE #chan +m` |
 

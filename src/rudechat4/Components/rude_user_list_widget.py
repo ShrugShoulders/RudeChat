@@ -4,21 +4,21 @@ from rudechat4.shared_imports import *
 from rudechat4.global_variables import *
 
 class RudeUserListWidget(QListWidget):
-"""List of users in the current channel.
+    """List of users in the current channel.
 
-    The parent must be the ``RudeGui`` window. Mode prefixes (such as ``@``
-    or ``+``) shown in the list are stripped before an action is run on a
-    nickname.
-"""
+        The parent must be the ``RudeGui`` window. Mode prefixes (such as ``@``
+        or ``+``) shown in the list are stripped before an action is run on a
+        nickname.
+    """
     def __init__(self, parent=None):
-    """Enable the custom context menu and keep a reference to the GUI."""
+        """Enable the custom context menu and keep a reference to the GUI."""
         super().__init__(parent)
         self.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.customContextMenuRequested.connect(self.show_context_menu)
         self.gui = parent
 
     def show_context_menu(self, pos: QPoint):
-    """Displays user list context menu"""
+        """Displays user list context menu"""
         menu = QMenu(self)
 
         # Init the actions
@@ -49,7 +49,7 @@ class RudeUserListWidget(QListWidget):
         menu.exec(self.mapToGlobal(pos))
 
     def open_user_data_window(self):
-    """Open the user data window for the selected user if WHO data exists for them."""
+        """Open the user data window for the selected user if WHO data exists for them."""
         try:
             # Get the user
             selected_item = self.currentItem()
@@ -65,13 +65,13 @@ class RudeUserListWidget(QListWidget):
             logging.error(f"Error Showing User Data: {e}")
 
     def open_dm_with_user(self):
-    """Removes the selected channel from the list."""
+        """Removes the selected channel from the list."""
         selected_item = self.currentItem()
         if selected_item:
             self.gui.irc_client.loop.create_task(self.gui.irc_client.command_parser(f"/query {selected_item.text()}"))
 
     def whois_the_user(self):
-    """Runs a whois command on the selected user."""
+        """Runs a whois command on the selected user."""
         selected_item = self.currentItem()
         if selected_item:
             modes_to_strip = ''.join(self.gui.irc_client.mode_values)
@@ -80,7 +80,7 @@ class RudeUserListWidget(QListWidget):
             self.gui.irc_client.loop.create_task(self.gui.irc_client.cmd_whois(user))
 
     def ignore_user(self):
-    """Add the selected user to the ignore list."""
+        """Add the selected user to the ignore list."""
         selected_item = self.currentItem()
         if selected_item:
             modes_to_strip = ''.join(self.gui.irc_client.mode_values)
@@ -88,7 +88,7 @@ class RudeUserListWidget(QListWidget):
             self.gui.irc_client.loop.create_task(self.gui.irc_client.ignore_user_from_gui(cleaned_nickname))
 
     def unignore_user(self):
-    """Remove the selected user from the ignore list."""
+        """Remove the selected user from the ignore list."""
         selected_item = self.currentItem()
         if selected_item:
             modes_to_strip = ''.join(self.gui.irc_client.mode_values)
@@ -96,7 +96,7 @@ class RudeUserListWidget(QListWidget):
             self.gui.irc_client.loop.create_task(self.gui.irc_client.unignore_user_from_gui(cleaned_nickname))
 
     def kick_user_from_channel(self):
-    """Kick the selected user from the current channel with the message "Bye <3"."""
+        """Kick the selected user from the current channel with the message "Bye <3"."""
         selected_item = self.currentItem()
         if selected_item:
             modes_to_strip = ''.join(self.gui.irc_client.mode_values)

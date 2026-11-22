@@ -68,7 +68,7 @@ Most modules start with `from rudechat4.shared_imports import *` and `from rudec
 
 ## Cleanup on exit
 
-Closing the window with `minimize_to_tray` off calls `Window.on_app_exit`, which schedules `save_channel_messages()` on every client so history is written to disk. With `minimize_to_tray` on, closing hides the window instead.
+Closing the window with `minimize_to_tray` off calls `Window.on_app_exit`, which schedules `save_channel_messages()` on every client with `create_task`. Asyncio only runs on the 100 ms timer tick and Qt exits right after the window closes, so those saves may never run (suspected, not tested; see [known-issues.md](known-issues.md)). With `minimize_to_tray` on, closing hides the window instead.
 
 ## Things worth knowing
 

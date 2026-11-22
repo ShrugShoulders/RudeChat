@@ -8,14 +8,14 @@ from rudechat4.shared_imports import *
 from rudechat4.global_variables import *
 
 class RudeFriends:
-"""Holds the friend list and the subset of friends currently online.
+    """Holds the friend list and the subset of friends currently online.
 
-    Attributes:
-        friend_list: Nicknames to watch for.
-        online_friends: Friends seen online during this session.
-"""
+        Attributes:
+            friend_list: Nicknames to watch for.
+            online_friends: Friends seen online during this session.
+    """
     def __init__(self):
-    """Create empty lists and load the saved friend list from disk."""
+        """Create empty lists and load the saved friend list from disk."""
         self.friend_list = []
         self.online_friends = []
 
@@ -23,9 +23,9 @@ class RudeFriends:
         self.load_friend_list()
 
     def save_friend_list(self):
-    """
-    Save Friend list!
-    """
+        """
+        Save Friend list!
+        """
         # Construct the full path for the friend_list.txt
         file_path = os.path.join(G_CONFIG_DIR, 'friend_list.txt')
 
@@ -34,9 +34,9 @@ class RudeFriends:
                 f.write(f"{user}\n")
 
     def load_friend_list(self):
-    """
-    Load Friend list!
-    """
+        """
+        Load Friend list!
+        """
         # Construct the full path for the friend_list.txt
         file_path = os.path.join(G_CONFIG_DIR, 'friend_list.txt')
 
@@ -47,9 +47,9 @@ class RudeFriends:
             self.save_friend_list()
 
     def add_friend(self, friend):
-    """
-    Add a friend!
-    """
+        """
+        Add a friend!
+        """
         if friend not in self.friend_list:
             self.friend_list.append(friend)
             self.save_friend_list()
@@ -58,9 +58,9 @@ class RudeFriends:
             return "Already in watch list."
 
     def remove_friend(self, enemy):
-    """
-    Remove Friend :(
-    """
+        """
+        Remove Friend :(
+        """
         if enemy in self.friend_list:
             self.friend_list.remove(enemy)
             self.save_friend_list()
@@ -69,18 +69,18 @@ class RudeFriends:
             return "Not found in watch list."
 
     def show_friend_list(self):
-    """
-    Show Friends!
-    """
+        """
+        Show Friends!
+        """
         if not self.friend_list:
             return "No users in the watch list."
 
         return "Friends: " + ", ".join(self.friend_list)
 
     def friend_online(self, channel, username):
-    """
-    Friend is online!
-    """
+        """
+        Friend is online!
+        """
         if username in self.friend_list:
             return f"{channel}: {username} is Online!"
         else:

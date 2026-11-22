@@ -35,8 +35,8 @@ class FirstRun:
             color_config = configparser.ConfigParser()
             color_config.read(config_file)
 
-            self.bg_color = color_config.get('GUI', 'master_color', fallback='black')
-            self.fg_color = color_config.get('GUI', 'main_fg_color', fallback='#C0FFEE')
+            self.bg_color = color_config.get('GUI', 'window_bg', fallback='black')
+            self.fg_color = color_config.get('GUI', 'window_fg', fallback='#C0FFEE')
 
     def update_first_run(self):
         file_path = os.path.join(G_CONFIG_DIR, "first_run.txt")

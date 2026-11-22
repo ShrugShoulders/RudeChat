@@ -4,13 +4,13 @@ from rudechat4.shared_imports import *
 from rudechat4.global_variables import *
 
 def configure_logging():
-# Log file path within the script directory
-"""Attach console and file log handlers to the root logger.
+   # Log file path within the script directory
+    """Attach console and file log handlers to the root logger.
 
-    Both handlers log at DEBUG level. The file handler writes
-    ``RudeChat4.log`` in ``G_CONFIG_DIR``. Does nothing if the root logger
-    already has handlers, so it is safe to call from every module.
-"""
+        Both handlers log at DEBUG level. The file handler writes
+        ``RudeChat4.log`` in ``G_CONFIG_DIR``. Does nothing if the root logger
+        already has handlers, so it is safe to call from every module.
+    """
     log_file = os.path.join(G_CONFIG_DIR, 'RudeChat4.log')
 
     # Configure logging only if not already configured

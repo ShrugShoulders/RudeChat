@@ -69,7 +69,7 @@ jobs:
           @"
           [Setup]
           AppName=rudechat
-          AppVersion=1.0.0
+          AppVersion=4.2.0
           DefaultDirName={autopf}\rudechat
           DefaultGroupName=rudechat
           SetupIconFile=src\rudechat4\Resources\Icons\rude.ico
@@ -107,7 +107,7 @@ jobs:
 
           cat <<EOF > pkg/DEBIAN/control
           Package: rudechat
-          Version: 1.0.0
+          Version: 4.2.0
           Section: utils
           Priority: optional
           Architecture: amd64
@@ -147,7 +147,7 @@ jobs:
       - name: Package .rpm
         run: |
           mkdir -p ~/rpmbuild/{BUILD,RPMS,SOURCES,SPECS,SRPMS} release
-          tar -czf ~/rpmbuild/SOURCES/rudechat-1.0.0.tar.gz -C dist rudechat
+          tar -czf ~/rpmbuild/SOURCES/rudechat-4.2.0.tar.gz -C dist rudechat
           cp src/rudechat4/Resources/Icons/rude_icon_round.png ~/rpmbuild/SOURCES/rudechat.png
 
           cat <<EOF > ~/rpmbuild/SPECS/rudechat.spec
@@ -155,11 +155,11 @@ jobs:
           %global __strip /bin/true
           %global debug_package %{nil}
           Name:           rudechat
-          Version:        1.0.0
+          Version:        4.2.0
           Release:        1%{?dist}
           Summary:        rudechat PyQt6 Application
           License:        GPLv3
-          Source0:        rudechat-1.0.0.tar.gz
+          Source0:        rudechat-4.2.0.tar.gz
           Source1:        rudechat.png
 
           %description
@@ -234,7 +234,7 @@ jobs:
 
           cat <<EOF > /home/builder/pkg/PKGBUILD
           pkgname=rudechat
-          pkgver=1.0.0
+          pkgver=4.2.0
           pkgrel=1
           pkgdesc="rudechat PyQt6 Application"
           arch=('x86_64')

@@ -10,8 +10,10 @@ RudeChat keeps its files in `~/.config/rudechat` (`G_CONFIG_DIR` in [`global_var
 | `nickname_colours.json`, `nickname_colours_bak.json` | `RudeGui` | Colour assigned to each nickname, plus a backup |
 | `channel_messages_<server>.json` | `save_channel_messages` | Saved channel history for one server, loaded on startup |
 | `<server>_away_users.json` | `save_away_users_to_file` | Users known to be away on one server |
-| `ignore_list.txt` | `save_ignore_list` | Ignored nicknames or hostmasks |
-| `friend_list.txt` | `RudeFriends` | One friend per line |
+| `<server_name>_open_dms.txt` | `save_dm_list` | DMs open on one server, restored on startup |
+| `filtered_channels.txt` | You | Channels where the pronoun filter rewrites outgoing text. Not shipped in `DefaultConfig`; see [text-formatting.md](text-formatting.md) |
+| `ignore_list.txt` | `save_ignore_list` | Ignored nicknames or hostmasks, shared across servers |
+| `friend_list.txt` | `RudeFriends` | One friend per line, shared across servers |
 | `channel_list.txt` | Channel list handler | Cached result of the last `/list` |
 | `Logs/irc_log_<server>_<channel>.txt` | `log_message` | Plain text chat logs, when `use_logging` is on |
 | `whois/` | `save_whois_to_file` | Saved WHOIS results |

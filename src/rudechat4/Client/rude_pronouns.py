@@ -14,15 +14,15 @@ _URL_RE = re.compile(r'(https?://\S+)')
 _cache = {'mtime': None, 'channels': frozenset()}
 
 def _filtered_channels(path):
-"""Return the set of channel names that should be rewritten.
+    """Return the set of channel names that should be rewritten.
 
-    Args:
-        path: Path to ``filtered_channels.txt``.
+        Args:
+            path: Path to ``filtered_channels.txt``.
 
-    Returns:
-        A frozenset of lower-cased channel names, empty if the file is
-        missing or unreadable.
-"""
+        Returns:
+            A frozenset of lower-cased channel names, empty if the file is
+            missing or unreadable.
+    """
     try:
         mtime = os.path.getmtime(path)
     except OSError:
@@ -34,11 +34,11 @@ def _filtered_channels(path):
     return _cache['channels']
 
 def _match_case(src, repl):
-"""Copy the capitalisation style of ``src`` onto ``repl``.
+    """Copy the capitalisation style of ``src`` onto ``repl``.
 
-    All-caps stays all-caps, a leading capital stays capitalised, anything
-    else is returned unchanged.
-"""
+        All-caps stays all-caps, a leading capital stays capitalised, anything
+        else is returned unchanged.
+    """
     if len(src) > 1 and src.isupper():
         return repl.upper()
     if src[0].isupper():
@@ -64,12 +64,12 @@ _SUBJ_VERB_RE = re.compile(r"\b(he|she)\s+(" + _ADV + r")([a-z]+(?:'t)?)\b", re.
 _HAVE_RE = re.compile(r"\b(he|she)'s(?=\s+(?:been|got|had|gone|done|made|seen|never)\b)", re.I)
 
 def _conjugate(verb):
-"""Convert a third-person singular verb to its plural form.
+    """Convert a third-person singular verb to its plural form.
 
-    Handles irregular verbs such as ``is`` and ``has`` and common endings
-    like ``-ies`` and ``-es``. Words that only look like verbs (``always``,
-    ``unless`` and similar) are returned unchanged.
-"""
+        Handles irregular verbs such as ``is`` and ``has`` and common endings
+        like ``-ies`` and ``-es``. Words that only look like verbs (``always``,
+        ``unless`` and similar) are returned unchanged.
+    """
     v = verb.lower()
     if v in _IRREGULAR:
         return _IRREGULAR[v]
@@ -82,7 +82,7 @@ def _conjugate(verb):
     return verb[:-1]
 
 def _subj_verb(m):
-"""Regex callback: replace ``he/she`` plus a verb with ``they`` plus the plural verb."""
+    """Regex callback: replace ``he/she`` plus a verb with ``they`` plus the plural verb."""
     return _match_case(m.group(1), 'they') + ' ' + m.group(2) + _conjugate(m.group(3))
 
 # "her" is an object ("I saw her") before these, otherwise possessive ("her book")
@@ -101,15 +101,15 @@ _SIMPLE_RE = re.compile(r'\b(%s)\b' % '|'.join(p for p, _ in _SIMPLE), re.I)
 _SIMPLE_MAP = {alt: rep for pat, rep in _SIMPLE for alt in pat.split('|')}
 
 def _simple(m):
-"""Regex callback: swap a single pronoun using the lookup table, keeping its case."""
+    """Regex callback: swap a single pronoun using the lookup table, keeping its case."""
     return _match_case(m.group(0), _SIMPLE_MAP[m.group(0).lower()])
 
 def _neutralize(text):
-"""Apply every pronoun rule to one piece of text, in order.
+    """Apply every pronoun rule to one piece of text, in order.
 
-    Order matters: possessive-plus-noun pairs, ``he's/she's`` contractions,
-    subject-verb agreement, object ``her``, then the simple word swaps.
-"""
+        Order matters: possessive-plus-noun pairs, ``he's/she's`` contractions,
+        subject-verb agreement, object ``her``, then the simple word swaps.
+    """
     text = _NOUN_RE.sub(lambda m: 'their ' + _NOUN_SWAPS[m.group(2).lower()], text)
     text = _HAVE_RE.sub(lambda m: _match_case(m.group(1), 'they') + "'ve", text)
     text = _SUBJ_VERB_RE.sub(_subj_verb, text)
@@ -117,16 +117,16 @@ def _neutralize(text):
     return _SIMPLE_RE.sub(_simple, text)
 
 def replace_pronouns(text, channel=None):
-"""Rewrite gendered pronouns in a message when the channel opts in.
+    """Rewrite gendered pronouns in a message when the channel opts in.
 
-    Args:
-        text: The message text.
-        channel: The channel the message belongs to. If it is empty or not
-            listed in ``filtered_channels.txt``, the text is returned as is.
+        Args:
+            text: The message text.
+            channel: The channel the message belongs to. If it is empty or not
+                listed in ``filtered_channels.txt``, the text is returned as is.
 
-    Returns:
-        The rewritten text. URLs inside the text are left untouched.
-"""
+        Returns:
+            The rewritten text. URLs inside the text are left untouched.
+    """
     path = os.path.join(G_CONFIG_DIR, 'filtered_channels.txt')
     if not channel or channel.lower() not in _filtered_channels(path):
         return text

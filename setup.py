@@ -9,7 +9,7 @@ PKGS = [
     'rudechat4.Util'
 ]
 
-VERSION = '4.2.0'
+VERSION = '4.2.2'
 APP = ['src/rudechat4/__main__.py']
 OPTIONS = {
     'iconfile': 'src/rudechat4/Resources/Icons/rude.icns', 
@@ -35,11 +35,10 @@ setup(
     scripts=["src/rudechat4/__main__.py"],
     install_requires=[
         'pytz',
-        'asyncio',
+        'regex',
         'irctokens',
         'aiofiles',
         'tzlocal',
-        'pillow',
         'emoji',
         'PyQt6',
         'requests',
@@ -51,7 +50,7 @@ setup(
     ],
     entry_points={
         'console_scripts': [
-            'rudechat=rudechat4.__main__:main',
+            'rudechat=rudechat4.__main__:__main__',
         ],
     },
     app = ['src/rudechat4/__main__.py'] if isMac() else [],
