@@ -25,7 +25,6 @@ These are real name errors: the code refers to something that is not defined. Mo
 
 | Status | Where | What is wrong | Likely impact |
 | --- | --- | --- | --- |
-| confirmed | [rude_gui.py:2012](../src/rudechat4/rude_gui.py#L2012) | `load_nickname_colors` compares `user == self.nickname`, but `RudeGui` has no `nickname` attribute. The line runs only when the colour file's first entry equals `window_fg` and the backup file is missing or corrupt. | `AttributeError`, caught by the outer `except Exception` at [2018](../src/rudechat4/rude_gui.py#L2018), so the loader returns `{}` and the saved colours are not restored. |
 | confirmed | [rude_client.py:2817](../src/rudechat4/rude_client.py#L2817) | `user_input_dm_message` tests `self.current_channel` against `channel_messages[server_name]` but then creates the list for `channel`. | If the two ever differ, the next line raises `KeyError`. It is normally masked because they match. |
 | confirmed | [rude_client.py:467](../src/rudechat4/rude_client.py#L467), [681](../src/rudechat4/rude_client.py#L681) | In the ZNC sync fallback, line 467 sends every `NAMESTOKENS` entry to `prtcl_366`, including `353` replies. Line 681 loops over `token` but reads `tokens`, the last line parsed, for every entry. Line 669 does it correctly. | With ZNC and `use_auto_join` off, the user lists after sync can be empty or wrong. The effect was not reproduced. |
 

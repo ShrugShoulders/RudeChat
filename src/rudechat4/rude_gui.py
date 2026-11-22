@@ -1981,6 +1981,11 @@ class RudeGui(QWidget):
         return next(iter(user_modes), None)  # Get the first mode if available, else None
 
     def load_nickname_colors(self):
+        """Loads the saved nickname colours for use when formatting text.
+        
+        Returns:
+            JSON Object, where each key is a nickname and its corresponding value is a colour in hex format.
+        """
         nickname_colors_path = os.path.join(G_CONFIG_DIR, 'nickname_colours.json')
         nickname_colors_path_bak = os.path.join(G_CONFIG_DIR, 'nickname_colours_bak.json')
 
@@ -2009,8 +2014,8 @@ class RudeGui(QWidget):
                             # If backup fails, fallback to generating random colors
                             logging.warning("Backup colors missing or corrupt. Generating new random colors.")
                             return {
-                                user: (self.main_nickname_color if user == self.nickname 
-                                       else self.generate_random_color())
+                                user: (self.main_nickname_color if user == self.irc_client.nickname 
+                                    else self.generate_random_color())
                                 for user in nickname_colors
                             }
                     else:
