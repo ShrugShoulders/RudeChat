@@ -720,6 +720,8 @@ class RudeChatClient:
         return any(channel.startswith(prefix) for prefix in self.chantypes)
 
     async def join_channel(self, channel):
+        chantypes = tuple(self.chantypes)
+        channel_count = sum(1 for c in self.joined_channels if c.startswith(chantypes))
         if not self.is_connected:
             return
         if not self.is_valid_channel(channel):
@@ -730,7 +732,7 @@ class RudeChatClient:
             self.gui.insert_text_widget(f"Maximum Channel Character Limit Reached, Max Allowed: {self.channellen}")
             return
 
-        if len(self.joined_channels) >= self.chan_limit:
+        if channel_count >= self.chan_limit:
             self.gui.insert_text_widget(f"You have reached the maximum number of channels allowed.\n")
             return
 
@@ -2528,6 +2530,9 @@ class RudeChatClient:
 
         match primary_command:
             case "join":
+                if len(args) != 2:
+                    self.gui.insert_text_widget("Usage: /join <channel>\n")
+                    return
                 channel_name = args[1]
                 await self.join_channel(channel_name)
                 await self.send_who(channel_name)
@@ -2602,10 +2607,16 @@ class RudeChatClient:
                 self.who_user_request = True
                 await self.cmd_who(args[1:])
             case "whois": #who is that?
+                parts = user_input.split()
+                if len(parts) != 2:
+                    self.gui.insert_text_widget("Usage: /whois <nickname>\n")
                 self.whois_user_request = True
-                target = user_input.split()[1]
+                target = parts[1]
                 await self.cmd_whois(target)
             case "part":
+                if len(args) < 2:
+                    self.gui.insert_text_widget("Usage: /part <channel> [reason]\n")
+                    return
                 channel_name = args[1]
                 reason = " ".join(args[2:]) if len(args) > 2 else None
                 await self.leave_channel(channel_name, reason)
@@ -2621,6 +2632,8 @@ class RudeChatClient:
                 # Create the channel list window
                 self.gui.show_channel_list_window()
             case "sw":
+                if len(args) != 2:
+                    return
                 channel_name = args[1]
                 if channel_name in self.joined_channels and self.server_name in self.gui.popped_out_channels and channel_name not in self.gui.popped_out_channels[self.server_name]:
                     self.gui.pop_out_return(channel_name)
@@ -2671,21 +2684,20 @@ class RudeChatClient:
             case "mac": await self.cmd_mac(args)
             case "notice": await self.cmd_notice(args)
             case "connect":
-                server_name = args[1] if len(args) > 1 else None
-                lserver_name = server_name.lower()
-                if server_name:
-                    await self.gui.client_connect(lserver_name)
-
-                else:
-                    data = "Please Enter A Server Name"
+                if len(args) != 2:
+                    data = "Usage: /connect <server>\n"
                     self.add_server_message(data)
-                    self.gui.insert_text_widget(f"{data}")
+                    self.gui.insert_text_widget(data)
+                    return
+
+                lserver_name = args[1].lower()
+                await self.gui.client_connect(lserver_name)
             case "disconnect":
                 server = args[1] if len(args) > 1 else None
                 if server:
                     await self.disconnect(server)
                 else:
-                    self.gui.insert_text_widget("Please Enter a Server Name")
+                    self.gui.insert_text_widget("Please Enter a Server Name\n")
             case "detach":
                 channel = args[1] if len(args) > 1 else None
                 if channel and self.znc_connection:
@@ -2698,6 +2710,7 @@ class RudeChatClient:
             case "logs" | "fortunes" | "macros" | "swhois" | "sounds": self.show_file_folder(primary_command)
             case "mock": await self.cmd_mock(args)
             case None: await self.handle_user_input(user_input, timestamp)
+            case _: return True
         return True
 
     async def send_message_chunks(self, message_chunks, channel, timestamp):
@@ -2994,22 +3007,30 @@ class RudeChatClient:
         except Exception as e:
             logging.error(f"Error in unignore_user_from_gui: {e}")
 
+    def is_valid_hostmask(self, mask: str) -> bool:
+            return bool(HOSTMASK_RE.match(mask))
+
     async def ignore_user(self, args):
-        if len(args) > 1:
-            user_to_ignore = " ".join(args[1:])
-            if user_to_ignore not in self.ignore_list:
-                self.ignore_list.append(user_to_ignore)
-                self.gui.insert_text_widget(f"You've ignored {user_to_ignore}.\n")
-                await self.save_ignore_list()
-            else:
-                self.gui.insert_text_widget(f"{user_to_ignore} is already in your ignore list.\n")
-        else:
+        if len(args) == 1:
             ignored_users = "Ignored: " + ", ".join(self.ignore_list)
             self.gui.insert_text_widget(f"{ignored_users}\n")
+            return
+
+        if len(args) != 2 or not self.is_valid_hostmask(args[1]):
+            self.gui.insert_text_widget("Usage: /ignore <nick!user@host>\n")
+            return
+
+        user_to_ignore = args[1]
+        if user_to_ignore not in self.ignore_list:
+            self.ignore_list.append(user_to_ignore)
+            self.gui.insert_text_widget(f"You've ignored {user_to_ignore}.\n")
+            await self.save_ignore_list()
+        else:
+            self.gui.insert_text_widget(f"{user_to_ignore} is already in your ignore list.\n")
 
     async def unignore_user(self, args):
-        if len(args) < 2:  # Check if the user has provided the username to unignore
-            self.gui.insert_text_widget("Usage: unignore <username>\n")
+        if len(args) != 2 or not self.is_valid_hostmask(args[1]):
+            self.gui.insert_text_widget("Usage: /unignore <nick!user@host>\n")
             return
 
         user_to_unignore = args[1]
@@ -3275,7 +3296,7 @@ class RudeChatClient:
         # Initialize ping_start_time to the current time
         self.ping_start_time = time.time()
 
-        await self.send_message(f'PING {user}')
+        await self.send_message(f"PRIVMSG {user} :\x01PING {self.ping_start_time}\x01")
 
     def display_help(self):
         # Categories and their associated commands
@@ -3341,7 +3362,7 @@ class RudeChatClient:
             "Help and Connection": [
                 "/quit - Closes connection and client",
                 "/help - Redisplays this message",
-                "/disconnect - Will disconnect you from the currently connected servers",
+                "/disconnect - Will disconnect you from the given server name",
                 "/connect <server_name> - Will connect you to the given server",
                 "_________",
             ],

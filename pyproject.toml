@@ -1,43 +1,44 @@
 [build-system]
-requires = ["setuptools>=42", "wheel"]
+requires = ["setuptools>=77.0.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "RudeChat"
-version = "4.2.2"
+version = "4.2.0"
 description = "Python IRC client designed to be fast, portable, and fun."
 authors = [
     { name = "Irish" },
-	{ name = "Bash Elliott", email="rackodo.business@gmail.com" }
+    { name = "Bash Elliott", email = "rackodo.business@gmail.com" },
 ]
-license = { text = "GNU General Public License v3 (GPLv3)" }
+license = "GPL-3.0-only"
 classifiers = [
     "Programming Language :: Python :: 3",
-    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
-    "Operating System :: OS Independent"
+    "Operating System :: OS Independent",
+]
+dependencies = [
+    "pytz",
+    "regex",
+    "irctokens",
+    "aiofiles",
+    "tzlocal",
+    "emoji",
+    "PyQt6",
+    "requests",
 ]
 
 [project.urls]
 homepage = "https://github.com/ShrugShoulders/RudeChat"
 
-[tool.setuptools]
-packages = ["rudechat4"]
-package-dir = {"" = "src"}
-
-[tool.setuptools.package-data]
-"rudechat4" = [
-    "DefaultConfig/*",
-    "GUI/*",
-    "Resources/*",
-    "Resources/Splashes/*",
-    "Resources/Fortunes/*",
-    "Resources/Icons/*",
-    "Resources/Macros/*",
-    "Resources/Sounds/*",
-    "Util/*",
-    "Components/*",
-    "Client/*",
-]
-
 [project.scripts]
 rudechat = "rudechat4.__main__:__main__"
+
+[tool.setuptools]
+package-dir = { "" = "src" }
+include-package-data = true
+
+[tool.setuptools.packages.find]
+where = ["src"]
+namespaces = true
+
+[tool.setuptools.package-data]
+"*" = ["*"]
