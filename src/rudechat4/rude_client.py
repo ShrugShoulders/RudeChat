@@ -469,7 +469,7 @@ class RudeChatClient:
                         return
 
                 match tokens.command:
-                    case "WALLOPS": self.bprtcl_to_server(tokens)
+                    case "WALLOPS": await self.bprtcl_to_server(tokens)
                     case "ACCOUNT": self.prtcl_ACCOUNT(tokens)
                     case "AWAY": self.prtcl_AWAY(tokens)
                     case "NOTICE":
@@ -556,7 +556,7 @@ class RudeChatClient:
                             await self.prtcl_PRIVMSG(tokens)
                     case "MODE": self.prtcl_MODE(tokens)
                     case "305" | "306": pass
-                    case "328": self.bprtcl_to_server(tokens)
+                    case "328": await self.bprtcl_to_server(tokens)
                     case "332" | "333" | "TOPIC":
                         got_topic += 1
                         if not self.use_auto_join:
@@ -3370,7 +3370,7 @@ class RudeChatClient:
                 "/mac <macro> - sends a chosen macro to a channel /mac - shows available macros",
                 "/macros - Shows the macros folder",
                 "/fortunes - Shows the fortunes folder",
-                "/sounds - Shows custom ping sound folder"
+                "/sounds - Shows custom ping sound folder",
                 "/mock <string> - uses mocking such as: tHiS Is a StRiNg.",
                 "Macros: To add a macro, save a .txt file with your chosen macro and add it to the Art folder within your installation directory.",
                 "Fortune Lists: dadjoke(jokes your dad makes), yomama(YO MAMA SO FAT), therules(Ferengi Rules of Acquisition)",
@@ -4871,13 +4871,19 @@ class RudeChatClient:
 
     def cmd_cq(self, args):
         if len(args) < 2:
-            self.gui.insert_text_widget(f"Usage: /cq <nickname>\n")
+            self.gui.insert_text_widget("Usage: /cq <nickname>\n")
+            return
+
+        nickname = args[1]
+
+        if nickname.startswith(tuple(self.chantypes)):
+            self.gui.insert_text_widget(f"{nickname} is a channel, not a nickname.\n")
+            return
+
+        if nickname in self.joined_channels:
+            self.close_dm(nickname)
         else:
-            nickname = args[1]
-            if nickname in self.joined_channels:
-                self.close_dm(nickname)
-            else:
-                self.gui.insert_text_widget(f"No open private message with {nickname}.\n")
+            self.gui.insert_text_widget(f"No open private message with {nickname}.\n")
 
     async def cmd_fortune(self, file_name=None):
         """Choose a random fortune from one of the lists"""

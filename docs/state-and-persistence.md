@@ -268,7 +268,7 @@ The old `writer` is replaced, never closed.
 
 `/disconnect <server>` or the server list menu calls `disconnect(server_name)` on the current client. For the target client it sends `QUIT`, sets `loop_running = False`, `is_connected = False` and `disconnect_requested = True`, and clears the ping label. It then calls `reset_state()` on the client that received the command, which may be a different client. It does not cancel tasks, close the socket or save history. Each loop exits the next time it wakes.
 
-`/connect <server>` goes through `client_connect`. It calls `create_tasks` again, which overwrites the `tasks` entries, then clears `disconnect_requested` and sets `loop_running = True`. The old tasks may still be asleep from before. If one wakes after the flag is true again, it keeps looping, so a quick disconnect and connect can leave two copies of a loop running. This was traced, not run.
+`/connect <server>` goes through `client_connect`. It calls `create_tasks` again, which overwrites the `tasks` entries, then clears `disconnect_requested` and sets `loop_running = True`. The old tasks may still be asleep from before. If one wakes after the flag is true again, it keeps looping, so a quick disconnect and connect can leave two copies of a loop running.
 
 ### Exit
 

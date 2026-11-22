@@ -52,7 +52,7 @@ class RudeUserListWidget(QListWidget):
             modes_to_strip = ''.join(self.parentGui.irc_client.mode_values)
             user = selected_item.text().lstrip(modes_to_strip)
             self.parentGui.irc_client.whois_user_request = True
-            self.parentGui.irc_client.loop.create_task(self.parentGui.irc_client.whois(user))
+            self.parentGui.irc_client.loop.create_task(self.parentGui.irc_client.cmd_whois(user))
 
     def ignore_user(self):
         selected_item = self.currentItem()
@@ -74,7 +74,7 @@ class RudeUserListWidget(QListWidget):
             modes_to_strip = ''.join(self.parentGui.irc_client.mode_values)
             channel = self.parentGui.irc_client.current_channel
             selected_user = selected_item.text().lstrip(modes_to_strip)
-            self.parentGui.irc_client.loop.create_task(self.parentGui.irc_client.handle_kick_command(["/kick", selected_user, channel, "Bye <3"]))
+            self.parentGui.irc_client.loop.create_task(self.parentGui.irc_client.cmd_kick(["/kick", selected_user, channel, "Bye <3"]))
 
 class TabEventFilter(QObject):
     def __init__(self, parent, gui):
