@@ -245,6 +245,20 @@ class RudeChatClient:
         except (FileNotFoundError, json.JSONDecodeError):
             self.channel_messages = {}
 
+    async def save_all_client_channel_messages(self):
+        try:
+            for client in list(self.gui.clients.values()):
+                if not client:
+                    continue
+                try:
+                    await asyncio.wait_for(client.save_channel_messages(), timeout=5.0)
+                except Exception as e:
+                    logging.error(f"Failed to save channel messages for {getattr(client, 'server_name', 'unknown')}: {e}")
+        except Exception as e:
+            logging.error(f"Unexpected error while saving all client channel messages: {e}")
+        finally:
+            return
+
     async def save_channel_messages(self):
         file_path = os.path.join(G_CONFIG_DIR, f'channel_messages_{self.server_name}.json')
         lock_file_path = os.path.join(G_CONFIG_DIR, f'channel_messages_{self.server_name}.lock')
@@ -449,7 +463,11 @@ class RudeChatClient:
                 return time.time() - last_366_time > TIMEOUT_SECONDS
 
         while True:
-            data = await self.reader.read(4096)
+            try:
+                async with asyncio.timeout(90):
+                    data = await self.reader.read(4096)
+            except TimeoutError:
+                return
             if not data:
                 raise ConnectionError("Connection lost while waiting for the welcome message.")
 
@@ -677,7 +695,7 @@ class RudeChatClient:
                     self.gui.insert_text_widget("\nMaximum sync time exceeded\n")
                     for token in TOPICTOKENS:
                         self.bprtcl_topic(token)
-                    for token in NAMESTOKENS:
+                    for tokens in NAMESTOKENS:
                         self.prtcl_353(tokens) if tokens.command == '353' else self.prtcl_366(tokens)
                     await process_PRIVMSG_tokens(PRIVMSGTOKENS)
                     return
@@ -867,11 +885,11 @@ class RudeChatClient:
         if sys.platform.startswith('win'):
             split_config = config_file.split("\\")
             server = split_config[-1].split(".")
-            return server[1]
+            return server[0]
         else:
             split_config = config_file.split("/")
             server = split_config[-1].split(".")
-            return server[1]
+            return server[0]
 
     def replace_dms_in_gui(self):
         listed_channels = self.gui.get_channel_selector_items()
@@ -955,10 +973,8 @@ class RudeChatClient:
                 if not self.loop_running:
                     break
 
-                # Measure ping time before sending PING
-                self.ping_start_time = time.time()
-
                 await asyncio.sleep(60)
+                self.ping_start_time = time.time()
                 await self.send_message(f'PING {self.server}')
 
             except asyncio.CancelledError:
@@ -2427,7 +2443,7 @@ class RudeChatClient:
                         client.is_connected = False
                         client.disconnect_requested = True
                         self.gui.update_server_ping(normalized_server_name, ping_time=None)
-                        self.reset_state()
+                        client.reset_state()
                         self.gui.insert_text_widget("Disconnected\n")
             else:
                 self.gui.insert_text_widget(f"No client found for server {normalized_server_name}\n")
@@ -2515,7 +2531,7 @@ class RudeChatClient:
     async def tray_quit(self):
         self.gui.minimize_to_tray = False
         self.remove_bang_channels()
-        await self.save_channel_messages()
+        await self.save_all_client_channel_messages()
         quit_message = "Client Quit"
         self.gui.quit_clients_with_message(quit_message)
         self.loop_running = False
@@ -2666,7 +2682,7 @@ class RudeChatClient:
             case "quit":
                 self.gui.minimize_to_tray = False
                 self.remove_bang_channels()
-                await self.save_channel_messages()
+                await self.save_all_client_channel_messages()
                 quit_message = " ".join(args[1:]) if len(args) > 0 else None
                 self.gui.quit_clients_with_message(quit_message)
                 self.loop_running = False
