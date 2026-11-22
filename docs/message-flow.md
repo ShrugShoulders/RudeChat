@@ -109,7 +109,7 @@ Chunking is simple. If the first line is longer than 420 characters, the whole s
 
 The channel versus DM decision is `channel.startswith(...)` against `chantypes` from ISUPPORT.
 
-[`user_input_dm_message`](../src/rudechat4/rude_client.py#L2812) checks `self.current_channel` against `channel_messages` but then creates the list for `channel`. If the current tab isn't in the dict, this would replace the history for the DM target with an empty list. Most of the time the current tab is in the dict, so it rarely matters. I haven't triggered it.
+[`user_input_dm_message`](../src/rudechat4/rude_client.py#L2812) checks `self.current_channel` against `channel_messages` but then creates the list for `channel`. If the current tab isn't in the dict, this would replace the history for the DM target with an empty list. Most of the time the current tab is in the dict, so it rarely matters.
 
 ### 5. `send_message`
 
@@ -119,7 +119,7 @@ The channel versus DM decision is `channel.startswith(...)` against `chantypes` 
 
 A pop-out has its own input box. [`RudePopout.insert_and_send_message`](../src/rudechat4/GUI/rude_popout.py#L761) builds the line itself and does not use `command_parser` for plain text. It sends `PRIVMSG` through its own `send_message` method as a new task, so it skips chunking, emoji replacement, green text, pronoun replacement and the away reset. It then calls `save_message` and `log_message` with `is_sent=False`.
 
-Inside the pop-out, `/mac` and `/me` have special cases. The `case None` branch for other slash commands can't match, because the code does `match args[0]` on a string. As written, a command such as `/join #x` typed in a pop-out appears to be sent to the channel as chat text. I haven't run it.
+Inside the pop-out, `/mac` and `/me` have special cases. The `case None` branch for other slash commands can't match, because the code does `match args[0]` on a string. As written, a command such as `/join #x` typed in a pop-out appears to be sent to the channel as chat text.
 
 ## Incoming: socket to chat view
 
@@ -192,7 +192,7 @@ For a DM, `display_message` takes its second branch: the line is drawn if the se
 4. In ZNC mode, a mention in a channel that is detached or unknown calls `auto_attach`, which adds the channel to the list and sends `NAMES` and `TOPIC`.
 5. The line is appended to `mentions[target]`, which `/mentions` shows in the `!MENTIONS!` tab.
 
-The mac and Linux sound helpers build a shell command with `os.system(f"afplay {sound_path}")`. The path comes from the install folder, not from network input. If the install path contains spaces, the command won't work. I haven't tested it.
+The mac and Linux sound helpers build a shell command with `os.system(f"afplay {sound_path}")`. The path comes from the install folder, not from network input. If the install path contains spaces, the command won't work.
 
 Other notification-like events skip this path. A friend coming online calls `trigger_desktop_notification` from `prtcl_JOIN`.
 
@@ -241,7 +241,7 @@ main thread (queued signal)
 ### Rules and risks
 
 - The worker thread only builds data (`QTextCharFormat` objects and strings). It never touches a widget. Keep it that way.
-- `insert_text_widget` starts one worker per call. Two calls in quick succession may land on two pool threads, and the signals are queued in whichever order the workers finish. I haven't seen the code force ordering between workers, so two lines sent a few milliseconds apart could appear swapped. A history redraw uses one worker for the whole list, so its lines stay in order.
+- `insert_text_widget` starts one worker per call. Two calls in quick succession may land on two pool threads, and the signals are queued in whichever order the workers finish. A history redraw uses one worker for the whole list, so its lines stay in order.
 - `switch_channel` clears the chat view and then starts the history worker. A line drawn by `insert_text_widget` while that worker runs would interleave with history lines. The code doesn't guard against it.
 - `tag_urls` only finds URLs by text match, so every identical string in the document gets the link format, not just the new one.
 

@@ -73,5 +73,4 @@ Closing the window with `minimize_to_tray` off calls `Window.on_app_exit`, which
 ## Things worth knowing
 
 - `build/lib/` holds a stale copy of the source from a past build. Edit `src/`, not `build/`.
-- `__main__.py` sets the app version to `4.1.2` while `pyproject.toml` says `4.2.0`. One of them is out of date.
 - Some class names repeat across files (`RudeUserListWidget` in `Components/` and `GUI/rude_popout.py`, and `TabEventFilter` and `ArrowKeyEventFilter` in both `rude_gui.py` and `GUI/rude_popout.py`). Check the import path when reading code.

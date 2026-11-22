@@ -149,8 +149,7 @@ Colour values go to Qt style sheets and `QColor`, so any CSS-style name or `#rrg
 
 | Reader | Keys | Notes |
 | --- | --- | --- |
-| `GUI/rude_shutdown.py:20` | `[Chat] window_bg`, `window_fg` | Same defaults as above. They are read and stored, and the shutdown window doesn't use them in any code I found. |
-| `GUI/rude_first_run.py:38` | `[GUI] master_color`, `main_fg_color` | Read into `bg_color` and `fg_color`, which nothing uses. These two keys don't exist in the shipped file. |
+| `GUI/rude_shutdown.py:20` | `[Chat] window_bg`, `window_fg` | Same defaults as above.
 
 When the file is missing entirely, `rude_gui.py` lines 298 to 327 set the same values as the fallbacks. The shipped `gui_config.ini` differs from both in one key: `entry_bg` is `#2a2e32` there and `#1b1e20` in the code.
 
