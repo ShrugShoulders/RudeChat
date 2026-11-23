@@ -9,6 +9,25 @@ from rudechat4.Client.rude_pronouns import replace_pronouns
 
 from rudechat4.Util.rude_logger import configure_logging
 
+import functools
+
+_HEX_COLOR_RE = re.compile(r'^[0-9a-fA-F]{6}$')
+
+@functools.lru_cache(maxsize=1024)
+def _ansi_color_start(hex_color):
+    """Return the 24-bit ANSI start sequence for a hex colour, or None if it isn't six hex digits."""
+    hex_color = str(hex_color).lstrip('#')
+    if not _HEX_COLOR_RE.match(hex_color):
+        return None
+    r, g, b = int(hex_color[0:2], 16), int(hex_color[2:4], 16), int(hex_color[4:6], 16)
+    return f"\x1b[38;2;{r};{g};{b}m"
+
+@functools.lru_cache(maxsize=256)
+def _mention_regex(nicks):
+    """One regex that matches any of ``nicks`` (lowercase, longest first) as a whole word."""
+    alternation = "|".join(re.escape(n) for n in nicks)
+    return re.compile(r'(?<![./])\b(?:' + alternation + r')\b(?![./])', re.IGNORECASE)
+
 class RudeChatClient:
     def __init__(self, server_text_widget, entry_widget, master, gui):
         self.master = master
@@ -26,6 +45,8 @@ class RudeChatClient:
         self.joined_channels = []
         self.motd_lines = []
         self.ignore_list = []
+        self._nick_color_index = None  # (colors dict, its length, {lowercase nick: key}), see ansi_color_nickname
+        self._mention_nick_cache = {}  # channel -> (users and mode symbols it was built from, lowercase nicks)
         self.detached_channels = []
         self.mode_keys = []
         self.mode_values = []
@@ -1832,6 +1853,26 @@ class RudeChatClient:
                 self.gui.save_nickname_colors()
         self.gui.update_bak_file()
 
+    def _nickname_color_key(self, nickname_colors, lower_nickname):
+        """Find the key in nickname_colors that matches a nick ignoring case, or None."""
+        cache = self._nick_color_index
+        if cache is None or cache[0] is not nickname_colors or cache[1] != len(nickname_colors):
+            index = {}
+            for key in nickname_colors:
+                index.setdefault(key.lower(), key)  # The first match wins, as the old scan did
+            cache = self._nick_color_index = (nickname_colors, len(nickname_colors), index)
+
+        key = cache[2].get(lower_nickname)
+        if key is not None and key in nickname_colors:
+            return key
+
+        # The index can be stale. A rename removes one key and adds another, so the length stays the same.
+        for key in nickname_colors:
+            if key.lower() == lower_nickname:
+                self._nick_color_index = None
+                return key
+        return None
+
     def ansi_color_nickname(self, nickname: str) -> str:
         """
         Retrieves the hex color for a nickname, converts it to 24-bit ANSI SGR 
@@ -1842,41 +1883,21 @@ class RudeChatClient:
             if not nickname:
                 return ""
 
-            lower_nickname = nickname.lower()
-            color_key = None
-
             # Safely access the dictionary to avoid AttributeError if gui is None
             nickname_colors = getattr(self.gui, 'nickname_colors', {})
             fallback_color = getattr(self.gui, 'window_fg', '#FFFFFF')
 
-            for key in nickname_colors:
-                if key.lower() == lower_nickname:
-                    color_key = key
-                    break
+            # Exact match first. Fall back to a case-insensitive lookup.
+            hex_color = nickname_colors.get(nickname)
+            if hex_color is None:
+                color_key = self._nickname_color_key(nickname_colors, nickname.lower())
+                hex_color = nickname_colors.get(color_key, fallback_color)
 
-            hex_color = nickname_colors.get(color_key, fallback_color)
+            ansi_start = _ansi_color_start(hex_color)
+            if ansi_start is None:
+                return nickname
 
-            # Clean and validate the hex color
-            hex_color = str(hex_color).lstrip('#')
-            
-            if len(hex_color) != 6 or not re.match(r'^[0-9a-fA-F]{6}$', hex_color):
-                return nickname
-                
-            # Convert hex to RGB
-            try:
-                r = int(hex_color[0:2], 16)
-                g = int(hex_color[2:4], 16)
-                b = int(hex_color[4:6], 16)
-            except (ValueError, IndexError):
-                # Handles cases where slicing fails or hex isn't valid base-16
-                return nickname
-                
-            # Define and apply ANSI codes
-            ESC = "\x1b["
-            ANSI_START = f"{ESC}38;2;{r};{g};{b}m"
-            ANSI_END = f"{ESC}0m"
-            
-            return f"{ANSI_START}{nickname}{ANSI_END}"
+            return f"{ansi_start}{nickname}\x1b[0m"
 
         except Exception as e:
             print(f"Error in ansi_color_nickname: {e}")
@@ -3595,50 +3616,6 @@ class RudeChatClient:
             QMessageBox.warning(self.gui, "Upload Error", f"An unexpected error occured: {e}")
             return
 
-    def update_user_data(self, nickname, new_data):
-        """
-        Helper method to compile WHO data.
-        """
-        # Check if the user already exists in who_user_data
-        if nickname in self.who_user_data:
-            user_data = self.who_user_data[nickname]
-
-            # Update the "shared-channels"
-            if "channel" in new_data:
-                # Ensure "shared-channels" is a string
-                if "shared-channels" not in user_data:
-                    user_data["shared-channels"] = user_data.get("channel", new_data["channel"])
-                elif new_data["channel"] not in user_data["shared-channels"].split(", "):
-                    # Append the new channel to the string if it's not already included
-                    user_data["shared-channels"] += f", {new_data['channel']}"
-
-            # Update other fields in user_data
-            for key, value in new_data.items():
-                if key not in {"shared-channels", "mode"} and (key not in user_data or user_data[key] != value):
-                    user_data[key] = value
-
-            # Update the "mode" field
-            if "mode" in new_data and "channel" in new_data:
-                # Only proceed if the mode is not empty
-                if new_data["mode"]:
-                    channel_mode = f"{new_data['channel']}({new_data['mode']})"
-
-                    # Initialize "mode" as an empty string if not already present or inconsistently formatted
-                    if "mode" not in user_data or user_data["mode"] == "":
-                        data = f"No Modes"
-                        user_data["mode"] = data
-                    else:
-                        existing_modes = user_data["mode"].split(", ")
-                        # Append only if this channel_mode isn't already present
-                        if channel_mode not in existing_modes:
-                            user_data["mode"] += f", {channel_mode}"
-
-        else:
-            # Initialize new user data with "shared-channels" and "mode" as strings
-            new_data["shared-channels"] = new_data.get("channel", "")
-            new_data["mode"] = f"{new_data['channel']}({new_data['mode']})" if "mode" in new_data else ""
-            self.who_user_data[nickname] = new_data
-
     # Combined Handlers
     def bprtcl_to_client(self, tokens):
         data = ""
@@ -4552,37 +4529,36 @@ class RudeChatClient:
         channel's user list and wraps them in their assigned 24-bit ANSI color codes.
         """
 
-        if channel in self.channel_users:
-            # Get the user list from the actively focused channel/tab.
-            users_to_check = self.channel_users.get(channel, [])
-        else:
+        if channel not in self.channel_users:
             # If the active channel list isn't loaded or doesn't exist, skip coloring.
             return message
 
-        processed_message = message
+        users = self.channel_users.get(channel, [])
+        if not message or not users:
+            return message
 
-        for nickname in users_to_check:
-            if nickname and nickname[0] in self.mode_values:
-                nickname = nickname[1:]
+        # Lowercase nicks without their mode symbol. Rebuilt only when the user list or the symbols change.
+        modes = self.mode_values
+        cache_key = (tuple(users), tuple(modes))
+        cached = self._mention_nick_cache.get(channel)
+        if cached is None or cached[0] != cache_key:
+            lowered_nicks = []
+            for nickname in users:
+                if nickname and nickname[0] in modes:
+                    nickname = nickname[1:]
+                if nickname:
+                    lowered_nicks.append(nickname.lower())
+            cached = self._mention_nick_cache[channel] = (cache_key, lowered_nicks)
 
-            pattern_str = r'(?<![./])\b' + re.escape(nickname) + r'\b(?![./])'
-            
-            pattern = re.compile(pattern_str, re.IGNORECASE)
+        # Cheap substring test first, so the regex is built only from nicks that can match.
+        lowered_message = message.lower()
+        hits = {nick for nick in cached[1] if nick in lowered_message}
+        if not hits:
+            return message
 
-            # The substitution function wraps the matched nickname in ANSI codes
-            def color_match(match: re.Match) -> str:
-                # Use the exact casing of the nickname as it appeared in the message
-                matched_nick = match.group(0)
-                
-                # The helper function generates the colored string
-                return self.ansi_color_nickname(matched_nick)
-
-            # Apply the substitution to the message.
-            new_processed_message = pattern.sub(color_match, processed_message)
-            
-            processed_message = new_processed_message
-
-        return processed_message
+        # One pass over the message. Longest nicks first so 'bobby' wins over 'bob'.
+        pattern = _mention_regex(tuple(sorted(hits, key=lambda n: (-len(n), n))))
+        return pattern.sub(lambda match: self.ansi_color_nickname(match.group(0)), message)
 
     async def prtcl_PRIVMSG(self, tokens, znc_privmsg=False):
             """Handle private messages between users, and messages to channels"""
