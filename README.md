@@ -13,7 +13,7 @@
 	- [x] tested all core functions and fixed minor bugs
 - [ ] OS Builds
 
-# RudeChat IRC Client: For Fun & Reasons. (Req Python 3.12+)
+# RudeChat IRC Client: For Fun & Reasons. (Req Python 3.13+)
 ## How to Install
 ### Windows (Installer)
 Download the installer. Windows installs to `%LOCALAPPDATA%\Programs\RudeChat4`.

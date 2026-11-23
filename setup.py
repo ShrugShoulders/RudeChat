@@ -32,6 +32,7 @@ setup(
     packages = find_namespace_packages(where='src'),
     package_dir={"": "src"},
     include_package_data=True,
+    python_requires='>=3.13',
     scripts=["src/rudechat4/__main__.py"],
     install_requires=[
         'pytz',
@@ -45,6 +46,7 @@ setup(
     ],
     classifiers=[
         "Programming Language :: Python :: 3",
+        "Programming Language :: Python :: 3.13",
         "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
         "Operating System :: OS Independent",
     ],

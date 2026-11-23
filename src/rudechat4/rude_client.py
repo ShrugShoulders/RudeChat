@@ -114,6 +114,7 @@ class RudeChatClient:
         self.auto_connect_to_networks = config.getboolean('IRC', 'auto_connect_to_networks', fallback=False)
         await self.load_channel_messages()
         self.load_away_users_from_file()
+        self.friends.use_server(self.list_file_key())
         self.load_ignore_list()
         self.load_dm_list()
         self.replace_dms_in_gui()
@@ -1580,11 +1581,8 @@ class RudeChatClient:
         return False
 
     async def notify_user_if_mentioned(self, message, target, sender, timestamp):
-        # Compile a regex pattern to match the exact nickname
-        pattern = re.compile(r'\b' + re.escape(self.nickname) + r'\b', re.IGNORECASE)
-
-        # Check if the exact nickname is mentioned in the message
-        if not pattern.search(message):
+        # Same test the highlighting uses, so a channel never lights up without a /mentions entry.
+        if not self.is_it_a_mention(message):
             return
 
         self.mentions.setdefault(target, []).append(f'{timestamp} <{sender}> {message}')
@@ -1910,10 +1908,17 @@ class RudeChatClient:
             message_list.append(f"<{mode_symbol}{colored_name}> {gmessage}\n")
 
     def is_it_a_mention(self, message):
-        if self.nickname.lower() in message.lower():
-            return True
-        else:
+        """True if the message contains our nickname as a whole nick, ignoring case.
+
+        This is the one mention test. Highlighting and /mentions both use it, so they agree.
+        'Bob' matches 'Bob: hi' but not 'Bobby'. IRC nicks can hold [ ] \\ ` ^ { | } - and _,
+        so those count as part of a nick and \\b isn't used.
+        """
+        if not self.nickname:
             return False
+        nick_chars = r"A-Za-z0-9_\-\[\]\\`^{|}"
+        pattern = rf"(?<![{nick_chars}]){re.escape(self.nickname)}(?![{nick_chars}])"
+        return re.search(pattern, message, re.IGNORECASE) is not None
 
     def get_mode_symbol(self, modes):
         """Return the combined symbols for a list of IRC modes, e.g. ['o', 'v'] -> '@+'."""
@@ -3123,13 +3128,22 @@ class RudeChatClient:
         else:
             self.gui.insert_text_widget(f"{user_to_unignore} is not in your ignore list.\n")
 
-    async def save_ignore_list(self):
-        # Construct the full path for the ignore_list.txt
-        file_path = os.path.join(G_CONFIG_DIR, 'ignore_list.txt')
+    def list_file_key(self):
+        """Name used in this server's own list files, such as <key>_ignore_list.txt."""
+        return self.server_name or self.server
 
-        async with aiofiles.open(file_path, mode="w", encoding='utf-8') as f:
-            for user in self.ignore_list:
-                await f.write(f"{user}\n")
+    def ignore_list_path(self):
+        return os.path.join(G_CONFIG_DIR, f'{self.list_file_key()}_ignore_list.txt')
+
+    async def save_ignore_list(self):
+        file_path = self.ignore_list_path()
+
+        # Write to a temp file and swap it in, so two saves can't interleave and a crash can't truncate the list.
+        tmp_path = file_path + ".tmp"
+        content = "".join(f"{user}\n" for user in self.ignore_list)
+        async with aiofiles.open(tmp_path, mode="w", encoding='utf-8') as f:
+            await f.write(content)
+        os.replace(tmp_path, file_path)
 
     async def save_dm_list(self):
         # Construct the full path for the ignore_list.txt
@@ -3140,16 +3154,21 @@ class RudeChatClient:
                 await f.write(f"{user}\n")
 
     def load_ignore_list(self):
-        # Construct the full path for the ignore_list.txt
-        file_path = os.path.join(G_CONFIG_DIR, 'ignore_list.txt')
+        file_path = self.ignore_list_path()
+        # A server with no file yet starts from the old shared ignore_list.txt, so lists made before per-server files aren't lost.
+        legacy_path = os.path.join(G_CONFIG_DIR, 'ignore_list.txt')
 
-        if os.path.exists(file_path):
-            with open(file_path, "r", encoding='utf-8') as f:
-                self.ignore_list = [line.strip() for line in f.readlines()]
+        source = file_path if os.path.exists(file_path) else legacy_path
+        if os.path.exists(source):
+            with open(source, "r", encoding='utf-8') as f:
+                self.ignore_list = [line.strip() for line in f if line.strip()]
         else:
-            # If the file doesn't exist, create it
+            self.ignore_list = []
+
+        if not os.path.exists(file_path):
             with open(file_path, "w", encoding='utf-8') as f:
-                pass
+                for user in self.ignore_list:
+                    f.write(f"{user}\n")
 
     def load_dm_list(self):
         # Construct the full path for the ignore_list.txt

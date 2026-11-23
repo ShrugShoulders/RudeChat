@@ -1,49 +1,67 @@
 #!/usr/bin/env python3
-"""Friend (watch) list that is saved to ``friend_list.txt`` in the config folder.
+"""Friend (watch) list that is saved per server to ``<server>_friend_list.txt`` in the config folder.
 
     The ``/watch`` command and the user list use this to flag friends who
-    are online.
+    are online. Each server's client has its own RudeFriends and its own file.
 """
 from rudechat4.shared_imports import *
 from rudechat4.global_variables import *
 
 class RudeFriends:
-    """Holds the friend list and the subset of friends currently online.
+    """Holds one server's friend list and the subset of friends currently online.
 
         Attributes:
-            friend_list: Nicknames to watch for.
-            online_friends: Friends seen online during this session.
+            friend_list: Nicknames to watch for on this server.
+            online_friends: Friends seen online during this session on this server.
+            server_name: The server this list belongs to. Set by ``use_server``.
     """
     def __init__(self):
-        """Create empty lists and load the saved friend list from disk."""
+        """Create empty lists. Call ``use_server`` to pick the file and load it."""
         self.friend_list = []
         self.online_friends = []
+        self.server_name = None
 
+    def _file_path(self):
+        return os.path.join(G_CONFIG_DIR, f'{self.server_name}_friend_list.txt')
 
+    def use_server(self, server_name):
+        """Point this list at a server's file and load it."""
+        self.server_name = server_name
         self.load_friend_list()
 
     def save_friend_list(self):
         """
         Save Friend list!
         """
-        # Construct the full path for the friend_list.txt
-        file_path = os.path.join(G_CONFIG_DIR, 'friend_list.txt')
+        if not self.server_name:
+            return
 
-        with open(file_path, "w", encoding='utf-8') as f:
+        # Write to a temp file and swap it in, so a crash never leaves a half-written list.
+        file_path = self._file_path()
+        tmp_path = file_path + ".tmp"
+        with open(tmp_path, "w", encoding='utf-8') as f:
             for user in self.friend_list:
                 f.write(f"{user}\n")
+        os.replace(tmp_path, file_path)
 
     def load_friend_list(self):
         """
         Load Friend list!
-        """
-        # Construct the full path for the friend_list.txt
-        file_path = os.path.join(G_CONFIG_DIR, 'friend_list.txt')
 
-        if os.path.exists(file_path):
-            with open(file_path, "r", encoding='utf-8') as f:
-                self.friend_list = [line.strip() for line in f.readlines()]
+        A server with no file yet starts from the old shared ``friend_list.txt``
+        if there is one, so lists made before per-server files aren't lost.
+        """
+        file_path = self._file_path()
+        legacy_path = os.path.join(G_CONFIG_DIR, 'friend_list.txt')
+
+        source = file_path if os.path.exists(file_path) else legacy_path
+        if os.path.exists(source):
+            with open(source, "r", encoding='utf-8') as f:
+                self.friend_list = [line.strip() for line in f if line.strip()]
         else:
+            self.friend_list = []
+
+        if not os.path.exists(file_path):
             self.save_friend_list()
 
     def add_friend(self, friend):

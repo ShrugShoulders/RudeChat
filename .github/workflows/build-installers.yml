@@ -34,7 +34,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.12'
+          python-version: '3.13'
 
       - name: Install Linux system dependencies (PyQt6 & Audio)
         if: matrix.platform == 'debian-ubuntu'
@@ -136,6 +136,10 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Check Python version (3.13 or newer)
+        run: |
+          python3 -c "import sys; print(sys.version); assert sys.version_info >= (3, 13), 'RudeChat needs Python 3.13 or newer'"
+
       - name: Build with PyInstaller
         run: |
           python3 -m pip install --upgrade pip
@@ -216,6 +220,10 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Check Python version (3.13 or newer)
+        run: |
+          python -c "import sys; print(sys.version); assert sys.version_info >= (3, 13), 'RudeChat needs Python 3.13 or newer'"
+
       - name: Build with PyInstaller
         run: |
           python -m venv /opt/venv
@@ -285,6 +293,10 @@ jobs:
 
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Check Python version (3.13 or newer)
+        run: |
+          python3 -c "import sys; print(sys.version); assert sys.version_info >= (3, 13), 'RudeChat needs Python 3.13 or newer'"
 
       - name: Build musl binary with PyInstaller
         run: |

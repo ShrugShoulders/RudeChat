@@ -89,7 +89,7 @@ The workflow in [`build-installers.yml`](../.github/workflows/build-installers.y
 
 | Job | Runs on | Python | Output |
 | --- | --- | --- | --- |
-| `build-standard` (matrix: macOS, Windows, Debian/Ubuntu) | `macos-latest`, `windows-latest`, `ubuntu-latest` | 3.12 from `actions/setup-python` | `.dmg`, Windows installer, `.deb` |
+| `build-standard` (matrix: macOS, Windows, Debian/Ubuntu) | `macos-latest`, `windows-latest`, `ubuntu-latest` | 3.13 from `actions/setup-python` | `.dmg`, Windows installer, `.deb` |
 | `build-fedora-rpm` | `ubuntu-latest` with a `fedora:latest` container | Fedora's `python3` | `.rpm` |
 | `build-arch-pkg` | `ubuntu-latest` with an `archlinux:latest` container | Arch's `python`, in a venv at `/opt/venv` | `.pkg.tar.zst` |
 | `build-musl-alpine` | `ubuntu-latest` with an `alpine:latest` container | Alpine's `python3`, in a venv with system site packages | `.tar.gz` |

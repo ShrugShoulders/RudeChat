@@ -4,7 +4,7 @@ How to run RudeChat from source, where it keeps its files, and how to check a ch
 
 ## Python version
 
-- The code needs Python 3.12 or newer. It uses `match` statements (3.10), and `rude_client.py` has f-strings that reuse the same quote character and put a backslash inside the braces, for example `{formatted_message.strip("\n")}` in `cmd_mac`. Only 3.12 and later accept that syntax. The CI jobs on GitHub's runners use 3.12.
+- The project requires Python 3.13 or newer, set by `requires-python` in `pyproject.toml`, `python_requires` in `setup.py`, `python-version` in `build-installers.yml` and a check in `macBuild.sh`. The code itself uses `match` statements (3.10), and `rude_client.py` has f-strings that reuse the same quote character and put a backslash inside the braces, for example `{formatted_message.strip("\n")}` in `cmd_mac`, which only 3.12 and later accept. The container jobs in the workflow (Fedora, Arch, Alpine) use the image's own Python and fail with a clear message if it is older than 3.13.
 - `qt_update()` in `__main__()` drives asyncio from a 100 ms Qt timer. [architecture.md](architecture.md) explains why a blocking call in a coroutine freezes the window.
 
 ## Set up from source
