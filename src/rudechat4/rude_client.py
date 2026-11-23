@@ -1281,7 +1281,7 @@ class RudeChatClient:
                 and target in self.gui.popped_out_channels[self.server_name]
             ):
                 try:
-                    window_list = self.gui.pop_out_windows.get(target)
+                    window_list = self.gui.pop_out_windows.get((self.server_name, target))
                     window = window_list[1] if window_list else None
                     if window != None:
                         window.insert_text(action_message.strip("\n"))
@@ -1311,7 +1311,7 @@ class RudeChatClient:
         try:
             for server, channels in self.channel_messages.items():
                 # Identify keys to be deleted
-                keys_to_delete = [channel for channel in channels.keys() if channel.startswith('!')]
+                keys_to_delete = [channel for channel in channels.keys() if channel.startswith('!') and channel.endswith('!')]
 
                 # Delete identified keys
                 for key in keys_to_delete:
@@ -1584,32 +1584,47 @@ class RudeChatClient:
         pattern = re.compile(r'\b' + re.escape(self.nickname) + r'\b', re.IGNORECASE)
 
         # Check if the exact nickname is mentioned in the message
-        if pattern.search(message):
-            await self.notify_user_of_mention(self.server, target, sender, message)
+        if not pattern.search(message):
+            return
 
-            if self.znc_connection:
-                if target != self.nickname and (target in self.detached_channels or 
-                                                 (target not in self.joined_channels and target not in self.detached_channels)):
-                    await self.auto_attach(target)
+        self.mentions.setdefault(target, []).append(f'{timestamp} <{sender}> {message}')
 
-            self.mentions.setdefault(target, []).append(f'{timestamp} <{sender}> {message}')
+        # Reattach before notifying. The highlight only applies to channels in joined_channels.
+        if self.znc_connection and target.startswith(tuple(self.chantypes)):
+            target_lower = target.lower()
+            is_detached = any(c.lower() == target_lower for c in self.detached_channels)
+            is_joined = any(c.lower() == target_lower for c in self.joined_channels)
+            if is_detached or not is_joined:
+                await self.auto_attach(target)
+
+        await self.notify_user_of_mention(self.server, target, sender, message)
 
     async def auto_attach(self, channel):
+        channel_lower = channel.lower()
+        was_detached = [c for c in self.detached_channels if c.lower() == channel_lower]
         try:
-            channel_lower = channel.lower()
-
-            # Remove from detached_channels immediately (case-insensitive, safe if absent)
-            self.detached_channels = [
-                c for c in self.detached_channels if c.lower() != channel_lower
-            ]
+            # Remove from detached_channels (case-insensitive, safe if absent)
+            self.detached_channels = [c for c in self.detached_channels if c.lower() != channel_lower]
 
             await self.join_channel(channel)
 
-            channel_idx = self.joined_channels.index(channel)
-            self.save_highlight(channel, channel_idx, is_mention=True)
+            # join_channel returns quietly when it refuses to join, so check that it worked.
+            joined = next((c for c in self.joined_channels if c.lower() == channel_lower), None)
+            if joined is None:
+                self.detached_channels.extend(was_detached)
+                logging.error(f"auto_attach: join_channel did not join {channel}.")
+                self.gui.insert_text_widget(f"Could not reattach to {channel}.\n")
+                return
+
+            # Save the highlight, then redraw the list so it shows. join_channel redraws before the highlight exists.
+            self.save_highlight(joined, self.joined_channels.index(joined), is_mention=True)
+            if self.gui.irc_client == self:
+                self.update_gui_channel_list()
+
             await self.send_message(f"NAMES {channel}")
             await self.send_message(f"TOPIC {channel}")
         except Exception as e:
+            self.detached_channels.extend(c for c in was_detached if c not in self.detached_channels and c.lower() not in [j.lower() for j in self.joined_channels])
             logging.error(f"Exception in auto_attach: {e}")
 
     def is_ctcp_command(self, message):
@@ -1723,7 +1738,7 @@ class RudeChatClient:
     async def pip_to_pop_out(self, timestamp, sender, message, target, mode_symbol):
         try:
             # Get the second window from the list for the target or sender channel
-            windows_list = self.gui.pop_out_windows.get(target) or self.gui.pop_out_windows.get(sender)
+            windows_list = self.gui.pop_out_windows.get((self.server_name, target)) or self.gui.pop_out_windows.get((self.server_name, sender))
             colored_nickname = self.ansi_color_nickname(sender)
             gmessage = self.color_message_mentions(target, message)
 
@@ -1900,21 +1915,20 @@ class RudeChatClient:
         else:
             return False
 
-    def get_mode_symbol(self, mode):
-        """Return the symbol corresponding to the IRC mode."""
-        if self.display_user_modes:
-            return self.mode_to_symbol.get(mode, '')
-        else:
+    def get_mode_symbol(self, modes):
+        """Return the combined symbols for a list of IRC modes, e.g. ['o', 'v'] -> '@+'."""
+        if not self.display_user_modes or not modes:
             return ''
+        return ''.join(self.mode_to_symbol.get(mode, '') for mode in modes)
 
     def get_user_mode(self, user, channel):
-        """Retrieve the user's mode for the given channel."""
-        if self.display_user_modes:
-            channel_modes = self.user_modes.get(channel, {})
-            user_modes = channel_modes.get(user, set())
-            return next(iter(user_modes), None)  # Get the first mode if available, else None
-        else:
-            return None
+        """Return the user's modes for the given channel as a list, highest rank first."""
+        if not self.display_user_modes:
+            return []
+        user_modes = self.user_modes.get(channel, {}).get(user, set())
+        # Sets are unordered. Sort by the server's prefix order so the symbols come out the same every time.
+        order = list(self.mode_to_symbol)
+        return sorted(user_modes, key=lambda m: order.index(m) if m in order else len(order))
 
     def display_message(self, timestamp, sender, message, target, mode_symbol, is_direct=False):
         try:
@@ -2058,9 +2072,9 @@ class RudeChatClient:
             logging.error(f"Error in sort_users: {e}")
 
     def pipe_mode_to_pop_out(self, message, target):
-        if target in self.gui.pop_out_windows:
+        if (self.server_name, target) in self.gui.pop_out_windows:
             try:
-                window_list = self.gui.pop_out_windows.get(target)
+                window_list = self.gui.pop_out_windows.get((self.server_name, target))
                 window = window_list[1] if window_list else None
                 formatted_message = f"{message.strip("\n")}"
                 if window != None:
@@ -2101,7 +2115,7 @@ class RudeChatClient:
 
         if self.server_name in self.gui.popped_out_channels and channel in self.gui.popped_out_channels[self.server_name]:
             try:
-                window_list = self.gui.pop_out_windows.get(channel)
+                window_list = self.gui.pop_out_windows.get((self.server_name, channel))
                 window = window_list[1] if window_list else None
                 if window != None:
                     window.update_gui_user_list(channel)
@@ -2495,6 +2509,12 @@ class RudeChatClient:
             else:
                 self.gui.insert_text_widget(f"No client found for server {normalized_server_name}\n")
 
+    async def register_user_activity(self):
+        """Reset the auto away timer and clear away status. Call when the user sends something."""
+        if self.use_auto_away:
+            self.watcher.update_last_message_time()
+        await self.remove_away_status()
+
     async def remove_away_status(self):
         """Removes the 'away' status and updates the necessary UI elements."""
         if self.nickname in self.away_users_dict:
@@ -2848,7 +2868,7 @@ class RudeChatClient:
         if userchan.startswith(tuple(self.chantypes)):
             return
         if self.server_name in self.gui.popped_out_channels and userchan in self.gui.popped_out_channels[self.server_name]:
-            window_list = self.gui.pop_out_windows.get(userchan)
+            window_list = self.gui.pop_out_windows.get((self.server_name, userchan))
             window = window_list[1] if window_list else None
 
             if window and userchan in self.away_users_dict:
@@ -2918,9 +2938,7 @@ class RudeChatClient:
     async def handle_user_input(self, user_input, timestamp):
         if not user_input:
             return
-        if self.use_auto_away:
-            self.watcher.update_last_message_time()
-        await self.remove_away_status()
+        await self.register_user_activity()
 
         # Escape color codes
         escaped_input = self.escape_color_codes(user_input)
@@ -2951,7 +2969,7 @@ class RudeChatClient:
             self.gui.insert_text_widget(f"No channel selected. Use /join to join a channel.\n")
 
     async def handle_pop_out_mac_command(self, args, channel):
-        window_list = self.gui.pop_out_windows.get(channel)
+        window_list = self.gui.pop_out_windows.get((self.server_name, channel))
         window = window_list[1] if window_list else None
         if window is None:
             return
@@ -2968,6 +2986,7 @@ class RudeChatClient:
         macro_name = args[1]
         if window:
             if macro_name in self.ASCII_ART_MACROS:
+                await self.register_user_activity()
                 for line in self.ASCII_ART_MACROS[macro_name].splitlines():
                     formatted_message = self.format_message(line, timestamp)
                     await self.send_message(f'PRIVMSG {channel} :{formatted_message}')
@@ -5043,9 +5062,7 @@ class RudeChatClient:
 
         await self.send_message(f'PRIVMSG {self.current_channel} :\x01ACTION {escaped_input}\x01')
 
-        if self.use_auto_away:
-            self.watcher.update_last_message_time()
-        await self.remove_away_status()
+        await self.register_user_activity()
 
         timestamp = datetime.now().strftime('[%H:%M:%S] ')
         colored_content = self.color_message_mentions(self.current_channel, formatted_message)

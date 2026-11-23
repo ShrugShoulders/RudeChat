@@ -5,11 +5,13 @@ from rudechat4.global_variables import *
 from rudechat4.Components.rude_text_browser import RudeTextBrowser
 
 class RudeUserListWidget(QListWidget):
-    def __init__(self, parent=None, maingui=None):
+    def __init__(self, parent=None, maingui=None, client=None, channel=None):
         super().__init__(parent)
         self.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.customContextMenuRequested.connect(self.show_context_menu)
         self.parentGui = maingui
+        self.irc_client = client  # The client of the pop-out's own server, not whichever server is on screen
+        self.channel = channel
         self.gui = parent
 
     def show_context_menu(self, pos: QPoint):
@@ -43,38 +45,38 @@ class RudeUserListWidget(QListWidget):
     def open_dm_with_user(self):
         selected_item = self.currentItem()
         if selected_item:
-            self.parentGui.irc_client.loop.create_task(self.parentGui.irc_client.command_parser(f"/query {selected_item.text()}"))
+            self.irc_client.loop.create_task(self.irc_client.command_parser(f"/query {selected_item.text()}"))
 
     def whois_the_user(self):
         """Runs a whois command on the selected user."""
         selected_item = self.currentItem()
         if selected_item:
-            modes_to_strip = ''.join(self.parentGui.irc_client.mode_values)
+            modes_to_strip = ''.join(self.irc_client.mode_values)
             user = selected_item.text().lstrip(modes_to_strip)
-            self.parentGui.irc_client.whois_user_request = True
-            self.parentGui.irc_client.loop.create_task(self.parentGui.irc_client.cmd_whois(user))
+            self.irc_client.whois_user_request = True
+            self.irc_client.loop.create_task(self.irc_client.cmd_whois(user))
 
     def ignore_user(self):
         selected_item = self.currentItem()
         if selected_item:
-            modes_to_strip = ''.join(self.parentGui.irc_client.mode_values)
+            modes_to_strip = ''.join(self.irc_client.mode_values)
             cleaned_nickname = selected_item.text().lstrip(modes_to_strip)
-            self.parentGui.irc_client.loop.create_task(self.parentGui.irc_client.ignore_user_from_gui(cleaned_nickname))
+            self.irc_client.loop.create_task(self.irc_client.ignore_user_from_gui(cleaned_nickname))
 
     def unignore_user(self):
         selected_item = self.currentItem()
         if selected_item:
-            modes_to_strip = ''.join(self.parentGui.irc_client.mode_values)
+            modes_to_strip = ''.join(self.irc_client.mode_values)
             cleaned_nickname = selected_item.text().lstrip(modes_to_strip)
-            self.parentGui.irc_client.loop.create_task(self.parentGui.irc_client.unignore_user_from_gui(cleaned_nickname))
+            self.irc_client.loop.create_task(self.irc_client.unignore_user_from_gui(cleaned_nickname))
 
     def kick_user_from_channel(self):
         selected_item = self.currentItem()
         if selected_item:
-            modes_to_strip = ''.join(self.parentGui.irc_client.mode_values)
-            channel = self.parentGui.irc_client.current_channel
+            modes_to_strip = ''.join(self.irc_client.mode_values)
+            channel = self.channel
             selected_user = selected_item.text().lstrip(modes_to_strip)
-            self.parentGui.irc_client.loop.create_task(self.parentGui.irc_client.cmd_kick(["/kick", selected_user, channel, "Bye <3"]))
+            self.irc_client.loop.create_task(self.irc_client.cmd_kick(["/kick", selected_user, channel, "Bye <3"]))
 
 class TabEventFilter(QObject):
     def __init__(self, parent, gui):
@@ -171,6 +173,8 @@ class RudePopout(QObject):
         super().__init__()
         self.parentGui = None
         self.channel = None
+        self.server_name = None  # Set by RudeGui.open_pop_out_window
+        self.irc_client = None  # The client this pop-out belongs to. Set by RudeGui.open_pop_out_window before setupUi
         self.form = None
         self.emoji_width_cache = {}
         self.tag_cache = {}
@@ -294,7 +298,7 @@ class RudePopout(QObject):
         self.users_selector.addWidget(self.user_label)
 
         # * List of users (clickable items) *
-        self.user_list = RudeUserListWidget(parent=Form, maingui=self.parentGui)
+        self.user_list = RudeUserListWidget(parent=Form, maingui=self.parentGui, client=self.irc_client, channel=self.channel)
         sizePolicy = QSizePolicy(
             QSizePolicy.Policy.Preferred,
             QSizePolicy.Policy.Expanding
@@ -409,9 +413,11 @@ class RudePopout(QObject):
 
     def pop_in_window(self):
         self.form.close()
-        self.parentGui.remove_from_pop_out_dict(self.channel)
-        self.parentGui.irc_client.update_gui_channel_list()
-        self.parentGui.pop_out_return(self.channel)
+        self.parentGui.remove_from_pop_out_dict(self.channel, self.server_name)
+        # Only touch the visible lists when this pop-out's server is the one on screen.
+        if self.parentGui.irc_client is self.irc_client:
+            self.irc_client.update_gui_channel_list()
+            self.parentGui.pop_out_return(self.channel)
 
     def insert_and_scroll(self):
         self.display_text.moveCursor(QTextCursor.MoveOperation.End)
@@ -725,7 +731,7 @@ class RudePopout(QObject):
 
     def load_channel_messages(self):
         try:
-            messages = self.parentGui.irc_client.channel_messages[self.parentGui.irc_client.server][self.channel]
+            messages = self.irc_client.channel_messages[self.irc_client.server][self.channel]
             for message in messages[-150:]:
                 cleaned_message = message.rstrip("\r\n")
                 self.insert_text(f"{cleaned_message}")
@@ -734,7 +740,7 @@ class RudePopout(QObject):
 
     def set_topic(self):
         try:
-            topic = self.parentGui.channel_topics[self.parentGui.irc_client.server_name][self.channel]
+            topic = self.parentGui.channel_topics[self.irc_client.server_name][self.channel]
             if topic:
                 self.topic_label.setText(str(topic))
         except Exception as e:
@@ -747,7 +753,9 @@ class RudePopout(QObject):
             msg = f'PRIVMSG {self.channel} :{text}'
             if self.parentGui.log_on:
                 logging.info(f"Sending message: {msg}")
-            self.parentGui.irc_client.loop.create_task(self.parentGui.irc_client.send_message(msg))
+            self.irc_client.loop.create_task(self.irc_client.send_message(msg))
+            # Typing here counts as activity, same as in the main window.
+            self.irc_client.loop.create_task(self.irc_client.register_user_activity())
         except Exception as e:
             logging.error(f"Exception in send_message: {e}")
 
@@ -761,33 +769,33 @@ class RudePopout(QObject):
     def insert_and_send_message(self):
         try:
             text = self.input.text().strip()
-            nickname = self.parentGui.irc_client.nickname
-            user_mode = self.parentGui.irc_client.get_user_mode(nickname, self.channel)
-            mode_symbol = self.parentGui.irc_client.get_mode_symbol(user_mode) if user_mode else ''
-            colored_nickname = self.parentGui.irc_client.ansi_color_nickname(nickname)
-            gmessage = self.parentGui.irc_client.color_message_mentions(self.channel, text)
+            nickname = self.irc_client.nickname
+            user_mode = self.irc_client.get_user_mode(nickname, self.channel)
+            mode_symbol = self.irc_client.get_mode_symbol(user_mode) if user_mode else ''
+            colored_nickname = self.irc_client.ansi_color_nickname(nickname)
+            gmessage = self.irc_client.color_message_mentions(self.channel, text)
 
-            if self.parentGui.irc_client.use_time_stamp:
+            if self.irc_client.use_time_stamp:
                 timestamp = datetime.now().strftime('[%H:%M:%S] ')
             else:
                 timestamp = ""
 
-            if text.startswith("/"):
-                args = text[1:].split()
-                primary_command = args[0].lower() if args else None
-
-                match args[0]:
+            args = text[1:].split() if text.startswith("/") else []
+            if args:  # A bare "/" has no command, so it falls through and is sent as text.
+                match args[0].lower():
                     case "mac":
-                        self.parentGui.irc_client.loop.create_task(self.parentGui.irc_client.handle_pop_out_mac_command(args, self.channel))
+                        self.irc_client.loop.create_task(self.irc_client.handle_pop_out_mac_command(args, self.channel))
                         self.input.clear()
                         return
                     case "me":
                         self.handle_action(args, nickname, timestamp)
                         self.input.clear()
                         return
-                    case None:
-                        self.parentGui.irc_client.loop.create_task(self.parentGui.irc_client.command_parser(text))
+                    case _:
+                        # Every other slash command goes through the same parser as the main window.
+                        self.irc_client.loop.create_task(self.irc_client.command_parser(text))
                         self.input.clear()
+                        self.save_entry_history(text)
                         return
 
             if self.parentGui.log_on:
@@ -799,8 +807,8 @@ class RudePopout(QObject):
             self.input.clear()
             self.send_message(text)
             self.save_entry_history(text)
-            self.parentGui.irc_client.save_message(self.parentGui.irc_client.server, self.channel, colored_nickname, text, mode_symbol, is_sent=False)
-            self.parentGui.irc_client.log_message(self.parentGui.irc_client.server_name, self.channel, nickname, text, is_sent=False)
+            self.irc_client.save_message(self.irc_client.server, self.channel, colored_nickname, text, mode_symbol, is_sent=False)
+            self.irc_client.log_message(self.irc_client.server_name, self.channel, nickname, text, is_sent=False)
         except Exception as e:
             logging.error(f"Exception in insert_and_send_message: {e}")
 
@@ -833,7 +841,7 @@ class RudePopout(QObject):
             logging.error(f"Error in save_entry_history: {e}")
 
     def load_user_list(self):
-        for user in self.parentGui.irc_client.channel_users.get(self.channel, []):
+        for user in self.irc_client.channel_users.get(self.channel, []):
             self.user_list.addItem(user)
 
         self.update_user_label()
@@ -846,7 +854,7 @@ class RudePopout(QObject):
     def update_gui_user_list(self, channel):
         self.user_list.clear()
 
-        for user in self.parentGui.irc_client.channel_users.get(self.channel, []):
+        for user in self.irc_client.channel_users.get(self.channel, []):
             self.user_list.addItem(user)
 
         self.highlight_away_users()
@@ -862,11 +870,11 @@ class RudePopout(QObject):
 
                 # Get the user name
                 user = user_item.text()
-                modes_to_strip = ''.join(self.parentGui.irc_client.mode_values)
+                modes_to_strip = ''.join(self.irc_client.mode_values)
                 strip_user = user.lstrip(modes_to_strip)
 
                 # Check if the user is in the away_users_dict
-                if strip_user in self.parentGui.irc_client.away_users_dict:
+                if strip_user in self.irc_client.away_users_dict:
                     # Change the foreground color 
                     user_item.setForeground(QColor(self.parentGui.list_user_away_fg))
                 else:

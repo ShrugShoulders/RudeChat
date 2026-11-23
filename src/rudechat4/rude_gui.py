@@ -1082,17 +1082,21 @@ class RudeGui(QWidget):
         if user_or_chan not in self.popped_out_channels[self.irc_client.server_name]:
             self.popped_out_channels[self.irc_client.server_name].append(user_or_chan)
 
-    def remove_from_pop_out_dict(self, user_or_chan):
-        if self.irc_client.server_name in self.popped_out_channels:
-            if user_or_chan in self.popped_out_channels[self.irc_client.server_name]:
-                self.popped_out_channels[self.irc_client.server_name].remove(user_or_chan)
-        if user_or_chan in self.pop_out_windows:
-            del self.pop_out_windows[user_or_chan]
+    def remove_from_pop_out_dict(self, user_or_chan, server_name=None):
+        # Default to the active server. A pop-out passes its own server so closing it never touches another server's entry.
+        server_name = server_name or self.irc_client.server_name
+        if server_name in self.popped_out_channels:
+            if user_or_chan in self.popped_out_channels[server_name]:
+                self.popped_out_channels[server_name].remove(user_or_chan)
+        self.pop_out_windows.pop((server_name, user_or_chan), None)
 
     def open_pop_out_window(self, usrchannel):
-        if usrchannel in self.pop_out_windows:
+        # pop_out_windows is keyed by (server_name, channel_or_nick) so two servers can both have #general.
+        server_name = self.irc_client.server_name
+        key = (server_name, usrchannel)
+        if key in self.pop_out_windows:
             # Get the list of windows for the user channel
-            windows_list = self.pop_out_windows[usrchannel]
+            windows_list = self.pop_out_windows[key]
 
             if windows_list:
                 # Use the first window in the list
@@ -1106,13 +1110,15 @@ class RudeGui(QWidget):
         ui = RudePopout()
         ui.parentGui = self
         ui.channel = usrchannel
+        ui.server_name = server_name
+        ui.irc_client = self.irc_client  # Set before setupUi, which loads messages and users from it
         ui.setupUi(window)
         window.setWindowTitle(str(usrchannel))
         window.resize(self.app_size[0], self.app_size[1])
         window.show()
 
         # Save reference to keep it alive
-        self.pop_out_windows[usrchannel] = [window, ui]
+        self.pop_out_windows[key] = [window, ui]
         self.append_to_pop_out_dict(usrchannel)
         self.irc_client.update_gui_channel_list()
         self.force_click()
