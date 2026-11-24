@@ -766,9 +766,6 @@ class RudeChatClient:
                 logging.debug("Draining writer...")
             await asyncio.wait_for(self.writer.drain(), timeout=10)
 
-            if self.log_on:
-                logging.info(f"Message sent successfully: {message}")
-
         except (ssl.SSLError, ConnectionResetError, ConnectionRefusedError, 
                 BrokenPipeError, TimeoutError, OSError) as e:
             logging.error(f"{type(e).__name__} in send_message: {e}")
@@ -2198,6 +2195,7 @@ class RudeChatClient:
     async def save_whois_to_file(self, nickname):
         """Save WHOIS data for a given nickname to a file."""
         # Construct the full path for the WHOIS directory
+        nickname = self.sanitize_save_text(nickname)
         whois_directory = os.path.join(G_CONFIG_DIR, 'whois')
 
         # Create the WHOIS directory if it doesn't exist
@@ -2378,9 +2376,9 @@ class RudeChatClient:
                 except Exception as e:
                     logging.error(f"Unhandled General Error in message handling: {e}")
 
-    def sanitize_channel_name(self, channel):
+    def sanitize_save_text(self, text):
         #gotta remove any characters that are not alphanumeric or allowed special characters
-        return re.sub(r'[^\w\-\[\]{}^`|]', '_', channel)
+        return re.sub(r'[^\w\-\[\]{}^`|]', '_', text)
 
     def log_message(self, server, channel, sender, message, is_sent=False):
         """
@@ -2425,7 +2423,7 @@ class RudeChatClient:
             os.makedirs(logs_directory, exist_ok=True)
 
             # Construct the full path for the log file inside the Logs directory
-            filename = os.path.join(logs_directory, f'irc_log_{server}_{self.sanitize_channel_name(channel)}.txt')
+            filename = os.path.join(logs_directory, f'irc_log_{server}_{self.sanitize_save_text(channel)}.txt')
 
             with open(filename, 'a', encoding='utf-8') as file:
                 file.write(log_line)
@@ -3667,7 +3665,7 @@ class RudeChatClient:
                 case "307": data = f"{tokens.source} {tokens.params[0]} {tokens.params[1]}: {tokens.params[2]}\n"
                 case "324": data = f"Modes for {tokens.params[1]}: {tokens.params[2]}\n"
                 case "328": data = f"URL for {tokens.params[1]} {tokens.params[2]}\n"
-                case "329": data = f"Creation time for {tokens.params[1]}: {datetime.utcfromtimestamp(int(tokens.params[2])).strftime('%Y-%m-%d %H:%M:%S UTC')}\n"
+                case "329": data = f"Creation time for {tokens.params[1]}: {datetime.fromtimestamp(int(tokens.params[2]), tz=timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC')}\n"
                 case "341": data = f"{tokens.source} {' '.join(tokens.params)}\n"
                 case "378": data = f"{tokens.source} {tokens.params[0]} {tokens.params[1]}: {tokens.params[2]}\n"
                 case "379": data = f"{tokens.source} {tokens.params[0]}: {tokens.params[1]} {tokens.params[2]}\n"

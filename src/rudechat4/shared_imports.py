@@ -5,7 +5,7 @@ import asyncio
 import base64
 import configparser
 import dataclasses
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import emoji
 import fnmatch
 import glob

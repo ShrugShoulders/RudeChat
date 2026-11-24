@@ -215,7 +215,7 @@ Display targets: the **chat view** is the current channel's text area (`gui.inse
 | `307` | Nick is registered | Source and params |
 | `324` | Channel modes | "Modes for #chan: ..." |
 | `328` | Channel URL | Shows the URL |
-| `329` | Channel creation time | Converts the epoch with `datetime.utcfromtimestamp`, which is deprecated in newer Python versions |
+| `329` | Channel creation time | Converts the epoch with `datetime.fromtimestamp(..., tz=timezone.utc)` and prints it as UTC |
 | `341` | Invite sent | Params joined |
 | `378`, `379` | Host and mode info from WHOIS-style replies | Params joined |
 | `396` | Host now hidden | "Your host is now hidden as ..." |

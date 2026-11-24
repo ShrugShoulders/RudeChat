@@ -13,9 +13,7 @@ Links use `file:line` and open the line in the file. Line numbers match commit `
 
 | Status | Where | What is wrong | Likely impact |
 | --- | --- | --- | --- |
-| confirmed | [rude_client.py:691](../src/rudechat4/rude_client.py#L691), [705](../src/rudechat4/rude_client.py#L705) | `send_message` logs every outgoing line when the client's `log_on` is true. That includes `PASS` ([line 321](../src/rudechat4/rude_client.py#L321)), `NickServ IDENTIFY` ([630](../src/rudechat4/rude_client.py#L630), [635](../src/rudechat4/rude_client.py#L635)) and the base64 `AUTHENTICATE` line ([3836](../src/rudechat4/rude_client.py#L3836)). | NickServ, ZNC and SASL passwords land in `RudeChat4.log` and on the console while `log_on` is on. The default is off. |
 | confirmed | [rude_client.py:3423](../src/rudechat4/rude_client.py#L3423) | `handle_upload` sends the chosen file's text to `https://bpa.st` and then posts the returned link into the current channel. The only prompt is the file picker. The file contents leave the machine. | Easy to leak private files by accident. Worth a Privacy review and a confirmation dialog. |
-| suspected | [rude_client.py:2098](../src/rudechat4/rude_client.py#L2098) | `save_whois_to_file` builds `whois_<nickname>.txt` from the raw nickname. `log_message` runs names through `sanitize_channel_name`, but this path does not. IRC allows `\` in nicknames. | On Windows a nickname with `\` could point into a subfolder or fail to write. POSIX is not affected. |
 | confirmed | [Util/rude_logger.py:20](../src/rudechat4/Util/rude_logger.py#L20) | `RudeChat4.log` always logs at DEBUG with no rotation. Error lines include message text and nicknames. | The file grows without limit and holds personal data. See the "Sensitive data" section of [data-files.md](data-files.md). |
 
 ## Missing methods and attributes
@@ -89,9 +87,3 @@ About 150 `except Exception` blocks cover the code. Most log through `logging.er
 | confirmed | [rude_client.py:1262](../src/rudechat4/rude_client.py#L1262), [1270](../src/rudechat4/rude_client.py#L1270) | `except (AttributeError, Exception)`. `AttributeError` is already an `Exception`. | Redundant, and a sign the real error was never found. |
 | confirmed | [rude_client.py:2274](../src/rudechat4/rude_client.py#L2274) | The main dispatch wraps every handler in one `except Exception` that logs and moves on. | One bad handler never stops the loop, but errors in a handler are easy to miss. |
 | confirmed | [rude_gui.py:628](../src/rudechat4/rude_gui.py#L628), [rude_client.py:2338](../src/rudechat4/rude_client.py#L2338) and others | Fire-and-forget `loop.create_task(...)` calls keep no reference and no done-callback (see the task list in [state-and-persistence.md](state-and-persistence.md#tasks-nobody-tracks)). Exceptions inside them print "Task exception was never retrieved" at best. | Failures in `leave_channel`, `save_dm_list` and the context-menu actions are not logged by the app. |
-
-## Python version
-
-| Status | Where | What is wrong | Likely impact |
-| --- | --- | --- | --- |
-| confirmed | [rude_client.py:3571](../src/rudechat4/rude_client.py#L3571) | `datetime.utcfromtimestamp` is deprecated from Python 3.12. | A warning today and a removal later. |
