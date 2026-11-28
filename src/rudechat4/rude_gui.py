@@ -779,11 +779,21 @@ class RudeGui(QWidget):
             logging.info("Client initializing completed.")
 
     async def create_tasks(self, irc_client, config_file):
+        # Make sure no loops from an earlier connection are still alive for this client.
+        await irc_client.cancel_client_tasks()
+        irc_client.disconnect_requested = False
+        irc_client.loop_running = True
+
         try:
             await irc_client.connect(config_file)
             irc_client.is_connected = True
         except Exception as e:
             logging.error(f"Error connecting with configuration {config_file}: {e}")
+            irc_client.is_connected = False
+            irc_client.loop_running = False
+            await irc_client.close_connection()
+            irc_client.add_server_message(f"Connection failed: {e}\n")
+            return False
 
         try:
             # Create and store references to tasks
@@ -844,36 +854,69 @@ class RudeGui(QWidget):
         if self.log_on:
             logging.info("Finished Creating Client Tasks.")
             logging.info("Client initializing completed.")
-        return
+        return True
+
+    def find_config_file(self, name):
+        """Case-insensitive lookup of <name>.rudeserver in the config directory."""
+        try:
+            files = sorted(os.listdir(G_CONFIG_DIR))
+        except OSError:
+            return None
+        wanted = f"{name}.rudeserver"
+        for file_name in files:
+            if file_name.lower() == wanted:
+                return os.path.join(G_CONFIG_DIR, file_name)
+        return None
+
+    def find_client(self, name, config_path=None):
+        """Find a client by server name, or by the config file it was loaded from."""
+        for key, client in self.clients.items():
+            if key.lower() == name:
+                return key, client
+            client_config = getattr(client, "config", None)
+            if config_path and client_config and os.path.abspath(client_config) == os.path.abspath(config_path):
+                return key, client
+        return None, None
 
     async def client_connect(self, server_name):
         try:
-            files = os.listdir(G_CONFIG_DIR)
-            config_files = [f for f in files if f.endswith(".rudeserver")]
-            config_files.sort()
+            name = server_name.strip().lower().split(" ")[0]
+            config_path = self.find_config_file(name)
+            key, client = self.find_client(name, config_path)
 
-            lower_server_name = server_name.lower().split(" ")[0]
+            if client is None:
+                if not config_path:
+                    self.insert_text_widget(f"No server or config file named '{name}' was found.\n")
+                    return
+                # The config file exists but was never loaded (for example it was added after startup).
+                stem = os.path.splitext(os.path.basename(config_path))[0]
+                await self.init_client_with_config(config_path, stem)
+                key, client = self.find_client(stem.lower(), config_path)
+                if client is None:
+                    self.insert_text_widget(f"Could not load the config file for '{name}'.\n")
+                    return
+                if client.is_connected:
+                    self.find_and_select_server(key)
+                    return
 
-            for actual_server_name, client in self.clients.items():
-                if lower_server_name == actual_server_name.lower():
-                    config_file_name = f"{lower_server_name}.rudeserver"
-                    if config_file_name in config_files:
-                        if not client.is_connected:
-                            await self.create_tasks(client, os.path.join(G_CONFIG_DIR, config_file_name))
-                            client.disconnect_requested = False
-                            client.loop_running = True
-                            self.find_and_select_server(actual_server_name)
-                            return
-                        else:
-                            self.insert_text_widget(f"Client '{actual_server_name}' is already connected.")
-                            return
+            elif client.is_connected:
+                self.insert_text_widget(f"Client '{key}' is already connected.\n")
+                return
 
-                    else:
-                        logging.warning(f"Configuration file '{config_file_name}' not found for server '{actual_server_name}'.")
-                        return  # Exit as no config found for this server
+            # Prefer the path the client was loaded from, otherwise the file found by name.
+            client_config = getattr(client, "config", None)
+            path = client_config if client_config and os.path.exists(client_config) else config_path
+            if not path:
+                self.insert_text_widget(f"Config file '{name}.rudeserver' was not found for '{key}'.\n")
+                logging.warning(f"Configuration file for '{key}' not found.")
+                return
+
+            if await self.create_tasks(client, path):
+                self.find_and_select_server(key)
 
         except Exception as e:
             logging.error(f"Error in client_connect for server '{server_name}': {e}")
+            self.insert_text_widget(f"Could not connect to '{server_name}': {e}\n")
 
     def find_and_select_server(self, server_name):
         """
@@ -882,14 +925,18 @@ class RudeGui(QWidget):
         Args:
             server_name (str): The name of the server to find and select.
         """
-        items = self.server_selector_box.findData(server_name, Qt.MatchFlag.MatchExactly)
-        if items:
-            item_to_select = items[0]  # Select the first matching item
-            row_index = self.server_selector_box.findText(item_to_select)
-            self.server_selector_box.setCurrentIndex(row_index)
-            self.on_server_change(None)
-        else:
-            logging.error(f"Server '{server_name}' not found in the list.")
+        wanted = server_name.strip().lower().split(" ")[0]
+        for index in range(self.server_selector_box.count()):
+            # Entries can carry a ping suffix, such as "name - 23ms".
+            entry = self.server_selector_box.itemText(index).split(" ")[0].lower()
+            if entry == wanted:
+                if self.server_selector_box.currentIndex() == index:
+                    # No index change means no signal, so refresh the view directly.
+                    self.on_server_change(None)
+                else:
+                    self.server_selector_box.setCurrentIndex(index)  # Fires on_server_change.
+                return
+        logging.error(f"Server '{server_name}' not found in the list.")
 
     def update_server_ping(self, server_name, ping_time=None):
         """Update the entry for a server in the QListWidget with the new ping time."""

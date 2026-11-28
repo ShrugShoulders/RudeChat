@@ -29,18 +29,14 @@ These are real name errors: the code refers to something that is not defined. Mo
 
 | Status | Where | What is wrong | Likely impact |
 | --- | --- | --- | --- |
-| confirmed | [rude_client.py:2410](../src/rudechat4/rude_client.py#L2410), [rude_gui.py:849](../src/rudechat4/rude_gui.py#L849) | `disconnect` sets `loop_running = False` but cancels nothing and does not close the socket. `client_connect` later overwrites `tasks` with new tasks and sets `loop_running = True`. Old loops that are still asleep (30 s to 20 min) see the flag true again and keep running. | Duplicate `keep_alive`, `auto_save` and similar loops after a quick disconnect and connect. Traced, not run. |
-| confirmed | [rude_client.py:131](../src/rudechat4/rude_client.py#L131) | `reload_config` falls back to `'red'` and `'green'` and does not call `.lower()` on the two note colours. `read_config` ([98](../src/rudechat4/rude_client.py#L98)) uses `'#ff0000'` and `'#008000'` and lower-cases them. The list highlight code compares these strings with `QColor.name()`, which is lower-case hex. | After the server config window closes, a colour typed in capitals, or the named fallback, may stop matching, so highlights get overwritten. The match was not tested in the UI. |
 | confirmed | [rude_client.py:70](../src/rudechat4/rude_client.py#L70), [226](../src/rudechat4/rude_client.py#L226) | Every `RudeChatClient` deletes all `*.lock` files at construction. `RudeGui.init_client` builds one extra client with no server config ([rude_gui.py:616](../src/rudechat4/rude_gui.py#L616)), and servers are built one after another. | A client created while another is mid-save can remove its lock. The window is small. |
 
 ## State and display
 
 | Status | Where | What is wrong | Likely impact |
 | --- | --- | --- | --- |
-| confirmed | [rude_client.py:756](../src/rudechat4/rude_client.py#L756), [1534](../src/rudechat4/rude_client.py#L1534) | Nothing removes a channel from `detached_channels`. With ZNC, `notify_user_if_mentioned` re-attaches any channel in that list on each mention. `auto_attach` appends to `joined_channels` without a duplicate check ([1542](../src/rudechat4/rude_client.py#L1542)). | A channel detached once is added to the list again on every later mention, even when it is already listed. |
 | suspected | [GUI/rude_popout.py:802](../src/rudechat4/GUI/rude_popout.py#L802) | The pop-out passes the already ANSI-coloured nickname to `save_message` as `sender`. `save_message` colours the sender again and looks the coloured string up in `nickname_colors`. | Saved pop-out lines may show the nickname in the fallback colour, with escape codes nested. |
 | suspected | [rude_gui.py:1544](../src/rudechat4/rude_gui.py#L1544), [1445](../src/rudechat4/rude_gui.py#L1445) | Decoding runs in `QThreadPool` workers that all emit back to the main thread. Workers may finish in a different order from the one they started in. | A line could appear before an earlier one, for example a new message right after a channel switch redraws history. README lists "messages loading in the wrong order" as fixed. Not reproduced. |
-| confirmed | [rude_client.py:1394](../src/rudechat4/rude_client.py#L1394), [1402](../src/rudechat4/rude_client.py#L1402) | The custom sound path is placed into `os.system(f"afplay {sound_path}")` without quotes. | An install path with a space breaks the sound. The path is not user-controlled, so this is not an injection route. |
 
 ## Blocking calls inside coroutines
 

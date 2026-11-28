@@ -13,6 +13,17 @@ import functools
 
 _HEX_COLOR_RE = re.compile(r'^[0-9a-fA-F]{6}$')
 
+def normalize_note_color(value, default):
+    """Return a color as lowercase '#rrggbb', the same form QColor.name() gives.
+
+    The highlight code compares these strings with QColor.name(), so named colors
+    ('red') and capitalised hex ('#FF0000') must be converted. Invalid values use the default.
+    """
+    color = QColor(str(value).strip())
+    if not color.isValid():
+        color = QColor(default)
+    return color.name()
+
 @functools.lru_cache(maxsize=1024)
 def _ansi_color_start(hex_color):
     """Return the 24-bit ANSI start sequence for a hex colour, or None if it isn't six hex digits."""
@@ -118,8 +129,8 @@ class RudeChatClient:
         self.display_user_modes = config.getboolean('IRC', 'display_user_modes', fallback=True)
         self.use_auto_away = config.getboolean('IRC', 'use_auto_away', fallback=True)
         self.use_emojis = config.getboolean('IRC', 'use_emojis', fallback=True)
-        self.mention_note_color = config.get('IRC', 'mention_note_color', fallback='#ff0000').lower()
-        self.activity_note_color = config.get('IRC', 'activity_note_color', fallback='#008000').lower()
+        self.mention_note_color = normalize_note_color(config.get('IRC', 'mention_note_color', fallback='#ff0000'), '#ff0000')
+        self.activity_note_color = normalize_note_color(config.get('IRC', 'activity_note_color', fallback='#008000'), '#008000')
         self.use_time_stamp = config.getboolean('IRC', 'use_time_stamp', fallback=True)
         self.show_full_hostmask = config.getboolean('IRC', 'show_hostmask', fallback=True)
         self.show_join_part_quit_nick = config.getboolean('IRC', 'show_join_part_quit_nick', fallback=True)
@@ -157,8 +168,8 @@ class RudeChatClient:
 
         # Reload specific variables
         self.auto_join_channels = self._parse_channel_list(config.get('IRC', 'auto_join_channels', fallback=''))
-        self.mention_note_color = config.get('IRC', 'mention_note_color', fallback='red')
-        self.activity_note_color = config.get('IRC', 'activity_note_color', fallback='green')
+        self.mention_note_color = normalize_note_color(config.get('IRC', 'mention_note_color', fallback='#ff0000'), '#ff0000')
+        self.activity_note_color = normalize_note_color(config.get('IRC', 'activity_note_color', fallback='#008000'), '#008000')
         self.use_time_stamp = config.getboolean('IRC', 'use_time_stamp', fallback=True)
         self.show_full_hostmask = config.getboolean('IRC', 'show_hostmask', fallback=True)
         self.show_join_part_quit_nick = config.getboolean('IRC', 'show_join_part_quit_nick', fallback=True)
@@ -336,6 +347,9 @@ class RudeChatClient:
         TIMEOUT = 256  # seconds
         self.gui.insert_text_widget(f'Connecting to server: {self.server}:{self.port}\n')
 
+        # Close this client's previous socket (if any) before opening a new one.
+        await self.close_connection()
+
         try:
             if self.ssl_enabled:
                 if not self.ignore_cert:
@@ -363,9 +377,15 @@ class RudeChatClient:
             if self.znc_connection:
                 await self.send_message(f'PASS {self.znc_password}')
 
-        except asyncio.TimeoutError:
-            self.gui.insert_text_widget(f"Connection timeout. Please try again later.\n")
-            logging.error(f"Connection timeout. Please try again later.")
+        except (asyncio.TimeoutError, OSError) as e:
+            if isinstance(e, asyncio.TimeoutError):
+                reason = "Connection timeout. Please try again later."
+            else:
+                reason = f"{type(e).__name__}: {e}"
+            self.gui.insert_text_widget(f"Could not connect to {self.server}:{self.port} ({reason})\n")
+            logging.error(f"Could not connect to {self.server}:{self.port}: {reason}")
+            await self.close_connection()
+            raise ConnectionError(f"Could not connect to {self.server}:{self.port}: {reason}") from e
 
     async def send_initial_commands(self):
         self.gui.insert_text_widget(f'Sent client registration commands.\n')
@@ -386,7 +406,8 @@ class RudeChatClient:
             return  # Successfully connected and received 001
         except (OSError, ConnectionError) as e:
             logging.error(f"Error occurred in wait_for_welcome: {e}.\n")
-            return
+            self.gui.insert_text_widget(f"Connection lost during registration: {e}\n")
+            raise
 
     async def handle_nickname_conflict(self, tokens):
         try:
@@ -919,6 +940,44 @@ class RudeChatClient:
         # Gather tasks to ensure they are properly cancelled
         await asyncio.gather(*tasks, return_exceptions=True)
 
+    async def cancel_client_tasks(self, keep=("load_ascii_art_macros",)):
+        """Cancel and await only the background tasks that belong to this client.
+
+        Never touches other clients' tasks and never cancels the task that is calling this.
+        """
+        current = asyncio.current_task()
+        doomed = []
+        for name, task in list(self.tasks.items()):
+            if name in keep:
+                continue
+            if task is current:
+                continue
+            if not task.done():
+                task.cancel()
+                doomed.append(task)
+            self.tasks.pop(name, None)
+
+        if doomed:
+            await asyncio.gather(*doomed, return_exceptions=True)
+
+    async def close_connection(self):
+        """Close this client's own socket (and only this client's) and drop the references."""
+        writer, self.writer = self.writer, None
+        self.reader = None
+        if writer is None:
+            return
+        try:
+            writer.close()
+            await asyncio.wait_for(writer.wait_closed(), timeout=5)
+        except Exception as e:
+            logging.debug(f"Error closing connection for {self.server_name}: {e}")
+
+    async def shutdown_connection(self):
+        """Stop this client's loops and close its socket. Safe to call more than once."""
+        self.loop_running = False
+        await self.cancel_client_tasks()
+        await self.close_connection()
+
     def reset_state(self):
         self.motd_dict.clear()
         self.joined_channels.clear()
@@ -961,6 +1020,7 @@ class RudeChatClient:
             return
 
         self.add_server_message(f"****Resetting State\n")
+        self.is_connected = False
         self.reset_state()
         self.gui.insert_text_widget(f"You have been \x0304DISCONNECTED\x0F Auto Reconnecting In Progress\x0303... in {RETRY_DELAY} seconds\x0F \n")
         self.add_server_message(f"You have been \x0304DISCONNECTED\x0F Auto Reconnecting In Progress\x0303... in {RETRY_DELAY} seconds\x0F \n")
@@ -975,6 +1035,7 @@ class RudeChatClient:
                 self.add_server_message("****Attempt Connection\n")
                 await self.connect(config_file)
                 self.replace_dms_in_gui()
+                self.is_connected = True
                 self.loop_running = True
                 self.add_server_message(f"****Connected: {self.loop_running}\n")
                 self.gui.select_first_server()
@@ -1466,15 +1527,17 @@ class RudeChatClient:
         if self.custom_sounds:
             if shutil.which("afplay"):
                 sound_path = os.path.join(G_SOURCE_DIR, "Resources", "Sounds", "Notification4.wav")
-                os.system(f"afplay {sound_path}")
+                # Argument list, no shell, so spaces in the install path are safe.
+                subprocess.run(["afplay", sound_path], check=False)
         else:
-            os.system("afplay /System/Library/Sounds/Ping.aiff")
+            subprocess.run(["afplay", "/System/Library/Sounds/Ping.aiff"], check=False)
 
     def linux_trigger_sound(self):
         if self.custom_sounds:
             if shutil.which("paplay"):
                 sound_path = os.path.join(G_SOURCE_DIR, "Resources", "Sounds", "Notification4.wav")
-                os.system(f"paplay {sound_path}")
+                # Argument list, no shell, so spaces in the install path are safe.
+                subprocess.run(["paplay", sound_path], check=False)
         else:
             os.system("echo -e '\a'")
 
@@ -2252,6 +2315,10 @@ class RudeChatClient:
                 if pending:
                     data = pending.encode('UTF-8')
                 else:
+                    if self.reader is None:
+                        if self.disconnect_requested or not self.loop_running:
+                            break
+                        raise ConnectionError("No active connection")
                     data = await asyncio.wait_for(self.reader.read(4096), timeout_seconds)
                 if self.log_on:
                     logging.debug(f"Data received: {data}...")
@@ -2522,10 +2589,13 @@ class RudeChatClient:
                         self.gui.insert_text_widget(f"You're not connected to: {client.server_name}\n")
                         return
                     else:
-                        await client.send_message("QUIT")
-                        client.loop_running = False
-                        client.is_connected = False
                         client.disconnect_requested = True
+                        try:
+                            await client.send_message("QUIT")
+                        except Exception as e:
+                            logging.error(f"Error sending QUIT for {client.server_name}: {e}")
+                        client.is_connected = False
+                        await client.shutdown_connection()
                         self.gui.update_server_ping(normalized_server_name, ping_time=None)
                         client.reset_state()
                         self.gui.insert_text_widget("Disconnected\n")
