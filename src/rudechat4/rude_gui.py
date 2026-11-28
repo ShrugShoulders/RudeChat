@@ -592,23 +592,17 @@ class RudeGui(QWidget):
         self.highlight_who_channels()
 
     def set_misc_variables(self):
-        self.channel_lists = {}
         self.nickname_colors = self.load_nickname_colors()
         self.clients = {}
         self.channel_topics = {}
-        self.url_cache = {}
-        self.tag_cache = {}
         self.entry_history = []
         self.popped_out_channels = {}
         self.pop_out_windows = {}
         self.server_colors = {}
-        self.emoji_width_cache = {}
         self.download_channel_list = {} 
         self.history_index = 0
-        self.last_selected_index = None
         self.previous_server_index = None
         self.iconed = False
-        self.target_user_info = None
         self.url_pattern = re.compile(r'(\w+://[^\s()<>]*\([^\s()<>]*\)[^\s()<>]*(?<![.,;!?])|www\.[^\s()<>]*\([^\s()<>]*\)[^\s()<>]*(?<![.,;!?])|\w+://[^\s()<>]+(?<![.,;!?])|www\.[^\s()<>]+(?<![.,;!?]))')
         self.rude_shutdown = RudeShutdown(self)
 
@@ -725,16 +719,11 @@ class RudeGui(QWidget):
         for server in unique_server_names:
             self.server_selector_box.addItem(server)
 
-        # Set the current server and select it in the combo box.
-        self.server_var = server_name
-        
         # Find the index of the newly added server name
         index = self.server_selector_box.findText(server_name)
         if index != -1:
             self.server_selector_box.setCurrentIndex(index)
         
-        # Store the joined channels list for this server.
-        self.channel_lists[server_name] = irc_client.joined_channels
         self.select_first_server()
 
     async def init_client_with_config(self, config_file, fallback_server_name):
@@ -743,7 +732,6 @@ class RudeGui(QWidget):
             irc_client = RudeChatClient(self.chat_box, self.text_field, self.master, self)
             if self.log_on:
                 logging.info(f"initializing client {irc_client} in progress")
-            irc_client.client_event_loops[irc_client] = asyncio.get_event_loop()  # Store a reference to the event loop
             irc_client.tasks = {}  # Create a dictionary to store references to tasks
         except Exception as e:
             logging.error(f"Error initializing IRC client: {e}")
@@ -1907,8 +1895,6 @@ class RudeGui(QWidget):
     def tag_urls(self, urls, index=0):
             if index < len(urls):
                 url = urls[index]
-                tag_name = f"url_{url}"
-                
                 try:
                     # Prepare the character format for the hyperlink
                     char_format = QTextCharFormat()
@@ -1916,7 +1902,6 @@ class RudeGui(QWidget):
                     char_format.setAnchorHref(url)
                     char_format.setForeground(QColor(self.url_color))
                     char_format.setFontUnderline(True)
-                    self.tag_cache[tag_name] = char_format
                     
                     # Loop through the document to find and merge the format
                     cursor = self.chat_box.document().find(url, 0)

@@ -13,7 +13,7 @@ Two details are easy to miss:
 - Lines are split only on `\r\n`. A server that sends a bare `\n` would never produce a complete line.
 - Each `read(4096)` chunk is decoded on its own with `data.decode('UTF-8', errors='ignore')`. A multi-byte character that straddles two reads is silently dropped. See [`handle_incoming_message`](../src/rudechat4/rude_client.py#L2143) and [`_await_welcome_message`](../src/rudechat4/rude_client.py#L398).
 
-`self.decoder` and `self.encoder` (`irctokens.StatefulDecoder` and `StatefulEncoder`, lines 51 and 52) are created in `__init__` but I found no code that uses them. Outgoing lines are built as f-strings in [`send_message`](../src/rudechat4/rude_client.py#L688).
+Outgoing lines are built as f-strings in [`send_message`](../src/rudechat4/rude_client.py#L688).
 
 Before tokenising, the receive loop strips `\x1b[?25h`, `\x1b[?7h`, `\x06` and `\a` from the text. If the server's `use_irc_colors` setting is off, it also removes IRC colour codes (`\x03` plus digits) with a regex.
 
@@ -172,7 +172,7 @@ Each call first writes defaults, then overwrites them from the tokens it recogni
 | `setting` | C | Take a parameter only when set |
 | `no_parameter` | D | Never take a parameter |
 
-After parsing, `get_mode_lists` fills `mode_keys` and `mode_values` from `mode_to_symbol`. `mode_values` (the prefix symbols, such as `@+`) is used all over the file to strip prefixes from nicknames.
+After parsing, `get_mode_lists` fills `mode_values` from `mode_to_symbol`. `mode_values` (the prefix symbols, such as `@+`) is used all over the file to strip prefixes from nicknames.
 
 Things to know:
 
@@ -403,7 +403,7 @@ The ping label: `prtcl_PONG` ([line 4405](../src/rudechat4/rude_client.py#L4405)
 
 ### Reconnect
 
-Three read failures call `reconnect` ([line 886](../src/rudechat4/rude_client.py#L886)): a timeout, an `OSError`, and an empty read. Each first tries `send_message('QUIT :<reason>')`. The timeout case builds the reason from `e.strerror`. On Python 3.11 and later, `asyncio.TimeoutError` is the built-in `TimeoutError` and its `strerror` is `None`, so the text reads `QUIT :None`. On older Pythons the attribute doesn't exist. I didn't check which versions the project supports. The old socket is not closed. I found no `writer.close()` call anywhere in the file.
+Three read failures call `reconnect` ([line 886](../src/rudechat4/rude_client.py#L886)): a timeout, an `OSError`, and an empty read. Each first tries `send_message('QUIT :<reason>')`. The timeout case builds the reason from `e.strerror`. On Python 3.11 and later, `asyncio.TimeoutError` is the built-in `TimeoutError` and its `strerror` is `None`, so the text reads `QUIT :None`. On older Pythons the attribute doesn't exist. I didn't check which versions the project supports. `connect_to_server` closes the old socket (`close_connection`) before it opens the new one.
 
 `reconnect` does this:
 
@@ -419,6 +419,6 @@ Two side effects of re-registering: `joined_channels` is emptied, so the rejoin 
 
 ### Disconnect and quit
 
-`/disconnect <server>` ([`disconnect`](../src/rudechat4/rude_client.py#L2410)) sends `QUIT`, sets `loop_running` false, `is_connected` false and `disconnect_requested` true, and clears the ping label. It calls `reset_state` but doesn't cancel the tasks or close the socket. `/connect` starts everything again through `RudeGui.client_connect`.
+`/disconnect <server>` ([`disconnect`](../src/rudechat4/rude_client.py#L2410)) sends `QUIT`, sets `disconnect_requested` true and `is_connected` false, then calls `shutdown_connection`, which sets `loop_running` false, cancels that client's own tasks and closes that client's own socket. It clears the ping label and calls `reset_state`. `/connect` starts everything again through `RudeGui.client_connect`, which cancels any leftover tasks first and prints the reason if the connection fails.
 
 Quitting the app (`/quit` or the tray menu) sends `QUIT` through `send_quit` or `spec_quit`, saves history, and cancels all asyncio tasks except `on_enter_key` and `quit_client_task`.

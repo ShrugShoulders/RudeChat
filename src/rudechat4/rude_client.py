@@ -59,7 +59,6 @@ class RudeChatClient:
         self._nick_color_index = None  # (colors dict, its length, {lowercase nick: key}), see ansi_color_nickname
         self._mention_nick_cache = {}  # channel -> (users and mode symbols it was built from, lowercase nicks)
         self.detached_channels = []
-        self.mode_keys = []
         self.mode_values = []
         self.dm_list = []
         self.cap_who_for_chan = []
@@ -77,13 +76,10 @@ class RudeChatClient:
         self.highlighted_channels = {}
         self.mentions = {}
         self.ASCII_ART_MACROS = {}
-        self.client_event_loops = {}
         self.tasks = {}
         self.account_cache = {}
         self.whois_executed = set()
         self.away_notified = set()
-        self.decoder = irctokens.StatefulDecoder()
-        self.encoder = irctokens.StatefulEncoder()
         self.config = ''
         self.reader = None
         self.writer = None
@@ -456,7 +452,6 @@ class RudeChatClient:
         # Check if the channel is already in the list of joined channels
         if channel not in self.joined_channels:
             self.joined_channels.append(channel)
-            self.gui.channel_lists[self.server] = self.joined_channels
             self.update_gui_channel_list()
 
     async def _await_welcome_message(self):
@@ -836,7 +831,6 @@ class RudeChatClient:
 
             await self.send_message(f'JOIN {channel}')
             self.joined_channels.append(channel)
-            self.gui.channel_lists[self.server] = self.joined_channels  # Update the GUI channel list
             self.update_gui_channel_list()  # Update the channel list in GUI
         except Exception as e:
             print(f"{e}")
@@ -850,7 +844,6 @@ class RudeChatClient:
             if self.server_name in self.highlighted_channels:
                 self.highlighted_channels[self.server_name].pop(channel, None)
 
-            self.gui.channel_lists[self.server] = self.joined_channels
             self.update_gui_channel_list()
             self.gui.insert_text_widget(f"You have \x02DETACHED\x0F from \x02{channel}\x0F\n")
             self.gui.insert_text_widget(f"To \x02REATTACH\x0F simply issue a normal /join \x02{channel}\x0F\n")
@@ -1008,7 +1001,6 @@ class RudeChatClient:
 
         new_entries = replaced_dms + self.joined_channels
         self.joined_channels = new_entries
-        self.gui.channel_lists[self.server] = self.joined_channels
         self.update_gui_channel_list()
 
     async def reconnect(self, config_file):
@@ -1775,7 +1767,6 @@ class RudeChatClient:
 
                 if self.is_direct_message(target) and sender not in self.joined_channels:
                     self.joined_channels.append(sender)
-                    self.gui.channel_lists[self.server] = self.joined_channels
                     self.update_gui_channel_list()
                     if sender not in self.dm_list:
                         self.dm_list.append(sender)
@@ -2211,7 +2202,6 @@ class RudeChatClient:
 
     def get_mode_lists(self):
         try:
-            self.mode_keys = list(self.mode_to_symbol.keys())
             self.mode_values = list(self.mode_to_symbol.values())
             return
         except Exception as e:
@@ -2240,7 +2230,6 @@ class RudeChatClient:
                 self.joined_channels.append(whois_channel)
                 if whois_channel not in self.cap_who_for_chan:
                     self.cap_who_for_chan.append(whois_channel)
-                self.gui.channel_lists[self.server] = self.joined_channels
                 self.update_gui_channel_list()
                 self.gui.update_channel_label()
 
@@ -2282,7 +2271,6 @@ class RudeChatClient:
             if self.server_name in self.highlighted_channels:
                 self.highlighted_channels[self.server_name].pop(channel, None)
 
-            self.gui.channel_lists[self.server] = self.joined_channels
             self.update_gui_channel_list()
 
     async def auto_rejoin_channel(self, channel):
@@ -2508,7 +2496,6 @@ class RudeChatClient:
         if nickname not in self.channel_messages[self.server]:
             self.channel_messages[self.server][nickname] = []
 
-        self.gui.channel_lists[self.server] = self.joined_channels
         self.update_gui_channel_list()
         self.gui.insert_text_widget(f"Opened DM with {nickname}.\n")
 
@@ -2551,7 +2538,6 @@ class RudeChatClient:
                 self.highlighted_channels[self.server_name].pop(channel, None)
 
             # Update the GUI's channel list
-            self.gui.channel_lists[self.server] = self.joined_channels
             self.update_gui_channel_list()
             if self.joined_channels:
                 try:
@@ -3596,7 +3582,6 @@ class RudeChatClient:
             self.remove_help_info()
             if help_channel not in self.joined_channels:
                 self.joined_channels.append(help_channel)
-                self.gui.channel_lists[self.server] = self.joined_channels
                 if help_channel not in self.cap_who_for_chan:
                     self.cap_who_for_chan.append(help_channel)
                 self.update_gui_channel_list()
@@ -4952,7 +4937,6 @@ class RudeChatClient:
             if channel in self.joined_channels:
                 await self.send_message(f'PART {channel}')
                 self.joined_channels.remove(channel)
-                self.gui.channel_lists[self.server] = self.joined_channels
                 self.update_gui_channel_list()
         except Exception as e:
             logging.error(f"Error in handle_bad_channel_name: {e}")
@@ -4970,7 +4954,6 @@ class RudeChatClient:
             # Make sure to remove the channel 
             if channel in self.joined_channels:
                 self.joined_channels.remove(channel)
-                self.gui.channel_lists[self.server] = self.joined_channels
                 self.update_gui_channel_list()
         except Exception as e:
             logging.error(f"Error in unable_to_join_channel: {e}")
@@ -5146,7 +5129,6 @@ class RudeChatClient:
         mentions_channel = f"!MENTIONS!"
         if mentions_channel not in self.joined_channels:
             self.joined_channels.append(mentions_channel)
-            self.gui.channel_lists[self.server] = self.joined_channels
             if mentions_channel not in self.cap_who_for_chan:
                 self.cap_who_for_chan.append(mentions_channel)
             self.update_gui_channel_list()

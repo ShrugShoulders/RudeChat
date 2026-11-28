@@ -176,8 +176,6 @@ class RudePopout(QObject):
         self.server_name = None  # Set by RudeGui.open_pop_out_window
         self.irc_client = None  # The client this pop-out belongs to. Set by RudeGui.open_pop_out_window before setupUi
         self.form = None
-        self.emoji_width_cache = {}
-        self.tag_cache = {}
         self.history_index = 0
         self.entry_history = []
 
@@ -692,7 +690,6 @@ class RudePopout(QObject):
         if index < len(urls):
             url = urls[index]
             try:
-                tag_name = f"url_{url}"
                 char_format = QTextCharFormat()
                 char_format.setAnchor(True)
                 char_format.setAnchorHref(url)
@@ -702,7 +699,6 @@ class RudePopout(QObject):
             try:
                 char_format.setForeground(QColor(self.parentGui.url_color))
                 char_format.setFontUnderline(True)
-                self.tag_cache[tag_name] = char_format
 
                 cursor = self.display_text.textCursor()
                 cursor = self.display_text.document().find(url, 0)
@@ -717,9 +713,9 @@ class RudePopout(QObject):
                 cursor = self.display_text.textCursor()
                 cursor.movePosition(QTextCursor.MoveOperation.Start) 
                 while self.display_text.find(url):
-                    cursor.mergeCharFormat(self.tag_cache[tag_name])
-                    cursor.setCharFormat(self.tag_cache[tag_name])
-                    cursor.insertText(url, self.tag_cache[tag_name])
+                    cursor.mergeCharFormat(char_format)
+                    cursor.setCharFormat(char_format)
+                    cursor.insertText(url, char_format)
                     cursor.setPosition(cursor.position() + len(url))
             except Exception as e:
                 logging.error(f"Error3 in tag_urls: {e}")

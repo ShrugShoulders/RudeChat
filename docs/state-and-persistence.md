@@ -13,7 +13,7 @@ A client has two server identifiers, and different dictionaries use different on
 | Attribute | Comes from | Used as the key for |
 | --- | --- | --- |
 | `server` | `server =` in the `.rudeserver` file (a hostname) | `channel_messages` (outer key) |
-| `server_name` | `server_name =` in the `.rudeserver` file (a label) | `highlighted_channels`, `motd_dict`, GUI `clients`, `popped_out_channels`, `channel_topics`, `channel_lists`, and the file names `channel_messages_<server_name>.json`, `<server_name>_away_users.json`, `<server_name>_open_dms.txt` |
+| `server_name` | `server_name =` in the `.rudeserver` file (a label) | `highlighted_channels`, `motd_dict`, GUI `clients`, `popped_out_channels`, `channel_topics`, and the file names `channel_messages_<server_name>.json`, `<server_name>_away_users.json`, `<server_name>_open_dms.txt` |
 
 If `server_name` is empty, `init_client_with_config` falls back to `Server_1`, `Server_2` and so on for the GUI key, but the client's own `server_name` attribute stays `None`. See [known-issues.md](known-issues.md).
 
@@ -28,11 +28,9 @@ Attributes below are created in `RudeChatClient.__init__` ([`rude_client.py`](..
 | `master`, `entry_widget`, `server_text_widget`, `gui` | Qt objects passed to the constructor. Every client shares the same widgets. | `__init__`, `set_gui` | Everywhere that draws text | No |
 | `loop` | The asyncio loop from `get_event_loop()` | `__init__` | `loop.create_task(...)` calls in the client and GUI | No |
 | `time_zone` | `tzlocal` zone | `__init__` | CTCP `TIME` reply | No |
-| `reader`, `writer` | asyncio stream pair, `None` until connected | `connect_to_server` | `handle_incoming_message`, `_await_welcome_message`, `send_message` | No. Nothing ever calls `writer.close()`. |
-| `tasks` | `{task key: asyncio.Task}` | `RudeGui.init_client_with_config` and `create_tasks` | Nothing. `stop_async_loop` uses `asyncio.all_tasks` instead. | No |
-| `client_event_loops` | `{client: loop}` | `RudeGui.init_client_with_config` | Nothing | No |
+| `reader`, `writer` | asyncio stream pair, `None` until connected | `connect_to_server`, `close_connection` | `handle_incoming_message`, `_await_welcome_message`, `send_message` | No. `close_connection` closes this client's socket on disconnect and before each new connection. |
+| `tasks` | `{task key: asyncio.Task}` | `RudeGui.init_client_with_config` and `create_tasks` | `cancel_client_tasks`, called by `shutdown_connection` (on `/disconnect`) and `create_tasks` (on `/connect`). `stop_async_loop` still uses `asyncio.all_tasks` for a full quit. | No |
 | `ping_threads` | `list[threading.Thread]` of notification sound threads | `trigger_beep_notification` | `wait_for_threads` (run by `thread_killer`) | No |
-| `decoder`, `encoder` | `irctokens` stateful objects | `__init__` | Nothing found | No |
 | `watcher` | `AutoAway` (created in `read_config`, replaced in `reload_config`; not in `__init__`) | `read_config`, `reload_config` | `handle_user_input`, `cmd_me`, `away_watcher` | No |
 
 ### Config values
@@ -67,7 +65,7 @@ Set by `prtcl_005` from the `ISUPPORT` line during registration. Each call first
 | `chantypes` | `list[str]` of channel prefixes | `['#', '&']` |
 | `chanmodes` | `{'list': [...], 'parameter': [...], 'setting': [...], 'no_parameter': [...]}`. Not in `__init__`. | Built-in lists: `list` is `e I b q`, `parameter` is `k`, `setting` is `f l j`, the rest go in `no_parameter` |
 | `mode_to_symbol` | `{mode letter: symbol}` in `PREFIX` order, so the first entry is the highest rank | `{'o': '@', 'v': '+'}` |
-| `mode_keys`, `mode_values` | The keys and values of `mode_to_symbol` as lists. `mode_values` is what the code strips from nicknames. | `[]` |
+| `mode_values` | The values of `mode_to_symbol` as a list. It is what the code strips from nicknames. | `[]` |
 
 `reset_state` clears `mode_to_symbol` but not `mode_values`, so `mode_values` keeps the old symbols until the next `005` line.
 
@@ -157,19 +155,15 @@ Each client holds its own copy of `ignore_list` and its own `RudeFriends`, loade
 
 | Attribute | Shape | Written by | Read by | Saved |
 | --- | --- | --- | --- | --- |
-| `channel_lists` | `{server_name: list}`, the same list object as the client's `joined_channels` at assignment time | `add_client` and many client methods | Nothing. Write only. | No |
 | `nickname_colors` | `{nickname: '#rrggbb'}` | `load_nickname_colors`, `reset_nick_colors`, `update_nickname_colors`, `prtcl_353` | `ansi_color_nickname`, `RudeColours` window | `nickname_colours.json` and `nickname_colours_bak.json`. See below. |
 | `clients` | `{server_name: RudeChatClient}` | `add_client` | `on_server_change`, `client_connect`, quit and away fan-out, `Window.on_app_exit` | No |
 | `channel_topics` | `{server_name: {channel: topic}}` | `bprtcl_topic`, `display_help` | `switch_channel`, `RudePopout.set_topic` | No |
-| `url_cache` | `{}` | Nothing | Nothing | No |
-| `tag_cache` | `{"url_<url>": QTextCharFormat}` | `tag_urls` | Nothing in `RudeGui`. The pop-out keeps its own and reads it. | No. Grows by one entry per distinct URL. |
 | `entry_history` | `list[str]`, last 10 inputs | `on_enter_key` | `show_previous_entry`, `show_next_entry` | No |
 | `history_index` | `int` position in `entry_history` | `on_enter_key`, arrow keys | Same | No |
 | `popped_out_channels` | `{server_name: list[str]}` of channels shown in a pop-out window and hidden from the main list | `inform_gui`, `append_to_pop_out_dict`, `remove_from_pop_out_dict` | 40 or so checks in the client and GUI, mostly "display here or in the pop-out" | No |
 | `pop_out_windows` | `{channel or nickname: [QWidget, RudePopout]}`. Not keyed by server. | `open_pop_out_window`, `remove_from_pop_out_dict` | `pip_to_pop_out`, `pipe_mode_to_pop_out`, `update_user_selector_list`, `handle_action_ctcp` | No |
 | `server_colors` | `{combo box index: {'fg': colour, 'bg': colour}}` | `on_server_change`, `highlight_server` | `on_server_change` | No |
 | `download_channel_list` | `{channel: {'user_count', 'topic'}}`, shared by all servers | `prtcl_322`, cleared in `reset_state` | `ChannelListWindow`, `prtcl_323` | `channel_list.txt`, rewritten at the end of each `/list` |
-| `last_selected_index`, `target_user_info`, `emoji_width_cache` | `None` or `{}` | Nothing | Nothing | No |
 | `previous_server_index` | `int` or `None` | `on_server_change` | `on_server_change` | No |
 | `iconed` | `bool`, window is hidden in the tray | `send_to_tray`, `restore_from_tray` | Nothing outside those two | No |
 | `url_pattern` | Compiled regex | `set_misc_variables` | `find_urls` | No |
@@ -182,7 +176,6 @@ Each client holds its own copy of `ignore_list` and its own `RudeFriends`, loade
 | Attribute | What it is |
 | --- | --- |
 | `irc_client` | The current client. `init_client` first creates a stray client with no server config. `on_server_change` replaces it with `clients[selected server]`. Code compares `self.gui.irc_client == self` to ask "is this the server on screen?". |
-| `server_var` | Last added server name. Written by `add_client` and `initialize_clients`, never read. |
 | `channel_window` | `ChannelListWindow`, created by `show_channel_list_window` for `/list`. The `322` handler uses it inside a `try`. |
 | `tray_icon`, `tab_filter`, `arrow_key_filter` | Qt helpers created in `init_layout`. |
 | `main_window`, `color_selector`, `user_info_window`, `user_info_ui` | The most recent config, colour or user-info window. Overwritten on each open. |
@@ -193,7 +186,7 @@ Each client holds its own copy of `ignore_list` and its own `RudeFriends`, loade
 
 ### Pop-out window state
 
-`RudePopout` ([`GUI/rude_popout.py`](../src/rudechat4/GUI/rude_popout.py)) keeps `parentGui`, `channel`, `form`, its own `tag_cache`, `entry_history` (10 lines) and `history_index`. It reads `channel_messages` (last 150 lines) when it opens and then receives new lines from client calls such as `pip_to_pop_out`. It saves nothing on its own.
+`RudePopout` ([`GUI/rude_popout.py`](../src/rudechat4/GUI/rude_popout.py)) keeps `parentGui`, `channel`, `server_name`, `irc_client`, `form`, `entry_history` (10 lines) and `history_index`. It reads `channel_messages` (last 150 lines) when it opens and then receives new lines from client calls such as `pip_to_pop_out`. It saves nothing on its own.
 
 ## Background tasks
 
@@ -243,7 +236,7 @@ Several `create_task` calls keep no reference, so they appear in no dictionary: 
 | Saved history file | Whatever is in memory at the next save. Trimming shrinks the file only after the next `auto_save`. | `save_channel_messages` |
 | Text logs in `Logs/` | None. Files grow without a limit. | `log_message` |
 | `RudeChat4.log` | None. A plain `FileHandler` at DEBUG level, no rotation. | `configure_logging` |
-| `motd_dict`, `who_user_data`, `account_cache`, `mentions`, `tag_cache`, `nickname_colors` | None. They grow until restart (or until `/mentions clear`, or `reset_state` for `motd_dict`). | Various |
+| `motd_dict`, `who_user_data`, `account_cache`, `mentions`, `nickname_colors` | None. They grow until restart (or until `/mentions clear`, or `reset_state` for `motd_dict`). | Various |
 
 A freshly loaded history file is not trimmed until the first `auto_trim` tick, 125 s after startup, so a large file is held in full until then.
 
@@ -257,18 +250,18 @@ A freshly loaded history file is not trimmed until the first `auto_trim` tick, 1
 
 1. `handle_incoming_message` sees EOF, an `OSError` or a 256 s read timeout. It sends `QUIT` and awaits `reconnect(config_file)`.
 2. `reconnect` returns at once if `disconnect_requested` is set. Otherwise it writes notices to the server view, calls `reset_state`, and tries up to 5 times. Each attempt waits 15 s first (5 s for ZNC), then runs `connect`, which opens the socket, registers and waits for the welcome sequence.
-3. On success it calls `replace_dms_in_gui`, sets `loop_running = True` and reselects the first server in the list.
+3. `reconnect` sets `is_connected = False` while it works. On success it calls `replace_dms_in_gui`, sets `is_connected` and `loop_running` to true and reselects the first server in the list. `connect_to_server` closes the old socket first, and raises `ConnectionError` (after printing the reason) if the new connection fails, which counts as a failed attempt.
 4. Channels return through `automatic_join`, which uses `auto_join_channels` only. A channel you joined by hand is not rejoined, except that ZNC replays its own.
 5. The background tasks are not recreated. They kept running through the drop. The WHO sweep and `the_worker` already finished, so they do not run again. This path was traced, not run.
-6. After 5 failures `reconnect` returns. The read loop then reads from the old reader, gets no data, and starts another reconnect round.
+6. After 5 failures `reconnect` returns. The read loop finds no reader (`None`), treats that as a lost connection and starts another reconnect round, so it retries until you disconnect.
 
-The old `writer` is replaced, never closed.
+The old `writer` is closed by `close_connection` before each new connection.
 
 ### You disconnect
 
-`/disconnect <server>` or the server list menu calls `disconnect(server_name)` on the current client. For the target client it sends `QUIT`, sets `loop_running = False`, `is_connected = False` and `disconnect_requested = True`, and clears the ping label. It then calls `reset_state()` on the client that received the command, which may be a different client. It does not cancel tasks, close the socket or save history. Each loop exits the next time it wakes.
+`/disconnect <server>` or the server list menu calls `disconnect(server_name)` on the current client. For the target client it sets `disconnect_requested`, sends `QUIT`, sets `is_connected = False` and then calls `shutdown_connection()`. That sets `loop_running = False`, cancels only that client's tasks (`cancel_client_tasks`) and closes only that client's socket (`close_connection`). It then clears the ping label and calls `reset_state()` on the target client. It does not save history. The one-shot `load_ascii_art_macros` task is left alone.
 
-`/connect <server>` goes through `client_connect`. It calls `create_tasks` again, which overwrites the `tasks` entries, then clears `disconnect_requested` and sets `loop_running = True`. The old tasks may still be asleep from before. If one wakes after the flag is true again, it keeps looping, so a quick disconnect and connect can leave two copies of a loop running.
+`/connect <server>` goes through `client_connect`. It finds the client by name (or by the config file it was loaded from) and finds the `.rudeserver` file without regard to case. If the client does not exist yet but the file does, it loads it first. It then calls `create_tasks`, which cancels any leftover tasks, sets `disconnect_requested = False` and `loop_running = True`, and runs `connect`. If the connection fails, it prints the reason, starts no tasks and leaves `is_connected` false so you can try again. Because the old tasks are cancelled first, a quick disconnect and connect no longer leaves two copies of a loop running.
 
 ### Exit
 

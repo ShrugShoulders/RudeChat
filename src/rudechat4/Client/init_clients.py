@@ -33,6 +33,4 @@ async def initialize_clients(app):
 
     # Update the Listbox with the new list of servers
     if app.server_selector_box.count() > 0:
-        first_server = app.server_selector_box.childAt(0, 0)
-        app.server_var = first_server
         app.on_server_change(None)
