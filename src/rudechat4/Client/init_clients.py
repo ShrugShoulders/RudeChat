@@ -20,16 +20,16 @@ async def initialize_clients(app):
     config_files.sort()
 
     if not config_files:
-        print("No .rudeserver configuration files found.")
+        logging.error("No .rudeserver configuration files found.")
         return
 
     for i, config_file in enumerate(config_files):
         try:
             await app.init_client_with_config(config_file, f'Server_{i+1}')
         except OSError as e:
-            print(f"An unexpected OS error occurred: {str(e)}")
+            logging.error(f"An unexpected OS error occurred: {str(e)}")
         except Exception as e:
-            print(f"Failed to connect to Server_{i+1} due to {e}. Proceeding to the next server.")
+            logging.error(f"Failed to connect to Server_{i+1} due to {e}. Proceeding to the next server.")
 
     # Update the Listbox with the new list of servers
     if app.server_selector_box.count() > 0:

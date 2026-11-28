@@ -1055,7 +1055,7 @@ class RudeChatClient:
                 self.wait_for_threads()
             except asyncio.CancelledError:
                 self.loop_running = False
-                logging.info("Exiting auto_save loop.")
+                logging.info("Exiting thread_killer loop.")
                 break
             except Exception as e:
                 logging.error(f"Error in thread_killer: {e}")
@@ -1322,7 +1322,7 @@ class RudeChatClient:
 
     def trim_messages(self):
         for server, channels in self.channel_messages.items():
-            # Trim the message history for remaining channels to the last 500 messages
+            # Trim the message history for remaining channels to the last 800 messages
             for channel, messages in channels.items():
                 channels[channel] = messages[-800:]
 
@@ -1445,7 +1445,6 @@ class RudeChatClient:
                 self.ping_threads.append(thread)
 
             # Trigger desktop notification
-            #await self.gui.trigger_desktop_notification(channel_name, message_content=message_content)
             self.gui.trigger_desktop_notification(sender, channel_name, message_content)
         except Exception as e:
             logging.error(f"Error triggering desktop notification: {e}")
@@ -3300,7 +3299,6 @@ class RudeChatClient:
 
         if file_name:
             return os.path.join(fortune_directory, file_name + ".txt")
-            print(file_name)
 
         fortune_files = [os.path.join(fortune_directory, f) for f in os.listdir(fortune_directory) if f.endswith('.txt')]
         return random.choice(fortune_files)
